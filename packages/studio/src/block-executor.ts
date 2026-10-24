@@ -138,6 +138,16 @@ export class BlockExecutionService {
   }
 
   /**
+   * Tells whether an executor is registered for a block type (default or custom).
+   *
+   * @param type - Block type to look for
+   */
+  hasExecutor(type: string): boolean {
+    return Object.prototype.hasOwnProperty.call(this.executors, type)
+      && typeof (this.executors as Record<string, unknown>)[type] === "function";
+  }
+
+  /**
    * Adds custom block executors
    * 
    * Custom executors can override default behavior or add new block types.
@@ -444,4 +454,52 @@ export const createBlockExecutionService = (
   const service = new BlockExecutionService(player, event, map, options);
   if (gameBlockExecutors) service.addCustomExecutors(gameBlockExecutors);
   return service;
+};
+
+/** Runs Studio blocks one at a time for a player, with the same executors as a workflow. */
+export interface StudioBlockRunner {
+  /**
+   * Executes one block. Rejects when no executor is registered for `type`, or when the executor throws.
+   *
+   * @param type - Block type, for example `change_gold` or `show_text`
+   * @param params - Parameters of the block
+   */
+  run<T extends BlockType>(type: T, params: BlockParamsMap[T]): Promise<void>;
+}
+
+/**
+ * Creates a runner that executes single blocks for a player, outside a workflow.
+ *
+ * The blocks go through the default executors plus the ones of the game (`blockExecutors`), with the same
+ * context helpers as a workflow, so a script and a visual block behave identically. There is no queue and no
+ * skill variable: the caller owns the ordering.
+ *
+ * @param player - Player the blocks run for
+ * @param event - Event the blocks run from, or `null`
+ * @param map - Authoritative map when it cannot be resolved from the player or event
+ * @param options - Variable ownership and local inputs
+ *
+ * @example
+ * ```ts
+ * const runner = createStudioBlockRunner(player, null, player.getCurrentMap(), { variableScope: "player" });
+ * await runner.run("change_gold", { type: "constant", operation: "add", amount: 10 });
+ * await runner.run("show_text", { text: "Hello" });
+ * ```
+ */
+export const createStudioBlockRunner = (
+  player: RpgPlayer | null,
+  event: RpgEvent | null,
+  map: RpgMap | null = null,
+  options?: BlockExecutionOptions,
+): StudioBlockRunner => {
+  const service = createBlockExecutionService(player, event, map, options);
+  let blockCounter = 0;
+  return {
+    async run(type, params) {
+      if (!service.hasExecutor(type)) {
+        throw new Error(`Unknown Studio block type: ${String(type)}`);
+      }
+      await service.executeSingleBlock({ id: `runner-${++blockCounter}`, type, data: params });
+    },
+  };
 };
