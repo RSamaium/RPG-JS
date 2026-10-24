@@ -12,6 +12,7 @@ import { Ray, RaycastHit } from '../collision/Ray';
 import type { EntityConfig } from '../physics/Entity';
 import { sweepEntities, type SweepResult } from '../collision/sweep';
 import { invalidateCollider } from '../collision/collider-cache';
+import { sortByCollationKey } from './collision-order';
 
 /**
  * World configuration
@@ -381,11 +382,7 @@ export class World {
   }
 
   private sortCollisionsForDeterminism(collisions: CollisionInfo[]): void {
-    collisions.sort((a, b) => {
-      const keyA = this.getCollisionKey(a);
-      const keyB = this.getCollisionKey(b);
-      return keyA.localeCompare(keyB);
-    });
+    sortByCollationKey(collisions, (collision) => this.getCollisionKey(collision));
   }
 
   private getCollisionKey(collision: CollisionInfo): string {
