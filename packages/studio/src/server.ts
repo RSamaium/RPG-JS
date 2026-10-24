@@ -6,7 +6,7 @@ import { runPlayerEventOnce } from "./event-execution-guard";
 import { createStudioRuntimeEventEditing } from "./runtime-event-editing";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
-import { BlockExecutionService } from "./block-executor";
+import { createBlockExecutionService } from "./block-executor";
 import { apiUrl, configureStudioConstants } from "./constants";
 import { RATIO_MAP_X, RATIO_MAP_Y } from "@common/map";
 import { matchesPageConditions } from "@common/blocks";
@@ -22,6 +22,7 @@ import { getStudioSkillChangeNotification } from "./skill-notification";
 import { triggerMatchesExecution, type StudioTouchTarget } from "./touch-runtime";
 import { compileStudioMapStream, isStudioDirectLoadPayload, prepareStudioMapPayload, type PreparedStudioMapPayload } from "./map-streaming";
 import { prepareStudioTerrainControlRegions } from "./terrain-control-streaming";
+import { isHydratedMedia } from "./media-reference";
 import { assignStudioEventPlacementIds } from "./event-placement";
 import {
   isStartingEquipmentCompatible,
@@ -334,7 +335,7 @@ const assignPlayerStartParams = (player: RpgPlayer, config: ProjectBasic, starti
 };
 
 const notifySkillChange = (player: RpgPlayer, payload: any) => {
-  const notification = getStudioSkillChangeNotification(payload);
+  const notification = getStudioSkillChangeNotification(payload, (key, params) => player.t(key, params));
 
   player.showNotification(notification.message, { type: notification.type });
 };
@@ -516,6 +517,7 @@ const toIdentifierString = (value: unknown): string => {
 
 const resolveMediaReference = async (value: unknown, provider: GameDataProvider): Promise<unknown> => {
   if (!value) return value;
+  if (isHydratedMedia(value)) return value;
   const referenceId = toIdentifierString(value);
   if (!referenceId) return value;
 
@@ -1117,6 +1119,10 @@ export default (_config?: unknown) => {
         },
       },
       onAccepted: async (player: RpgPlayer, connectionContext: RpgPlayerConnectionContext) => {
+        // A connection with a transfer token is the player moving into a room (a map): the game has already
+        // started. Handling it again sent the player to the start map again, so the client reloaded the map
+        // on every reconnection.
+        if (connectionContext?.query?.transferToken) return;
         const roomId = String((player as any).getCurrentMap?.()?.id ?? (player as any).map?.id ?? "");
         if (roomId && !roomId.startsWith("lobby-")) return;
 
@@ -1246,7 +1252,7 @@ export default (_config?: unknown) => {
         }
       },
       onLevelUp: async (player: RpgPlayer, nbLevel: number) => {
-        player.showNotification(`You reached level ${player.level}`);
+        player.showNotification(player.t("rpg.notification.level-up", { level: player.level }));
       },
       onSkillChange: async (player: RpgPlayer, payload: any) => {
         notifySkillChange(player, payload);
@@ -1335,7 +1341,7 @@ export default (_config?: unknown) => {
           return;
         }
 
-        const blockExecutor = new BlockExecutionService(player, null, map);
+        const blockExecutor = createBlockExecutionService(player, null, map);
         await blockExecutor.executeBlockSequence(blocks);
       },
       onLeave(player: RpgPlayer, map: RpgMap) {
@@ -1438,7 +1444,7 @@ export default (_config?: unknown) => {
               variableScope?: "player" | "map";
             },
           ) {
-            const blockExecutor = new BlockExecutionService(player, event, event.getCurrentMap?.() ?? map, { variableScope: options?.variableScope });
+            const blockExecutor = createBlockExecutionService(player, event, event.getCurrentMap?.() ?? map, { variableScope: options?.variableScope });
             const conditionPlayer = options?.variableScope === "map" ? null : player;
             const trigger = eventObj.applyActiveTrigger(conditionPlayer, event);
             if (!triggerMatchesExecution(trigger, triggerType, options?.touchTarget)) {

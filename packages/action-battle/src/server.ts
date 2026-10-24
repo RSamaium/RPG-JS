@@ -12,7 +12,7 @@ import {
   ActionBattleHotbarSkill,
   ActionBattleOptions,
 } from "./types";
-import { normalizeActionBattleOptions, setActionBattleOptions } from "./config";
+import { isActionBattleEnabled, normalizeActionBattleOptions, setActionBattleOptions } from "./config";
 import {
   getActionBattleEntityTile,
   getActionBattleTileSize,
@@ -321,7 +321,7 @@ export function applyActionBattleEntityHit(
   metadata?: Record<string, any>
 ): HitResult | undefined {
   const ai = (target as any).battleAi as BattleAi;
-  if (target instanceof RpgEvent && !ai) return undefined;
+  if (target instanceof RpgEvent && (!ai || ai.disabled)) return undefined;
 
   const systems = getActionBattleSystems();
   const result = applyActionBattleHit(
@@ -1341,6 +1341,7 @@ export const createActionBattleServer = (
        * @param input - Input data containing pressed keys
        */
       onInput(player: RpgPlayer, input: any) {
+        if (!isActionBattleEnabled({ player, map: player.getCurrentMap?.() ?? undefined }, options)) return;
         const state = getPlayerCombatState(player);
         const charged = objectOption(options.combat?.player?.chargedAttack);
         const dodge = objectOption(options.combat?.player?.dodge);
@@ -1547,11 +1548,13 @@ export const createActionBattleServer = (
         }
       },
       onConnected(player: RpgPlayer) {
+        if (!isActionBattleEnabled({ player, map: player.getCurrentMap?.() ?? undefined }, options)) return;
         player.initializeHotbar?.();
         syncActionBattleHotbar(player, options);
         syncActionBattleActionBar(player, options);
       },
       onJoinMap(player: RpgPlayer) {
+        if (!isActionBattleEnabled({ player, map: player.getCurrentMap?.() ?? undefined }, options)) return;
         player.initializeHotbar?.();
         syncActionBattleHotbar(player, options);
         syncActionBattleActionBar(player, options);

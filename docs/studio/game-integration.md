@@ -547,29 +547,6 @@ The same geometry generator is used by server-authoritative collisions, client
 prediction, and collision debugging; enabling debug collisions does not alter
 movement rules.
 
-### Terrain drawing in workers
-
-Studio draws the terrain textures (grid and control textures, holes, walls, water
-masks, wall slices and shadows) off the main thread. The pixel work runs in up to
-three Web Workers on `OffscreenCanvas` and only the finished bitmaps come back
-to the page, so the page keeps answering input and timers while a map loads or
-the map editor redraws chunks after a stroke. The workers run the same painter
-as the page, so the pixels are the same. Chunks are drawn one after the other,
-the first chunk wanted first, and a chunk whose data was replaced while it waited
-is not drawn.
-
-There is nothing to configure and nothing to serve beside the game: the worker
-code is part of `@rpgjs/studio` (inlined, started from a `blob:` URL). It needs
-`Worker`, `OffscreenCanvas` and `createImageBitmap`. A page whose
-Content-Security-Policy has a `worker-src` (or `script-src`) must allow `blob:`.
-Terrain pictures are fetched by the worker with CORS, like the images the page
-reads back, so the media server must send CORS headers.
-
-Where the page cannot have a worker, or when a worker fails (it cannot start, a
-message cannot be sent, it crashes), Studio logs a warning and the page draws the
-terrain itself from then on, as before. The water animation that moves over
-water chunks is still drawn on each frame by the page.
-
 ### Liquid contacts and submerged scenery
 
 Liquid borders derive their dominant, light and dark colors from the opaque

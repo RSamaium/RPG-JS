@@ -185,6 +185,18 @@ describe("Studio server runtime", () => {
     expect(player.changeMap).toHaveBeenCalledOnce();
   });
 
+  test("does not start the game again for a connection that transfers the player into a map", async () => {
+    const player = { initializeDefaultStats: vi.fn(), changeMap: vi.fn(async () => true) };
+    const hooks = (studioServer({ autoStart: true, startMapId: "requested-map" }) as any).player;
+
+    await hooks.onAccepted(player, { connection: {}, query: { transferToken: "abc" }, headers: {} });
+    expect(player.changeMap).not.toHaveBeenCalled();
+    expect(player.initializeDefaultStats).not.toHaveBeenCalled();
+
+    await hooks.onAccepted(player, { connection: {}, query: {}, headers: {} });
+    expect(player.changeMap).toHaveBeenCalledOnce();
+  });
+
   test("publishes the generated Studio class in every map database", async () => {
     const databaseProvider = (studioServer() as any).database as (map: RpgMap) => Promise<Record<string, any>>;
     const database = await databaseProvider({

@@ -47,6 +47,7 @@ const createPlayer = () => ({
   gold: 0,
   addItem: vi.fn(() => ({ name: () => "Potion" })),
   showNotification: vi.fn(),
+  t: vi.fn((key: string, params?: Record<string, unknown>) => `${key}:${JSON.stringify(params)}`),
   getCurrentMap: vi.fn(() => ({
     database: () => ({
       potion: { icon: "potion-icon" },
@@ -215,6 +216,13 @@ describe("BattleAi defeat flow", () => {
     expect(attacker.exp).toBe(25);
     expect(attacker.gold).toBe(7);
     expect(attacker.addItem).toHaveBeenCalledWith("potion", 2);
+    expect(attacker.showNotification).toHaveBeenCalledWith(
+      'rpg.notification.reward.exp-gold:{"exp":25,"gold":7}',
+    );
+    expect(attacker.showNotification).toHaveBeenCalledWith(
+      'rpg.notification.reward.item:{"amount":2,"name":"Potion"}',
+      { icon: "potion-icon" },
+    );
     expect(event.setGraphicAnimation).not.toHaveBeenCalledWith("die", 1);
     expect(event.remove).toHaveBeenCalledWith({
       reason: "defeated",

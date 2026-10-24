@@ -1,6 +1,8 @@
 import { describe, expect, test } from "vitest";
 import { getStudioSkillChangeNotification } from "../src/skill-notification";
 
+const t = (key: string, params?: Record<string, unknown>) => `${key}:${params?.name}`;
+
 describe("Studio skill change notification", () => {
   test("returns a notification for learned skills", () => {
     expect(
@@ -8,9 +10,9 @@ describe("Studio skill change notification", () => {
         action: "learn",
         skill: { name: "Fire" },
         skillId: "fire",
-      }),
+      }, t),
     ).toEqual({
-      message: "Learned Fire",
+      message: "rpg.notification.skill-learned:Fire",
       type: "info",
     });
   });
@@ -20,9 +22,9 @@ describe("Studio skill change notification", () => {
       getStudioSkillChangeNotification({
         action: "forget",
         skillId: "fire",
-      }),
+      }, t),
     ).toEqual({
-      message: "Forgot fire",
+      message: "rpg.notification.skill-forgotten:fire",
       type: "warn",
     });
   });

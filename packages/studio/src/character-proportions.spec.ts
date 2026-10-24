@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { characterAnimationCalibration, characterFrameBounds, characterFrameTransform } from "./character-proportions";
+import { characterAnimationCalibration, characterFrameBounds, characterFrameTransform, visibleCharacterHeight } from "./character-proportions";
 
 /** One opaque rectangle per cell: `[left, top, right, bottom]` (exclusive end). */
 const sheet = (columns: number, rows: number, cell: [number, number], rects: Array<[number, number, number, number] | null>) => {
@@ -44,5 +44,92 @@ describe("character animation calibration", () => {
     const calibration = characterAnimationCalibration(frames, frames);
     expect(calibration.bottom).toBe(90);
     expect(calibration.scale).toBe(1);
+  });
+});
+
+/** The scans as they were before the single fast pass: the results must not change. */
+const legacyHeight = (pixels: ImageData, columns: number, rows: number) => {
+  const frameWidth = Math.floor(pixels.width / columns);
+  const frameHeight = Math.floor(pixels.height / rows);
+  const heights: number[] = [];
+  for (let row = 0; row < rows; row++) {
+    for (let column = 0; column < columns; column++) {
+      let first = frameHeight;
+      let last = -1;
+      for (let y = 0; y < frameHeight; y++) {
+        for (let x = 0; x < frameWidth; x++) {
+          const index = ((row * frameHeight + y) * pixels.width + column * frameWidth + x) * 4 + 3;
+          if (pixels.data[index] > 16) {
+            first = Math.min(first, y);
+            last = y;
+            break;
+          }
+        }
+      }
+      if (last >= first) heights.push(last - first + 1);
+    }
+  }
+  heights.sort((a, b) => a - b);
+  return heights[Math.floor(heights.length / 2)];
+};
+
+const legacyBounds = (pixels: ImageData, columns: number, rows: number) => {
+  const width = Math.floor(pixels.width / columns);
+  const height = Math.floor(pixels.height / rows);
+  return Array.from({ length: columns * rows }, (_, index) => {
+    let left = width, right = -1, top = height, bottom = -1;
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const offset = (((Math.floor(index / columns) * height + y) * pixels.width) + (index % columns) * width + x) * 4 + 3;
+        if (pixels.data[offset] <= 16) continue;
+        left = Math.min(left, x);
+        right = Math.max(right, x);
+        top = Math.min(top, y);
+        bottom = Math.max(bottom, y);
+      }
+    }
+    if (bottom < top) return undefined;
+    const band = Math.max(2, Math.round((bottom - top + 1) * 0.06));
+    let sum = 0, count = 0;
+    for (let y = Math.max(top, bottom - band + 1); y <= bottom; y++) {
+      for (let x = left; x <= right; x++) {
+        const offset = (((Math.floor(index / columns) * height + y) * pixels.width)
+          + (index % columns) * width + x) * 4 + 3;
+        if (pixels.data[offset] > 16) { sum += x + 0.5; count++; }
+      }
+    }
+    return { width, height, top, bottom: bottom + 1, centerX: (left + right + 1) / 2, footX: count ? sum / count : (left + right + 1) / 2 };
+  });
+};
+
+describe("character frame scan", () => {
+  it("gives the same bounds and height as the per-pixel scan on random sheets", () => {
+    let seed = 12345;
+    const random = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 0x100000000;
+    for (let round = 0; round < 40; round++) {
+      const columns = 1 + Math.floor(random() * 4);
+      const rows = 1 + Math.floor(random() * 4);
+      const cellWidth = 3 + Math.floor(random() * 30);
+      const cellHeight = 3 + Math.floor(random() * 30);
+      // Extra pixels on the right and bottom are outside every cell, like in a real atlas.
+      const width = cellWidth * columns + Math.floor(random() * 3);
+      const height = cellHeight * rows + Math.floor(random() * 3);
+      const data = new Uint8ClampedArray(width * height * 4);
+      const density = random() * 0.4;
+      for (let pixel = 0; pixel < width * height; pixel++) {
+        if (random() < density) data[pixel * 4 + 3] = [0, 16, 17, 128, 255][Math.floor(random() * 5)];
+      }
+      const pixels = { width, height, data } as ImageData;
+      expect(characterFrameBounds(pixels, columns, rows)).toEqual(legacyBounds(pixels, columns, rows));
+      expect(visibleCharacterHeight(pixels, columns, rows)).toBe(legacyHeight(pixels, columns, rows));
+    }
+  });
+
+  it("treats an alpha of 16 as empty and 17 as visible", () => {
+    const data = new Uint8ClampedArray(4 * 4 * 4);
+    data[(1 * 4 + 1) * 4 + 3] = 16;
+    expect(characterFrameBounds({ width: 4, height: 4, data } as ImageData, 1, 1)).toEqual([undefined]);
+    data[(1 * 4 + 1) * 4 + 3] = 17;
+    expect(characterFrameBounds({ width: 4, height: 4, data } as ImageData, 1, 1)[0]).toMatchObject({ top: 1, bottom: 2 });
   });
 });

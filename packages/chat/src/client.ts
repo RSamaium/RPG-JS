@@ -42,6 +42,15 @@ export const CHAT_CLIENT_I18N = {
     "rpg.chat.error.channel": "This chat channel is unavailable.",
     "rpg.chat.error.rejected": "The message was rejected.",
   },
+  fr: {
+    "rpg.chat.placeholder": "Message…",
+    "rpg.chat.send": "Envoyer",
+    "rpg.chat.error.empty": "Saisissez un message.",
+    "rpg.chat.error.too-long": "Le message ne peut pas dépasser {maxLength} caractères.",
+    "rpg.chat.error.rate-limit": "Vous envoyez des messages trop vite.",
+    "rpg.chat.error.channel": "Ce canal de discussion est indisponible.",
+    "rpg.chat.error.rejected": "Le message a été refusé.",
+  },
 };
 
 export function createChatClient(options: ChatClientOptions = {}): RpgClient {

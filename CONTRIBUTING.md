@@ -99,9 +99,38 @@ tested, and removed without coupling it to the application shell.
 
 ## UI and Components
 
-Game UI components should be built with CanvasEngine by default. This keeps the
-runtime consistent with the rendering stack and makes components composable
-inside RPGJS scenes and modules.
+GUIs must be built with CanvasEngine (`*.ce` components). CanvasEngine is the
+abstraction over Pixi: do not import or manipulate Pixi directly in a GUI, and go
+through CanvasEngine components, directives, and signals instead. This keeps the
+runtime consistent with the rendering stack, lets the renderer evolve without
+rewriting GUIs, and makes components composable inside RPGJS scenes and modules.
+
+Every GUI must be usable with all the supported inputs, not only the one it was
+developed with:
+
+- **Keyboard:** every action is reachable and the bindings come from the
+  configurable keyboard controls, never from hard-coded keys.
+- **Gamepad:** navigation, confirmation, and going back work without a keyboard
+  or a mouse. Use the shared menu mapping from
+  `packages/client/src/services/gamepadControls.ts` (A to confirm, B or Start to
+  go back, d-pad or stick to move, L/R for tabs) so every GUI behaves the same.
+  A popup or overlay that opens on top of another GUI must own its gamepad
+  controls and keep the GUI below from acting at the same time.
+- **Mobile and touch:** the layout is responsive, touch targets are large enough,
+  and nothing depends on hover or on a physical keyboard.
+
+Verify the three before merging, for example by driving the GUI with the
+keyboard, with a gamepad (or a mocked `navigator.getGamepads()`), and in the
+mobile viewport of the Storybook.
+
+Every module or GUI that carries text must use the i18n system provided by RPGJS
+(`engine.i18n()` on the client). Do not hard-code labels, titles, messages,
+placeholders, `aria-label` values, or error messages in a component, a module, or
+a server command. Declare default translation keys in the module (namespaced
+after the module, like `rpg.menu.*` for the base GUIs), provide at least the
+English text, and let the game override them. Check that text added to an
+existing GUI also has its key, and that no sentence is built by concatenating
+translated fragments, since word order differs between languages.
 
 Every new player-facing UI component must be referenced in the `@rpgjs/ui-css`
 Storybook in the same contribution. Add a dedicated story, or extend an existing
@@ -119,6 +148,17 @@ owns its components and integration points. Examples include a custom battle UI,
 inventory system, quest tracker, or specialized editor/runtime feature. The
 module should expose the necessary hooks, services, and documentation instead of
 placing system-specific UI in a shared base package.
+
+## Studio Package
+
+Think framework first when working on the Studio package. Design the feature as
+an RPGJS framework capability, with a good developer experience (a clear API,
+documentation, defaults, types, and examples that work in a plain RPGJS project
+without Studio) and make it work and be tested on its own. Only **then** attach
+it to the Studio module, which exposes it through Studio schemas, editors, and
+integration points. Studio must remain a consumer of the framework rather than
+the place where a capability is born, so a feature never exists only because of
+Studio.
 
 ## Client, Server, RPG, and MMORPG Behavior
 

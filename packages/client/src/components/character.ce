@@ -670,7 +670,13 @@
       threshold: 0.1
     },
     gamepad: {
-      enabled: true
+      enabled: true,
+      // "back" shares its key with "escape" and is shadowed by it, so target "escape".
+      buttonMapping: {
+        button_0: "action",
+        button_1: "escape",
+        button_9: "escape"
+      }
     }
   }));
 
@@ -1383,7 +1389,8 @@
           smoothMove,
           followRevision,
           isCurrentRevision: (revision) => client.cameraFollowRevision() === revision,
-          shouldFollowCamera
+          shouldFollowCamera,
+          pixelSnap: client.cameraPixelSnap
         })
       );
       appliedCameraFollowRevision = appliedCameraFollowOwnership ? followRevision : null;

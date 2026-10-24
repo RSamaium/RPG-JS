@@ -155,6 +155,7 @@
   import { inject } from "../../core/inject";
   import { RpgClientEngine } from "../../RpgClientEngine";
   import { getKeyboardControlBind } from "../../services/actionInput";
+  import { menuGamepadControls } from "../../services/gamepadControls";
 
   const engine = inject(RpgClientEngine);
   const { t } = engine.i18n();
@@ -276,6 +277,6 @@
     right: { repeat: true, bind: keyboardControls.right, throttle: 400, keyDown: nextActor },
     action: { bind: getKeyboardControlBind(keyboardControls.action), keyDown: activateFocused },
     escape: { bind: getKeyboardControlBind(keyboardControls.escape), keyDown: cancel },
-    gamepad: { enabled: true },
+    gamepad: menuGamepadControls,
   });
 </script>

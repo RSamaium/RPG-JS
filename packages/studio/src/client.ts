@@ -6,6 +6,7 @@ import {
   RpgGui,
   TitleScreenComponent,
   inject,
+  dismissStartupSplash,
 } from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
 import {
@@ -26,6 +27,10 @@ import type { StudioGameModuleConfig } from ".";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
+import { setStudioMediaPreload, waitForStudioMediaPreload } from "./startup-preload";
+import { collectMediaIds, warmUpStartupData } from "./startup-warmup";
+import { keepStudioApiAnswers } from "./data-provider/http-game-data-provider";
+import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
 import { beginStudioMapLoading, waitForStudioMapReady } from "./studio-map-readiness";
 
 interface GlobalConfig {
@@ -194,6 +199,10 @@ const resolveActorIllustrationRefs = async (
 ): Promise<unknown[]> => {
   const provider = getGameDataProvider();
   const actors = database.filter((record) => (record?.type ?? record?._type) === "actor");
+  // The graphics of the actors that have no illustration of their own are asked for together, not one by one.
+  provider.prefetchMedia?.(collectMediaIds(
+    actors.filter((actor) => !(actor.illustration ?? actor.graphic?.metadata?.illustration)).map((actor) => actor.graphic),
+  ));
   const refs = await Promise.all(actors.map(async (actor) => {
     const direct = actor.illustration ?? actor.graphic?.metadata?.illustration;
     if (direct) return direct;
@@ -232,9 +241,17 @@ export const configureStudioClientStartupProject = (
 };
 
 export default (config: StudioGameModuleConfig) => {
+  // In a page the client and the server (standalone) ask for the same data: the answers are shared during the start-up.
+  if (typeof window !== "undefined") keepStudioApiAnswers();
+  // The module is created long before the engine starts: the game data is already asked for while the engine boots.
+  if (typeof window !== "undefined" && config.projectId && !resolveStudioClientStartupQuery(window.location.search).directMapId) {
+    warmUpStartupData(getGameDataProvider(), { projectId: config.projectId, startMapId: config.startMapId });
+  }
   return defineModule<RpgClient>({
     engine: {
       async onStart(engine: RpgClientEngine<any>) {
+        // Boot the terrain workers now: they parse their code while the project and the hero load.
+        TerrainWorkerClient.warm();
         const gui = inject(RpgGui);
 
         await new Promise((resolve) => setTimeout(resolve, 20));
@@ -248,6 +265,12 @@ export default (config: StudioGameModuleConfig) => {
         let response: any = {};
         const provider = getGameDataProvider();
 
+        // The provider keeps what it fetches: asking now for what the next steps need overlaps their round trips
+        // with the project request (a round trip to the API costs a few hundred milliseconds).
+        const warmUp = (request: Promise<unknown> | undefined) => void request?.catch(() => undefined);
+        if (projectId) warmUp(provider.getDatabase(projectId));
+        if (config.startMapId && !startupQuery.directMapId) warmUp(provider.getMap(config.startMapId));
+
         // Configuration projectId takes precedence over URL mode.
         if (projectId) {
           response = await provider.getProject({
@@ -255,6 +278,10 @@ export default (config: StudioGameModuleConfig) => {
           });
         }
 
+        // Without a start map in the configuration, the project says which one the game starts on.
+        if (!config.startMapId && !startupQuery.directMapId && response.startMapId) {
+          warmUpStartupData(provider, { startMapId: response.startMapId });
+        }
         window.gameConfig = response;
 
         const debugCollisions = config.debugCollisions === true || response.debugCollisions === true || engine.globalConfig?.debugCollisions === true;
@@ -297,29 +324,37 @@ export default (config: StudioGameModuleConfig) => {
           .filter((record) => (record?.type ?? record?._type) === "actor")
           .flatMap((actor) => [actor.graphic, actor.faceset])
           .filter(Boolean);
-        const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
-
-        const heroMediaRefs = [
-          engine.globalConfig.hero?.graphic,
-          engine.globalConfig.hero?.faceset,
-          ...animationMediaRefs,
-          ...databaseAnimationMediaRefs,
-          ...actorMediaRefs,
-          ...actorIllustrationRefs,
-        ].filter(Boolean);
-
-        // Load hero and combat animation spritesheets from either direct media objects or media IDs.
-        // Preloading database combat animations avoids lazy-load races when a temporary
-        // attack/hurt graphic is restored while Pixi is still resolving the spritesheet.
-        const heroSpritesheets = await Promise.all(
-          heroMediaRefs.map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
-        );
-
-        heroSpritesheets
-          .filter((value) => value && typeof value === "object")
-          .forEach((spritesheet) => {
-            engine.addSpriteSheet(spritesheet);
-          });
+        // Only the hero is needed to start. The other media (combat animations, actors, illustrations) load
+        // while the first map loads, and the map is revealed once they are in: preloading them avoids
+        // lazy-load races when a temporary attack/hurt graphic is restored while Pixi is still resolving
+        // the spritesheet.
+        const addSpritesheets = (sheets: any[]) =>
+          sheets
+            .filter((value) => value && typeof value === "object")
+            .forEach((spritesheet) => engine.addSpriteSheet(spritesheet));
+        const heroReferences = [engine.globalConfig.hero?.graphic, engine.globalConfig.hero?.faceset];
+        provider.prefetchMedia?.(collectMediaIds(heroReferences));
+        addSpritesheets(await Promise.all(
+          heroReferences
+            .filter(Boolean)
+            .map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
+        ));
+        setStudioMediaPreload((async () => {
+          const actorIllustrationRefs = await resolveActorIllustrationRefs(database);
+          const mediaRefs = [
+            ...animationMediaRefs,
+            ...databaseAnimationMediaRefs,
+            ...actorMediaRefs,
+            ...actorIllustrationRefs,
+          ].filter(Boolean);
+          // Every media of the preload in one request (a hundred at most), then each spritesheet is built from the cache.
+          provider.prefetchMedia?.(collectMediaIds(mediaRefs));
+          addSpritesheets(await Promise.all(
+            mediaRefs.map((mediaRef) => resolveHeroMediaSpritesheet(mediaRef)),
+          ));
+        })().catch((error) => {
+          console.warn("[StudioGame] media preload failed", error);
+        }));
 
         const displayTitleScreen = startupQuery.directMapId
           ? false
@@ -349,6 +384,8 @@ export default (config: StudioGameModuleConfig) => {
               { id: "load", label: "Load" },
             ],
           });
+          // The title screen is the first screen the player sees: the startup splash has done its job.
+          dismissStartupSplash();
         }
       },
     },
@@ -388,7 +425,7 @@ export default (config: StudioGameModuleConfig) => {
             fadeTrigger,
             coverDuration: hasPreviousMap ? 120 : 0,
             duration: 180,
-            loaderDelay: 250,
+            loaderDelay: hasPreviousMap ? 250 : 0,
             maxAssetWait: 1_200,
             loadingText: engine.t("rpg.transition.loading"),
             onCovered: complete,
@@ -410,6 +447,8 @@ export default (config: StudioGameModuleConfig) => {
         bindInitialStudioEventHitboxes(scene);
         const loadedScene = engine.scene.data?.();
         await waitForStudioMapReady(loadedScene?.data ?? loadedScene);
+        // The map is ready: wait only a moment for the background media still loading.
+        await waitForStudioMediaPreload();
         await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         fadeTrigger.start();
       },

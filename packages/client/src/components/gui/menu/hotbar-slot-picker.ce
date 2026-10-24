@@ -25,7 +25,7 @@
           >
             <span class="rpg-ui-hotbar-key">{slotLabels[index]}</span>
             @if (slot.icon) {
-              <DOMSprite sheet={iconSheet(slot.icon)} width="48px" height="48px" scale={2} objectFit="contain" />
+              <DOMSprite sheet={iconSheet(slot.icon)} width="48px" height="48px" objectFit="contain" />
             } @else {
               <span class="rpg-ui-hotbar-text">{slot.name || t("rpg.menu.empty")}</span>
             }
@@ -168,6 +168,7 @@
   import { inject } from "../../../core/inject";
   import { RpgClientEngine } from "../../../RpgClientEngine";
   import { getKeyboardControlBind } from "../../../services/actionInput";
+  import { menuGamepadControls } from "../../../services/gamepadControls";
 
   const { hotbar, entry, onAssign, onClear, onCancel } = defineProps();
   const engine = inject(RpgClientEngine);
@@ -285,10 +286,9 @@
       }
     },
     gamepad: {
-      enabled: true,
+      ...menuGamepadControls,
       buttonMapping: {
-        button_0: "action",
-        button_1: "escape",
+        ...menuGamepadControls.buttonMapping,
         button_2: "clear",
         button_6: "left",
         button_7: "right"

@@ -251,8 +251,11 @@ export const evaluateConditionalBranch = (
       switch (params.playerProperty) {
         case 'name':
           return player.name === params.playerName;
-        case 'direction':
-          return (player as any).direction === params.playerDirection;
+        case 'direction': {
+          // RpgPlayer.direction is a signal, a plain value is kept for custom players
+          const direction: unknown = player.direction;
+          return (typeof direction === 'function' ? direction() : direction) === params.playerDirection;
+        }
         case 'position':
           return player.x?.() === params.playerX && player.y?.() === params.playerY;
         default:

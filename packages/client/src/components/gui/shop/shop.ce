@@ -206,6 +206,7 @@
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { getKeyboardControlBind } from "../../../services/actionInput";
+    import { menuGamepadControls } from "../../../services/gamepadControls";
 
     const engine = inject(RpgClientEngine)
     const transition = guiTransition();
@@ -465,9 +466,7 @@
                 closeShop()
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     });
 
     const itemControls = signal({
@@ -534,9 +533,7 @@
                 engine.playUiSound("cancel")
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     });
 
     const tabControls = signal({
@@ -560,9 +557,7 @@
                 engine.playUiSound("navigate")
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     })
 
     mount(() => {

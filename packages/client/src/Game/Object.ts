@@ -92,25 +92,26 @@ export const getFrameTimestamp = (frame: Frame): number => {
 };
 
 /**
- * Frames waiting to be applied are consumed one per client tick. The tick follows
- * `requestAnimationFrame`, which is paused in a hidden tab while the server keeps
- * sending frames: without a bound the queue is replayed at once on return.
+ * Largest movement backlog replayed frame by frame. One frame is consumed per
+ * render tick, so a longer queue (a hidden or frozen tab keeps receiving
+ * positions while the render loop is paused) would never drain and the object
+ * would replay old positions long after the tab is visible again.
  */
-export const MAX_PENDING_FRAMES = 8;
+export const MAX_FRAME_BACKLOG = 10;
 
 export const mergeFreshFramePayload = (
   current: unknown,
   items: unknown,
   lastAppliedFrameTs = 0,
-  maxPending = Number.POSITIVE_INFINITY,
 ): Frame[] => {
-  const fresh = appendFramePayload(current, items)
+  const frames = appendFramePayload(current, items)
     .filter((frame) => {
       const timestamp = getFrameTimestamp(frame);
       return timestamp === 0 || timestamp > lastAppliedFrameTs;
     })
     .sort((a, b) => getFrameTimestamp(a) - getFrameTimestamp(b));
-  return fresh.length > maxPending ? fresh.slice(-maxPending) : fresh;
+  // Positions are absolute: when the backlog is stale, only the newest matters.
+  return frames.length > MAX_FRAME_BACKLOG ? frames.slice(-1) : frames;
 };
 
 export abstract class RpgClientObject extends RpgCommonPlayer {
@@ -143,8 +144,6 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
         this.frames,
         items,
         this.lastAppliedFrameTs,
-        // Only a hidden tab (tick paused) bounds the queue: while visible, every frame is replayed.
-        typeof document !== "undefined" && document.hidden ? MAX_PENDING_FRAMES : undefined,
       );
     });
 

@@ -36,7 +36,7 @@
         tabindex={0}
         click={requestOpenMenu}
       >
-        <span class="rpg-ui-hotbar-text action-battle-actionbar-text">Menu</span>
+        <span class="rpg-ui-hotbar-text action-battle-actionbar-text">{t("rpg.menu.title")}</span>
       </div>
     </div>
   </div>
@@ -87,6 +87,7 @@
   } from "../ui/state";
 
   const engine = inject(RpgClientEngine);
+  const { t } = engine.i18n();
   const keyboardControls = engine.globalConfig.keyboardControls;
   const { data, onInteraction } = defineProps();
   const MAX_ACTION_BAR_SIZE = 10;

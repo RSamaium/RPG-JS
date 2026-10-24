@@ -1,38 +1,36 @@
 import { Assets, type Texture } from 'pixi.js';
 
+const ALPHA_THRESHOLD = 16;
+const LITTLE_ENDIAN = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1;
+
 /** Median visible frame height, using the same alpha threshold as Character Editor. */
 export function visibleCharacterHeight(
   pixels: Pick<ImageData, 'data' | 'width' | 'height'>,
   columns: number,
   rows: number,
 ): number | undefined {
-  const frameWidth = Math.floor(pixels.width / columns);
-  const frameHeight = Math.floor(pixels.height / rows);
-  if (frameWidth < 1 || frameHeight < 1) return undefined;
-  const heights: number[] = [];
-  for (let row = 0; row < rows; row++) {
-    for (let column = 0; column < columns; column++) {
-      let first = frameHeight;
-      let last = -1;
-      for (let y = 0; y < frameHeight; y++) {
-        for (let x = 0; x < frameWidth; x++) {
-          const index = ((row * frameHeight + y) * pixels.width + column * frameWidth + x) * 4 + 3;
-          if (pixels.data[index] > 16) {
-            first = Math.min(first, y);
-            last = y;
-            break;
-          }
-        }
-      }
-      if (last >= first) heights.push(last - first + 1);
-    }
-  }
-  heights.sort((a, b) => a - b);
-  return heights[Math.floor(heights.length / 2)];
+  return medianVisibleHeight(characterFrameBounds(pixels, columns, rows));
 }
 
-/** Inspect the already loaded Pixi image; unavailable pixel access keeps saved scales. */
-export function loadedCharacterHeight(image: string, columns: number, rows: number): number | undefined {
+const medianVisibleHeight = (frames: Array<CharacterFrameBounds | undefined>): number | undefined => {
+  const heights = frames
+    .filter((frame): frame is CharacterFrameBounds => Boolean(frame))
+    .map((frame) => frame.bottom - frame.top)
+    .sort((a, b) => a - b);
+  return heights[Math.floor(heights.length / 2)];
+};
+
+/**
+ * Bounds of the frames of an image, read once per image and kept: the height and the calibration
+ * of a character both come from them, and an animation uses the same sheet again and again.
+ */
+const analyses = new Map<string, Array<CharacterFrameBounds | undefined>>();
+
+/** Reads the pixels of the already loaded Pixi image; `undefined` when they are not available (yet). */
+function loadedCharacterAnalysis(image: string, columns: number, rows: number) {
+  const key = `${image}:${columns}:${rows}`;
+  const cached = analyses.get(key);
+  if (cached) return cached;
   try {
     const texture = Assets.get<Texture>(image);
     if (!texture?.source?.resource) return undefined;
@@ -42,10 +40,18 @@ export function loadedCharacterHeight(image: string, columns: number, rows: numb
     const context = canvas.getContext('2d', { willReadFrequently: true });
     if (!context) return undefined;
     context.drawImage(texture.source.resource as CanvasImageSource, 0, 0);
-    return visibleCharacterHeight(context.getImageData(0, 0, canvas.width, canvas.height), columns, rows);
+    const frames = characterFrameBounds(context.getImageData(0, 0, canvas.width, canvas.height), columns, rows);
+    analyses.set(key, frames);
+    return frames;
   } catch {
     return undefined;
   }
+}
+
+/** Inspect the already loaded Pixi image; unavailable pixel access keeps saved scales. */
+export function loadedCharacterHeight(image: string, columns: number, rows: number): number | undefined {
+  const frames = loadedCharacterAnalysis(image, columns, rows);
+  return frames ? medianVisibleHeight(frames) : undefined;
 }
 
 export interface CharacterFrameBounds {
@@ -67,27 +73,44 @@ export function characterFrameBounds(
   const width = Math.floor(pixels.width / columns);
   const height = Math.floor(pixels.height / rows);
   if (width < 1 || height < 1) return [];
+  const stride = pixels.width;
+  const bytes = pixels.data;
+  // The alpha byte is the high byte of a little-endian pixel: one compare tells whether it is above the threshold.
+  const words = LITTLE_ENDIAN && bytes.byteOffset % 4 === 0
+    ? new Uint32Array(bytes.buffer, bytes.byteOffset, Math.floor(bytes.byteLength / 4))
+    : null;
+  const limit = (ALPHA_THRESHOLD + 1) * 0x1000000;
+  const opaque = words
+    ? (pixel: number) => words[pixel] >= limit
+    : (pixel: number) => bytes[pixel * 4 + 3] > ALPHA_THRESHOLD;
+
   return Array.from({ length: columns * rows }, (_, index) => {
+    const originX = (index % columns) * width;
+    const originY = Math.floor(index / columns) * height;
     let left = width, right = -1, top = height, bottom = -1;
     for (let y = 0; y < height; y++) {
+      const row = (originY + y) * stride + originX;
+      let first = -1;
       for (let x = 0; x < width; x++) {
-        const offset = (((Math.floor(index / columns) * height + y) * pixels.width)
-          + (index % columns) * width + x) * 4 + 3;
-        if (pixels.data[offset] <= 16) continue;
-        left = Math.min(left, x);
-        right = Math.max(right, x);
-        top = Math.min(top, y);
-        bottom = Math.max(bottom, y);
+        if (opaque(row + x)) { first = x; break; }
       }
+      if (first < 0) continue;
+      let last = first;
+      for (let x = width - 1; x > first; x--) {
+        if (opaque(row + x)) { last = x; break; }
+      }
+      if (first < left) left = first;
+      if (last > right) right = last;
+      if (y < top) top = y;
+      bottom = y;
     }
     if (bottom < top) return undefined;
     const band = Math.max(2, Math.round((bottom - top + 1) * 0.06));
     let sum = 0, count = 0;
     for (let y = Math.max(top, bottom - band + 1); y <= bottom; y++) {
+      const row = (originY + y) * stride + originX;
       for (let x = left; x <= right; x++) {
-        const offset = (((Math.floor(index / columns) * height + y) * pixels.width)
-          + (index % columns) * width + x) * 4 + 3;
-        if (pixels.data[offset] > 16) { sum += x + 0.5; count++; }
+        if (opaque(row + x)) { sum += x + 0.5; count++; }
       }
     }
     return { width, height, top, bottom: bottom + 1, centerX: (left + right + 1) / 2, footX: count ? sum / count : (left + right + 1) / 2 };
@@ -95,19 +118,7 @@ export function characterFrameBounds(
 }
 
 export function loadedCharacterFrames(image: string, columns: number, rows: number) {
-  try {
-    const texture = Assets.get<Texture>(image);
-    if (!texture?.source?.resource) return [];
-    const canvas = document.createElement('canvas');
-    canvas.width = texture.width;
-    canvas.height = texture.height;
-    const context = canvas.getContext('2d', { willReadFrequently: true });
-    if (!context) return [];
-    context.drawImage(texture.source.resource as CanvasImageSource, 0, 0);
-    return characterFrameBounds(context.getImageData(0, 0, canvas.width, canvas.height), columns, rows);
-  } catch {
-    return [];
-  }
+  return loadedCharacterAnalysis(image, columns, rows) ?? [];
 }
 
 const median = (values: number[]): number => {

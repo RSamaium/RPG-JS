@@ -8,6 +8,7 @@ import {
 } from "@rpgjs/action-battle/server";
 import { normalizeEventType } from "@common/event-types";
 import { assignParams } from "./assign-params";
+import { getStudioEnemyInteractionResolver } from "./enemy-interaction";
 import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
 import { createStudioActionBattleAnimations } from "./action-battle-animations";
 import { getGraphicKey } from "./graphic-key";
@@ -693,18 +694,33 @@ const enemyRuntime: EventTypeRuntime = {
         initializeEnemyNaturalAttackFromStudioConfig(context.event, enemy);
         initializeEnemyVitalsFromParameters(context.event);
         learnEnemySkills(context.event, enemy);
-        const aiOptions = resolveEnemyBattleAiOptions(enemy);
-        (context.event as any).battleAi = new BattleAi(context.event, {
-          ...aiOptions,
-          rewards: {
-            ...enemy.reward,
-            showNotification: true,
-          },
-        });
+        const interaction = getStudioEnemyInteractionResolver() && map
+          ? getStudioEnemyInteractionResolver()!({ event: context.event, enemy, map })
+          : "action";
+        if (typeof interaction === "object" && interaction) {
+          (context.event as any).__studioEnemyTouch = interaction.onTouch;
+        }
+        if (interaction === "action" || !interaction) {
+          const aiOptions = resolveEnemyBattleAiOptions(enemy);
+          (context.event as any).battleAi = new BattleAi(context.event, {
+            ...aiOptions,
+            rewards: {
+              ...enemy.reward,
+              showNotification: true,
+            },
+          });
+        }
         applyGraphicSetting({ event: context.event, trigger: enemy, fallbackParams: context.params, object: context.object, eventType: context.eventType });
       }
       await next();
-    }
+    },
+    onTouch: async (context, next) => {
+      const onTouch = (context.event as any).__studioEnemyTouch;
+      if (typeof onTouch === "function" && context.player && context.touchContext?.otherType !== "event") {
+        await onTouch(context.player);
+      }
+      await next();
+    },
   }
 };
 

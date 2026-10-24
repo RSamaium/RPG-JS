@@ -1,3 +1,4 @@
+import { Log } from "../src/logs/log";
 import { describe, expect, test, vi } from "vitest";
 import {
   CharacterSelectGui,
@@ -326,10 +327,11 @@ describe("GUI", () => {
       skills: signal([]),
       param: {},
       useItem: vi.fn(() => {
-        throw { msg: "Cannot use item" };
+        throw new Log("NOT_USE_ITEM", "The player cannot use the item");
       }),
       syncChanges: vi.fn(),
       showNotification: vi.fn(),
+      t: (key: string) => `translated:${key}`,
       databaseById() {
         return { _type: "item", consumable: true };
       },
@@ -344,7 +346,7 @@ describe("GUI", () => {
     await gui.emit("useItem", { id: "potion", clientActionId: "use-error" });
 
     expect(player.syncChanges).not.toHaveBeenCalled();
-    expect(player.showNotification).toHaveBeenCalledWith("Cannot use item");
+    expect(player.showNotification).toHaveBeenCalledWith("translated:rpg.error.NOT_USE_ITEM", { type: "warn" });
     expect(sent.some((event) => event.type === "gui.update" && event.value.clientActionId === "use-error")).toBe(true);
 
     gui.close();

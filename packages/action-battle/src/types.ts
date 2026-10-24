@@ -2,7 +2,7 @@ import type {
   ClientVisualContext,
   ClientVisualHelpers,
 } from "@rpgjs/client";
-import type { RpgPlayer } from "@rpgjs/server";
+import type { RpgEvent, RpgMap, RpgPlayer } from "@rpgjs/server";
 import type {
   ActionBattleAiVisual,
 } from "./core/ai-behavior-tree";
@@ -530,7 +530,23 @@ export interface ActionBattleAudioOptions {
   music?: false | ActionBattleMusicOptions;
 }
 
+export interface ActionBattleEnabledContext {
+  /** Player pressing a key, or being set up on a map. */
+  player?: RpgPlayer;
+  /** Event whose AI is being created. */
+  event?: RpgEvent;
+  map?: RpgMap;
+}
+
 export interface ActionBattleOptions {
+  /**
+   * Keeps the module installed but inactive. A function is evaluated each time
+   * (an input, an AI creation), so a host can read the project of the player or
+   * of the map. When `false`: no attack, dodge, guard or hotbar on the action
+   * input, no AI started for the events, no hotbar or action bar opened.
+   * Defaults to `true`.
+   */
+  enabled?: boolean | ((context: ActionBattleEnabledContext) => boolean);
   preset?: "adventure" | "classic";
   combat?: ActionBattleCombatOptions;
   visual?: ActionBattleVisualInput;

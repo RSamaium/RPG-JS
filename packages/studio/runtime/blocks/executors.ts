@@ -5,6 +5,7 @@ import type {
   AnyBlockInstance,
   BlockExecutorRegistry,
   PartialBlockExecutorRegistry,
+  CustomBlockExecutors,
   RuntimeBlockExecutorRegistry,
   GameExecutionContext
 } from './types';
@@ -161,7 +162,7 @@ export const defaultExecutors: BlockExecutorRegistry<BlockType> = {
  * ```
  */
 export function createExecutorRegistry(
-  customExecutors: PartialBlockExecutorRegistry = {}
+  customExecutors: PartialBlockExecutorRegistry | CustomBlockExecutors = {}
 ): RuntimeBlockExecutorRegistry {
   return {
     ...defaultExecutors,
@@ -253,5 +254,6 @@ export async function executeBlocksRecursively(
 export type {
   BlockExecutorRegistry,
   PartialBlockExecutorRegistry,
+  CustomBlockExecutors,
   RuntimeBlockExecutorRegistry
 } from './types';

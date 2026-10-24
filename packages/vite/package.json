@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/vite",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.0.1",
+  "version": "5.0.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -22,8 +22,8 @@
     "@babel/parser": "^7.29.7",
     "@babel/traverse": "^7.29.7",
     "@babel/types": "^7.29.7",
-    "@canvasengine/compiler": "2.4.0",
-    "@canvasengine/tiled": "2.4.0",
+    "@canvasengine/compiler": "2.4.1",
+    "@canvasengine/tiled": "2.4.1",
     "@hono/vite-dev-server": "^0.26.0",
     "@iarna/toml": "^2.2.5",
     "@rpgjs/server": "workspace:*",

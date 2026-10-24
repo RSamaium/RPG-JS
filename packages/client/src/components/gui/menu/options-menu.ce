@@ -1,4 +1,4 @@
-<DOMContainer width="100%" height="100%">
+<DOMContainer width="100%" height="100%" controls={controls}>
     <div class="rpg-ui-menu-panel rpg-ui-panel">
         <div class="rpg-ui-menu-panel-header">{t("rpg.menu.options")}</div>
         <div class="rpg-ui-menu-panel-body rpg-ui-options">
@@ -18,11 +18,11 @@
                 @if (listening()) {
                     <button type="button" class="rpg-ui-btn" click={cancelCapture}>{t("rpg.controls.cancel")}</button>
                 }
-                <button type="button" class="rpg-ui-btn" data-variant="secondary" click={resetBindings}>{t("rpg.controls.reset")}</button>
+                <button type="button" class="rpg-ui-btn" data-variant="secondary" data-focused={focusedRow() === "reset" ? "true" : "false"} click={resetBindings}>{t("rpg.controls.reset")}</button>
             </section>
             <section class="rpg-ui-option-section">
                 <div class="rpg-ui-menu-panel-details-title">{t("rpg.audio.title")}</div>
-                <label class="rpg-ui-language-option">
+                <label class="rpg-ui-language-option" data-focused={focusedRow() === "language" ? "true" : "false"}>
                     <span>{t("rpg.options.language")}</span>
                     <select class="rpg-ui-input" value={language} change={changeLanguage} aria-label={t("rpg.options.language")}>
                         <option value="auto">{t("rpg.options.language-auto")}</option>
@@ -33,7 +33,7 @@
                 </label>
                 <div class="rpg-ui-menu-panel-details-desc">{t("rpg.audio.help")}</div>
                 @for (channel of channels) {
-                    <label class="rpg-ui-audio-option">
+                    <label class="rpg-ui-audio-option" data-focused={focusedRow() === channel.id ? "true" : "false"}>
                         <span>{t(channel.label)}</span>
                         <span>{percentages()[channel.id]}%</span>
                         <input
@@ -57,7 +57,9 @@
     import { signal, computed, effect, mount } from "canvasengine";
     import { configurableControls, movementPreferences } from "../../../services/movementPreferences";
     import { inject } from "../../../core/inject";
+    import { getKeyboardControlBind } from "../../../services/actionInput";
     import { RpgClientEngine } from "../../../RpgClientEngine";
+    import { menuGamepadControls } from "../../../services/gamepadControls";
 
     const engine = inject(RpgClientEngine);
     const { t } = engine.i18n();
@@ -118,12 +120,48 @@
         { id: "ui", label: "rpg.audio.ui" }
     ].map(channel => ({ ...channel, value: signal(String(Math.round(engine.getSoundVolume(channel.id) * 100))) }));
     const percentages = computed(() => Object.fromEntries(channels.map(channel => [channel.id, Number(channel.value())])));
-    const changeVolume = (channel) => (event) => {
-        const value = Number(event?.target?.value ?? 100) / 100;
+    const setVolume = (channel, value) => {
         channels.find(entry => entry.id === channel).value.set(String(Math.round(value * 100)));
         engine.setSoundVolume(channel, value);
         if (channel === "ui" || channel === "master") engine.playUiSound("navigate");
     };
+    const changeVolume = (channel) => (event) => setVolume(channel, Number(event?.target?.value ?? 100) / 100);
+
+    // Gamepad / keyboard cursor over the options that are not text capture.
+    const keyboardControls = engine.globalConfig.keyboardControls;
+    const rows = ["language", ...channels.map(channel => channel.id), "reset"];
+    const focusedRow = signal("language");
+    const moveFocus = (delta) => {
+        const index = rows.indexOf(focusedRow());
+        focusedRow.set(rows[(index + delta + rows.length) % rows.length]);
+        engine.playUiSound("navigate");
+    };
+    const adjustFocused = (delta) => {
+        const row = focusedRow();
+        if (row === "language") {
+            const options = ["auto", ...locales.map(locale => locale.id)];
+            const index = Math.max(0, options.indexOf(language()));
+            changeLanguage({ target: { value: options[(index + delta + options.length) % options.length] } });
+            return;
+        }
+        const channel = channels.find(entry => entry.id === row);
+        if (!channel) return;
+        const value = Math.max(0, Math.min(100, Number(channel.value()) + delta * 5));
+        setVolume(channel.id, value / 100);
+    };
+    const controls = signal({
+        up: { repeat: true, bind: keyboardControls.up, throttle: 150, keyDown() { if (!listening()) moveFocus(-1); } },
+        down: { repeat: true, bind: keyboardControls.down, throttle: 150, keyDown() { if (!listening()) moveFocus(1); } },
+        left: { repeat: true, bind: keyboardControls.left, throttle: 80, keyDown() { if (!listening()) adjustFocused(-1); } },
+        right: { repeat: true, bind: keyboardControls.right, throttle: 80, keyDown() { if (!listening()) adjustFocused(1); } },
+        action: {
+            bind: getKeyboardControlBind(keyboardControls.action),
+            keyDown() {
+                if (!listening() && focusedRow() === "reset") resetBindings();
+            }
+        },
+        gamepad: { ...menuGamepadControls, stepInterval: { default: 200, left: 80, right: 80 } }
+    });
 
 </script>
 
@@ -135,6 +173,12 @@
         gap: 0.35rem 1rem;
         margin-top: 0.9rem;
         color: var(--rpg-ui-text);
+    }
+    .rpg-ui-language-option[data-focused="true"],
+    .rpg-ui-audio-option[data-focused="true"],
+    .rpg-ui-btn[data-focused="true"] {
+        outline: 2px solid var(--rpg-ui-accent);
+        outline-offset: 3px;
     }
     .rpg-ui-audio-option .rpg-ui-input {
         grid-column: 1 / -1;

@@ -38,3 +38,18 @@ export const Notifications: StoryObj = {
     panel("Quest complete", "<p>You discovered the crystal sanctuary.</p>") +
     '<div class="rpg-ui-toast"><h3 class="rpg-ui-toast-title">Level up</h3><p>You reached level 12.</p></div><div class="rpg-ui-notification"><span class="rpg-ui-notification-message">Inventory full</span></div></div>',
 };
+
+const splashSegments = Array.from({ length: 10 }, (_, segment) => `<i style="--segment:${segment}"></i>`).join("");
+export const StartupSplash: StoryObj = {
+  render: () => {
+    const root = document.createElement("div");
+    root.style.cssText = "position:relative;height:320px;overflow:hidden";
+    root.innerHTML = `<div class="rpg-ui-splash" role="status" aria-live="polite" style="position:absolute"><div class="rpg-ui-splash__spinner" aria-hidden="true">${splashSegments}</div><p class="rpg-ui-splash__label">Loading area…</p></div><button class="rpg-ui-btn" style="position:absolute;right:12px;bottom:12px;z-index:2147483001">Fade out</button>`;
+    const splash = root.querySelector<HTMLElement>(".rpg-ui-splash")!;
+    root.querySelector("button")!.addEventListener("click", () => {
+      splash.dataset.leaving = "true";
+      setTimeout(() => { splash.dataset.leaving = "false"; }, 1200);
+    });
+    return root;
+  },
+};

@@ -151,6 +151,12 @@ export class MenuGui extends Gui {
         this.update(data, { clientActionId })
     }
 
+    private notifyError(err: any) {
+        const key = `rpg.error.${err?.id}`
+        const message = err?.id && this.player.t(key) !== key ? this.player.t(key) : this.player.t('rpg.error.generic')
+        this.player.showNotification(message, { type: 'warn' })
+    }
+
     open(options: MenuGuiOptions = {}) {
         this.menuOptions = options
         const data = this.buildMenuData(options)
@@ -161,7 +167,7 @@ export class MenuGui extends Gui {
                 this.player.syncChanges()
             }
             catch (err: any) {
-                this.player.showNotification(err.msg)
+                this.notifyError(err)
             }
             finally {
                 this.refreshMenu(clientActionId)
@@ -173,7 +179,7 @@ export class MenuGui extends Gui {
                 this.player.syncChanges()
             }
             catch (err: any) {
-                this.player.showNotification(err.msg)
+                this.notifyError(err)
             }
             finally {
                 this.refreshMenu(clientActionId)

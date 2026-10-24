@@ -11,7 +11,7 @@ import {
   resolveActionBattleAnimation,
 } from "./animations";
 import { emitActionBattleClientVisual } from "./visual";
-import { getActionBattleOptions } from "./config";
+import { getActionBattleOptions, isActionBattleEnabled } from "./config";
 import { getActionBattleSystems } from "./core/context";
 import { applyActionBattleHit } from "./core/hit";
 import {
@@ -335,7 +335,7 @@ const createDefeatReward = (
       if (gold > 0) player.gold += gold;
 
       if (rewards.showNotification && (exp > 0 || gold > 0)) {
-        player.showNotification(`You won ${exp} experience and ${gold} gold`);
+        player.showNotification(player.t("rpg.notification.reward.exp-gold", { exp, gold }));
       }
 
       for (const rawItem of rewards.items ?? []) {
@@ -352,7 +352,10 @@ const createDefeatReward = (
               ? getPlayerMap(player)?.database?.()?.[itemRef]
               : undefined;
           player.showNotification(
-            `You won ${amount} ${getRewardItemName(inventoryItem, itemRef)}`,
+            player.t("rpg.notification.reward.item", {
+              amount,
+              name: getRewardItemName(inventoryItem, itemRef),
+            }),
             {
               icon: itemData?.icon,
             }
@@ -762,6 +765,8 @@ export class BattleAi {
   private visionSetupRetries: number = 0;
   private maxVisionSetupRetries: number = 20;
   private destroyed: boolean = false;
+  /** The module is inactive for this event: no loop, no vision, no health bar. */
+  readonly disabled: boolean = false;
   private lastNoTargetTraceTime: number = 0;
 
   /**
@@ -795,9 +800,13 @@ export class BattleAi {
     options: BattleAiOptions | BattleAiLegacyOptions = {}
   ) {
     options = mergeBattleAiPresetOptions(options);
+    this.disabled = !isActionBattleEnabled({
+      event,
+      map: (event as any).getCurrentMap?.(),
+    });
     event.battleAi = this;
     // An enemy is attacked, not talked to
-    (event as any).interactive?.set?.(false);
+    if (!this.disabled) (event as any).interactive?.set?.(false);
     this.event = event;
 
     // Set enemy type and apply behavior modifiers
@@ -859,6 +868,7 @@ export class BattleAi {
     };
     const healthBar = options.presentation?.healthBar;
     if (
+      !this.disabled &&
       this.presentation.role !== "hidden" &&
       healthBar !== false &&
       !hasTopComponent(event, "rpg:hpBar")
@@ -928,6 +938,8 @@ export class BattleAi {
     } else if (options.simpleBehavior) {
       this.behaviorTree = defineAiBehavior(options.simpleBehavior);
     }
+
+    if (this.disabled) return;
 
     // Setup AI systems
     this.scheduleVisionSetup();

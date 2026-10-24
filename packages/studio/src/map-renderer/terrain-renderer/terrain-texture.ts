@@ -1,3 +1,4 @@
+import { createCanvasElement } from "../canvas-env";
 import type {
   TerrainAssetMetadata,
   TerrainRenderMode,
@@ -7,7 +8,6 @@ import type {
   TerrainTileAtlasMetadata,
   TerrainTransitionRule,
 } from "../types";
-import { createTerrainCanvas, type TerrainCanvas, type TerrainContext } from "./terrain-canvas";
 
 interface TerrainMediaLike {
   fileName?: string;
@@ -169,7 +169,7 @@ export function isWaterTerrainTexture(
 }
 
 export function drawTerrainTexture(
-  ctx: TerrainContext,
+  ctx: CanvasRenderingContext2D,
   image: CanvasImageSource,
   source: TerrainSourceRect,
   x: number,
@@ -185,10 +185,12 @@ export function createTerrainPatternCanvas(
   image: CanvasImageSource,
   source: TerrainSourceRect,
   destinationCellSize: number
-): TerrainCanvas {
+): HTMLCanvasElement {
   const cellSize = Math.max(1, Math.floor(destinationCellSize));
-  const canvas = createTerrainCanvas(cellSize, cellSize);
-  const ctx = canvas.getContext("2d") as TerrainContext | null;
+  const canvas = createCanvasElement();
+  canvas.width = cellSize;
+  canvas.height = cellSize;
+  const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context unavailable");
   // Match Studio's terrain sampling: atlas cell borders can contain separator
   // pixels, which become visible grid lines when repeated in the world.
@@ -268,7 +270,6 @@ function normalizeTerrainTextures(
       id: `terrain-${index}`,
       index,
       label: `Terrain ${index + 1}`,
-      renderTileSize: 48,
     }));
   }
 
@@ -284,7 +285,7 @@ function normalizeTerrainTextures(
         index: nonNegativeInteger(texture.index) ?? index,
         label,
         ...(typeof texture.collision === "boolean" ? { collision: texture.collision } : {}),
-        renderTileSize: positiveInteger(texture.renderTileSize) ?? 48,
+        ...(positiveInteger(texture.renderTileSize) ? { renderTileSize: positiveInteger(texture.renderTileSize) } : {}),
         ...(specialType ? { specialType } : {}),
         ...(isTerrainRenderMode(texture.defaultRenderMode)
           ? { defaultRenderMode: texture.defaultRenderMode as TerrainRenderMode }

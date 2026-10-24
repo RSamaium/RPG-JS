@@ -1,5 +1,11 @@
 # @rpgjs/calendar
 
+## 5.1.1
+
+### Patch Changes
+
+- cd51839: Update CanvasEngine to 2.4.1.
+
 ## 5.1.0
 
 ### Minor Changes

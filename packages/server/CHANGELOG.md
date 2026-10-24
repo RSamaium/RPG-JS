@@ -1,5 +1,15 @@
 # @rpgjs/server
 
+## 5.1.1
+
+### Patch Changes
+
+- cd51839: Update CanvasEngine to 2.4.1.
+- 2fbd534: Route the remaining player-facing texts through the i18n service: stat labels and close buttons of the menu, the action-battle menu button, level-up, skill and reward notifications, and item error notifications. The server now ships default `en`/`fr` messages (`rpg.notification.*`, `rpg.error.*`) that games can override with `provideI18n()`.
+- dcd5a2d: Fix: a player who has just joined a map no longer triggers `onTouch` / `onPlayerTouch` of the events under or placed on the arrival point, so paired doors no longer bounce the player back (#400). The contact stays silent until the player leaves the event (or sends an input, or the 1 s arrival window ends) and fires again on the next contact.
+- Updated dependencies [cd51839]
+  - @rpgjs/testing@5.0.2
+
 ## 5.1.0
 
 ### Minor Changes

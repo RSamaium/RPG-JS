@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/client",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "description": "RPGJS is a framework for creating RPG/MMORPG games",
   "main": "dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,8 +22,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "peerDependencies": {
-    "@canvasengine/presets": "^2.4.0",
-    "canvasengine": "^2.4.0",
+    "@canvasengine/presets": "^2.4.1",
+    "canvasengine": "^2.4.1",
     "pixi.js": "^8.9.2"
   },
   "dependencies": {
@@ -37,7 +37,7 @@
     "rxjs": "^7.8.2"
   },
   "devDependencies": {
-    "@canvasengine/compiler": "2.4.0",
+    "@canvasengine/compiler": "2.4.1",
     "vite": "^8.1.5",
     "vite-plugin-dts": "^5.0.3",
     "vitest": "^4.1.10"

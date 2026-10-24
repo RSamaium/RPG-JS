@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { createStudioSkillOnUse } from "../src/skill-workflow";
+import { createStudioSkillOnUse, runStudioSkillTrigger } from "../src/skill-workflow";
 
 const workflow = (phase: "cast" | "impact" | "defeat", variableId: string) => ({
   phase,
@@ -128,5 +128,25 @@ describe("Studio skill workflows", () => {
     });
 
     expect(variables.get("legacy-impact")).toBe(1);
+  });
+
+  test("runs a phase of a skill on demand with a target id only", async () => {
+    const variables = new Map<string, unknown>();
+    const player = {
+      id: "hero",
+      getCurrentMap: () => ({}),
+      getVariable: (id: string) => variables.get(id),
+      setVariable: (id: string, value: unknown) => variables.set(id, value),
+      syncChanges: vi.fn(),
+    };
+    createStudioSkillOnUse("manual-fire", [
+      workflow("cast", "manual-cast"),
+      workflow("impact", "manual-impact"),
+    ]);
+
+    await runStudioSkillTrigger(player as any, "manual-fire", "impact", { targetId: "slime-1" });
+    await runStudioSkillTrigger(player as any, "unknown-skill", "cast");
+
+    expect(Object.fromEntries(variables)).toEqual({ "manual-impact": 1 });
   });
 });

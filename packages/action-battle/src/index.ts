@@ -317,6 +317,8 @@ export {
   createActionBattleServer,
 } from "./server";
 
+export { isActionBattleEnabled } from "./config";
+
 export function provideActionBattle(options: ActionBattleOptions = {}): RpgProvider[] {
   return createModule("ActionBattle", [
     {

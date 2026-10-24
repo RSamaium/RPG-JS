@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/chat",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "description": "Official renderer-neutral chat module for RPGJS",
   "main": "dist/client/index.js",
   "types": "dist/client/client-index.d.ts",
@@ -32,10 +32,10 @@
     "@rpgjs/common": "workspace:^",
     "@rpgjs/server": "workspace:^",
     "@rpgjs/vite": "workspace:^",
-    "canvasengine": "^2.4.0"
+    "canvasengine": "^2.4.1"
   },
   "devDependencies": {
-    "@canvasengine/compiler": "2.4.0",
+    "@canvasengine/compiler": "2.4.1",
     "vite": "^8.0.16",
     "vite-plugin-dts": "^5.0.2",
     "vitest": "^4.1.9"

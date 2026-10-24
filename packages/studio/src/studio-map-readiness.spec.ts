@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   beginStudioMapLoading,
+  holdStudioMapReady,
   markStudioMapReady,
   waitForStudioMapReady,
 } from "./studio-map-readiness";
@@ -46,5 +47,32 @@ describe("Studio map readiness", () => {
     markStudioMapReady();
     await waitForStudioMapReady(map);
     expect(ready).toHaveBeenCalledOnce();
+  });
+
+  it("also waits for the parts of the scene that hold the reveal", async () => {
+    const map = { terrainRenderData: {} };
+    const ready = vi.fn();
+    beginStudioMapLoading();
+    const release = holdStudioMapReady();
+    void waitForStudioMapReady(map).then(ready);
+
+    markStudioMapReady();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(ready).not.toHaveBeenCalled();
+
+    release();
+    release();
+    await waitForStudioMapReady(map);
+    expect(ready).toHaveBeenCalledOnce();
+  });
+
+  it("ignores a hold taken after the map is revealed", async () => {
+    const map = { terrainRenderData: {} };
+    beginStudioMapLoading();
+    markStudioMapReady();
+    const release = holdStudioMapReady();
+    await expect(waitForStudioMapReady(map)).resolves.toBeUndefined();
+    expect(() => release()).not.toThrow();
   });
 });

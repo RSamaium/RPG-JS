@@ -33,7 +33,7 @@
                             <div>
                                 <div class="rpg-ui-eyebrow">{t("rpg.menu.status")}</div>
                                 <h1 class="rpg-ui-dossier-name">{heroName()}</h1>
-                                <div class="rpg-ui-dossier-caption">{t("rpg.menu.level") + ' ' + level()}</div>
+                                <div class="rpg-ui-dossier-caption">{t("rpg.menu.level-value", { level: level() })}</div>
                             </div>
                         </div>
                         <div class="rpg-ui-main-menu-status-card">
@@ -46,19 +46,19 @@
                                 <div class="rpg-ui-main-menu-status-value">{gold()}</div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">HP {hp() ?? 0}/{hpMax() ?? 0}</div>
+                                <div class="rpg-ui-main-menu-status-label">{t("rpg.menu.hp-value", { value: hp() ?? 0, max: hpMax() ?? 0 })}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
                                     <div class="rpg-ui-main-menu-status-bar-fill hp" style={{width: hpPercent}}></div>
                                 </div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block">
-                                <div class="rpg-ui-main-menu-status-label">SP {sp() ?? 0}/{spMax() ?? 0}</div>
+                                <div class="rpg-ui-main-menu-status-label">{t("rpg.menu.sp-value", { value: sp() ?? 0, max: spMax() ?? 0 })}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
                                     <div class="rpg-ui-main-menu-status-bar-fill sp" style={{width: spPercent}}></div>
                                 </div>
                             </div>
                             <div class="rpg-ui-main-menu-status-block" style={{gridColumn: "span 2"}}>
-                                <div class="rpg-ui-main-menu-status-label">EXP {exp()}/{expForNextlevel()}</div>
+                                <div class="rpg-ui-main-menu-status-label">{t("rpg.menu.exp-value", { value: exp(), max: expForNextlevel() })}</div>
                                 <div class="rpg-ui-main-menu-status-bar">
                                     <div class="rpg-ui-main-menu-status-bar-fill exp" style={{width: expPercent}}></div>
                                 </div>
@@ -141,6 +141,7 @@
     import { getEntityProp } from "../../../utils/getEntityProp";
     import { delay, Direction } from "@rpgjs/common";
     import { getKeyboardControlBind } from "../../../services/actionInput";
+    import { menuGamepadControls } from "../../../services/gamepadControls";
 
     import { movementPreferences, refreshKeyboardBindings } from "../../../services/movementPreferences";
     import { guiTransition, lockGuiInput } from "../lifecycle";
@@ -253,10 +254,28 @@
             return;
         }
         delay(() => {
+            // The cursor stays on the entry the player came from.
             view.set("menu");
-            const statusIndex = menuEntries().findIndex(entry => entry.id === "status");
-            if (statusIndex >= 0) selectedMenu.set(statusIndex);
         });
+    };
+
+    // Entries that open a panel; "save" (overlay) and "exit" (confirmation) are not tabs.
+    const tabIndexes = computed(() => selectableIndexes().filter((index) => {
+        const id = menuEntries()[index]?.id;
+        return id !== "save" && id !== "exit";
+    }));
+
+    const switchTab = (delta) => {
+        if (saveOverlay() || hotbarAssignmentOpen() || view() === "exit") return;
+        const tabs = tabIndexes();
+        if (!tabs.length) return;
+        const position = tabs.indexOf(selectedMenu());
+        const next = tabs[(Math.max(0, position) + delta + tabs.length) % tabs.length];
+        if (next === selectedMenu() && position >= 0 && tabs.length === 1) return;
+        selectedMenu.set(next);
+        engine.playUiSound("navigate");
+        const id = menuEntries()[next].id;
+        view.set(id === "status" ? "menu" : id);
     };
 
     const openHotbarAssignment = (entry) => {
@@ -349,13 +368,13 @@
 
     const paramsList = computed(() => {
         return [
-            { label: "ATK", value: data().playerStats.atk },
-            { label: "PDEF", value: data().playerStats.pdef },
-            { label: "SDEF", value: data().playerStats.sdef },
-            { label: "STR", value: data().playerStats.str },
-            { label: "DEX", value: data().playerStats.dex },
-            { label: "INT", value: data().playerStats.int },
-            { label: "AGI", value: data().playerStats.agi }
+            { label: t("rpg.stat.atk"), value: data().playerStats.atk },
+            { label: t("rpg.stat.pdef"), value: data().playerStats.pdef },
+            { label: t("rpg.stat.sdef"), value: data().playerStats.sdef },
+            { label: t("rpg.stat.str"), value: data().playerStats.str },
+            { label: t("rpg.stat.dex"), value: data().playerStats.dex },
+            { label: t("rpg.stat.int"), value: data().playerStats.int },
+            { label: t("rpg.stat.agi"), value: data().playerStats.agi }
         ]
     });
 
@@ -388,6 +407,18 @@
                 openMenu();
             }
         },
+        tabPrev: {
+            bind: "page up",
+            keyDown() {
+                switchTab(-1);
+            }
+        },
+        tabNext: {
+            bind: "page down",
+            keyDown() {
+                switchTab(1);
+            }
+        },
         escape: {
             bind: keyboardControls.escape,
             keyDown() {
@@ -403,9 +434,7 @@
                 closeMenu()
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     });
 
     mount((element) => {

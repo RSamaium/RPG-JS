@@ -1,14 +1,14 @@
 <Container scale>
-    <Container alpha={terrainAlpha}>
+    <Container alpha={terrainOpacity}>
       <StudioTerrainMap data debugCollisions={terrainPluginOptions().debugCollisions === true} splitWallForeground={true} />
     </Container>
     <Container sortableChildren={true} pixiChildren={terrainWallShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
-    <Container sortableChildren={true} alpha={elementsAlwaysLowAlpha} pixiChildren={elementsAlwaysLowPixiChildren} />
+    <Container sortableChildren={true} pixiChildren={elementsAlwaysLowPixiChildren} />
     <Container scale={eventLayerScale}>
       <StudioEventLayer pixiChildren={eventLayerPixiChildren} hideEvents={eventsHidden} /> 
     </Container>
-    <Container sortableChildren={true} alpha={elementsHighAlpha} pixiChildren={elementsHighPixiChildren} />
+    <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
 </Container>
 
 @if (weatherOptions()) {
@@ -56,6 +56,7 @@
     import { StudioTerrainWallOcclusionRenderer, StudioTerrainWallShadowRenderer } from '../map-renderer/terrain-renderer/terrain-chunk-renderer'
     import { StudioElementRenderer } from '../map-renderer/studio-element-renderer'
     import { createMapBuilderElementLayer, partitionStudioElements } from '../map-renderer/map-builder-bridge'
+    import { holdStudioMapReady } from '../studio-map-readiness'
     import { toCanvasWeatherOptions } from '@common/weather';
     import { assetsUrl } from "../constants";
     import { createViewportCullKey, getPixiLocalViewportBounds } from '../map-renderer/viewport-culling'
@@ -113,6 +114,23 @@
         ...terrainWallOcclusionChildren(),
         ...eventLayerPluginPixiChildren()
       ]
+    })
+    // `layerOpacity` fades a layer without drawing the map again (map editor opacity view).
+    const readLayerOpacity = (layer) => {
+      const value = Number(data()?.layerOpacity?.[layer])
+      return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1
+    }
+    const terrainOpacity = computed(() => readLayerOpacity('terrain'))
+    effect(() => {
+      elementsAlwaysLowWorld.alpha = readLayerOpacity('elementsAlwaysLow')
+      elementsHighWorld.alpha = readLayerOpacity('elementsHigh')
+      terrainWallShadowWorld.alpha = terrainOpacity()
+    })
+    effect(() => {
+      const alpha = readLayerOpacity('elementsLow')
+      for (const child of elementsLowPixiChildren()) {
+        if (child) child.alpha = alpha
+      }
     })
     const terrainWallOcclusionRenderer = new StudioTerrainWallOcclusionRenderer()
     const terrainWallShadowRenderer = new StudioTerrainWallShadowRenderer()
@@ -188,11 +206,17 @@
       const mapData = data()
       if (!mapData) return
       const currentSerial = ++terrainWallOcclusionSerial
-      const children = await terrainWallOcclusionRenderer.renderMap(mapData)
-      if (currentSerial !== terrainWallOcclusionSerial) return
-      terrainWallOcclusionChildren.set(toEventLayerSpace(children))
-      lastTerrainMorphologyCullKey = ""
-      updateTerrainMorphologyCulling()
+      // The reveal waits for the walls: the mountains must not pop in after it.
+      const releaseReveal = holdStudioMapReady()
+      try {
+        const children = await terrainWallOcclusionRenderer.renderMap(mapData)
+        if (currentSerial !== terrainWallOcclusionSerial) return
+        terrainWallOcclusionChildren.set(toEventLayerSpace(children))
+        lastTerrainMorphologyCullKey = ""
+        updateTerrainMorphologyCulling()
+      } finally {
+        releaseReveal()
+      }
     }
 
     const mapLighting = computed(() => {
@@ -204,12 +228,17 @@
       const mapData = data()
       if (!mapData) return
       const currentSerial = ++terrainWallShadowSerial
-      const children = await terrainWallShadowRenderer.renderMap(mapData, mapLighting())
-      if (currentSerial !== terrainWallShadowSerial) return
-      terrainWallShadowChildren = children
-      syncPixiWorldChildren(terrainWallShadowWorld, terrainWallShadowChildren)
-      lastTerrainMorphologyCullKey = ""
-      updateTerrainMorphologyCulling()
+      const releaseReveal = holdStudioMapReady()
+      try {
+        const children = await terrainWallShadowRenderer.renderMap(mapData, mapLighting())
+        if (currentSerial !== terrainWallShadowSerial) return
+        terrainWallShadowChildren = children
+        syncPixiWorldChildren(terrainWallShadowWorld, terrainWallShadowChildren)
+        lastTerrainMorphologyCullKey = ""
+        updateTerrainMorphologyCulling()
+      } finally {
+        releaseReveal()
+      }
     }
 
     effect(() => {
@@ -562,16 +591,8 @@
       return children
     }
 
-    const layerOpacity = (key) => computed(() => {
-      const value = Number(data().layerOpacity?.[key])
-      return Number.isFinite(value) ? Math.min(1, Math.max(0, value)) : 1
-    })
     // `hideEvents` is a key of the scene data a map extension sets while the map is edited: the events the game runs are not drawn.
     const eventsHidden = computed(() => data().hideEvents === true)
-    const terrainAlpha = layerOpacity('terrain')
-    const elementsAlwaysLowAlpha = layerOpacity('elementsAlwaysLow')
-    const elementsHighAlpha = layerOpacity('elementsHigh')
-    const elementsLowAlpha = layerOpacity('elementsLow')
 
     const mapBounds = computed(() => {
       const mapData = map()
@@ -638,7 +659,6 @@
       elementsAlwaysLowChildren = alwaysLowChildren
       syncPixiWorldChildren(elementsAlwaysLowWorld, elementsAlwaysLowChildren)
       elementsLowPixiChildren.set(toEventLayerSpace(lowChildren))
-      applyLowAlpha()
       syncPixiWorldChildren(groundShadowWorld, [
         ...elementsAlwaysLowRenderer.getGroundShadowSprites(),
         ...elementsLowRenderer.getGroundShadowSprites(),
@@ -648,16 +668,6 @@
       syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
       if (layers) Object.values(layers).forEach((layer) => layer.commit())
     }
-
-    // The low elements share the event layer with the characters, so their opacity is set on each of them.
-    const applyLowAlpha = () => {
-      const alpha = untracked(() => elementsLowAlpha())
-      elementsLowPixiChildren().forEach((child) => { if (child) child.alpha = alpha })
-    }
-    effect(() => {
-      elementsLowAlpha()
-      untracked(applyLowAlpha)
-    })
 
     effect(() => {
       data()

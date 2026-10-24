@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/server",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.1.0",
+  "version": "5.1.1",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
@@ -31,7 +31,7 @@
   "license": "MIT",
   "description": "",
   "dependencies": {
-    "@canvasengine/tiled": "2.4.0",
+    "@canvasengine/tiled": "2.4.1",
     "@rpgjs/common": "workspace:*",
     "@rpgjs/database": "^4.3.0",
     "@rpgjs/physic": "workspace:*",

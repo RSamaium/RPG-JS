@@ -7,6 +7,9 @@ import { configureStudioConstants } from "./constants";
 import type { GameRuntimeMode } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
+import { configureStudioBlockExecutors } from "./block-executor";
+import { configureStudioEnemyInteraction, type StudioEnemyInteractionResolver } from "./enemy-interaction";
+import type { CustomBlockExecutors } from "@common/blocks";
 export {
   StudioStartupError,
   type StudioDirectStartup,
@@ -48,6 +51,9 @@ export {
   createStudioItemWorkflowHooks,
   normalizeStudioItemWorkflowTriggers,
 } from "./item-workflow";
+export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./enemy-interaction";
+export { runStudioEvent } from "./run-event";
+export { runStudioSkillTrigger } from "./skill-workflow";
 export type {
   StudioItemWorkflowHooks,
   StudioItemWorkflowPhase,
@@ -97,6 +103,30 @@ export interface StudioGameModuleConfig {
    */
   resolveStartup?: StudioStartupResolver;
   debugCollisions?: boolean;
+  /**
+   * Block executors of the game. They run in every Studio workflow (events, maps,
+   * items, skills). A key may be a block type the framework does not know, or a
+   * default block type to replace.
+   *
+   * @example
+   * ```ts
+   * provideStudioGame({
+   *   blockExecutors: {
+   *     call_battle: async (context, params) => {
+   *       await context.player.callBattle(params.troopId);
+   *     },
+   *   },
+   * })
+   * ```
+   */
+  blockExecutors?: CustomBlockExecutors;
+  /**
+   * Chooses how an enemy event reacts, evaluated when the event is initialized
+   * (the host can read `map.globalConfig`). Returns `"action"` (default, real-time
+   * `BattleAi`), `"none"` (no AI) or `{ onTouch(player) }` (no AI; called when a
+   * player touches the event, the host may `event.remove()`).
+   */
+  enemyInteraction?: StudioEnemyInteractionResolver;
   studioPlugins?: StudioMapPlugin[];
   /** Authoritative Studio v2 map streaming, or `false` to disable it. */
   streaming?:
@@ -125,6 +155,9 @@ export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvi
     assetsUrl: resolvedAssetsUrl,
     apiUrl: resolvedApiUrl,
   });
+
+  configureStudioBlockExecutors(config.blockExecutors);
+  configureStudioEnemyInteraction(config.enemyInteraction);
 
   configureStudioGameRuntime({
     projectId: config.projectId ?? null,

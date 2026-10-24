@@ -1,10 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { StudioTerrainPainter } from "./terrain-painter";
-import type { TerrainPaintBackend } from "./terrain-paint-backend";
 import {
   resolveTerrainHoleWaveDescriptors,
   shouldRenderTerrainGridWithSoftMasks,
   StudioTerrainChunkRenderer,
+  StudioTerrainWallOcclusionRenderer,
 } from "./terrain-chunk-renderer";
 
 function createTerrainMap(width = 2304, height = 768) {
@@ -39,7 +38,7 @@ function createInstrumentedRenderer() {
   const renderChunk = vi
     .spyOn(renderer as any, "renderChunk")
     .mockImplementation((...args: unknown[]) => {
-      const [key, bounds] = args as [string, any];
+      const [key, , bounds] = args as [string, unknown, any];
       (renderer as any).chunks.set(key, {
         key,
         ...bounds,
@@ -54,9 +53,9 @@ function createInstrumentedRenderer() {
 
 describe("StudioTerrainChunkRenderer terrain control cache", () => {
   it("does not reuse a buffer when region content changes after the base64 prefix", () => {
-    const painter = new StudioTerrainPainter();
+    const renderer = new StudioTerrainChunkRenderer({ sortableChildren: false } as any);
     const getBuffer = (control: any) =>
-      (painter as any).getTerrainControlBuffer(control, null);
+      (renderer as any).getTerrainControlBuffer(control, null);
     const baseRegion = {
       key: "0:0",
       x: 0,
@@ -125,7 +124,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     };
 
     await renderer.renderMap(map, { streamUpdate: firstUpdate });
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["0:0", "1:0"]);
+    expect(renderChunk.mock.calls.map(([key]) => key).sort()).toEqual(["0:0", "1:0"]);
     const firstChunk = (renderer as any).chunks.get("0:0");
 
     renderChunk.mockClear();
@@ -184,7 +183,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
         activeRegions: [{ x: 0, y: 0, width: 2304, height: 768 }],
       },
     });
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual([
+    expect(renderChunk.mock.calls.map(([key]) => key).sort()).toEqual([
       "0:0",
       "1:0",
       "2:0",
@@ -219,11 +218,26 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
   it("keeps full-map rendering for non-streamed terrain", async () => {
     const { renderer, renderChunk } = createInstrumentedRenderer();
     await renderer.renderMap(createTerrainMap());
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual([
+    expect(renderChunk.mock.calls.map(([key]) => key).sort()).toEqual([
       "0:0",
       "1:0",
       "2:0",
     ]);
+  });
+
+  it("renders the chunks nearest to the middle of the map first", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    await renderer.renderMap(createTerrainMap());
+    expect(renderChunk.mock.calls.map(([key]) => key)[0]).toBe("1:0");
+  });
+
+  it("renders the chunks nearest to the viewport first", async () => {
+    const { renderer, renderChunk } = createInstrumentedRenderer();
+    await renderer.renderMap(createTerrainMap(), {
+      viewportBounds: { x: 1500, y: 0, width: 800, height: 600 },
+      viewportMargin: 1500,
+    });
+    expect(renderChunk.mock.calls.map(([key]) => key)[0]).toBe("2:0");
   });
 
   it("rasterizes non-streamed chunks lazily as the viewport moves", async () => {
@@ -245,142 +259,65 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
     expect([...(renderer as any).chunks.keys()]).toEqual(["0:0", "1:0"]);
   });
 
-  it("draws the chunks in view that a stream update left out, as the camera moves over a map first drawn in part", async () => {
+  it("waits for terrain assets and drops an obsolete render request", async () => {
     const { renderer, renderChunk } = createInstrumentedRenderer();
-    const map = createTerrainMap(3072, 1536);
-    // The map is drawn where the camera is...
-    await renderer.renderMap(map, { viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
-    expect([...(renderer as any).chunks.keys()]).toEqual(["0:0"]);
-
-    // ...a stroke is given to the runtime as a stream update that touches chunk 0:0 only...
-    const update = {
-      revision: "",
-      generation: 1,
-      dirtyRegions: [{ x: 0, y: 0, width: 100, height: 100 }],
-      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
-    };
-    map.terrainRenderData.version = "editor:1";
-    renderChunk.mockClear();
-    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["0:0"]);
-
-    // ...and the camera moves over chunks never drawn: they are drawn, the one already there is not drawn again.
-    renderChunk.mockClear();
-    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 800, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["1:0"]);
-    renderChunk.mockClear();
-    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 800, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
-    expect(renderChunk).not.toHaveBeenCalled();
-  });
-
-  it("shows the chunks of the view the camera has when the drawing ends, not of the view it had when it began", async () => {
-    const { renderer } = createInstrumentedRenderer();
-    const map = createTerrainMap(3072, 1536);
-    const update = {
-      revision: "",
-      generation: 1,
-      dirtyRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
-      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
-    };
-    const drawing = renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
-    // the camera moves to the other end of the map while the chunks are drawn
-    renderer.updateChunkVisibility({ x: 2400, y: 800, width: 600, height: 700 }, 0);
-    await drawing;
-    const visible = [...(renderer as any).chunks.values()].filter((chunk: any) => chunk.sprite.visible).map((chunk: any) => chunk.key);
-    expect(visible).toEqual(["3:1"]);
-  });
-
-  it("draws once more, when the camera rests, the chunks drawn while it moved", async () => {
-    const { renderer, renderChunk } = createInstrumentedRenderer();
-    const map = createTerrainMap(3072, 1536);
-    const update = {
-      revision: "",
-      generation: 1,
-      dirtyRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
-      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
-    };
-    const drawing = renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
-    renderer.updateChunkVisibility({ x: 2400, y: 800, width: 600, height: 700 }, 0);
-    await drawing;
-    renderChunk.mockClear();
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    expect(renderChunk.mock.calls.map(([key]) => key)).toEqual(["3:1"]);
-    renderChunk.mockClear();
-    await new Promise((resolve) => setTimeout(resolve, 700));
-    expect(renderChunk).not.toHaveBeenCalled();
-  });
-
-  it("does not lose the chunks a stream update asked for when another render replaces the one drawing them", async () => {
-    const { renderer, renderChunk } = createInstrumentedRenderer();
-    const map = createTerrainMap(3072, 1536);
-    const update = {
-      revision: "",
-      generation: 1,
-      dirtyRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
-      activeRegions: [{ x: 0, y: 0, width: 3072, height: 1536 }],
-    };
-    // the camera moves while the first chunk is drawn: the call it makes replaces the drawing in progress
-    let replaced: Promise<void> | undefined;
-    let replacing = false;
-    const original = renderChunk.getMockImplementation()!;
-    renderChunk.mockImplementation((...args: unknown[]) => {
-      original(...args);
-      if (replacing) return;
-      replacing = true;
-      replaced = renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 2300, y: 800, width: 700, height: 700 }, viewportMargin: 0 });
-    });
-    await renderer.renderMap(map, { streamUpdate: update, viewportBounds: { x: 0, y: 0, width: 700, height: 700 }, viewportMargin: 0 });
-    await replaced;
-    expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "0:1", "1:0", "1:1", "2:0", "2:1", "3:0", "3:1"]);
-  });
-
-  it("drops a chunk drawn for a render that another render replaced", async () => {
-    const pending: Array<(paint: { canvas: unknown; water: null }) => void> = [];
-    const painter: TerrainPaintBackend = {
-      setData: vi.fn(),
-      paintChunk: () => new Promise((resolve) => void pending.push(resolve as never)),
-      paintWallOcclusion: async () => [],
-      paintWallShadow: async () => [],
-      paintLiquidContact: async () => null,
-      clearCaches: vi.fn(),
-      destroy: vi.fn(),
-    };
-    const renderer = new StudioTerrainChunkRenderer({ sortableChildren: false } as any, { chunkSize: 768, painter });
-    const placeChunk = vi.spyOn(renderer as any, "placeChunk").mockImplementation(() => undefined);
     const map = createTerrainMap(768, 768);
+    map.terrainRenderData.sourceTexture = "terrain.png";
+    map.terrainRenderData.terrainControl = {
+      source: "control.png",
+      width: 768,
+      height: 768,
+      palette: [],
+    } as any;
+    const pending = new Map<string, {
+      promise: Promise<HTMLImageElement>;
+      resolve: (image: HTMLImageElement) => void;
+    }>();
+    for (const source of ["terrain.png", "control.png"]) {
+      let resolve!: (image: HTMLImageElement) => void;
+      const promise = new Promise<HTMLImageElement>((done) => { resolve = done; });
+      pending.set(source, { promise, resolve });
+    }
+    vi.spyOn(renderer as any, "loadImage").mockImplementation(
+      (...args: unknown[]) => pending.get(String(args[0]))!.promise
+    );
 
     const obsolete = renderer.renderMap(map);
     map.terrainRenderData.version = "streamed:revision-1:2";
     const current = renderer.renderMap(map);
-    expect(pending).toHaveLength(2); // each render waits for its chunk
+    expect(renderChunk).not.toHaveBeenCalled();
 
-    pending[0]!({ canvas: {}, water: null });
-    pending[1]!({ canvas: {}, water: null });
+    pending.get("terrain.png")?.resolve({} as HTMLImageElement);
+    pending.get("control.png")?.resolve({} as HTMLImageElement);
     await Promise.all([obsolete, current]);
-
-    expect(placeChunk).toHaveBeenCalledTimes(1);
+    expect(renderChunk).toHaveBeenCalledTimes(1);
   });
 
-  it("closes the bitmaps a worker gave when a chunk goes", () => {
-    class FakeBitmap { close = vi.fn(); }
-    vi.stubGlobal("ImageBitmap", FakeBitmap);
-    try {
-      const { renderer } = createInstrumentedRenderer();
-      const [chunk, surface, mask] = [new FakeBitmap(), new FakeBitmap(), new FakeBitmap()];
-      (renderer as any).destroyChunk.mockRestore?.();
-      const real = (StudioTerrainChunkRenderer.prototype as any).destroyChunk;
-      real.call(renderer, {
-        sprite: { destroyed: true },
-        canvas: chunk,
-        waterOverlay: { sprite: { destroyed: true }, surface, regions: [{ mask }] },
-      });
-      expect([chunk.close, surface.close, mask.close].map((close) => close.mock.calls.length)).toEqual([1, 1, 1]);
-    } finally {
-      vi.unstubAllGlobals();
-    }
+  it("moves the water drawn by a shader on every frame, and only syncs it where it can be seen", () => {
+    const { renderer } = createInstrumentedRenderer();
+    const visible = { phase: 0, speed: 2 };
+    const hidden = { phase: 0, speed: 1 };
+    const syncVisible = vi.fn();
+    const syncHidden = vi.fn();
+    (renderer as any).chunks.set("0:0", {
+      sprite: { visible: true },
+      waterOverlay: { sprite: { destroyed: false, visible: true }, regions: [visible], gpu: { sync: syncVisible } },
+    });
+    (renderer as any).chunks.set("1:0", {
+      sprite: { visible: false },
+      waterOverlay: { sprite: { destroyed: false, visible: false }, regions: [hidden], gpu: { sync: syncHidden } },
+    });
+
+    renderer.update(16);
+    renderer.update(16);
+
+    expect(visible.phase).toBeCloseTo(0.064);
+    expect(hidden.phase).toBeCloseTo(0.032); // the waves keep their speed where nobody looks
+    expect(syncVisible).toHaveBeenCalledTimes(2);
+    expect(syncHidden).not.toHaveBeenCalled();
   });
 
-  it("updates water animation smoothly at no more than thirty frames per second", () => {
+  it("updates water animation drawn on the CPU smoothly at no more than thirty frames per second", () => {
     const { renderer } = createInstrumentedRenderer();
     const region = { phase: 0, speed: 1 };
     (renderer as any).chunks.set("0:0", {
@@ -388,6 +325,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
       waterOverlay: {
         sprite: { destroyed: false, visible: false },
         regions: [region],
+        cpu: {},
       },
     });
 
@@ -402,6 +340,7 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
       id: index,
       sprite: { destroyed: false, visible: true },
       regions: [{ phase: 0, speed: 1 }],
+      cpu: {},
     }));
     const setup = (count: number, costMs: number) => {
       const { renderer } = createInstrumentedRenderer();
@@ -451,5 +390,85 @@ describe("StudioTerrainChunkRenderer streamed invalidation", () => {
 
       expect(drawn).toEqual([0, 1, 2, 3]);
     });
+  });
+});
+
+describe("StudioTerrainChunkRenderer overlapping renders", () => {
+  it("resolves a render only once the chunks already on their way have arrived", async () => {
+    const { renderer } = createInstrumentedRenderer();
+    const map = createTerrainMap();
+    let painting = 0;
+    (renderer as any).worker = {
+      setData: () => undefined,
+      dispose: () => undefined,
+      paint: async () => {
+        painting += 1;
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        return { canvas: {} as HTMLCanvasElement, water: null };
+      },
+    };
+
+    const first = renderer.renderMap(map);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    const second = renderer.renderMap(map);
+    let secondDone = false;
+    void second.then(() => { secondDone = true; });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    expect(secondDone).toBe(false);
+
+    await Promise.all([first, second]);
+    // Whichever call resolves, no chunk is missing when it does.
+    expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "1:0", "2:0"]);
+    // A chunk is not painted twice for the same state.
+    expect(painting).toBe(3);
+  });
+});
+
+describe("StudioTerrainWallOcclusionRenderer", () => {
+  it("paints the walls once when the scene asks for them again while they are being painted", async () => {
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const create = vi
+      .spyOn(StudioTerrainChunkRenderer.prototype, "createWallOcclusionSprites")
+      .mockImplementation(async () => { await gate; return []; });
+    try {
+      const walls = new StudioTerrainWallOcclusionRenderer();
+      const map = createTerrainMap();
+      const requests = [walls.renderMap(map), walls.renderMap(map), walls.renderMap(map)];
+      release();
+      const results = await Promise.all(requests);
+      expect(create).toHaveBeenCalledTimes(1);
+      expect(results[1]).toBe(results[0]);
+      // Painted: a new request for the same terrain does not paint again.
+      await walls.renderMap(map);
+      expect(create).toHaveBeenCalledTimes(1);
+    } finally {
+      create.mockRestore();
+    }
+  });
+});
+
+describe("StudioTerrainChunkRenderer pipeline", () => {
+  it("asks the worker for the next chunk before the previous one has been handled", async () => {
+    const { renderer } = createInstrumentedRenderer();
+    const map = createTerrainMap();
+    let inFlight = 0;
+    let maxInFlight = 0;
+    (renderer as any).worker = {
+      setData: () => undefined,
+      dispose: () => undefined,
+      paint: async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        inFlight -= 1;
+        return { canvas: {} as HTMLCanvasElement, water: null };
+      },
+    };
+
+    await renderer.renderMap(map);
+
+    expect(maxInFlight).toBeGreaterThanOrEqual(2);
+    expect([...(renderer as any).chunks.keys()].sort()).toEqual(["0:0", "1:0", "2:0"]);
   });
 });

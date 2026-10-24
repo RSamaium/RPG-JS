@@ -12,6 +12,8 @@ import {
   createStudioTerrainRenderData,
   normalizeMorphologyFeatures,
 } from "./map-renderer";
+import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
+import { collectEmbeddedMedia, isHydratedMedia } from "./media-reference";
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
 import { assignStudioEventPlacementIds } from "./event-placement";
@@ -376,10 +378,23 @@ export const loadMap = async (mapId: string) => {
     return [parsedValue];
   };
 
+  // The tilesets the map carries whole answer the ids that name them (`primaryElementTileset`, `primaryTerrainTileset`).
+  const embeddedMedia = collectEmbeddedMedia(
+    params,
+    ['elementTilesets', 'terrainTilesets'],
+    ['tileset', 'baseTerrain'],
+  );
+
   const resolveMediaReference = async (value: unknown): Promise<any> => {
     const parsedValue = parseJsonValue(value);
+    if (typeof parsedValue === 'string' || (parsedValue && typeof parsedValue === 'object' && !isHydratedMedia(parsedValue))) {
+      const id = typeof parsedValue === 'string' ? parsedValue.trim().replace(/^#/, '') : extractMediaReferenceId(parsedValue);
+      const embedded = id ? embeddedMedia.get(id) : undefined;
+      if (embedded) return embedded;
+    }
     if (parsedValue === undefined || parsedValue === null) return parsedValue;
     if (typeof parsedValue === 'object') {
+      if (isHydratedMedia(parsedValue)) return parsedValue;
       const referenceId = extractMediaReferenceId(parsedValue);
       if (!referenceId) return parsedValue;
       const candidateIds = Array.from(
@@ -493,21 +508,40 @@ export const loadMap = async (mapId: string) => {
     return "";
   };
 
-  params.tileset = await resolveMediaReference(params.tileset);
-  params.primaryElementTileset = await resolveMediaReference(params.primaryElementTileset);
-  params.baseTerrain = await resolveMediaReference(params.baseTerrain);
-  params.primaryTerrainTileset = await resolveMediaReference(params.primaryTerrainTileset);
-  params.elementTilesets = await resolveMediaList(params.elementTilesets);
-  params.terrainTilesets = await resolveMediaList(params.terrainTilesets);
-
-  params.backgroundMusic = await resolveAudioSource(params.backgroundMusic);
-  params.backgroundAmbientSound = await resolveAudioSource(params.backgroundAmbientSound);
-
-  const resolvedMapEvents = assignStudioEventPlacementIds(await hydrateEventMediaReferences(
-    await resolveMapEventReferences(mapResponse.events, {
-      useLocalBundleEvents,
-    })
-  ));
+  // These requests do not depend on one another: they run together instead of one round trip after the other.
+  const [
+    r_tileset,
+    r_primaryElementTileset,
+    r_baseTerrain,
+    r_primaryTerrainTileset,
+    r_elementTilesets,
+    r_terrainTilesets,
+    r_backgroundMusic,
+    r_backgroundAmbientSound,
+    resolvedMapEvents,
+  ] = await Promise.all([
+    resolveMediaReference(params.tileset),
+    resolveMediaReference(params.primaryElementTileset),
+    resolveMediaReference(params.baseTerrain),
+    resolveMediaReference(params.primaryTerrainTileset),
+    resolveMediaList(params.elementTilesets),
+    resolveMediaList(params.terrainTilesets),
+    resolveAudioSource(params.backgroundMusic),
+    resolveAudioSource(params.backgroundAmbientSound),
+    hydrateEventMediaReferences(
+      await resolveMapEventReferences(mapResponse.events, {
+        useLocalBundleEvents,
+      })
+    ).then(assignStudioEventPlacementIds),
+  ]);
+  params.tileset = r_tileset;
+  params.primaryElementTileset = r_primaryElementTileset;
+  params.baseTerrain = r_baseTerrain;
+  params.primaryTerrainTileset = r_primaryTerrainTileset;
+  params.elementTilesets = r_elementTilesets;
+  params.terrainTilesets = r_terrainTilesets;
+  params.backgroundMusic = r_backgroundMusic;
+  params.backgroundAmbientSound = r_backgroundAmbientSound;
   // Merge polygons with hitboxes to create polygon-based hitboxes
   const mergedHitboxes = [...(mapResponse.hitboxes ?? [])];
   
@@ -1004,6 +1038,15 @@ export const loadMap = async (mapId: string) => {
     ...map,
     terrainByTileset,
   }) : null;
+  if (terrainRenderData) {
+    // The terrain workers can fetch the atlas while the rest of the map loads.
+    TerrainWorkerClient.prefetchImages([
+      terrainRenderData.sourceTexture,
+      terrainRenderData.terrainControl && !terrainRenderData.terrainControl.regions?.length
+        ? terrainRenderData.terrainControl.source
+        : null,
+    ]);
+  }
   const allHitboxes = [
     ...(Array.isArray(finalHitboxes) ? finalHitboxes : []),
     ...terrainCollisionPolygons,

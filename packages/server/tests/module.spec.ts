@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, test, expect, vi } from 'vitest'
 import { testing, type TestingFixture } from '@rpgjs/testing'
 import { defineModule, createModule, RpgModule } from '@rpgjs/common'
+import { Context } from '@signe/di'
 import { provideServerModules, RpgPlayer, RpgServer } from '../src'
 import { RpgClient } from '../../client/src'
 
@@ -74,7 +75,7 @@ test('decorated v4 modules and native v5 modules preserve hook order', async () 
   })
 
   const provider = provideServerModules([LegacyModule, nativeModule]) as any
-  const hooks = provider.useFactory({ values: {} })
+  const hooks = provider.useFactory(new Context())
   await new Promise<void>((resolve, reject) => {
     hooks.callHooks('server-player-onConnected', {}).subscribe({
       complete: resolve,

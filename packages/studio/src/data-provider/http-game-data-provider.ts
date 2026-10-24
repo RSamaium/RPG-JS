@@ -5,12 +5,51 @@ import type {
   ProjectQuery,
 } from './types';
 
+/**
+ * Answers of the API, shared by every copy of this module in the page. In a standalone game the server
+ * and the client are bundled apart but run together, and both ask for the same project, database,
+ * map and media. A request is shared while it is on its way and, where the client has asked for it with
+ * `keepStudioApiAnswers()`, for a few seconds after its answer, then forgotten: the cache never outlives the
+ * start-up, and a new page always reads the API again. A server process lives for long and re-reads a project
+ * that was published, so it keeps nothing after an answer.
+ */
+const SHARED_ANSWER_MS = 10_000;
+type SharedAnswer = { promise: Promise<any>; expiresAt: number };
+const KEEP_ANSWERS = Symbol.for("rpgjs.studio.keep-api-answers");
+
+/** Called by the client of a page: its answers may be reused for a few seconds, whichever copy of the module asks. */
+export const keepStudioApiAnswers = (enabled = true): void => {
+  (globalThis as any)[KEEP_ANSWERS] = enabled;
+};
+
+const sharedAnswers: Map<string, SharedAnswer> = ((globalThis as any)[Symbol.for("rpgjs.studio.api-answers")] ??= new Map());
+
 const fetchJson = async (url: string, label: string): Promise<any> => {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`[HttpGameDataProvider] ${label} failed (${response.status}) for ${url}`);
+  let shared = sharedAnswers.get(url);
+  if (shared && shared.expiresAt <= Date.now()) {
+    sharedAnswers.delete(url);
+    shared = undefined;
   }
-  return response.json();
+  if (!shared) {
+    const entry: SharedAnswer = {
+      promise: (async () => {
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`[HttpGameDataProvider] ${label} failed (${response.status}) for ${url}`);
+        }
+        return response.json();
+      })(),
+      expiresAt: Infinity,
+    };
+    sharedAnswers.set(url, entry);
+    entry.promise.then(
+      () => { entry.expiresAt = Date.now() + ((globalThis as any)[KEEP_ANSWERS] ? SHARED_ANSWER_MS : 0); },
+      () => { if (sharedAnswers.get(url) === entry) sharedAnswers.delete(url); },
+    );
+    shared = entry;
+  }
+  // Every caller gets its own copy: they change what they receive (resolved media, normalized events).
+  return structuredClone(await shared.promise);
 };
 
 const getStudioApiKey = (): string | null => {
@@ -75,6 +114,43 @@ export class HttpGameDataProvider implements GameDataProvider {
 
   getMedia(mediaId: string): Promise<any> {
     return fetchJson(`${this.config.apiBaseUrl}/game/media/${mediaId}`, 'media query');
+  }
+
+  /** The most media the API answers in one request (`/game/media?ids=`); a longer list is asked in several. */
+  static readonly MEDIA_BATCH_SIZE = 100;
+
+  async getMediaMany(mediaIds: string[]): Promise<any[]> {
+    const ids = [...new Set(mediaIds.filter(Boolean))];
+    const slices: string[][] = [];
+    for (let start = 0; start < ids.length; start += HttpGameDataProvider.MEDIA_BATCH_SIZE) {
+      slices.push(ids.slice(start, start + HttpGameDataProvider.MEDIA_BATCH_SIZE));
+    }
+    const answers = await Promise.all(
+      slices.map((slice) =>
+        fetchJson(
+          `${this.config.apiBaseUrl}/game/media?ids=${slice.map(encodeURIComponent).join(',')}`,
+          'media batch query',
+        ),
+      ),
+    );
+    return answers.flat().filter((media) => media && typeof media === 'object');
+  }
+
+  async getMediaGroupMany(mediaIds: string[]): Promise<Record<string, any[]>> {
+    const ids = [...new Set(mediaIds.filter(Boolean))];
+    const slices: string[][] = [];
+    for (let start = 0; start < ids.length; start += HttpGameDataProvider.MEDIA_BATCH_SIZE) {
+      slices.push(ids.slice(start, start + HttpGameDataProvider.MEDIA_BATCH_SIZE));
+    }
+    const answers = await Promise.all(
+      slices.map((slice) =>
+        fetchJson(
+          `${this.config.apiBaseUrl}/game/animations?ids=${slice.map(encodeURIComponent).join(',')}`,
+          'character animations batch query',
+        ),
+      ),
+    );
+    return Object.assign({}, ...answers.filter((answer) => answer && typeof answer === 'object' && !Array.isArray(answer)));
   }
 
   getMediaGroup(mediaId: string): Promise<any[]> {

@@ -44,6 +44,7 @@
     import { PrebuiltGui } from "@rpgjs/common";
     import { RpgGui } from "../../Gui/Gui";
     import { getKeyboardControlBind } from "../../services/actionInput";
+    import { menuGamepadControls } from "../../services/gamepadControls";
 
     const engine = inject(RpgClientEngine);
     const { t } = engine.i18n();
@@ -223,9 +224,7 @@
                 closeSaveLoad();
             }
         },
-        gamepad: {
-            enabled: true
-        }
+        gamepad: menuGamepadControls
     });
 
     mount((element) => {
