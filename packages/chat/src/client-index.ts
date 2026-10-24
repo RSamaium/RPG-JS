@@ -32,6 +32,7 @@ export type {
   ResolvedChatClientOptions,
 } from "./client-types";
 export type {
+  ChatAudience,
   ChatChannel,
   ChatErrorPayload,
   ChatMessage,

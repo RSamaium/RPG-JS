@@ -12,19 +12,25 @@ export {
   CHAT_SEND_EVENT,
 } from "./config";
 export { normalizeChatServerOptions } from "./server-config";
+export { defineChatChannel, globalChannel, mapChannel } from "./channels";
 export {
   createChatHandler,
   createChatServer,
 };
 export type {
+  ChatChannelDefinition,
+  ChatContext,
   ChatMapLike,
+  ChatMiddleware,
   ChatModerationContext,
   ChatPlayerLike,
   ChatRateLimitOptions,
+  ChatRejectedInfo,
   ChatServerOptions,
   ResolvedChatServerOptions,
 } from "./server-types";
 export type {
+  ChatAudience,
   ChatChannel,
   ChatErrorPayload,
   ChatMessage,

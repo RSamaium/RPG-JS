@@ -19,6 +19,7 @@ export {
 } from "./config";
 export { normalizeChatClientOptions } from "./client-config";
 export { normalizeChatServerOptions } from "./server-config";
+export { defineChatChannel, globalChannel, mapChannel } from "./channels";
 export {
   addChatMessage,
   chatClientOptions,

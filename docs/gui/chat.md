@@ -101,27 +101,34 @@ export default createServer({
 ```
 
 Map chat is enabled by default. A map message is broadcast only to players in
-the sender's current map. An omitted channel defaults to `map`; any explicitly
-supplied value other than `map` or `global` is rejected.
+the sender's current map. An omitted channel defaults to `map` (or to the first
+channel when the game has no map chat); any value that is not one of the
+declared channels is rejected. See [Channels](#channels) to add more.
 
 ### Server options and hooks
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `channels` | `['map']` | Accepted channels: `map`, `global`, or both. |
+| `channels` | `['map']` | The channels of the game: the built-in `'map'` and `'global'`, or definitions made with `defineChatChannel()`. |
 | `maxLength` | `180` | Maximum normalized message length. |
 | `rateLimit` | 5 messages / 10 seconds | Per-player rate limit; use `false` to disable it. |
 | `formatAuthor(player)` | Player name or `Player {id}` | Builds the trusted display name on the server. |
 | `beforeSend(context)` | — | Rejects with `false`, or returns the text that should be broadcast. May be async. |
-| `afterSend(message, player)` | — | Runs after a successful broadcast. Useful for audit, metrics, or automated replies. May be async. |
-| `broadcastGlobal(message, player)` | — | Required adapter when `global` is enabled. |
+| `middleware` | `[]` | Moderation steps that can rewrite or refuse a message with their own error key. See [Middleware](#middleware). |
+| `deliver(audience, message, player)` | — | Carries a message to an audience that is not the sender's map: everybody, or a group. Required for `global` and custom channels. |
+| `afterSend(message, player)` | — | Runs after a successful delivery. Useful for audit, metrics, or automated replies. May be async. |
+| `onRejected(info)` | — | Runs when a message was refused, by the module or by a middleware. A failure of the hook is ignored. |
+| `broadcastGlobal(message, player)` | — | Legacy adapter of the `global` channel. `deliver` is the canonical option and wins when both are given. |
 
 The hook order is:
 
 ```text
-normalize → length/rate validation → beforeSend → construct ChatMessage
-→ broadcast → afterSend
+normalize → length → channel and canSend → rate limit → beforeSend → middleware
+→ construct ChatMessage → deliver (or the map broadcast) → afterSend
 ```
+
+A message refused at any step sends the player the error `chat:error` and calls
+`onRejected`.
 
 ### Moderation example
 
@@ -153,17 +160,60 @@ provideChat({
 
 Clients never choose the accepted author, player ID, map ID, or timestamp.
 
-## Global chat
+## Channels
 
-Global chat is opt-in because the correct broadcast mechanism depends on the
-deployment topology. Enable the channel and provide an adapter:
+A channel is a place where players talk. The server owns who may write on it
+and who receives what is written: the client only asks for a channel id.
+`map` and `global` are built in. Declare any other channel with
+`defineChatChannel()`:
+
+```ts
+import { defineChatChannel, provideChat } from '@rpgjs/chat/server'
+
+const guild = defineChatChannel({
+  id: 'guild',
+  label: 'game.chat.guild', // a translation key or plain text
+  color: 'violet',
+  canSend: (player) => guildOf(player) !== undefined,
+  audience: (message, player) => ({ type: 'group', id: guildOf(player)! }),
+})
+
+provideChat({
+  server: {
+    channels: ['map', 'global', guild],
+    async deliver(audience, message, player) {
+      if (audience.type === 'group') await guildBus.publish(audience.id, message)
+      else await applicationChatBus.publish(message, { senderId: player.id })
+    },
+  },
+})
+```
+
+| Field | Description |
+| --- | --- |
+| `id` | Letters, digits and dashes. It travels in the messages. |
+| `label` | Translation key or plain text shown by the channel selector. |
+| `color` | `slate` (default), `amber`, `violet`, `emerald`, `rose` or `sky`. |
+| `canSend(player)` | Who may write. Everybody when missing. |
+| `audience(message, player)` | `{ type: 'map' }`, `{ type: 'global' }` or `{ type: 'group', id }`. Default: the map for `map`, everybody for `global`. A channel with another id must give it. |
+
+The audience `map` is broadcast by the module. Any other audience is carried by
+`deliver`, which is responsible for reaching all intended clients, including
+clients hosted by another room, process, or edge location. A channel whose
+audience cannot be delivered (no `deliver`) refuses the message. Giving the same
+`channels` to the client shows the selector (see [Client options](#client-options)).
+
+### Global chat
+
+Global chat is opt-in because the correct delivery mechanism depends on the
+deployment topology. Enable the channel and provide `deliver`:
 
 ```ts
 provideChat({
   server: {
     channels: ['map', 'global'],
 
-    async broadcastGlobal(message, player) {
+    async deliver(audience, message, player) {
       await applicationChatBus.publish(message, {
         senderId: player.id,
       })
@@ -172,8 +222,41 @@ provideChat({
 })
 ```
 
-The adapter is responsible for delivering the message to all intended clients,
-including clients hosted by another room, process, or edge location.
+The legacy `broadcastGlobal(message, player)` option still works for the
+`global` channel; use `deliver` in new code.
+
+## Middleware
+
+`middleware` is the place for moderation: mutes, filters, anti-spam, or an
+external classifier. Each step receives the message and `next()`:
+
+```ts
+provideChat({
+  server: {
+    middleware: [
+      async (context, next) => {
+        if (isMuted(context.player)) context.reject('game.chat.error.muted', { minutes: 10 })
+        context.text = filterBlockedWords(context.text)
+        await next()
+      },
+    ],
+    onRejected({ player, key }) {
+      audit('chat refused', player.id, key)
+    },
+  },
+})
+```
+
+| Member of the context | Description |
+| --- | --- |
+| `player` | The sender. |
+| `channel` | The `ChatChannelDefinition` of the message. |
+| `text` | The normalized text. Rewriting it changes what the players read. |
+| `meta` | Data shared by the steps of this message. |
+| `reject(key, params?)` | Refuses the message: the player gets this error key (translate it in the game) and nothing is shown. |
+
+The steps run in order, around the delivery. A step that neither calls `next()`
+nor refuses refuses the message. `beforeSend` keeps working and runs first.
 
 ## Client API
 
@@ -199,7 +282,7 @@ interface ChatMessage {
   text: string
   author: string
   playerId: string
-  channel: 'map' | 'global'
+  channel: string // 'map', 'global' or a channel id of the game
   mapId?: string
   createdAt: number
 }
