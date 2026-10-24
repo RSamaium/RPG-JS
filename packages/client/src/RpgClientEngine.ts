@@ -896,8 +896,12 @@ export class RpgClientEngine<T = any> {
       this.hooks.callHooks("client-engine-onConnectionClosed", this, info).subscribe();
     };
 
-    this.webSocket.on('close', () => {
+    this.webSocket.on('close', (event: any) => {
       this.localeConnected = false;
+      // `onDisconnect` is the documented hook of a module. `onDisconnected` is the name this engine used to fire,
+      // which no declared hook matched: it keeps working for the modules that already use it.
+      const reason = typeof event?.reason === "string" ? event.reason : "";
+      this.hooks.callHooks("client-engine-onDisconnect", this, reason, this.socket).subscribe();
       this.hooks.callHooks("client-engine-onDisconnected", this, this.socket).subscribe();
       // Stop ping/pong when disconnected
       this.stopPingPong();
