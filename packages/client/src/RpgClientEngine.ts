@@ -258,6 +258,8 @@ export class RpgClientEngine<T = any> {
   private onAfterLoadingSubscription?: any;
   private sceneResetQueued = false;
   private mapTransitionInProgress = false;
+  /** True until the destination room's first local-player position (spawn / changeMap target) is applied. */
+  private awaitingTransferSpawnSync = false;
   private currentMapRoomId?: string;
   private activeMapStreamController?: { attach(map: RpgClientMap): void; detach(): void };
   private socketListenersInitialized = false;
@@ -731,6 +733,15 @@ export class RpgClientEngine<T = any> {
       if (patch?.knockbackActive === true) currentPlayer?.knockbackActive?.set(true);
       return { payload, serverDrivenMovement: true };
     }
+    // The destination room's first position is a teleport, not a prediction drift: apply it right away.
+    // Queuing it behind pending inputs (movement continued across the transfer) leaves the sprite and
+    // the camera on the source map's coordinates until the next acknowledged step.
+    if (this.awaitingTransferSpawnSync && Number.isFinite(patch?.x) && Number.isFinite(patch?.y)) {
+      this.awaitingTransferSpawnSync = false;
+      this.prediction?.clearPendingInputs();
+      this.pendingPredictionFrames = [];
+      return { payload, serverDrivenMovement: true };
+    }
     if (this.predictionEnabled && this.prediction) {
       const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
       const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
@@ -899,6 +910,7 @@ export class RpgClientEngine<T = any> {
       ? this.latestDirectionalInput
       : undefined;
     this.mapTransitionInProgress = true;
+    this.awaitingTransferSpawnSync = true;
     this.currentMapRoomId = nextMapId;
     this.sceneResetQueued = false;
     this.clearMapTransferPredictionStates();
