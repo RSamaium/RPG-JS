@@ -77,6 +77,17 @@ export const withGraphicDisplayScale = (spritesheet: any, scale: unknown): any =
   };
 };
 
+/**
+ * Drops the graphics the engine could not resolve to a spritesheet (`getSpriteSheet` gives
+ * `undefined`/`null` for an id nobody registered, e.g. the default graphic of a player the server
+ * has not given its real graphic yet). The sprite is drawn once an id resolves.
+ */
+export const keepResolvedSheets = (sheets: unknown): any[] => {
+  return Array.isArray(sheets)
+    ? sheets.filter((sheet) => sheet !== null && typeof sheet === "object")
+    : [];
+};
+
 export const appendFramePayload = (current: unknown, items: unknown): Frame[] => {
   const frameItems = Array.isArray(items) ? items : items ? [items] : [];
   const nextFrames = frameItems.flatMap((item): Frame[] =>
@@ -165,7 +176,7 @@ export abstract class RpgClientObject extends RpgCommonPlayer {
       })
     )
     .subscribe((sheets) => {  
-      this.graphicsSignals.set(sheets);
+      this.graphicsSignals.set(keepResolvedSheets(sheets));
     });
 
     engine.tick
