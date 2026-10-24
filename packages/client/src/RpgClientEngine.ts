@@ -879,6 +879,10 @@ export class RpgClientEngine<T = any> {
       this.startPingPong();
     })
 
+    this.webSocket.connectionClosedHandler = (info) => {
+      this.hooks.callHooks("client-engine-onConnectionClosed", this, info).subscribe();
+    };
+
     this.webSocket.on('close', () => {
       this.localeConnected = false;
       this.hooks.callHooks("client-engine-onDisconnected", this, this.socket).subscribe();
