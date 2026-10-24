@@ -188,6 +188,15 @@ function resolveUrlFromSocketRequest(request: RpgWebSocketRequestLike): {
   };
 }
 
+/**
+ * Names of the query parameters of a WebSocket request, for logs. The values are never
+ * logged: the query carries application bearer tokens, the transfer token of a map change
+ * and the private session key (`_pk`) of the connection.
+ */
+function describeQueryParameterNames(searchParams: URLSearchParams): string {
+  return [...new Set(searchParams.keys())].sort().join(", ") || "(none)";
+}
+
 function ensureNodeSessionIdQuery(url: URL): URL {
   if (!url.searchParams.has("id")) {
     const partySocketId = url.searchParams.get("_pk");
@@ -401,8 +410,7 @@ export class RpgServerTransport {
     try {
       console.log(`WebSocket upgrade request: ${normalizedRequest.url.pathname}`);
 
-      const queryParams = Object.fromEntries(normalizedRequest.url.searchParams.entries());
-      console.log(`Room: ${route.roomId}, Query params:`, queryParams);
+      console.log(`Room: ${route.roomId}, Query parameters: ${describeQueryParameterNames(normalizedRequest.url.searchParams)}`);
       this.lastKnownHost = normalizedRequest.url.host;
       ensureNodeSessionIdQuery(normalizedRequest.url);
       const connection = await this.transport.acceptWebSocket(
