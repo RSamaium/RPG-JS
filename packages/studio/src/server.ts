@@ -1026,6 +1026,17 @@ export default (_config?: unknown) => {
       };
     }
 
+    if (startup.flow === "new-game") {
+      return {
+        ...config,
+        projectId,
+        startMapId: startup.startMapId,
+        autoStart: true,
+        displayTitleScreen: false,
+        skipCharacterSelect: false,
+      };
+    }
+
     const mapId = startup.mapId?.trim();
     if (!mapId) {
       throw new StudioStartupError("MAP_REQUIRED", "Direct Studio startup requires a mapId");
