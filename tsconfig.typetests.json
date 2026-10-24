@@ -29,6 +29,7 @@
     "packages/action-battle/src/public-api-types.spec.ts",
     "packages/client/src/public-api-types.spec.ts",
     "packages/common/src/foundation.spec.ts",
+    "packages/script/src/public-api-types.spec.ts",
     "packages/server/tests/server-api-types.spec.ts"
   ]
 }
