@@ -31,7 +31,7 @@ export interface AccountStorage {
   removeItem(key: string): void;
 }
 
-export interface AccountClientOptions {
+export interface AccountClientBaseOptions {
   /** Displayed game title (application-owned, optionally localized). */
   title?: string;
   /** Short introduction below the game title. */
@@ -49,7 +49,12 @@ export interface AccountClientOptions {
   /** Reset token supplied by the application's email-link routing. Never persisted. */
   resetToken?: string;
   signIn: (credentials: AccountCredentials) => Promise<AccountAuthResult>;
-  signUp: (credentials: AccountRegistrationCredentials) => Promise<AccountAuthResult>;
+  /**
+   * Close codes that end the player's session: the account screen comes back with a notice (`rpg.account.session-ended`).
+   * Defaults to `[4401]`, the code a server uses with `conn.close(4401, "Authentication required")` for a banned or
+   * revoked session. Pass `[]` to leave the connection closes to the game (`onConnectionClosed`).
+   */
+  sessionEndCodes?: readonly number[];
   storageKey?: string;
   storage?: AccountStorage;
   guiId?: string;
@@ -58,16 +63,29 @@ export interface AccountClientOptions {
   autoOpen?: boolean;
 }
 
-export interface ResolvedAccountClientOptions extends AccountClientOptions {
-  signIn: AccountClientOptions["signIn"];
-  signUp: AccountClientOptions["signUp"];
+export type AccountSignUp = (credentials: AccountRegistrationCredentials) => Promise<AccountAuthResult>;
+
+/**
+ * Options of the account client. `signUp` is required while sign-up is allowed; an invitation-only game passes
+ * `allowSignUp: false`, which hides the "Create a new account" button and the sign-up form.
+ */
+export type AccountClientOptions = AccountClientBaseOptions & (
+  | { allowSignUp?: true; signUp: AccountSignUp }
+  | { allowSignUp: false; signUp?: AccountSignUp }
+);
+
+export type ResolvedAccountClientOptions = AccountClientBaseOptions & {
+  signIn: AccountClientBaseOptions["signIn"];
+  signUp?: AccountSignUp;
+  allowSignUp: boolean;
+  sessionEndCodes: readonly number[];
   storageKey: string;
   storage?: AccountStorage;
   guiId: string;
   component: GuiComponent;
   renderer: GuiRenderer;
   autoOpen: boolean;
-}
+};
 
 /** Credentials sent to the application-owned password-reset endpoint. */
 export interface AccountResetCredentials {
