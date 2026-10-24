@@ -227,6 +227,30 @@ export const Chat: StoryObj = {
   render: () =>
     '<div class="rpg-ui-chat rpg-ui-panel"><h2>World chat</h2><div class="rpg-ui-chat-log" role="log" aria-label="Messages"><p class="rpg-ui-chat-message"><strong class="rpg-ui-chat-author">Luna</strong> <span class="rpg-ui-chat-text">Meet me at the sanctuary.</span></p><p class="rpg-ui-chat-message"><strong class="rpg-ui-chat-author">Kai</strong> <span class="rpg-ui-chat-text">On my way!</span></p></div><form class="rpg-ui-chat-form" onsubmit="return false"><input class="rpg-ui-chat-input rpg-ui-input" aria-label="Message" placeholder="Write a message"><button class="rpg-ui-chat-send rpg-ui-btn">Send</button></form></div>',
 };
+const chatTabs =
+  '<div class="rpg-ui-chat-bar"><div class="rpg-ui-chat-tabs" role="group" aria-label="Channels"><button class="rpg-ui-chat-tab" data-color="green" aria-pressed="true"><span class="rpg-ui-chat-tab-dot"></span>Map</button><button class="rpg-ui-chat-tab" data-color="blue" aria-pressed="false"><span class="rpg-ui-chat-tab-dot"></span>Everyone</button></div></div>';
+const chatLog =
+  '<div class="rpg-ui-chat-log" role="log" aria-label="Messages"><p class="rpg-ui-chat-message" data-channel="map"><strong class="rpg-ui-chat-author">Luna</strong> <span class="rpg-ui-chat-text">Meet me at the sanctuary.</span></p><p class="rpg-ui-chat-message" data-channel="global" data-self="true"><strong class="rpg-ui-chat-author">Kai</strong> <span class="rpg-ui-chat-text">On my way!</span></p></div>';
+const chatForm = (sending: boolean) =>
+  '<form class="rpg-ui-chat-form" onsubmit="return false"><input class="rpg-ui-chat-input rpg-ui-input" aria-label="Message" placeholder="Write a message"><button class="rpg-ui-chat-send rpg-ui-btn"' +
+  (sending ? ' disabled aria-busy="true">Sending…' : ">Send") +
+  "</button></form>";
+export const ChatChannels: StoryObj = {
+  render: () =>
+    '<div class="rpg-ui-chat rpg-ui-panel"><h2>World chat</h2>' + chatTabs + chatLog + chatForm(false) + "</div>",
+};
+export const ChatTall: StoryObj = {
+  render: () =>
+    '<div class="rpg-ui-chat rpg-ui-panel" data-size="tall"><h2>World chat</h2>' + chatTabs + chatLog + chatForm(false) + "</div>",
+};
+export const ChatSending: StoryObj = {
+  render: () =>
+    '<div class="rpg-ui-chat rpg-ui-panel"><h2>World chat</h2>' + chatTabs + chatLog + chatForm(true) + "</div>",
+};
+export const ChatPill: StoryObj = {
+  render: () =>
+    '<button class="rpg-ui-btn rpg-ui-chat-pill" data-position="bottom-left">Chat <span class="rpg-ui-chat-unread">3</span></button>',
+};
 export const InputDialog: StoryObj = {
   render: () =>
     panel(

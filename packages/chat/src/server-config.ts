@@ -1,4 +1,5 @@
 import { positiveInteger } from "./config";
+import { resolveChatChannel } from "./channels";
 import type { ChatChannel } from "./shared-types";
 import type {
   ChatPlayerLike,
@@ -13,11 +14,17 @@ const readText = (value: string | (() => string) | undefined): string => {
 export function normalizeChatServerOptions(
   options: ChatServerOptions = {},
 ): ResolvedChatServerOptions {
-  const channels: ChatChannel[] = [
-    ...new Set<ChatChannel>(options.channels?.length ? options.channels : ["map"]),
+  const definitions = [
+    ...new Map(
+      (options.channels?.length ? options.channels : ["map"])
+        .map(resolveChatChannel)
+        .map((definition) => [definition.id, definition] as const),
+    ).values(),
   ];
+  const channels: ChatChannel[] = definitions.map((definition) => definition.id);
   return {
     channels,
+    channelDefinitions: definitions,
     maxLength: positiveInteger(options.maxLength, 180),
     rateLimit: options.rateLimit === false
       ? false
@@ -28,8 +35,11 @@ export function normalizeChatServerOptions(
     formatAuthor: options.formatAuthor || ((player: ChatPlayerLike) => {
       return readText(player.name) || `Player ${player.id}`;
     }),
+    middleware: options.middleware ?? [],
     beforeSend: options.beforeSend,
     afterSend: options.afterSend,
+    deliver: options.deliver,
     broadcastGlobal: options.broadcastGlobal,
+    onRejected: options.onRejected,
   };
 }
