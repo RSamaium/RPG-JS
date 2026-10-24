@@ -9,6 +9,7 @@ import { normalizeAccountClientOptions } from "./client-config";
 import {
   accountClientOptions,
   accountError,
+  accountNotice,
   accountPending,
   accountSession,
   configureAccountClient,
@@ -39,6 +40,8 @@ export const ACCOUNT_CLIENT_I18N = {
     "rpg.account.reset-description": "Enter your recovery code and choose a new password.",
     "rpg.account.recovery-sent": "If an account exists for this email, reset instructions have been sent.",
     "rpg.account.reset-done": "Your password has been updated. You can now sign in.",
+    "rpg.account.session-ended": "Your session has ended. Sign in again to keep playing.",
+    "rpg.account.error.sign-up-disabled": "Account creation is not available.",
     "rpg.account.error.heading": "Please check your details",
     "rpg.account.error.email": "Enter a valid email address.",
     "rpg.account.error.reset-fields": "Enter your recovery code and new password.",
@@ -75,6 +78,8 @@ export const ACCOUNT_CLIENT_I18N = {
     "rpg.account.reset-description": "Saisissez votre code de récupération et choisissez un nouveau mot de passe.",
     "rpg.account.recovery-sent": "Si un compte correspond à cet e-mail, les instructions ont été envoyées.",
     "rpg.account.reset-done": "Votre mot de passe a été modifié. Vous pouvez vous connecter.",
+    "rpg.account.session-ended": "Votre session est terminée. Reconnectez-vous pour continuer à jouer.",
+    "rpg.account.error.sign-up-disabled": "La création de compte n’est pas disponible.",
     "rpg.account.error.heading": "Vérifiez vos informations",
     "rpg.account.error.email": "Saisissez une adresse e-mail valide.",
     "rpg.account.error.reset-fields": "Saisissez votre code et votre nouveau mot de passe.",
@@ -165,13 +170,17 @@ export async function submitAccount(
     accountError.set(validation.error);
     return;
   }
+  if (mode === "sign-up" && !options().allowSignUp) {
+    accountError.set({ key: "rpg.account.error.sign-up-disabled" });
+    return;
+  }
   const normalized = validation.credentials;
   accountPending.set(true);
   accountError.set(null);
   try {
     const config = options();
     const result = mode === "sign-up"
-      ? await config.signUp(normalized as AccountRegistrationCredentials)
+      ? await config.signUp!(normalized as AccountRegistrationCredentials)
       : await config.signIn(normalized as AccountCredentials);
     await acceptSession(result);
   }
@@ -205,6 +214,15 @@ export async function restoreAccountSession(): Promise<boolean> {
   }
 }
 
+/** Ends the session after the server closed the connection with one of the `sessionEndCodes`. */
+export function endSession(info: { code: number }): boolean {
+  const config = accountClientOptions();
+  if (!config || !config.sessionEndCodes.includes(info.code)) return false;
+  signOut();
+  accountNotice.set("rpg.account.session-ended");
+  return true;
+}
+
 export function signOut(): void {
   const config = options();
   clearToken(config);
@@ -233,6 +251,9 @@ export function createAccountClient(options: AccountClientOptions): RpgClient {
       autoDisplay: false,
     }],
     engine: {
+      onConnectionClosed(_engine: unknown, info: { code: number }) {
+        endSession(info);
+      },
       async onStart() {
         const restored = resolved.resetToken ? false : await restoreAccountSession();
         if (!restored && resolved.autoOpen) inject(RpgGui).display(resolved.guiId);

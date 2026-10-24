@@ -9,6 +9,7 @@ import type {
     RenderedProjectileProps,
 } from './Game/ProjectileManager'
 import type { ClientVisualMap } from './Game/ClientVisuals'
+import type { ConnectionClosedInfo } from './services/AbstractSocket'
 import type {
     RpgInteractionBehavior,
     RpgInteractionMatcher,
@@ -88,6 +89,16 @@ export interface RpgClientEngineHooks {
      * @memberof RpgEngineHooks
      */
     onDisconnect?: (engine: RpgClientEngine, reason: any, socket: any) => any
+
+    /**
+     * Called when the connection to the server ends, including after the player moved to a map room. It does not run
+     * for a clean close (code 1000) nor for the close of a room change. A server that ends a session on purpose
+     * closes with a 4xxx code, for example 4401 for a revoked session.
+     *
+     * @prop { (engine: RpgClientEngine, info: { code: number; reason: string; willReconnect: boolean }) => any } [onConnectionClosed]
+     * @memberof RpgEngineHooks
+     */
+    onConnectionClosed?: (engine: RpgClientEngine, info: ConnectionClosedInfo) => any
 
     /**
      * Called when there was a connection error. In MMORPG mode, this also runs
