@@ -542,6 +542,19 @@ export class RpgClientEngine<T = any> {
   }
 
   /**
+   * Whether the client waits for the game to open the connection (`provideMmorpg({ deferConnection: true })`),
+   * for example behind a sign-in screen.
+   */
+  isConnectionDeferred(): boolean {
+    return this.webSocket.deferConnection === true;
+  }
+
+  /** Whether the connection to the server is open and accepted. */
+  isConnected(): boolean {
+    return this.localeConnected;
+  }
+
+  /**
    * Open the initial MMORPG connection after a deferred account flow.
    * Concurrent calls share the same attempt. Standalone and normal MMORPG starts
    * call this automatically.
