@@ -135,9 +135,9 @@
         "groups": [
           {
             "group": "Overview",
-            "root": "api",
+            "root": "api/index",
             "pages": [
-              "api"
+              "api/index"
             ]
           },
           {
