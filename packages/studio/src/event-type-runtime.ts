@@ -11,7 +11,8 @@ import { assignParams } from "./assign-params";
 import { getStudioEnemyInteractionResolver } from "./enemy-interaction";
 import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
 import { createStudioActionBattleAnimations } from "./action-battle-animations";
-import { getGraphicKey, getGraphicScale } from "./graphic-key";
+import { getGraphicKey } from "./graphic-key";
+import { resolveEventGraphicScale } from "./placement-scale";
 export { getGraphicKey, getGraphicScale } from "./graphic-key";
 
 /**
@@ -86,7 +87,7 @@ const applyGraphicSetting: TriggerSettingsApplier = ({
   const graphicKey = getGraphicKey(graphic);
   if (graphicKey) {
     (event as any)._graphicScale?.set(
-      getGraphicScale(trigger, fallbackParams, object) ?? null,
+      resolveEventGraphicScale(object, trigger, fallbackParams, object) ?? null,
     );
     event.setGraphic(graphicKey);
   }
@@ -447,7 +448,7 @@ const applyEnemyGraphicSetting: TriggerSettingsApplier = ({
   const graphicKey = getGraphicKey(enemy.graphic ?? enemy.params?.graphic);
   if (graphicKey) {
     (event as any)._graphicScale?.set(
-      getGraphicScale(trigger, fallbackParams, object, enemy.params) ??
+      resolveEventGraphicScale(object, trigger, fallbackParams, object, enemy.params) ??
         null,
     );
     event.setGraphic(graphicKey);

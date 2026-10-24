@@ -188,7 +188,7 @@ function getMaxTileId(value: unknown): number {
   return max;
 }
 
-function normalizeMorphologyFeatures(value: unknown): StudioTerrainMorphologyFeature[] {
+export function normalizeMorphologyFeatures(value: unknown): StudioTerrainMorphologyFeature[] {
   const layer = parseObject(value);
   const features = (layer as { features?: unknown[] } | null | undefined)?.features;
   if (!Array.isArray(features)) return [];

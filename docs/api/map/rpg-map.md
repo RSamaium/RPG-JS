@@ -34,6 +34,7 @@ Reference for the `RpgMap` class.
 - [getEventBy](#geteventby)
 - [getEvents](#getevents)
 - [getEventsBy](#geteventsby)
+- [getInteractableObjectIds](#getinteractableobjectids)
 - [getInWorldMaps](#getinworldmaps)
 - [getLighting](#getlighting)
 - [getPlayer](#getplayer)
@@ -73,6 +74,7 @@ Reference for the `RpgMap` class.
 - [removeFromWorldMaps](#removefromworldmaps)
 - [removeInDatabase](#removeindatabase)
 - [removeShape](#removeshape)
+- [Replace static hitboxes](#replace-static-hitboxes)
 - [Replace streamed static hitboxes](#replace-streamed-static-hitboxes)
 - [setAutoTick](#setautotick)
 - [setBodyPosition](#setbodyposition)
@@ -964,6 +966,30 @@ const nearbyEvents = map.getEventsBy(event =>
 );
 ```
 
+## getInteractableObjectIds
+
+Get entities inside the action area directly in front of an entity.
+
+This is intentionally separate from physical collisions: a player often
+presses the action key while blocked just before touching an NPC, so the
+physics solver may leave a tiny gap even though gameplay expects an
+interaction.
+
+- Source: `packages/common/src/rooms/Map.ts`
+- Kind: `method`
+- Defined in: `RpgCommonMap`
+
+### Signature
+
+```ts
+getInteractableObjectIds(id: string, direction?: Direction | string): string[]
+```
+
+### Parameters
+
+- `id`: `string`
+- `direction?`: `Direction | string`
+
 ## getInWorldMaps
 
 Get attached World
@@ -1777,7 +1803,9 @@ patchLighting(patch: Partial<LightingState>, options?: LightingSetOptions): Ligh
 
 Patch the current weather state.
 
-Nested `params` values are merged.
+Nested `params` values are merged. A patch that names a new `preset` (or a new
+`effect`) replaces the previous one, so the old `effect` never overrides the
+effect of the new preset.
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`
@@ -2215,6 +2243,38 @@ const shape = map.createShape({
 map.removeShape("temp-zone");
 ```
 
+## Replace static hitboxes
+
+Replace the static hitboxes whose id matches, wherever they came from: those of the map data, loaded with the
+physics world, and those of a streamed chunk. The others (the rest of the map, characters, events) are left as
+they are. Use it when a tool changes what the collisions are made of while the map runs, e.g. a map editor that
+moves placed elements.
+
+The new hitboxes are registered like a streamed chunk, under the `replaced` namespace, so a call replaces what the
+previous one added.
+
+- Source: `packages/common/src/rooms/Map.ts`
+- Kind: `method`
+- Member of: `RpgCommonMap`
+- Defined in: `RpgCommonMap`
+
+### Signature
+
+```ts
+map.replaceStaticHitboxes
+```
+
+### Parameters
+
+- `match`: `(id: string) => boolean`
+- `hitboxes`: `MapChunkHitbox[]`
+
+### Examples
+
+```ts
+map.replaceStaticHitboxes((id) => id.includes("studio-element:"), [{ id: "studio-element:0", x: 96, y: 48, width: 32, height: 32 }]);
+```
+
 ## Replace streamed static hitboxes
 
 Replace the client-prediction collision geometry owned by one streamed map chunk.
@@ -2244,7 +2304,8 @@ Enable or disable automatic server tick processing
 
 When disabled, the unified input/physics/projectile loop will not run
 automatically. This is useful for unit tests where you want manual control
-over server ticks.
+over server ticks. A map editor that holds the map also holds the enemies of `@rpgjs/action-battle`:
+their AI reads `map.isAutoTickEnabled()` (`true` unless the loop was disabled) and stands still while it is `false`. To hold only the enemies while the map goes on running, set `map.battleAiHeld = true` (and `false` to let them go).
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`

@@ -372,6 +372,16 @@ function formatLightingColor(value: LightingColor | undefined, fallback: string)
   return fallback;
 }
 
+let chunkSizeOverride: number | undefined;
+
+/**
+ * Sets the chunk size, in world pixels, of the terrain renderers created from now on (before a map is loaded). A map
+ * that is edited wants small chunks: drawing again what a stroke touched costs what the chunks it touches cost.
+ */
+export function setStudioTerrainChunkSize(size: number | undefined): void {
+  chunkSizeOverride = size !== undefined && Number.isFinite(size) && size > 0 ? Math.round(size) : undefined;
+}
+
 export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
   private readonly world: PixiContainer;
   private readonly chunkSize: number;
@@ -397,7 +407,7 @@ export class StudioTerrainChunkRenderer extends StudioTerrainChunkPainter {
   constructor(world: PixiContainer, options: StudioTerrainChunkRendererOptions = {}) {
     super();
     this.world = world;
-    this.chunkSize = Math.max(STUDIO_TERRAIN_TILE_SIZE, options.chunkSize ?? DEFAULT_CHUNK_SIZE);
+    this.chunkSize = Math.max(STUDIO_TERRAIN_TILE_SIZE, options.chunkSize ?? chunkSizeOverride ?? DEFAULT_CHUNK_SIZE);
     this.world.sortableChildren = true;
   }
 

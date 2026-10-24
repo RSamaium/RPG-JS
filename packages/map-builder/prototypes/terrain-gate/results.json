@@ -1,0 +1,356 @@
+{
+ "environment": {
+  "renderer": "ANGLE (Intel, Mesa Intel(R) UHD Graphics 770 (ADL-S GT1), OpenGL 4.6)",
+  "rendererType": "webgl",
+  "hardwareConcurrency": 20,
+  "workers": 4,
+  "chunks": 96,
+  "mapPx": "6144x4096"
+ },
+ "initialRender": {
+  "chunks": 96,
+  "workers": 4,
+  "wallMs": 11514,
+  "kernelMsPerChunk": {
+   "n": 96,
+   "p50": 467.8,
+   "p95": 658.1,
+   "max": 798.2
+  },
+  "uploadAllMs": 0.7,
+  "uploaded": 96,
+  "frameDeltasWhileRendering": {
+   "n": 687,
+   "p50": 16.6,
+   "p95": 17.4,
+   "max": 55
+  }
+ },
+ "strokes": [
+  {
+   "variant": "main thread, default margin, r=24",
+   "kernelMsPerDab": {
+    "n": 90,
+    "p50": 80.7,
+    "p95": 88,
+    "max": 109
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 80.8,
+    "p95": 88,
+    "max": 110.6
+   },
+   "uploadMsPerDab": {
+    "n": 90,
+    "p50": 0.1,
+    "p95": 0.2,
+    "max": 0.2
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 80.8,
+    "p95": 88,
+    "max": 110.6
+   },
+   "frameDeltas": {
+    "n": 193,
+    "p50": 2.9,
+    "p95": 88.3,
+    "max": 110.9
+   },
+   "framesOver33ms": 90,
+   "chunkUploads": 119
+  },
+  {
+   "variant": "main thread, margin 24, r=24",
+   "kernelMsPerDab": {
+    "n": 90,
+    "p50": 12.4,
+    "p95": 15.6,
+    "max": 18
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 12.5,
+    "p95": 15.7,
+    "max": 18.1
+   },
+   "uploadMsPerDab": {
+    "n": 90,
+    "p50": 0.1,
+    "p95": 0.2,
+    "max": 0.3
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 12.5,
+    "p95": 15.7,
+    "max": 18.1
+   },
+   "frameDeltas": {
+    "n": 93,
+    "p50": 16.6,
+    "p95": 19.7,
+    "max": 22.3
+   },
+   "framesOver33ms": 0,
+   "chunkUploads": 119
+  },
+  {
+   "variant": "main thread, margin 24, r=64",
+   "kernelMsPerDab": {
+    "n": 90,
+    "p50": 31.9,
+    "p95": 37,
+    "max": 47.4
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 32.1,
+    "p95": 37.2,
+    "max": 47.7
+   },
+   "uploadMsPerDab": {
+    "n": 90,
+    "p50": 0.1,
+    "p95": 0.2,
+    "max": 0.3
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 32.1,
+    "p95": 37.2,
+    "max": 47.7
+   },
+   "frameDeltas": {
+    "n": 186,
+    "p50": 3.5,
+    "p95": 39.5,
+    "max": 51.1
+   },
+   "framesOver33ms": 78,
+   "chunkUploads": 154
+  },
+  {
+   "variant": "4 workers, margin 24, r=24",
+   "kernelMsPerDab": {
+    "n": 90,
+    "p50": 12.5,
+    "p95": 20,
+    "max": 21.7
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 0.1,
+    "p95": 0.3,
+    "max": 0.4
+   },
+   "uploadMsPerDab": {
+    "n": 90,
+    "p50": 0.1,
+    "p95": 0.2,
+    "max": 0.3
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 13.2,
+    "p95": 20.7,
+    "max": 22.5
+   },
+   "frameDeltas": {
+    "n": 92,
+    "p50": 16.7,
+    "p95": 17.1,
+    "max": 17.9
+   },
+   "framesOver33ms": 0,
+   "chunkUploads": 119
+  },
+  {
+   "variant": "4 workers, margin 24, r=64",
+   "kernelMsPerDab": {
+    "n": 90,
+    "p50": 38.8,
+    "p95": 48.7,
+    "max": 56
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 0.2,
+    "p95": 0.4,
+    "max": 2.9
+   },
+   "uploadMsPerDab": {
+    "n": 90,
+    "p50": 0.1,
+    "p95": 0.3,
+    "max": 0.3
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 40,
+    "p95": 50,
+    "max": 56.9
+   },
+   "frameDeltas": {
+    "n": 91,
+    "p50": 16.6,
+    "p95": 17.3,
+    "max": 17.5
+   },
+   "framesOver33ms": 0,
+   "chunkUploads": 154
+  },
+  {
+   "variant": "4 workers, margin 24, r=128",
+   "kernelMsPerDab": {
+    "n": 90,
+    "p50": 77.3,
+    "p95": 88,
+    "max": 93.6
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 0.3,
+    "p95": 0.6,
+    "max": 0.7
+   },
+   "uploadMsPerDab": {
+    "n": 90,
+    "p50": 0.1,
+    "p95": 0.2,
+    "max": 0.2
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 228.3,
+    "p95": 348.9,
+    "max": 362.5
+   },
+   "frameDeltas": {
+    "n": 111,
+    "p50": 16.6,
+    "p95": 17.3,
+    "max": 17.7
+   },
+   "framesOver33ms": 0,
+   "chunkUploads": 229
+  },
+  {
+   "variant": "4 workers coalesced, margin 24, r=64",
+   "kernelMsPerDab": {
+    "n": 90,
+    "p50": 28,
+    "p95": 31.5,
+    "max": 43.4
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 0.2,
+    "p95": 0.3,
+    "max": 0.3
+   },
+   "uploadMsPerDab": {
+    "n": 90,
+    "p50": 0,
+    "p95": 0.1,
+    "max": 0.2
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 28.5,
+    "p95": 31.9,
+    "max": 44
+   },
+   "frameDeltas": {
+    "n": 91,
+    "p50": 16.7,
+    "p95": 17,
+    "max": 17.5
+   },
+   "framesOver33ms": 0,
+   "chunkUploads": 154,
+   "jobs": 90,
+   "jobAreaKpx": {
+    "n": 90,
+    "p50": 31.51,
+    "p95": 31.51,
+    "max": 31.51
+   }
+  },
+  {
+   "variant": "4 workers coalesced, margin 24, r=128",
+   "kernelMsPerDab": {
+    "n": 70,
+    "p50": 80.4,
+    "p95": 97.7,
+    "max": 105.1
+   },
+   "mainThreadMsPerDab": {
+    "n": 90,
+    "p50": 0.3,
+    "p95": 0.5,
+    "max": 0.5
+   },
+   "uploadMsPerDab": {
+    "n": 70,
+    "p50": 0.1,
+    "p95": 0.2,
+    "max": 0.2
+   },
+   "dabToScreenMs": {
+    "n": 90,
+    "p50": 93.6,
+    "p95": 124.5,
+    "max": 128.8
+   },
+   "frameDeltas": {
+    "n": 96,
+    "p50": 16.7,
+    "p95": 17.1,
+    "max": 17.3
+   },
+   "framesOver33ms": 0,
+   "chunkUploads": 178,
+   "jobs": 70,
+   "jobAreaKpx": {
+    "n": 70,
+    "p50": 93.33,
+    "p95": 106.86,
+    "max": 117.22
+   }
+  }
+ ],
+ "fidelity": {
+  "kernel vs Canvas 2D (putImageData + getImageData)": {
+   "pixels": 262144,
+   "opaque": 262144,
+   "different": 0,
+   "worstChannelDelta": 0
+  },
+  "kernel vs Pixi (canvas texture, nearest, 1:1)": {
+   "pixels": 262144,
+   "opaque": 262144,
+   "different": 0,
+   "worstChannelDelta": 0
+  },
+  "Canvas 2D vs Pixi": {
+   "pixels": 262144,
+   "opaque": 262144,
+   "different": 0,
+   "worstChannelDelta": 0
+  }
+ },
+ "integrity": {
+  "chunksCompared": 30,
+  "chunksDifferent": 0,
+  "pixelsDifferent": 0,
+  "samples": [],
+  "ms": 9595
+ },
+ "memory": {
+  "jsHeapMB": 190
+ },
+ "done": true
+}

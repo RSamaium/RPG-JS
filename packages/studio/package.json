@@ -26,8 +26,8 @@
       "types": "./dist/client/index.d.ts"
     },
     "./server": {
-      "import": "./dist/server/index.js",
-      "types": "./dist/server/server-entry.d.ts"
+      "types": "./dist/server/server-entry.d.ts",
+      "import": "./dist/server/index.js"
     }
   },
   "keywords": [],
@@ -51,6 +51,7 @@
   ],
   "devDependencies": {
     "@canvasengine/compiler": "2.4.1",
+    "@rpgjs/map-builder": "workspace:*",
     "pixi.js": "^8.19.0",
     "vite": "^8.0.16",
     "vite-plugin-dts": "^5.0.2"

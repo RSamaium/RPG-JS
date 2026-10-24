@@ -13,6 +13,7 @@
     "@rpgjs/sample-cloudflare-mmorpg",
     "@rpgjs/playground-action-battle",
     "@rpgjs/playground-dash",
+    "@rpgjs/playground-map-builder",
     "@rpgjs/playground-mouse-interactions",
     "@rpgjs/playground-pressure-plate",
     "@rpgjs/playground-projectiles",

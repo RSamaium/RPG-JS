@@ -203,4 +203,31 @@ describe("RpgCommonMap static hitboxes", () => {
     expect(event.x()).toBe(68);
     expect(event.y()).toBe(100);
   });
+
+  test("replaces the static hitboxes that match, wherever they were registered, and leaves the others", () => {
+    const map = new TestMap();
+    map.data.set({
+      width: 400,
+      height: 400,
+      hitboxes: [
+        { id: "studio-element:0", x: 0, y: 0, width: 10, height: 10 },
+        { id: "wall", x: 100, y: 0, width: 10, height: 10 },
+      ],
+    });
+    map.loadPhysic();
+    map.replaceStreamedStaticHitboxes("chunk:0:0", [{ id: "studio-element:1", x: 200, y: 0, width: 10, height: 10 }]);
+
+    map.replaceStaticHitboxes((id) => id.includes("studio-element:"), [{ id: "studio-element:0", x: 300, y: 300, width: 10, height: 10 }]);
+
+    expect(map.physic.getEntityByUUID("studio-element:0")).toBeUndefined();
+    expect(map.physic.getEntityByUUID("wall")).toBeDefined();
+    const ids = map.physic.getEntities().map((entity: any) => entity.uuid as string);
+    expect(ids.filter((id) => id.includes("studio-element:"))).toHaveLength(1);
+    expect(ids.some((id) => id.includes(":studio-element:0"))).toBe(true);
+
+    // the streamed chunk that held one of them can still be cleared, and replaced again
+    map.clearStreamedStaticHitboxes("chunk:0:0");
+    map.replaceStaticHitboxes((id) => id.includes("studio-element:"), []);
+    expect(map.physic.getEntities().some((entity: any) => String(entity.uuid).includes("studio-element:"))).toBe(false);
+  });
 });
