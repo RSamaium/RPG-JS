@@ -18,6 +18,8 @@ const mapSchema = z.object({
 const sharedSchema = z.object({
   config: z.record(z.string(), z.unknown()),
   database: z.union([z.array(z.unknown()), z.record(z.string(), z.unknown())]),
+  /** Enabled plugins of the project (their parsed scripts), applied by the rooms together with the maps of this version. */
+  plugins: z.array(z.unknown()).optional(),
 }).strict();
 const manifestSchema = z.object({
   schemaVersion: z.literal(1),
@@ -29,7 +31,7 @@ const manifestSchema = z.object({
 
 /** Immutable project version. Hashes address private objects within this project. */
 export type RpgPublicationManifest = z.infer<typeof manifestSchema>;
-/** Server-owned prepared map, before its shared config/database are attached. */
+/** Server-owned prepared map, before its shared config/database/plugins are attached. */
 export type RpgPublicationMap = z.infer<typeof mapSchema>;
 /** Data shared by all maps in a publication. */
 export type RpgPublicationShared = z.infer<typeof sharedSchema>;
@@ -56,9 +58,12 @@ export async function prepareRpgPublication(bucket: RpgPublicationBucket, input:
   projectId: string;
   /** First map entered by new players. */
   startMapId: string;
-  /** Project configuration (including world topology) and database. */
+  /**
+   * Project configuration (including world topology), database and, optionally, the plugins of the project. A room applies
+   * them with the map of the same version, so the scripts and the maps of a version always change together.
+   */
   shared: RpgPublicationShared;
-  /** Complete server-prepared maps, with config/database stored in shared instead. */
+  /** Complete server-prepared maps, with config/database/plugins stored in shared instead. */
   maps: RpgPublicationMap[];
 }): Promise<string> {
   identifier.parse(input.projectId);
@@ -67,7 +72,7 @@ export async function prepareRpgPublication(bucket: RpgPublicationBucket, input:
   for (const source of input.maps) {
     const map = mapSchema.parse(source);
     if (Object.hasOwn(maps, map.id)) throw new Error('Duplicate publication map');
-    if ('config' in map || 'database' in map) throw new Error('Store config and database in shared');
+    if ('config' in map || 'database' in map || 'plugins' in map) throw new Error('Store config, database and plugins in shared');
     maps[map.id] = await writeArtifact(bucket, input.projectId, map);
   }
   return writeArtifact(bucket, input.projectId, manifestSchema.parse({
@@ -116,14 +121,19 @@ export async function readPublicationMap(bucket: RpgPublicationBucket, manifest:
   const map = mapSchema.parse(await readArtifact(bucket, manifest.projectId, manifest.maps[mapId]));
   if (map.id !== mapId) throw new Error('Publication map mismatch');
   const shared = sharedSchema.parse(await readArtifact(bucket, manifest.projectId, manifest.shared));
-  return { ...map, config: { ...shared.config, startMapId: manifest.startMapId }, database: shared.database };
+  return {
+    ...map,
+    config: { ...shared.config, startMapId: manifest.startMapId },
+    database: shared.database,
+    ...(shared.plugins ? { plugins: shared.plugins } : {}),
+  };
 }
 export async function validatePublication(bucket: RpgPublicationBucket, manifest: RpgPublicationManifest) {
   // Read every artifact before activation, without retaining the entire project in memory.
   sharedSchema.parse(await readArtifact(bucket, manifest.projectId, manifest.shared));
   for (const [id, ref] of Object.entries(manifest.maps)) {
     const map = mapSchema.parse(await readArtifact(bucket, manifest.projectId, ref));
-    if (map.id !== id || 'config' in map || 'database' in map) throw new Error('Invalid publication map');
+    if (map.id !== id || 'config' in map || 'database' in map || 'plugins' in map) throw new Error('Invalid publication map');
   }
 }
 export function ownershipKey(mapId: string) {

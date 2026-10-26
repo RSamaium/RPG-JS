@@ -5,7 +5,7 @@ import { buildElementPolygonHitboxes } from './element-polygon-hitbox'
 import MapComponentV2 from "./components/draw-map-v2.ce";
 import { inject, RpgClientEngine } from "@rpgjs/client";
 import { createSpriteSheetObject, resolveAssetSource } from "./spritesheet-utils";
-import { getGameDataProvider, getStudioGameRuntimeConfig } from "./data-provider";
+import { getGameDataProvider, getStudioGameRuntimeConfig, normalizeBundleBasePath, shouldReadEventsFromBundle } from "./data-provider";
 import { resolveStudioMapScale, scaleStudioHitboxes } from './map-scale';
 import {
   buildStudioTerrainCollisionPolygons,
@@ -110,15 +110,7 @@ const extractMediaReferenceId = (value: unknown): string => {
   );
 };
 
-const ensureLeadingSlash = (value: string): string => {
-  if (!value) return "/game-data";
-  return value.startsWith("/") ? value : `/${value}`;
-};
-
-const normalizeBundlePath = (value?: string): string => {
-  const normalized = ensureLeadingSlash(value || "/game-data");
-  return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
-};
+const normalizeBundlePath = (value?: string): string => normalizeBundleBasePath(value);
 
 const imageLoadCache = new Map<string, Promise<void>>();
 
@@ -333,7 +325,7 @@ export const loadMap = async (mapId: string) => {
   const runtimeMode =
     getStudioGameRuntimeConfig().runtimeMode ??
     (client.globalConfig as Record<string, unknown>).runtimeMode;
-  const useLocalBundleEvents = runtimeMode !== "online" && !hasProjectId;
+  const useLocalBundleEvents = shouldReadEventsFromBundle({ runtimeMode: runtimeMode as string | undefined, hasProjectId });
 
   let finalMapId = mapId;
   if (!firstMapLoaded) {

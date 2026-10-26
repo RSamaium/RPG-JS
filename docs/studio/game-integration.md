@@ -340,6 +340,51 @@ For a runnable local Worker, deterministic fixture, seed script, and real Studio
 API seed command, see the
 [Studio playground](https://github.com/RSamaium/RPG-JS/tree/master/playground/games/studio).
 
+## Published snapshot
+
+A Studio project has three states of data: the **draft** (editing, test play, the game inside the Studio iframe), a **published RPG snapshot** (an immutable, versioned bundle served publicly) and, for an MMORPG, a private snapshot read by the rooms. A game that players run reads the published snapshot, never the draft.
+
+The Studio server serves the active revision in the layout of the local bundle (`project.json`, `database.json`, `events.json`, `maps/<id>.json`, `media/media-index.json`, `plugins.json`) at `/api/published/<projectId>/<file>`. Use the `published` runtime mode:
+
+```ts
+provideStudioGame({
+  runtimeMode: "published",
+  projectId: "<projectId>",
+  bundleBasePath: "https://studio.example/api/published/<projectId>",
+})
+```
+
+- The data comes from `bundleBasePath`, a path or the complete URL of the snapshot.
+- Unlike `offline`, the project id is kept: accounts, saves and the start need it.
+- The events of the maps are resolved from the `events.json` of the bundle, whatever the project id. In `online` mode they are never read from the bundle.
+
+### Draft in the Studio iframe
+
+The data source is chosen without a rebuild. A page opened with `?editor` or `?preview` reads the draft from the API (`online`), every other URL reads the published bundle. When the draft routes of the Studio are private, send a preview token: set `previewToken`, or pass it in the URL (`?preview=<token>`). The token is sent in the `x-studio-preview-token` header, never in the URL of a request; a token found in the address is kept for the tab (`sessionStorage`) and taken off the address bar.
+
+### Plugins
+
+`GameDataProvider.getPlugins(projectId?)` returns the enabled plugins of the project, `[{ pluginId, version, scripts: [{ name, tree }] }]`: from `plugins.json` for a bundle (empty when absent) and from `/game/plugins` for the API.
+
+With [`@rpgjs/script`](../guide/scripts), give `provideStudioGame` the `ScriptService` of the game (the one you pass to `provideScripts`) and the plugins install themselves:
+
+```ts
+import { ScriptService, provideScripts } from "@rpgjs/script/server"
+
+const scripts = new ScriptService()
+
+// server
+createServer({ providers: [provideScripts(scripts), provideStudioGame({ runtimeMode: "published", projectId, scripts })] })
+```
+
+- When the server starts, every script of every enabled plugin is installed under the id `<pluginId>/<scriptName>`, with the version of its plugin.
+- The plugins follow the data: when the data of the project is invalidated, they are read again. A script whose plugin version changed is replaced, and the scripts of a plugin that is gone or disabled are uninstalled. A script that `ScriptService` refuses is reported by the service (`scripts.errors`) and tried again at the next synchronisation.
+- **In an MMORPG, nothing restarts**: with the versioned Cloudflare publication, put the plugins in `shared.plugins` of the version. Every room that applies the version receives them with its map (`plugins` of the map update, read in `map.onBeforeUpdate`), so the scripts and the maps change together; a room that failed to apply a version goes back to the previous one, scripts included, and a room that restarts or wakes up reads the version it runs. Once a version has carried its plugins to a room, that version is the source of truth and the provider is not read for plugins any more.
+- The scripts the game installed itself are never touched.
+- A shared runtime (`resolveStartup`) has no single project: its host installs the plugins of each project itself, with `syncStudioPluginsToScripts(scripts, plugins)` or `loadStudioPlugins(install, projectId)`.
+
+`scripts` only needs `install(script)` and `uninstall(id)`, so `@rpgjs/studio` does not depend on `@rpgjs/script`. For another interpreter, `installPlugins(plugins)` receives the same list.
+
 ## Offline mode
 
 Offline mode lets the game run from exported Studio data without calling the Studio API. Export the project data from Studio into the game public directory, using the default bundle path:

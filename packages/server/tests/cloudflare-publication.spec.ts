@@ -102,6 +102,44 @@ describe('versioned Cloudflare publication', () => {
     expect(map.database).toEqual([{ id: 'potion' }]);
   });
 
+  it('carries the plugins of a version with its maps, and only the shared part changes with them', async () => {
+    const h = harness();
+    const plugin = (version: number) => ({ pluginId: 'quests', version, scripts: [{ name: 'main', tree: { type: 'Program' } }] });
+    const publish = (plugins?: unknown[]) => prepareRpgPublication(h.bucket, {
+      projectId: 'game', startMapId: 'town',
+      shared: { config: { name: 'Game' }, database: [{ id: 'potion' }], ...(plugins ? { plugins } : {}) },
+      maps: [{ id: 'town', width: 640, height: 480, events: [], data: { version: 1 } }],
+    });
+
+    // a version published without plugins keeps its payload and its hash
+    const without = await publish();
+    expect(await publish()).toBe(without);
+    const bare = await readPublicationMap(h.bucket, await readManifest(h.bucket, 'game', without), 'town');
+    expect('plugins' in bare).toBe(false);
+
+    const first = await publish([plugin(1)]);
+    expect(first).not.toBe(without);
+    const map = await readPublicationMap(h.bucket, await readManifest(h.bucket, 'game', first), 'town');
+    expect(map.plugins).toEqual([plugin(1)]);
+
+    // only the plugins changed: the maps are the same objects, but the room must apply the new version
+    await h.activate(first);
+    const room = h.room();
+    await room.connect();
+    expect(room.apply).toHaveBeenCalledTimes(1);
+    await h.activate(await publish([plugin(2)]), 1); await h.project().alarm();
+    expect(room.apply).toHaveBeenCalledTimes(2);
+    expect(room.current()).toMatchObject({ plugins: [plugin(2)] });
+  });
+
+  it('refuses plugins stored inside a map: they belong to the shared part of the version', async () => {
+    const h = harness();
+    await expect(prepareRpgPublication(h.bucket, {
+      projectId: 'game', startMapId: 'town', shared: { config: {}, database: [] },
+      maps: [{ id: 'town', width: 640, height: 480, plugins: [] }],
+    })).rejects.toThrow(/shared/);
+  });
+
   it('activates many empty maps without initializing any room, and stops polling', async () => {
     const h = harness();
     const manifest = await h.prepare(1, Array.from({ length: 100 }, (_, i) => `map-${i}`));
