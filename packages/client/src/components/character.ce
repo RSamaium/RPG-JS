@@ -96,6 +96,7 @@
   import { getCanMoveValue } from "../utils/readPropValue";
   import { fitAnimationTimeline } from "./animation-timing";
   import { RecoilSmoothing } from "./recoil-smoothing";
+  import { RemoteSmoothing, resolveRemoteSmoothingOptions } from "./remote-smoothing";
   import { resolveCharacterAnimation } from "./character-animation";
   import {
     loadCachedSpriteSheetAlphaBounds,
@@ -696,12 +697,23 @@
 
   const realAnimationName = signal(animationName());
 
+  // The other characters walk to each position of the server instead of jumping to it (`remoteSmoothing` of the client config).
+  const remoteSmoothingOptions = () => resolveRemoteSmoothingOptions(client.globalConfig?.remoteSmoothing);
+  const remoteSmoothingX = new RemoteSmoothing(remoteSmoothingOptions);
+  const remoteSmoothingY = new RemoteSmoothing(remoteSmoothingOptions);
+
   const xSubscription = x.observable.subscribe((value) => {
-    smoothX.set(value, { duration: recoilSmoothing.duration(sprite.knockbackActive(), smoothX(), value, Date.now()) });
+    const now = Date.now();
+    const recoil = recoilSmoothing.duration(sprite.knockbackActive(), smoothX(), value, now);
+    const remote = isMe() ? 0 : remoteSmoothingX.duration(smoothX(), value, now);
+    smoothX.set(value, { duration: recoil || remote });
   });
 
   const ySubscription = y.observable.subscribe((value) => {
-    smoothY.set(value, { duration: recoilSmoothing.duration(sprite.knockbackActive(), smoothY(), value, Date.now()) });
+    const now = Date.now();
+    const recoil = recoilSmoothing.duration(sprite.knockbackActive(), smoothY(), value, now);
+    const remote = isMe() ? 0 : remoteSmoothingY.duration(smoothY(), value, now);
+    smoothY.set(value, { duration: recoil || remote });
   });
   
   // A frame with a `footAnchor` (the ground point of the character in its cell) is placed so that point
