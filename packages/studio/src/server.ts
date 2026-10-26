@@ -1112,10 +1112,17 @@ export default (_config?: unknown) => {
     : undefined;
 
   // `scripts` is the ScriptService of `@rpgjs/script`: the plugins of the project are installed in it and kept in step with the data.
+  // Once a published version carried its plugins to this room (`plugins` of the map update), that version is the source of truth:
+  // it replaces them together with the map, and the provider no longer reads them (it could not know which version this room runs).
+  let pluginsFromSnapshot = false;
+  const applyProjectPlugins = async (plugins: StudioPlugin[]) => {
+    if (config.scripts) syncStudioPluginsToScripts(config.scripts, plugins);
+    await config.installPlugins?.(plugins);
+  };
   const installProjectPlugins = config.scripts || config.installPlugins
     ? async (plugins: StudioPlugin[]) => {
-        if (config.scripts) syncStudioPluginsToScripts(config.scripts, plugins);
-        await config.installPlugins?.(plugins);
+        if (pluginsFromSnapshot) return;
+        await applyProjectPlugins(plugins);
       }
     : undefined;
   let stopListeningToInvalidation: (() => void) | undefined;
@@ -1295,6 +1302,15 @@ export default (_config?: unknown) => {
     },
     map: {
       async onBeforeUpdate(mapData: any, map) {
+        // The plugins of a published version change together with its maps, in every room that receives the update.
+        if (installProjectPlugins && Array.isArray(mapData?.plugins)) {
+          pluginsFromSnapshot = true;
+          try {
+            await applyProjectPlugins(mapData.plugins);
+          } catch (error) {
+            console.warn("[StudioGame] the plugins of the published version could not be installed", error);
+          }
+        }
         const mapExtended = map as RpgMapExtended;
         const isDirectLoad = isStudioDirectLoadPayload(mapData);
         const useLocalBundleEvents = shouldUseLocalBundleEvents(config);

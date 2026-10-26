@@ -73,6 +73,8 @@ const manifest = await prepareRpgPublication(env.GAME_DATA, {
 });
 ```
 
+`shared` can also carry the project's `plugins` (their parsed scripts, as `@rpgjs/studio` reads them). A room receives them with its map, in the `plugins` field of the map payload, so the scripts and the maps of a version always change together, in every room that applies the version, without restarting anything. A change of the plugins alone changes the shared part of the version, so the rooms apply it. Plugins are read by a module's `map.onBeforeUpdate` hook (`@rpgjs/studio` installs them in the `ScriptService` when you give it `scripts`); a map never stores them itself.
+
 Input must be JSON data. Map dimensions are positive pixels. Project/map IDs use
 letters, digits, `_` and `-` (1–200 characters). Map IDs must be globally unique
 within a room namespace, matching existing `map-<id>` routing. Ownership is

@@ -43,6 +43,11 @@ export const MapUpdateSchema = z.object({
   ]).optional(),
   /** Optional map params payload */
   params: z.any().optional(),
+  /**
+   * Enabled plugins of the project, published with the map (optional). A plugin game module reads them in its
+   * `map.onBeforeUpdate` hook, so a new version changes the scripts of a running room together with its map.
+   */
+  plugins: z.array(z.any()).optional(),
 });
 
 /**

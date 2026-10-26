@@ -372,6 +372,7 @@ createServer({ providers: [provideScripts(scripts), provideStudioGame({ runtimeM
 
 - When the server starts, every script of every enabled plugin is installed under the id `<pluginId>/<scriptName>`, with the version of its plugin.
 - The plugins follow the data: when the data of the project is invalidated, they are read again. A script whose plugin version changed is replaced, and the scripts of a plugin that is gone or disabled are uninstalled. A script that `ScriptService` refuses is reported by the service (`scripts.errors`) and tried again at the next synchronisation.
+- **In an MMORPG, nothing restarts**: with the versioned Cloudflare publication, put the plugins in `shared.plugins` of the version. Every room that applies the version receives them with its map (`plugins` of the map update, read in `map.onBeforeUpdate`), so the scripts and the maps change together; a room that failed to apply a version goes back to the previous one, scripts included, and a room that restarts or wakes up reads the version it runs. Once a version has carried its plugins to a room, that version is the source of truth and the provider is not read for plugins any more.
 - The scripts the game installed itself are never touched.
 - A shared runtime (`resolveStartup`) has no single project: its host installs the plugins of each project itself, with `syncStudioPluginsToScripts(scripts, plugins)` or `loadStudioPlugins(install, projectId)`.
 

@@ -93,4 +93,65 @@ describe("installing the plugins of a published snapshot", () => {
     invalidateGameDataProviderProject("p1");
     await vi.waitFor(() => expect(scripts.uninstall).toHaveBeenCalledWith("quests/main"));
   });
+
+  describe("with the maps of a published version (MMORPG, no server restart)", () => {
+    const mapPayload = (version: number, extra: Record<string, unknown> = {}) => ({
+      id: "town",
+      width: 640,
+      height: 480,
+      plugins: [{ ...plugins[0], version }],
+      ...extra,
+    });
+    const update = async (module: any, mapData: any) => {
+      // the rest of the update (hydrating the map) is not what is tested: it may fail on this minimal payload
+      await module.map.onBeforeUpdate(mapData, {}).catch(() => undefined);
+    };
+
+    it("replaces the scripts of the room together with its map, and uninstalls the ones a version drops", async () => {
+      const scripts = { install: vi.fn(() => true), uninstall: vi.fn() };
+      const module: any = studioServer({ projectId: "p1", runtimeMode: "published", scripts });
+
+      await update(module, mapPayload(2));
+      expect(scripts.install).toHaveBeenCalledWith({ id: "quests/main", version: 2, tree: { type: "Program" } });
+
+      scripts.install.mockClear();
+      await update(module, mapPayload(2));
+      expect(scripts.install).not.toHaveBeenCalled();
+
+      await update(module, mapPayload(3));
+      expect(scripts.install).toHaveBeenCalledWith({ id: "quests/main", version: 3, tree: { type: "Program" } });
+
+      await update(module, { ...mapPayload(3), plugins: [] });
+      expect(scripts.uninstall).toHaveBeenCalledWith("quests/main");
+    });
+
+    it("leaves the scripts as they are for an update that carries no plugins", async () => {
+      const scripts = { install: vi.fn(() => true), uninstall: vi.fn() };
+      const module: any = studioServer({ projectId: "p1", runtimeMode: "published", scripts });
+      await update(module, mapPayload(2));
+      scripts.install.mockClear();
+
+      const { plugins: _plugins, ...withoutPlugins } = mapPayload(2);
+      await update(module, withoutPlugins);
+
+      expect(scripts.install).not.toHaveBeenCalled();
+      expect(scripts.uninstall).not.toHaveBeenCalled();
+    });
+
+    it("lets the version win over the provider, which cannot know the version this room runs", async () => {
+      configureStudioGameRuntime({ projectId: "p1", runtimeMode: "published", bundleBasePath: "/published" });
+      mockBundle([{ ...plugins[0], version: 1 }]);
+      const scripts = { install: vi.fn(() => true), uninstall: vi.fn() };
+      const module: any = studioServer({ projectId: "p1", runtimeMode: "published", scripts });
+
+      await update(module, mapPayload(5));
+      scripts.install.mockClear();
+      await module.engine.onStart();
+      invalidateGameDataProviderProject("p1");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+
+      expect(scripts.install).not.toHaveBeenCalled();
+      expect(scripts.uninstall).not.toHaveBeenCalled();
+    });
+  });
 });
