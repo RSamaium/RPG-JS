@@ -7,6 +7,7 @@ import { configureStudioConstants } from "./constants";
 import type { GameRuntimeMode, StudioPlugin } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
+import type { StudioScriptHost } from "./plugins";
 import { configureStudioBlockExecutors } from "./block-executor";
 import { configureStudioEnemyInteraction, type StudioEnemyInteractionResolver } from "./enemy-interaction";
 import type { CustomBlockExecutors } from "@common/blocks";
@@ -49,6 +50,8 @@ export {
 export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./enemy-interaction";
 export { runStudioEvent } from "./run-event";
 export { loadStudioPlugins } from "./server";
+export { studioPluginScriptId, syncStudioPluginsToScripts } from "./plugins";
+export type { StudioPluginSyncReport, StudioScriptHost, StudioScriptInstall } from "./plugins";
 export type { StudioPlugin, StudioPluginScript } from "./data-provider/types";
 export { runStudioSkillTrigger } from "./skill-workflow";
 export type {
@@ -77,9 +80,17 @@ export interface StudioGameModuleConfig {
    */
   previewToken?: string;
   /**
+   * The `ScriptService` of `@rpgjs/script` (the one given to `provideScripts`). The enabled plugins of the project are
+   * installed in it when the server starts, each script under the id `<pluginId>/<scriptName>`, and kept in step with the
+   * data: when the data of the project is invalidated the plugins are read again, the scripts of a plugin whose version
+   * changed are replaced, and the ones of a plugin that is gone or disabled are uninstalled. The scripts the game installed
+   * itself are left alone. A shared runtime (`resolveStartup`) has no single project: its host installs the plugins itself.
+   */
+  scripts?: StudioScriptHost;
+  /**
    * Receives the enabled plugins of the project (their parsed scripts) when the server starts, to install them in the script
-   * interpreter of the game. Read from the bundle (`plugins.json`) or the API (`/game/plugins`). Call
-   * `loadStudioPlugins()` again to reinstall them after the data was invalidated.
+   * interpreter of the game when `scripts` does not fit. Read from the bundle (`plugins.json`) or the API (`/game/plugins`),
+   * and again when the data of the project is invalidated.
    */
   installPlugins?: (plugins: StudioPlugin[]) => void | Promise<void>;
   isProduction?: boolean;

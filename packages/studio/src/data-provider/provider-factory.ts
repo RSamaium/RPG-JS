@@ -322,9 +322,27 @@ export const resetGameDataProvider = (): void => {
   providerInstance = null;
 };
 
+const invalidationListeners = new Set<(projectId: string) => void>();
+
+/**
+ * Calls `listener` each time the data of a project was invalidated (a publication changed it): a game reloads what it
+ * installed from that data, such as the plugins. Returns the function that stops listening.
+ */
+export const onGameDataInvalidated = (listener: (projectId: string) => void): (() => void) => {
+  invalidationListeners.add(listener);
+  return () => void invalidationListeners.delete(listener);
+};
+
 export const invalidateGameDataProviderProject = (projectId: string): void => {
   if (providerInstance instanceof CachedGameDataProvider) {
     providerInstance.invalidateProject(projectId);
+  }
+  for (const listener of [...invalidationListeners]) {
+    try {
+      listener(projectId);
+    } catch (error) {
+      console.warn('[StudioGame] a listener of the data invalidation failed', error);
+    }
   }
 };
 

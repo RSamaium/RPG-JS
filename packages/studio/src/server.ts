@@ -12,7 +12,8 @@ import type { ProjectBasic } from "@common/types/project";
 import { applyTriggerSettings, getEventTypeRuntime, getGraphicKey, getGraphicScale, RpgMapExtended } from "./event-type-runtime";
 import { normalizeEventType } from "@common/event-types";
 import { normalizeWeatherState } from "@common/weather";
-import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, invalidateGameDataProviderProject, normalizeBundleBasePath, resetGameDataProvider, shouldReadEventsFromBundle } from "./data-provider";
+import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, invalidateGameDataProviderProject, normalizeBundleBasePath, onGameDataInvalidated, resetGameDataProvider, shouldReadEventsFromBundle } from "./data-provider";
+import { syncStudioPluginsToScripts, type StudioScriptHost } from "./plugins";
 import type { GameDataProvider, GameRuntimeMode, StudioPlugin } from "./data-provider";
 import { normalizeStudioDatabase, normalizeStudioDatabaseRecord } from "./database-normalizer";
 import { createStudioDefaultClass, normalizeStudioSkillsToLearn } from "./skills-to-learn";
@@ -472,6 +473,7 @@ export const loadStudioPlugins = async (
 
 type StudioServerConfig = CreateStudioMapUpdatePayloadOptions & {
   installPlugins?: (plugins: StudioPlugin[]) => void | Promise<void>;
+  scripts?: StudioScriptHost;
   autoStart?: boolean;
   displayTitleScreen?: boolean;
   skipCharacterSelect?: boolean;
@@ -1109,12 +1111,28 @@ export default (_config?: unknown) => {
       )
     : undefined;
 
+  // `scripts` is the ScriptService of `@rpgjs/script`: the plugins of the project are installed in it and kept in step with the data.
+  const installProjectPlugins = config.scripts || config.installPlugins
+    ? async (plugins: StudioPlugin[]) => {
+        if (config.scripts) syncStudioPluginsToScripts(config.scripts, plugins);
+        await config.installPlugins?.(plugins);
+      }
+    : undefined;
+  let stopListeningToInvalidation: (() => void) | undefined;
+
   return defineModule<RpgServer>({
     engine: {
       async onStart() {
         // A shared runtime (`resolveStartup`) has no single project: its host loads the plugins of each project itself.
-        if (!config.installPlugins || config.resolveStartup) return;
-        await loadStudioPlugins(config.installPlugins, config.projectId ?? undefined);
+        if (!installProjectPlugins || config.resolveStartup) return;
+        const projectId = config.projectId ?? undefined;
+        await loadStudioPlugins(installProjectPlugins, projectId);
+        // The plugins follow the data: they are read again, and the scripts replaced, when the data of the project is invalidated.
+        stopListeningToInvalidation?.();
+        stopListeningToInvalidation = onGameDataInvalidated((invalidatedProjectId) => {
+          if (projectId && invalidatedProjectId !== projectId) return;
+          void loadStudioPlugins(installProjectPlugins, projectId);
+        });
       },
     },
     player: {

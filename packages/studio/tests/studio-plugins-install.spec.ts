@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import studioServer, { loadStudioPlugins } from "../src/server";
-import { configureStudioGameRuntime, resetGameDataProvider } from "../src/data-provider";
+import { configureStudioGameRuntime, invalidateGameDataProviderProject, resetGameDataProvider } from "../src/data-provider";
 
 const plugins = [{ pluginId: "quests", version: 2, scripts: [{ name: "main", tree: { type: "Program" } }] }];
 
@@ -67,5 +67,30 @@ describe("installing the plugins of a published snapshot", () => {
     await module.engine.onStart();
 
     expect(installPlugins).not.toHaveBeenCalled();
+  });
+
+  it("installs them in the script service of the game and keeps them in step with the data", async () => {
+    configureStudioGameRuntime({ projectId: "p1", runtimeMode: "published", bundleBasePath: "/published" });
+    let published: unknown = plugins;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/plugins.json") ? Response.json(published) : new Response("no", { status: 404 }));
+    const scripts = { install: vi.fn(() => true), uninstall: vi.fn() };
+    const module: any = studioServer({ projectId: "p1", runtimeMode: "published", scripts });
+
+    await module.engine.onStart();
+    expect(scripts.install).toHaveBeenCalledWith({ id: "quests/main", version: 2, tree: { type: "Program" } });
+
+    // a publication: version 3 of the plugin, and the plugin of another project invalidated meanwhile
+    published = [{ ...plugins[0], version: 3 }];
+    scripts.install.mockClear();
+    invalidateGameDataProviderProject("another-project");
+    await vi.waitFor(() => expect(scripts.install).not.toHaveBeenCalled());
+    invalidateGameDataProviderProject("p1");
+    await vi.waitFor(() => expect(scripts.install).toHaveBeenCalledWith({ id: "quests/main", version: 3, tree: { type: "Program" } }));
+
+    // the plugin is disabled: its scripts are uninstalled
+    published = [];
+    invalidateGameDataProviderProject("p1");
+    await vi.waitFor(() => expect(scripts.uninstall).toHaveBeenCalledWith("quests/main"));
   });
 });

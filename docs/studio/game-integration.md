@@ -357,7 +357,25 @@ The data source is chosen without a rebuild. A page opened with `?editor` or `?p
 
 ### Plugins
 
-`GameDataProvider.getPlugins(projectId?)` returns the enabled plugins of the project, `[{ pluginId, version, scripts: [{ name, tree }] }]`: from `plugins.json` for a bundle (empty when absent) and from `/game/plugins` for the API. `provideStudioGame({ installPlugins })` receives them when the server starts, to install their scripts in the script interpreter of the game. Call `loadStudioPlugins(install)` again to reinstall them after the data was invalidated. A shared runtime (`resolveStartup`) has no single project: its host loads the plugins of each project itself. The interpreter is not part of `@rpgjs/studio`.
+`GameDataProvider.getPlugins(projectId?)` returns the enabled plugins of the project, `[{ pluginId, version, scripts: [{ name, tree }] }]`: from `plugins.json` for a bundle (empty when absent) and from `/game/plugins` for the API.
+
+With [`@rpgjs/script`](../guide/scripts), give `provideStudioGame` the `ScriptService` of the game (the one you pass to `provideScripts`) and the plugins install themselves:
+
+```ts
+import { ScriptService, provideScripts } from "@rpgjs/script/server"
+
+const scripts = new ScriptService()
+
+// server
+createServer({ providers: [provideScripts(scripts), provideStudioGame({ runtimeMode: "published", projectId, scripts })] })
+```
+
+- When the server starts, every script of every enabled plugin is installed under the id `<pluginId>/<scriptName>`, with the version of its plugin.
+- The plugins follow the data: when the data of the project is invalidated, they are read again. A script whose plugin version changed is replaced, and the scripts of a plugin that is gone or disabled are uninstalled. A script that `ScriptService` refuses is reported by the service (`scripts.errors`) and tried again at the next synchronisation.
+- The scripts the game installed itself are never touched.
+- A shared runtime (`resolveStartup`) has no single project: its host installs the plugins of each project itself, with `syncStudioPluginsToScripts(scripts, plugins)` or `loadStudioPlugins(install, projectId)`.
+
+`scripts` only needs `install(script)` and `uninstall(id)`, so `@rpgjs/studio` does not depend on `@rpgjs/script`. For another interpreter, `installPlugins(plugins)` receives the same list.
 
 ## Offline mode
 
