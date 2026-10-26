@@ -13,7 +13,7 @@ describe("loadStudioPluginGuis", () => {
     expect(studioPluginGuiId("quests", "ui/log.ce")).toBe("quests_ui_log");
   });
 
-  it("builds the component with the host and registers it as a GUI that shows itself", async () => {
+  it("builds the component with the host and registers it as a GUI that a script opens", async () => {
     const gui = { add: vi.fn() };
     const component = { id: "component" };
     const factory = vi.fn(() => component);
@@ -22,7 +22,7 @@ describe("loadStudioPluginGuis", () => {
     const report = await loadStudioPluginGuis({ gui, host, plugins: [plugin("quests", [{ name: "panel.ce", code: "A" }])], importModule: modules({ A: factory }) });
 
     expect(factory).toHaveBeenCalledWith(host);
-    expect(gui.add).toHaveBeenCalledWith({ name: "quests_panel", component, autoDisplay: true });
+    expect(gui.add).toHaveBeenCalledWith({ name: "quests_panel", component });
     expect(report).toEqual({ loaded: ["quests_panel"], failed: [] });
   });
 

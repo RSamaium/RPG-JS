@@ -36,7 +36,7 @@ const loadedVersions = new WeakMap<object, Map<string, number>>();
 
 /**
  * Registers the client files of the plugins as GUIs of the game: each module is `(host) => component` (what Studio compiles
- * a `.ce` into), the GUI is named `<pluginId>_<file>` and shows itself. A file that fails is reported and does not stop the
+ * a `.ce` into), the GUI is named `<pluginId>_<file>` and is opened by a script (`$player.openGui`) or by `player.gui(id).open()`. A file that fails is reported and does not stop the
  * others. A GUI already registered for the same plugin version is left alone.
  */
 export const loadStudioPluginGuis = async ({ gui, host, plugins, importModule = importFromBlob }: {
@@ -54,7 +54,7 @@ export const loadStudioPluginGuis = async ({ gui, host, plugins, importModule = 
       if (known.get(name) === plugin.version) continue;
       try {
         const module = await importModule(file.code);
-        gui.add({ name, component: module.default(host), autoDisplay: true });
+        gui.add({ name, component: module.default(host), });
         known.set(name, plugin.version);
         report.loaded.push(name);
       } catch (error) {
