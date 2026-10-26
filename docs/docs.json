@@ -125,7 +125,8 @@
               "advanced/node-server-production",
               "advanced/cloudflare-server-production",
               "advanced/latency-simulation",
-              "advanced/packet-loss-simulation"
+              "advanced/packet-loss-simulation",
+              "advanced/remote-smoothing"
             ]
           }
         ]
