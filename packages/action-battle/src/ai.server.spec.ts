@@ -443,6 +443,43 @@ describe("BattleAi behavior tree", () => {
     ai.destroy();
   });
 
+  test("stands still while the map does not tick (a map editor paused it), and goes on when it ticks again", () => {
+    vi.useFakeTimers();
+    const event = createEvent();
+    event.attachShape.mockReturnValue({ id: "vision_monster-1" });
+    let ticking = false;
+    event.getCurrentMap.mockReturnValue({ isAutoTickEnabled: () => ticking });
+    const ai = new BattleAi(event as any, {});
+    const update = vi.spyOn(ai as any, "updateAiBehavior").mockImplementation(() => {});
+
+    vi.advanceTimersByTime(300);
+    expect(update).not.toHaveBeenCalled();
+
+    ticking = true;
+    vi.advanceTimersByTime(100);
+    expect(update).toHaveBeenCalledTimes(1);
+    ai.destroy();
+  });
+
+  test("stands still, and stops walking, while its map says the enemies are held (battleAiHeld)", () => {
+    vi.useFakeTimers();
+    const event = createEvent();
+    event.attachShape.mockReturnValue({ id: "vision_monster-1" });
+    const map = { battleAiHeld: true } as { battleAiHeld: boolean };
+    event.getCurrentMap.mockReturnValue(map);
+    const ai = new BattleAi(event as any, {});
+    const update = vi.spyOn(ai as any, "updateAiBehavior").mockImplementation(() => {});
+
+    vi.advanceTimersByTime(200);
+    expect(update).not.toHaveBeenCalled();
+    expect(event.stopMoveTo).toHaveBeenCalled();
+
+    map.battleAiHeld = false;
+    vi.advanceTimersByTime(100);
+    expect(update).toHaveBeenCalledTimes(1);
+    ai.destroy();
+  });
+
   test("does not target an already defeated player", () => {
     const event = createEvent();
     event.attachShape.mockReturnValue({ id: "vision_monster-1" });

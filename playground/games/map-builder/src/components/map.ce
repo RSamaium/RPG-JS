@@ -1,0 +1,25 @@
+<Container>
+  <Rect width={2400} height={1600} color="#6aa84f" />
+
+  @for (patch of patches) {
+    <Rect x={patch.x} y={patch.y} width={patch.size} height={patch.size} color="#73b358" alpha={0.55} />
+  }
+
+  <EventLayerComponent pixiChildren={mapBuilder.pixiChildren} />
+</Container>
+
+<script>
+  import { EventLayerComponent, RpgClientEngine, inject } from "@rpgjs/client";
+  import { getMapBuilder } from "@rpgjs/map-builder/client";
+
+  const engine = inject(RpgClientEngine);
+  // The elements of the map are drawn by the map builder, inside the layer the characters are in,
+  // so a tree hides a player standing behind it and not one standing in front.
+  const mapBuilder = getMapBuilder(engine);
+
+  const patches = Array.from({ length: 90 }, (_, index) => ({
+    x: (index * 211) % 1000,
+    y: (index * 137) % 700,
+    size: 48 + ((index * 7) % 4) * 16,
+  }));
+</script>

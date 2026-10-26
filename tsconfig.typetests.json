@@ -21,7 +21,21 @@
       "@rpgjs/client": ["./packages/client/src"],
       "@rpgjs/physic": ["./packages/physic/src"],
       "@rpgjs/action-battle": ["./packages/action-battle/src"],
-      "@rpgjs/action-battle/server": ["./packages/action-battle/src/server.ts"]
+      "@rpgjs/action-battle/server": ["./packages/action-battle/src/server.ts"],
+      "@rpgjs/map-builder": ["./packages/map-builder/src/index.ts"],
+      "@rpgjs/map-builder/model": ["./packages/map-builder/src/model/index.ts"],
+      "@rpgjs/map-builder/renderer": ["./packages/map-builder/src/renderer/index.ts"],
+      "@rpgjs/map-builder/features": ["./packages/map-builder/src/features/index.ts"],
+      "@rpgjs/map-builder/terrain": ["./packages/map-builder/src/terrain/index.ts"],
+      "@rpgjs/map-builder/embed": ["./packages/map-builder/src/embed/index.ts"],
+      "@rpgjs/map-builder/terrain-render": ["./packages/map-builder/src/terrain-render/index.ts"],
+      "@rpgjs/map-builder/interaction": ["./packages/map-builder/src/interaction/index.ts"],
+      "@rpgjs/map-builder/skins": ["./packages/map-builder/src/skins/index.ts"],
+      "@rpgjs/map-builder/protocol": ["./packages/map-builder/src/protocol/index.ts"],
+      "@rpgjs/map-builder/authority": ["./packages/map-builder/src/authority/index.ts"],
+      "@rpgjs/map-builder/remote": ["./packages/map-builder/src/remote/index.ts"],
+      "@rpgjs/map-builder/server": ["./packages/map-builder/src/server/index.ts"],
+      "@rpgjs/map-builder/client": ["./packages/map-builder/src/client/index.ts"]
     }
   },
   "files": [
@@ -29,6 +43,8 @@
     "packages/action-battle/src/public-api-types.spec.ts",
     "packages/client/src/public-api-types.spec.ts",
     "packages/common/src/foundation.spec.ts",
+    "packages/map-builder/src/public-api-types.spec.ts",
+    "packages/map-builder/tests/rpgjs/api-types.spec.ts",
     "packages/script/src/public-api-types.spec.ts",
     "packages/server/tests/server-api-types.spec.ts"
   ]

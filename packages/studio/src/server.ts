@@ -1,7 +1,9 @@
 import { normalizeRuntimeHitbox } from "./runtime-hitbox";
 import { collectEventGraphics, scaleEventHitboxToGraphic } from "./event-hitbox-scale";
+import { scaleHitboxToPlacement } from "./placement-scale";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
+import { createStudioRuntimeEventEditing } from "./runtime-event-editing";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
 import { createBlockExecutionService } from "./block-executor";
@@ -109,7 +111,7 @@ export const resolveRuntimeEventHitbox = (object: any, params: any): { width: nu
     : undefined;
 
   const hitbox = normalizeRuntimeHitbox(object?.hitbox) ?? normalizeRuntimeHitbox(triggerHitbox) ?? normalizeRuntimeHitbox(params?.hitbox);
-  return hitbox ? scaleEventHitboxToGraphic(hitbox, collectEventGraphics(object)) : undefined;
+  return hitbox ? scaleHitboxToPlacement(scaleEventHitboxToGraphic(hitbox, collectEventGraphics(object)), object) : undefined;
 };
 
 const normalizeProjectId = (value: unknown): string | null => {
@@ -1369,6 +1371,8 @@ export default (_config?: unknown) => {
           mapData.data.commonEvents = hydratedCommonEvents;
         }
         mapExtended.scale = mapData.data?.params?.scale || 1;
+        // A map editor in the page changes the events the game runs through these, without loading the map again.
+        Object.assign(mapExtended, createStudioRuntimeEventEditing(mapExtended as never, hydrateEventMediaReferences));
         const initialWeather = mapData?.data?.weather !== undefined
           ? mapData.data.weather
           : mapData?.data?.params?.weather;

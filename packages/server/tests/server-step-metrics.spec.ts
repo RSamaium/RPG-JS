@@ -132,6 +132,20 @@ describe("server step metrics", () => {
     expect(legacyOnStep).toHaveBeenCalledWith(server);
   });
 
+  it("goes on stepping when the map is held with setAutoTick(false) and let go again", async () => {
+    await connectPlayer();
+    await vi.waitFor(() => expect(map.getTick()).toBeGreaterThan(2), { timeout: 1000 });
+
+    map.setAutoTick(false);
+    await wait(50);
+    const held = map.getTick();
+    await wait(150);
+    expect(map.getTick()).toBe(held);
+
+    map.setAutoTick(true);
+    await vi.waitFor(() => expect(map.getTick()).toBeGreaterThan(held + 2), { timeout: 1500 });
+  });
+
   it("reports queued delta and pending inputs until delayed processing recovers", async () => {
     await connectPlayer();
     map.setAutoTick(false);

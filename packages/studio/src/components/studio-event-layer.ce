@@ -1,6 +1,8 @@
 <Container sortableChildren={true} onBeforeDestroy={detachPixiChildren}>
-    @for ((event,id) of events) {
-        <CharacterComponent id={id} object={event} />
+    @if (!eventsHidden()) {
+        @for ((event,id) of events) {
+            <CharacterComponent id={id} object={event} />
+        }
     }
 
     @for ((player,id) of players) {
@@ -13,16 +15,21 @@
 </Container>
 
 <script>
-    import { effect, mount, tick } from "canvasengine";
+    import { computed, effect, mount, tick } from "canvasengine";
     import { CharacterComponent, RpgClientEngine, inject } from "@rpgjs/client";
 
     const engine = inject(RpgClientEngine);
-    const { children, pixiChildren } = defineProps({
+    const { children, pixiChildren, hideEvents } = defineProps({
         pixiChildren: {
             default: []
+        },
+        hideEvents: {
+            default: false
         }
     })
     const readValue = (value) => typeof value === "function" ? value() : value
+    // A map editor shows the events as markers while the map is edited: the ones the game runs are not drawn.
+    const eventsHidden = computed(() => readValue(hideEvents) === true)
     let rootContainer = null
     let mountedPixiChildren = []
 

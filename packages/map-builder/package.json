@@ -1,0 +1,122 @@
+{
+  "name": "@rpgjs/map-builder",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Modifiable map model, renderer and editing features for RPGJS games and editors (experimental)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./model": {
+      "import": "./dist/model/index.js",
+      "types": "./dist/model/index.d.ts"
+    },
+    "./renderer": {
+      "import": "./dist/renderer/index.js",
+      "types": "./dist/renderer/index.d.ts"
+    },
+    "./embed": {
+      "import": "./dist/embed/index.js",
+      "types": "./dist/embed/index.d.ts"
+    },
+    "./terrain": {
+      "import": "./dist/terrain/index.js",
+      "types": "./dist/terrain/index.d.ts"
+    },
+    "./terrain-render": {
+      "import": "./dist/terrain-render/index.js",
+      "types": "./dist/terrain-render/index.d.ts"
+    },
+    "./terrain-render/worker": {
+      "import": "./dist/terrain-render/worker.js",
+      "types": "./dist/terrain-render/worker.d.ts"
+    },
+    "./features": {
+      "import": "./dist/features/index.js",
+      "types": "./dist/features/index.d.ts"
+    },
+    "./interaction": {
+      "import": "./dist/interaction/index.js",
+      "types": "./dist/interaction/index.d.ts"
+    },
+    "./skins": {
+      "import": "./dist/skins/index.js",
+      "types": "./dist/skins/index.d.ts"
+    },
+    "./protocol": {
+      "import": "./dist/protocol/index.js",
+      "types": "./dist/protocol/index.d.ts"
+    },
+    "./authority": {
+      "import": "./dist/authority/index.js",
+      "types": "./dist/authority/index.d.ts"
+    },
+    "./remote": {
+      "import": "./dist/remote/index.js",
+      "types": "./dist/remote/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run",
+    "test:types": "tsc -p tsconfig.test.json",
+    "test:rpgjs": "vitest run --root ../.. packages/map-builder/tests"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/render-map2d": "workspace:*",
+    "@rpgjs/server": "workspace:*",
+    "@rpgjs/testing": "workspace:*",
+    "@types/node": "^25.9.3",
+    "canvasengine": "2.4.0",
+    "pixi.js": "8.19.0",
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "^5.0.2",
+    "vitest": "^4.1.9"
+  },
+  "peerDependencies": {
+    "pixi.js": "^8.0.0",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/server": "workspace:*",
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/render-map2d": "workspace:*",
+    "canvasengine": "^2.4.0"
+  },
+  "peerDependenciesMeta": {
+    "@rpgjs/common": {
+      "optional": true
+    },
+    "@rpgjs/server": {
+      "optional": true
+    },
+    "@rpgjs/client": {
+      "optional": true
+    },
+    "@rpgjs/render-map2d": {
+      "optional": true
+    },
+    "canvasengine": {
+      "optional": true
+    }
+  }
+}

@@ -125,7 +125,7 @@ function normalizeDrawRules(raw: unknown): Map<string, any> {
   );
 }
 
-function prepareElements(map: Record<string, any>): {
+export function prepareElements(map: Record<string, any>): {
   elements: Record<StudioElementLayer, any[]>;
   hitboxes: MapChunkHitbox[];
 } {

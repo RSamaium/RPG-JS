@@ -1,0 +1,56 @@
+import { jsonMapSource, type MapDefinition } from "@rpgjs/map-builder/model";
+import { ownerOnly, rateLimit } from "@rpgjs/map-builder/interaction";
+import type { RpgPlayer } from "@rpgjs/server";
+import { provideMapBuilder as provideMapBuilderServer } from "@rpgjs/map-builder/server";
+import meadowJson from "./maps/meadow.json";
+import { defineEvent, refreshHud } from "./modules/main/server";
+import { assets } from "./shared/assets";
+import { forest } from "./shared/forest";
+import { registerTerrainIntents, terrainPatchHandlers } from "@rpgjs/map-builder/terrain";
+import { catalog, moveRules, placementRules, terrainRules } from "./shared/rules";
+import { isEditorActor, registerAuthority } from "./editor";
+
+/**
+ * Two maps, from two sources: the forest is written in code, the meadow is a JSON file. The map
+ * builder does not care where a map comes from.
+ */
+const json = jsonMapSource({ maps: { meadow: meadowJson } });
+const loadMap = async (id: string): Promise<MapDefinition | undefined> => {
+  if (id === "forest") return forest;
+  return json.load(id).catch(() => undefined);
+};
+
+const idOf = (who: unknown): string | undefined => String((who as RpgPlayer | undefined)?.id ?? "") || undefined;
+
+/** The authority of every map: the same rules the clients preview with, plus what only a server can know. */
+export const mapBuilderServer = () =>
+  provideMapBuilderServer({
+    assets,
+    maps: loadMap,
+    authority: {
+      patchHandlers: [terrainPatchHandlers],
+      // Only the Studio session (created when this page is embedded as an editor) may send raw patches.
+      trustPatches: isEditorActor,
+      // Tilling: painting the ground goes through the same rules the clients preview with.
+      setup: (controller) => {
+        registerTerrainIntents(controller);
+        controller.usePipeline("terrain.paint", [...terrainRules, rateLimit({ max: 60, windowMs: 1000 })]);
+      },
+      pipeline: {
+        move: [...moveRules, ownerOnly({ actor: idOf })],
+        remove: [ownerOnly({ actor: idOf })],
+      },
+      placement: {
+        catalog,
+        pipeline: [...placementRules, rateLimit({ max: 8, windowMs: 3000 })],
+        // Whatever is planted belongs to whoever planted it. This runs once the placement is accepted.
+        stamp: (who) => {
+          refreshHud(who as RpgPlayer);
+          return { owner: idOf(who) ?? "" };
+        },
+      },
+      author: (who) => (who as RpgPlayer).name,
+    },
+    events: { define: defineEvent },
+    onReady: (authority, map) => registerAuthority(authority.model.state.id, authority, map as never),
+  });

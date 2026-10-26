@@ -1,0 +1,8 @@
+{
+  "id": "map-builder",
+  "title": "Woodcutter (map builder)",
+  "description": "A modifiable map: cut trees that shake and drop wood, pull a lever that opens a gate, and plant trees under rules the server decides. One map is written in code, the other is JSON.",
+  "tags": ["map-builder", "builder", "events", "multiplayer"],
+  "modes": ["standalone", "mmorpg"],
+  "port": 5192
+}
