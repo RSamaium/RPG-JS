@@ -182,9 +182,16 @@ provideStudioGame({
 ```
 
 `flow: "title"` keeps the Studio-owned title screen, character selection,
-actor application, default stats, and start-map transfer. `flow: "direct"`
-skips the interactive screens and transfers to `mapId` after verifying that the
-map belongs to `projectId`.
+actor application, default stats, and start-map transfer. `flow: "new-game"`
+keeps the same new-game flow without the title screen: the character selection
+first (when the project enabled it), then the actor, default stats, and the
+start map (`startMapId`, or the project's start map). Set `displayTitleScreen:
+false` in the client options as well, so the client does not draw the title.
+`flow: "direct"` skips the interactive screens, character selection included,
+and transfers to `mapId` after verifying that the map belongs to `projectId`.
+
+A resolver can pick the flow per player, for example `direct` for a player who
+has a save and `new-game` for a player without one.
 
 The resolver receives `{ player, query, headers, connection }`, runs after the
 RPGJS `connected` packet, and is evaluated only once for that lobby connection.
@@ -522,7 +529,7 @@ Studio runtime then enables immediate startup automatically. Explicit
 `autoStart` remains useful for non-Studio configuration and overrides.
 - `startMapId`: force the map used to start the player.
 - `skipCharacterSelect`: skip actor selection during an automatic direct-map startup.
-- `resolveStartup`: resolve a player-specific `title` or `direct` startup after
+- `resolveStartup`: resolve a player-specific `title`, `new-game` or `direct` startup after
   MMORPG authentication. See [Share one server between Studio projects](#share-one-server-between-studio-projects).
 - `streaming`: authoritative Studio v2 chunk settings for MMORPG mode. Set it to
   `false` only when another server map provider replaces the built-in streaming
