@@ -258,7 +258,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * critical hits, and element coefficients. Default formulas are merged
    * with custom formulas when the map is loaded.
    */
-  damageFormulas: DamageFormulas = {}
+  /** Default formulas until a `/map/update` request publishes its own (a restored room never receives one). */
+  damageFormulas: DamageFormulas = withDefaultDamageFormulas(undefined)
   private _weatherState: WeatherState | null = null;
   private _lightingState: LightingState | null = null;
   private _lightingTransitionTimer?: ReturnType<typeof setInterval>;
