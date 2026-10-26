@@ -12,7 +12,7 @@ describe("remote character smoothing", () => {
   it("walks for 1.5 times the measured update interval", () => {
     const smoothing = new RemoteSmoothing();
     smoothing.duration(0, 2, 1000);
-    // the interval starts at 50 ms and follows the real rhythm: 50, 50, 50...
+    // the interval starts at 50 ms and the server keeps that rhythm: 50, 50, 50...
     expect(smoothing.duration(2, 4, 1050)).toBe(75);
     expect(smoothing.duration(4, 6, 1100)).toBe(75);
   });
@@ -22,7 +22,7 @@ describe("remote character smoothing", () => {
     fast.duration(0, 1, 0);
     let now = 0;
     let duration = 0;
-    for (let i = 0; i < 12; i++) duration = fast.duration(i, i + 1, (now += 20));
+    for (let i = 0; i < 60; i++) duration = fast.duration(i, i + 1, (now += 20));
     expect(duration).toBe(30);
 
     const slow = new RemoteSmoothing();
@@ -32,8 +32,21 @@ describe("remote character smoothing", () => {
     expect(duration).toBe(150);
   });
 
+  it("keeps walking until the next burst when the updates come in bursts", () => {
+    // two updates a few milliseconds apart, then a 50 ms gap: the walk must not end before the next burst
+    const smoothing = new RemoteSmoothing();
+    smoothing.duration(0, 1, 0);
+    let now = 0;
+    const durations: number[] = [];
+    for (let i = 0; i < 20; i++) {
+      durations.push(smoothing.duration(i, i + 1, (now += 13)));
+      durations.push(smoothing.duration(i, i + 1, (now += 50)));
+    }
+    expect(Math.min(...durations.slice(-10))).toBeGreaterThanOrEqual(65);
+  });
+
   it("keeps the walk between the minimum and the maximum", () => {
-    const bounds = () => ({ ...DEFAULT_REMOTE_SMOOTHING, minDuration: 40, maxDuration: 60 });
+    const bounds = () => ({ ...DEFAULT_REMOTE_SMOOTHING, factor: 0.5, minDuration: 40, maxDuration: 60 });
     const short = new RemoteSmoothing(bounds);
     short.duration(0, 1, 100);
     expect(short.duration(1, 2, 101)).toBe(40);

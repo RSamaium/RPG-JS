@@ -11,7 +11,7 @@ The client therefore shows each character that is **not** the current player wal
 
 ## How it works
 
-- The walk lasts `factor` times the measured time between two updates of that character (about 50 ms with the default sync rate, so about 75 ms), kept between `minDuration` and `maxDuration`. It follows the real rhythm of your server.
+- The walk lasts `factor` times the measured time between two updates of that character (about 50 ms with the default sync rate, so about 75 ms), kept between `minDuration` and `maxDuration`. It follows the real rhythm of your server: the longest recent gap is held and decays slowly, so updates that arrive in bursts (two within a few milliseconds, then a pause) do not leave the character standing between two bursts.
 - It **interpolates**: the character is about one update behind the server, and never goes past the last position received. A character that stops or turns does not overshoot or rubber-band.
 - It **jumps** for the first position received, after a silence longer than `maxGap`, and for a move longer than `teleportDistance` (a teleport or a map change).
 - The current player is not affected, and a server knockback keeps its own smoothing.

@@ -65,8 +65,9 @@ export class RemoteSmoothing {
     if (!options.enabled) return 0;
     // First update, or a long silence: jump.
     if (elapsed <= 0 || elapsed > options.maxGap) return 0;
-    // Follows the real rhythm of the server.
-    this.interval = (this.interval + elapsed) / 2;
+    // Follows the rhythm of the server. Updates can come in bursts (two within a few milliseconds, then a long gap):
+    // the longest recent gap is held and decays slowly, so the walk still lasts until the next burst.
+    this.interval = elapsed > this.interval ? elapsed : this.interval * 0.9 + elapsed * 0.1;
     // Teleport or map change: jump.
     if (Math.abs(target - current) > options.teleportDistance) return 0;
     return Math.max(options.minDuration, Math.min(options.maxDuration, Math.round(this.interval * options.factor)));
