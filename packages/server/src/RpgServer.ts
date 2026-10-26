@@ -366,6 +366,15 @@ export interface RpgPlayerHooks<TAuthData = unknown> {
     onLevelUp?: (player: RpgPlayer, nbLevel: number) => MaybePromise<void>
 
     /**
+    *  When a player acts in a GUI of the client: the component sent an interaction (`rpgGuiInteraction(name, data)`),
+    *  whether or not the server listens to it with `player.gui(id).on(name, ...)`.
+    * 
+    * @prop { (player: RpgPlayer, interaction: { guiId: string, name: string, data: any }) => void | Promise<void> } [onGuiInteraction]
+    * @memberof RpgPlayerHooks
+    */
+    onGuiInteraction?: (player: RpgPlayer, interaction: { guiId: string, name: string, data: any }) => MaybePromise<void>
+
+    /**
     *  When a player learns or forgets a skill
     * 
     * @prop { (player: RpgPlayer, payload: SkillChangePayload) => void | Promise<void> } [onSkillChange]

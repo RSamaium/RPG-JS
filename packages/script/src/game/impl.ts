@@ -21,6 +21,9 @@ export interface DialogOptions { position?: string; speaker?: string; fullWidth?
 /** The options of a notification: its `type` and how long it stays, in ms. */
 export interface NotificationOptions { type?: string; time?: number }
 
+/** The options of a GUI a script opens: RPGJS has more (`waitingAction`), a script never waits for a GUI, it listens to `gui.action`. */
+export interface GuiOptions { blockPlayerInput?: boolean }
+
 /** What a script gets of an event of the map: a copy, whose changes change nothing. */
 export interface EventSnapshot { id: string; name: string; x: number; y: number }
 /** What a script gets of a player of the map. */
@@ -116,6 +119,12 @@ export interface PlayerPort {
   showChoices(text: string, choices: Choice[]): Promise<Choice | null>;
   showNotification(message: string, options?: NotificationOptions): void | Promise<void>;
   changeMap(map: string, positions?: { x: number; y: number }): void | Promise<void>;
+  /** Opens a GUI of the client with data, as `player.gui(id).open(data, options)` does. */
+  openGui(id: string, data?: VariableValue, options?: GuiOptions): void | Promise<void>;
+  /** Sends new data to an open GUI, as `player.gui(id).update(data)` does. */
+  updateGui(id: string, data: VariableValue): void | Promise<void>;
+  /** Closes a GUI, as `player.removeGui(id, data)` does. */
+  closeGui(id: string, data?: VariableValue): void | Promise<void>;
 }
 
 /** What a script run needs from its environment. */
@@ -171,6 +180,23 @@ function plain(value: unknown, depth = 0): VariableValue {
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, plain(v, depth + 1)]));
   throw new Error("a variable holds a text, a number, true/false, null, or plain data; use removeVariable() to remove one");
 }
+/** A GUI of a plugin is named `<pluginId>_<name>`: the GUIs of the game (`rpg-main-menu`, `rpg-title-screen`…) have a hyphen and are not the scripts'. */
+const GUI_ID = /^[a-z][a-z0-9_]{0,99}$/;
+const guiId = (v: unknown) => {
+  if (typeof v !== "string" || !GUI_ID.test(v)) throw new Error("a GUI is named by a text of a-z, 0-9 and _ (the GUIs of the game, such as rpg-main-menu, are not for scripts)");
+  return v;
+};
+const guiData = (v: unknown): VariableValue => {
+  const value = plain(v);
+  if (JSON.stringify(value).length > MAX_VARIABLE_JSON) throw new Error(`the data of a GUI holds ${MAX_VARIABLE_JSON} characters at most`);
+  return value;
+};
+const guiOptions = (o: unknown): GuiOptions => {
+  const x = opts(o), out: GuiOptions = {};
+  for (const name of Object.keys(x)) if (name !== "blockPlayerInput") throw new Error(`a GUI takes the option blockPlayerInput only, not ${name}`);
+  if (x.blockPlayerInput !== undefined) out.blockPlayerInput = !!x.blockPlayerInput;
+  return out;
+};
 const collection = (v: unknown) => {
   if (typeof v !== "string" || !v || v.length > 100) throw new Error("a collection is named by a text of 1 to 100 characters");
   return v;
@@ -318,6 +344,9 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         showText: (w, [t, o]) => w.player.showText(text(t), dialogOptions(o)),
         showChoices: (w, [t, c]) => w.player.showChoices(text(t), choices(c)),
         showNotification: (w, [m, o]) => w.player.showNotification(text(m, "a message"), notificationOptions(o)),
+        openGui: (w, [id, d, o]) => w.player.openGui(guiId(id), d === undefined ? undefined : guiData(d), guiOptions(o)),
+        updateGui: (w, [id, d]) => w.player.updateGui(guiId(id), guiData(d)),
+        closeGui: (w, [id, d]) => w.player.closeGui(guiId(id), d === undefined ? undefined : guiData(d)),
         changeMap: (w, [m, p]) => {
           const map = text(m, "a map id");
           if (p === undefined) return w.player.changeMap(map);

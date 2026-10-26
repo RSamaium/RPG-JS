@@ -84,6 +84,10 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
     signal: "player.leaveMap", scope: "player", hook: "onLeaveMap",
     emit: (player, map) => ({ payload: { map: String(map.id) }, context: { player, map } }),
   }),
+  signalBinding<[RpgPlayer, { guiId: string; name: string; data?: unknown }]>({
+    signal: "gui.action", scope: "player", hook: "onGuiInteraction",
+    emit: (player, interaction) => ({ payload: { gui: String(interaction.guiId), event: String(interaction.name), data: interaction.data ?? {} }, context: { player } }),
+  }),
   signalBinding<[RpgPlayer, number]>({
     signal: "player.levelUp", scope: "player", hook: "onLevelUp",
     emit: async (player, gained) => {
