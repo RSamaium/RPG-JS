@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 import { signal } from "canvasengine";
 import {
   appendFramePayload,
+  keepResolvedSheets,
   mergeFreshFramePayload,
   MAX_FRAME_BACKLOG,
   multiplyGraphicDisplayScale,
@@ -163,4 +164,15 @@ test("retains cycle duration until the complete animation finishes", async () =>
   object.animationCurrentIndex.set(1);
   await done;
   expect(object.animationPlayback()).toBeNull();
+});
+
+describe("keepResolvedSheets", () => {
+  test("drops the graphics that did not resolve to a spritesheet", () => {
+    const hero = { id: "hero", textures: {} };
+    expect(keepResolvedSheets([undefined, hero, null, "default_character"])).toEqual([hero]);
+  });
+
+  test("returns an empty list when there is nothing to draw", () => {
+    expect(keepResolvedSheets(undefined)).toEqual([]);
+  });
 });
