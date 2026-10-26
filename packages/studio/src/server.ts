@@ -389,6 +389,17 @@ const getPublishedStudioDatabase = (map?: RpgMap): any => {
   return publishedMapData?.database;
 };
 
+/**
+ * Registers the records of the Studio database in the database of a room (a map, or the lobby a player is in before it joins
+ * a map), so `databaseById` finds the classes, skills and items of the project there.
+ */
+const addStudioRecordsToRoomDatabase = (room: unknown, records: readonly any[]): void => {
+  if (!room || typeof (room as any).addInDatabase !== "function") return;
+  for (const [id, data] of Object.entries(normalizeStudioDatabase([...records]))) {
+    (room as any).addInDatabase(id, data, { force: true });
+  }
+};
+
 const refreshOnlineStudioDatabase = async (map: RpgMap): Promise<void> => {
   const publishedDatabase = getPublishedStudioDatabase(map);
   if (
@@ -405,11 +416,7 @@ const refreshOnlineStudioDatabase = async (map: RpgMap): Promise<void> => {
   if (!projectId || typeof (map as any).addInDatabase !== "function") return;
 
   try {
-    const records = await provider.getDatabase(projectId);
-    const database = normalizeStudioDatabase(records);
-    for (const [id, data] of Object.entries(database)) {
-      (map as any).addInDatabase(id, data, { force: true });
-    }
+    addStudioRecordsToRoomDatabase(map, await provider.getDatabase(projectId));
   } catch (error) {
     console.error("[StudioGame] database refresh failed", error);
   }
@@ -825,6 +832,9 @@ const selectStudioActorForNewGame = async (
     console.warn("[StudioGame] character select actors could not be loaded; using the project main actor", error);
     return;
   }
+  // The player is still in the lobby, which has no Studio database: the class and the skills of the chosen actor are looked up in
+  // the database of its room by `setActor`, so the records are registered there first.
+  addStudioRecordsToRoomDatabase((player as any).map ?? (player as any).getCurrentMap?.(), records);
   const actors = records.filter(isStudioActorRecord);
   const actorsById = new Map(actors.map((actor) => [studioActorRecordId(actor)!, actor]));
   const offeredActors = settings.allActors
