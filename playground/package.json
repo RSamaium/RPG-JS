@@ -21,6 +21,8 @@
     "dev:calendar": "pnpm --dir games/calendar dev",
     "dev:hotbar": "pnpm --dir games/hotbar dev",
     "build:calendar": "pnpm --dir games/calendar build",
+    "dev:scripts": "pnpm --dir games/scripts dev",
+    "build:scripts": "pnpm --dir games/scripts build",
     "build:hotbar": "pnpm --dir games/hotbar build",
     "dev:mouse-interactions": "pnpm --dir games/mouse-interactions dev",
     "build:mouse-interactions": "pnpm --dir games/mouse-interactions build",

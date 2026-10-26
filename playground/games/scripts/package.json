@@ -1,0 +1,24 @@
+{
+  "name": "@rpgjs/playground-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@rpgjs/client": "workspace:*",
+    "@rpgjs/common": "workspace:*",
+    "@rpgjs/script": "workspace:*",
+    "@rpgjs/server": "workspace:*",
+    "@rpgjs/ui-css": "workspace:*",
+    "@rpgjs/vite": "workspace:*",
+    "canvasengine": "2.4.1",
+    "pixi.js": "^8.19.0"
+  },
+  "devDependencies": {
+    "@canvasengine/compiler": "2.4.1",
+    "vite": "^8.0.16"
+  }
+}
