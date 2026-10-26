@@ -24,6 +24,8 @@ import {
   getStudioGameRuntimeConfig,
 } from "./data-provider";
 import type { StudioGameModuleConfig } from ".";
+import * as canvasengine from "canvasengine";
+import { loadStudioPluginGuis } from "./client-plugins";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
@@ -285,6 +287,13 @@ export default (config: StudioGameModuleConfig) => {
           warmUpStartupData(provider, { startMapId: response.startMapId });
         }
         window.gameConfig = response;
+
+        // The GUIs of the plugins of the project: they load while the game starts, and a plugin that fails never stops it.
+        if (projectId) {
+          provider.getPlugins?.(projectId)
+            .then((plugins) => loadStudioPluginGuis({ gui, host: { canvasengine }, plugins }))
+            .catch((error) => console.warn("[StudioGame] plugin client files failed", error));
+        }
 
         const debugCollisions = config.debugCollisions === true || response.debugCollisions === true || engine.globalConfig?.debugCollisions === true;
 
