@@ -14,8 +14,9 @@ import type { ProjectBasic } from "@common/types/project";
 import { applyTriggerSettings, getEventTypeRuntime, getGraphicKey, getGraphicScale, RpgMapExtended } from "./event-type-runtime";
 import { normalizeEventType } from "@common/event-types";
 import { normalizeWeatherState } from "@common/weather";
-import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, invalidateGameDataProviderProject, resetGameDataProvider } from "./data-provider";
-import type { GameDataProvider, GameRuntimeMode } from "./data-provider";
+import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, invalidateGameDataProviderProject, normalizeBundleBasePath, onGameDataInvalidated, resetGameDataProvider, shouldReadEventsFromBundle } from "./data-provider";
+import { syncStudioPluginsToScripts, type StudioScriptHost } from "./plugins";
+import type { GameDataProvider, GameRuntimeMode, StudioPlugin } from "./data-provider";
 import { normalizeStudioDatabase, normalizeStudioDatabaseRecord } from "./database-normalizer";
 import { createStudioDefaultClass, normalizeStudioSkillsToLearn } from "./skills-to-learn";
 import { getStudioSkillChangeNotification } from "./skill-notification";
@@ -451,7 +452,30 @@ export interface CreateStudioMapUpdatePayloadOptions {
       };
 }
 
+/**
+ * Reads the enabled plugins of the project (the bundle's `plugins.json` or the API's `/game/plugins`) and gives them to
+ * `install`, which installs their scripts in the interpreter of the game. A source without plugins gives an empty list.
+ * Errors are logged and never stop the game from starting.
+ */
+export const loadStudioPlugins = async (
+  install: (plugins: StudioPlugin[]) => void | Promise<void>,
+  projectId: string | null = getStudioGameRuntimeConfig().projectId,
+): Promise<StudioPlugin[]> => {
+  const provider = getGameDataProvider();
+  if (!provider.getPlugins) return [];
+  try {
+    const plugins = await provider.getPlugins(projectId ?? undefined);
+    await install(plugins);
+    return plugins;
+  } catch (error) {
+    console.warn("[StudioGame] plugins could not be loaded", error);
+    return [];
+  }
+};
+
 type StudioServerConfig = CreateStudioMapUpdatePayloadOptions & {
+  installPlugins?: (plugins: StudioPlugin[]) => void | Promise<void>;
+  scripts?: StudioScriptHost;
   autoStart?: boolean;
   displayTitleScreen?: boolean;
   skipCharacterSelect?: boolean;
@@ -465,15 +489,7 @@ export const prepareStudioWorldMaps = (worldMaps: unknown): WorldMapConfig[] =>
     worldY: Math.round(Number(worldMap?.worldY ?? 0) * RATIO_MAP_Y),
   }));
 
-const ensureLeadingSlash = (value: string): string => {
-  if (!value) return "/game-data";
-  return value.startsWith("/") ? value : `/${value}`;
-};
-
-const normalizeBundlePath = (value?: string): string => {
-  const normalized = ensureLeadingSlash(value || "/game-data");
-  return normalized.endsWith("/") ? normalized.slice(0, -1) : normalized;
-};
+const normalizeBundlePath = (value?: string): string => normalizeBundleBasePath(value);
 
 const parseArrayValue = (value: unknown): any[] => {
   if (Array.isArray(value)) return value;
@@ -571,12 +587,10 @@ const hydrateEventMediaReferences = async (
 const shouldUseLocalBundleEvents = (config: StudioServerConfig = {}): boolean => {
   const runtimeConfig = getStudioGameRuntimeConfig();
   const runtimeMode = config.runtimeMode ?? runtimeConfig.runtimeMode;
-  if (runtimeMode === "online") return false;
-
   const gameConfig = readGameConfig();
   const projectId = config.projectId?.trim?.() || runtimeConfig.projectId?.trim?.() || gameConfig?._id || null;
 
-  return !projectId;
+  return shouldReadEventsFromBundle({ runtimeMode, hasProjectId: Boolean(projectId) });
 };
 
 const resolveMapEventReferences = async (events: unknown, options: { useLocalBundleEvents: boolean }): Promise<any[]> => {
@@ -1028,6 +1042,17 @@ export default (_config?: unknown) => {
       };
     }
 
+    if (startup.flow === "new-game") {
+      return {
+        ...config,
+        projectId,
+        startMapId: startup.startMapId,
+        autoStart: true,
+        displayTitleScreen: false,
+        skipCharacterSelect: false,
+      };
+    }
+
     const mapId = startup.mapId?.trim();
     if (!mapId) {
       throw new StudioStartupError("MAP_REQUIRED", "Direct Studio startup requires a mapId");
@@ -1099,7 +1124,37 @@ export default (_config?: unknown) => {
       )
     : undefined;
 
+  // `scripts` is the ScriptService of `@rpgjs/script`: the plugins of the project are installed in it and kept in step with the data.
+  // Once a published version carried its plugins to this room (`plugins` of the map update), that version is the source of truth:
+  // it replaces them together with the map, and the provider no longer reads them (it could not know which version this room runs).
+  let pluginsFromSnapshot = false;
+  const applyProjectPlugins = async (plugins: StudioPlugin[]) => {
+    if (config.scripts) syncStudioPluginsToScripts(config.scripts, plugins);
+    await config.installPlugins?.(plugins);
+  };
+  const installProjectPlugins = config.scripts || config.installPlugins
+    ? async (plugins: StudioPlugin[]) => {
+        if (pluginsFromSnapshot) return;
+        await applyProjectPlugins(plugins);
+      }
+    : undefined;
+  let stopListeningToInvalidation: (() => void) | undefined;
+
   return defineModule<RpgServer>({
+    engine: {
+      async onStart() {
+        // A shared runtime (`resolveStartup`) has no single project: its host loads the plugins of each project itself.
+        if (!installProjectPlugins || config.resolveStartup) return;
+        const projectId = config.projectId ?? undefined;
+        await loadStudioPlugins(installProjectPlugins, projectId);
+        // The plugins follow the data: they are read again, and the scripts replaced, when the data of the project is invalidated.
+        stopListeningToInvalidation?.();
+        stopListeningToInvalidation = onGameDataInvalidated((invalidatedProjectId) => {
+          if (projectId && invalidatedProjectId !== projectId) return;
+          void loadStudioPlugins(installProjectPlugins, projectId);
+        });
+      },
+    },
     player: {
       props: {
         studioCombatAnimations: {
@@ -1260,6 +1315,15 @@ export default (_config?: unknown) => {
     },
     map: {
       async onBeforeUpdate(mapData: any, map) {
+        // The plugins of a published version change together with its maps, in every room that receives the update.
+        if (installProjectPlugins && Array.isArray(mapData?.plugins)) {
+          pluginsFromSnapshot = true;
+          try {
+            await applyProjectPlugins(mapData.plugins);
+          } catch (error) {
+            console.warn("[StudioGame] the plugins of the published version could not be installed", error);
+          }
+        }
         const mapExtended = map as RpgMapExtended;
         const isDirectLoad = isStudioDirectLoadPayload(mapData);
         const useLocalBundleEvents = shouldUseLocalBundleEvents(config);

@@ -258,6 +258,8 @@ export class RpgClientEngine<T = any> {
   private onAfterLoadingSubscription?: any;
   private sceneResetQueued = false;
   private mapTransitionInProgress = false;
+  /** True until the destination room's first local-player position (spawn / changeMap target) is applied. */
+  private awaitingTransferSpawnSync = false;
   private currentMapRoomId?: string;
   private activeMapStreamController?: { attach(map: RpgClientMap): void; detach(): void };
   private socketListenersInitialized = false;
@@ -542,6 +544,19 @@ export class RpgClientEngine<T = any> {
   }
 
   /**
+   * Whether the client waits for the game to open the connection (`provideMmorpg({ deferConnection: true })`),
+   * for example behind a sign-in screen.
+   */
+  isConnectionDeferred(): boolean {
+    return this.webSocket.deferConnection === true;
+  }
+
+  /** Whether the connection to the server is open and accepted. */
+  isConnected(): boolean {
+    return this.localeConnected;
+  }
+
+  /**
    * Open the initial MMORPG connection after a deferred account flow.
    * Concurrent calls share the same attempt. Standalone and normal MMORPG starts
    * call this automatically.
@@ -731,6 +746,15 @@ export class RpgClientEngine<T = any> {
       if (patch?.knockbackActive === true) currentPlayer?.knockbackActive?.set(true);
       return { payload, serverDrivenMovement: true };
     }
+    // The destination room's first position is a teleport, not a prediction drift: apply it right away.
+    // Queuing it behind pending inputs (movement continued across the transfer) leaves the sprite and
+    // the camera on the source map's coordinates until the next acknowledged step.
+    if (this.awaitingTransferSpawnSync && Number.isFinite(patch?.x) && Number.isFinite(patch?.y)) {
+      this.awaitingTransferSpawnSync = false;
+      this.prediction?.clearPendingInputs();
+      this.pendingPredictionFrames = [];
+      return { payload, serverDrivenMovement: true };
+    }
     if (this.predictionEnabled && this.prediction) {
       const currentPlayer = this.sceneMap?.getCurrentPlayer?.();
       const currentState = currentPlayer ? this.getLocalPlayerState() : undefined;
@@ -879,8 +903,16 @@ export class RpgClientEngine<T = any> {
       this.startPingPong();
     })
 
-    this.webSocket.on('close', () => {
+    this.webSocket.connectionClosedHandler = (info) => {
+      this.hooks.callHooks("client-engine-onConnectionClosed", this, info).subscribe();
+    };
+
+    this.webSocket.on('close', (event: any) => {
       this.localeConnected = false;
+      // `onDisconnect` is the documented hook of a module. `onDisconnected` is the name this engine used to fire,
+      // which no declared hook matched: it keeps working for the modules that already use it.
+      const reason = typeof event?.reason === "string" ? event.reason : "";
+      this.hooks.callHooks("client-engine-onDisconnect", this, reason, this.socket).subscribe();
       this.hooks.callHooks("client-engine-onDisconnected", this, this.socket).subscribe();
       // Stop ping/pong when disconnected
       this.stopPingPong();
@@ -899,6 +931,7 @@ export class RpgClientEngine<T = any> {
       ? this.latestDirectionalInput
       : undefined;
     this.mapTransitionInProgress = true;
+    this.awaitingTransferSpawnSync = true;
     this.currentMapRoomId = nextMapId;
     this.sceneResetQueued = false;
     this.clearMapTransferPredictionStates();

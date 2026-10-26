@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  MapUpdateSchema,
   normalizeWorldMapConfigs,
   parseWorldIdFromUpdateUrl,
   unauthorizedUpdateResponse,
@@ -40,5 +41,13 @@ describe("map update request helpers", () => {
     const response = unauthorizedUpdateResponse("world", "/world/:id/update");
     expect(response.status).toBe(401);
     expect((await response.json()).error).toBe("Unauthorized world update");
+  });
+
+  it("keeps the plugins published with the map in the validated payload", () => {
+    const plugins = [{ pluginId: "quests", version: 1, scripts: [{ name: "main", tree: { type: "Program" } }] }];
+    const parsed = MapUpdateSchema.parse({ id: "town", width: 640, height: 480, plugins });
+    expect(parsed.plugins).toEqual(plugins);
+    expect("plugins" in MapUpdateSchema.parse({ id: "town", width: 640, height: 480 })).toBe(false);
+    expect(() => MapUpdateSchema.parse({ id: "town", width: 640, height: 480, plugins: "nope" })).toThrow();
   });
 });

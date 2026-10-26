@@ -1,0 +1,8 @@
+{
+  "id": "scripts",
+  "title": "Scripts",
+  "description": "Gameplay written as sandboxed scripts that listen to the signals of the game: a chest, a shop with a stock shared by the players, and a trap. Walk to a block and press the action key.",
+  "tags": ["scripts", "events", "gameplay"],
+  "modes": ["standalone", "mmorpg"],
+  "port": 5193
+}

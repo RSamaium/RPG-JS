@@ -1,6 +1,6 @@
 import type { GameRuntimeMode } from './types';
 
-const runtimeModes = new Set<GameRuntimeMode>(['online', 'offline', 'auto']);
+const runtimeModes = new Set<GameRuntimeMode>(['online', 'offline', 'published', 'auto']);
 
 const parseRuntimeMode = (value: unknown): GameRuntimeMode | null => {
   if (typeof value !== 'string') return null;

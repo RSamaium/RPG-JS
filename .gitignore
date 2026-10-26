@@ -7,6 +7,7 @@ packages/common/types
 docs/api/*
 docs/others/*
 !docs/api/readme.md
+!docs/api/index.md
 !docs/api/player/
 !docs/api/player/*.md
 !docs/api/map/

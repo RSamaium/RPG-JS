@@ -81,6 +81,7 @@
               "guide/projectiles",
               "guide/move-routes",
               "guide/create-database",
+              "guide/scripts",
               "guide/items",
               "guide/hotbar",
               "guide/save-load",
@@ -125,7 +126,8 @@
               "advanced/node-server-production",
               "advanced/cloudflare-server-production",
               "advanced/latency-simulation",
-              "advanced/packet-loss-simulation"
+              "advanced/packet-loss-simulation",
+              "advanced/remote-smoothing"
             ]
           }
         ]
@@ -135,9 +137,9 @@
         "groups": [
           {
             "group": "Overview",
-            "root": "api",
+            "root": "api/index",
             "pages": [
-              "api"
+              "api/index"
             ]
           },
           {

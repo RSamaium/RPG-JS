@@ -4,15 +4,17 @@ import { createModule, type RpgProvider } from "@rpgjs/common";
 import { createStudioMapClientProviders } from "./client-provider";
 import { configureStudioGameRuntime } from "./data-provider";
 import { configureStudioConstants } from "./constants";
-import type { GameRuntimeMode } from "./data-provider/types";
+import type { GameRuntimeMode, StudioPlugin } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
+import type { StudioScriptHost } from "./plugins";
 import { configureStudioBlockExecutors } from "./block-executor";
 import { configureStudioEnemyInteraction, type StudioEnemyInteractionResolver } from "./enemy-interaction";
 import type { CustomBlockExecutors } from "@common/blocks";
 export {
   StudioStartupError,
   type StudioDirectStartup,
+  type StudioNewGameStartup,
   type StudioPlayerStartup,
   type StudioStartupErrorCode,
   type StudioStartupResolver,
@@ -53,6 +55,10 @@ export {
 } from "./item-workflow";
 export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./enemy-interaction";
 export { runStudioEvent } from "./run-event";
+export { loadStudioPlugins } from "./server";
+export { studioPluginScriptId, syncStudioPluginsToScripts } from "./plugins";
+export type { StudioPluginSyncReport, StudioScriptHost, StudioScriptInstall } from "./plugins";
+export type { StudioPlugin, StudioPluginScript } from "./data-provider/types";
 export { runStudioSkillTrigger } from "./skill-workflow";
 export type {
   StudioItemWorkflowHooks,
@@ -62,9 +68,37 @@ export type {
 
 export interface StudioGameModuleConfig {
   projectId?: string | null;
+  /**
+   * Where the game reads its data: `online` (the draft of the project), `offline` (a local bundle, no project id),
+   * `published` (the bundle of a published snapshot, with the project id) or `auto`.
+   *
+   * With `published`, the data comes from `bundleBasePath` (for example `<api>/published/<projectId>`), the events from its
+   * `events.json`, and a page opened with `?editor` or `?preview` still reads the draft online, so the Studio iframe edits
+   * the draft while every other URL plays the published snapshot.
+   */
   runtimeMode?: GameRuntimeMode;
   apiBaseUrl?: string;
+  /** Base path or complete URL of the bundle read by `offline` and `published`. Defaults to `/game-data`. */
   bundleBasePath?: string;
+  /**
+   * Token a draft request (`?editor` or `?preview`) sends in the `x-studio-preview-token` header, for a Studio whose draft
+   * routes are private. The URL can also carry it (`?preview=<token>`): it is then kept for the tab and taken off the address.
+   */
+  previewToken?: string;
+  /**
+   * The `ScriptService` of `@rpgjs/script` (the one given to `provideScripts`). The enabled plugins of the project are
+   * installed in it when the server starts, each script under the id `<pluginId>/<scriptName>`, and kept in step with the
+   * data: when the data of the project is invalidated the plugins are read again, the scripts of a plugin whose version
+   * changed are replaced, and the ones of a plugin that is gone or disabled are uninstalled. The scripts the game installed
+   * itself are left alone. A shared runtime (`resolveStartup`) has no single project: its host installs the plugins itself.
+   */
+  scripts?: StudioScriptHost;
+  /**
+   * Receives the enabled plugins of the project (their parsed scripts) when the server starts, to install them in the script
+   * interpreter of the game when `scripts` does not fit. Read from the bundle (`plugins.json`) or the API (`/game/plugins`),
+   * and again when the data of the project is invalidated.
+   */
+  installPlugins?: (plugins: StudioPlugin[]) => void | Promise<void>;
   isProduction?: boolean;
   isPreprod?: boolean;
   baseUrl?: string;
@@ -164,6 +198,7 @@ export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvi
     runtimeMode: config.runtimeMode ?? (config.resolveStartup ? "online" : undefined),
     apiBaseUrl: config.apiBaseUrl ?? resolvedApiUrl,
     bundleBasePath: config.bundleBasePath ?? "/game-data",
+    previewToken: config.previewToken,
   });
 
   const clientProviders = createStudioMapClientProviders?.() ?? [];

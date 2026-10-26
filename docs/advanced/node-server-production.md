@@ -301,6 +301,16 @@ servers. Configure SQLite for a production process so synchronized room state
 and sessions survive a restart. This Node adapter deliberately targets one
 process; horizontal coordination is a separate World/Shard deployment concern.
 
+When a room starts from a SQLite database, no connection exists yet: the sockets
+that were open when the previous process stopped (a deploy, a crash) are gone.
+The players of those connections get the usual reconnect window again (the
+`sessionExpiryTime` of the map, five minutes by default). A client that reconnects
+inside it, with the same connection id, keeps the same player; after it, the
+session and the player are removed from the map and from the room storage, even
+if nobody connects in the meantime. A player that has no session at all is
+discarded when the room is restored, before it reaches the physics world or the
+first synchronization.
+
 Room SQLite storage is not the same as long-term player save storage. The
 starter's `LocalStorageSaveStorageStrategy` only works for standalone browser
 games. Configure a server-side save strategy before relying on save slots or

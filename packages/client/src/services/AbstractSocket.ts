@@ -9,6 +9,15 @@ export type SocketUpdateProperties = {
   host?: string;
   query?: SocketQuery;
 };
+/** Why a connection ended, as given to `onConnectionClosed`. */
+export interface ConnectionClosedInfo {
+  /** WebSocket close code. The server uses 4xxx codes (for example 4401) to end a session on purpose. */
+  code: number;
+  /** Close reason sent by the server, or an empty string. */
+  reason: string;
+  /** Whether the transport is going to open the connection again by itself. */
+  willReconnect: boolean;
+}
 export type WebSocketMode = "standalone" | "mmorpg";
 
 export abstract class AbstractWebsocket {
@@ -17,6 +26,8 @@ export abstract class AbstractWebsocket {
   readonly deferConnection?: boolean;
   /** @internal Current negotiated language, evaluated before every connection. */
   locale?: () => string;
+  /** @internal Set by the engine: called for every connection that ends outside a deliberate room change. */
+  connectionClosedHandler?: (info: ConnectionClosedInfo) => void;
 
   constructor(protected context: RpgContext) {}
 

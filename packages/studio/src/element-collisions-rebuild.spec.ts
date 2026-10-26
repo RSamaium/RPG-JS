@@ -20,6 +20,8 @@ vi.mock("./map-renderer/terrain-renderer/terrain-worker-client", () => ({ Terrai
 vi.mock("./data-provider", () => ({
   getGameDataProvider: () => ({ getMap: async () => state.map, getMedia: async () => null }),
   getStudioGameRuntimeConfig: () => ({ runtimeMode: "local" }),
+  normalizeBundleBasePath: (value?: string) => value || "/game-data",
+  shouldReadEventsFromBundle: () => false,
 }));
 
 import { loadMap } from "./map-loader";

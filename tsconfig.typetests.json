@@ -45,6 +45,7 @@
     "packages/common/src/foundation.spec.ts",
     "packages/map-builder/src/public-api-types.spec.ts",
     "packages/map-builder/tests/rpgjs/api-types.spec.ts",
+    "packages/script/src/public-api-types.spec.ts",
     "packages/server/tests/server-api-types.spec.ts"
   ]
 }
