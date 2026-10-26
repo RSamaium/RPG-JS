@@ -3,6 +3,7 @@ import type {
   PlayerStartConfigQuery,
   ProviderConfig,
   ProjectQuery,
+  StudioPlugin,
 } from './types';
 
 /**
@@ -24,7 +25,7 @@ export const keepStudioApiAnswers = (enabled = true): void => {
 
 const sharedAnswers: Map<string, SharedAnswer> = ((globalThis as any)[Symbol.for("rpgjs.studio.api-answers")] ??= new Map());
 
-const fetchJson = async (url: string, label: string): Promise<any> => {
+const fetchJson = async (url: string, label: string, headers?: Record<string, string>): Promise<any> => {
   let shared = sharedAnswers.get(url);
   if (shared && shared.expiresAt <= Date.now()) {
     sharedAnswers.delete(url);
@@ -33,7 +34,7 @@ const fetchJson = async (url: string, label: string): Promise<any> => {
   if (!shared) {
     const entry: SharedAnswer = {
       promise: (async () => {
-        const response = await fetch(url);
+        const response = headers && Object.keys(headers).length > 0 ? await fetch(url, { headers }) : await fetch(url);
         if (!response.ok) {
           throw new Error(`[HttpGameDataProvider] ${label} failed (${response.status}) for ${url}`);
         }
@@ -90,16 +91,20 @@ export class HttpGameDataProvider implements GameDataProvider {
 
   constructor(private readonly config: ProviderConfig) {}
 
+  private getJson(url: string, label: string): Promise<any> {
+    return fetchJson(url, label, this.config.requestHeaders);
+  }
+
   async getProject(query: ProjectQuery): Promise<any> {
     if (query.projectId) {
-      return fetchJson(
+      return this.getJson(
         `${this.config.apiBaseUrl}/game/project?projectId=${query.projectId}`,
         'project query by projectId'
       );
     }
 
     if (query.mapId) {
-      return fetchJson(
+      return this.getJson(
         `${this.config.apiBaseUrl}/game/project?mapId=${query.mapId}`,
         'project query by mapId'
       );
@@ -109,11 +114,11 @@ export class HttpGameDataProvider implements GameDataProvider {
   }
 
   getMap(mapId: string): Promise<any> {
-    return fetchJson(`${this.config.apiBaseUrl}/game/maps/${mapId}`, 'map query');
+    return this.getJson(`${this.config.apiBaseUrl}/game/maps/${mapId}`, 'map query');
   }
 
   getMedia(mediaId: string): Promise<any> {
-    return fetchJson(`${this.config.apiBaseUrl}/game/media/${mediaId}`, 'media query');
+    return this.getJson(`${this.config.apiBaseUrl}/game/media/${mediaId}`, 'media query');
   }
 
   /** The most media the API answers in one request (`/game/media?ids=`); a longer list is asked in several. */
@@ -127,7 +132,7 @@ export class HttpGameDataProvider implements GameDataProvider {
     }
     const answers = await Promise.all(
       slices.map((slice) =>
-        fetchJson(
+        this.getJson(
           `${this.config.apiBaseUrl}/game/media?ids=${slice.map(encodeURIComponent).join(',')}`,
           'media batch query',
         ),
@@ -144,7 +149,7 @@ export class HttpGameDataProvider implements GameDataProvider {
     }
     const answers = await Promise.all(
       slices.map((slice) =>
-        fetchJson(
+        this.getJson(
           `${this.config.apiBaseUrl}/game/animations?ids=${slice.map(encodeURIComponent).join(',')}`,
           'character animations batch query',
         ),
@@ -154,7 +159,7 @@ export class HttpGameDataProvider implements GameDataProvider {
   }
 
   getMediaGroup(mediaId: string): Promise<any[]> {
-    return fetchJson(`${this.config.apiBaseUrl}/game/media/${mediaId}/animations`, 'character animations query');
+    return this.getJson(`${this.config.apiBaseUrl}/game/media/${mediaId}/animations`, 'character animations query');
   }
 
   async getDatabase(projectId?: string): Promise<any[]> {
@@ -162,7 +167,7 @@ export class HttpGameDataProvider implements GameDataProvider {
       throw new Error('[HttpGameDataProvider] getDatabase requires projectId');
     }
 
-    const value = await fetchJson(
+    const value = await this.getJson(
       `${this.config.apiBaseUrl}/game/database/all?projectId=${projectId}`,
       'database query'
     );
@@ -173,5 +178,17 @@ export class HttpGameDataProvider implements GameDataProvider {
   async getPlayerStartConfig(query: PlayerStartConfigQuery): Promise<any> {
     if (!query.projectId) return null;
     return fetchStudioProject(this.config.apiBaseUrl, query.projectId);
+  }
+
+  /** The enabled plugins of the project, with their scripts (`/game/plugins`). */
+  async getPlugins(projectId?: string): Promise<StudioPlugin[]> {
+    if (!projectId) {
+      throw new Error('[HttpGameDataProvider] getPlugins requires projectId');
+    }
+    const value = await this.getJson(
+      `${this.config.apiBaseUrl}/game/plugins?projectId=${projectId}`,
+      'plugins query'
+    );
+    return Array.isArray(value) ? value : [];
   }
 }

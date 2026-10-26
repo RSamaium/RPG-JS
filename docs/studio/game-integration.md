@@ -333,6 +333,32 @@ For a runnable local Worker, deterministic fixture, seed script, and real Studio
 API seed command, see the
 [Studio playground](https://github.com/RSamaium/RPG-JS/tree/master/playground/games/studio).
 
+## Published snapshot
+
+A Studio project has three states of data: the **draft** (editing, test play, the game inside the Studio iframe), a **published RPG snapshot** (an immutable, versioned bundle served publicly) and, for an MMORPG, a private snapshot read by the rooms. A game that players run reads the published snapshot, never the draft.
+
+The Studio server serves the active revision in the layout of the local bundle (`project.json`, `database.json`, `events.json`, `maps/<id>.json`, `media/media-index.json`, `plugins.json`) at `/api/published/<projectId>/<file>`. Use the `published` runtime mode:
+
+```ts
+provideStudioGame({
+  runtimeMode: "published",
+  projectId: "<projectId>",
+  bundleBasePath: "https://studio.example/api/published/<projectId>",
+})
+```
+
+- The data comes from `bundleBasePath`, a path or the complete URL of the snapshot.
+- Unlike `offline`, the project id is kept: accounts, saves and the start need it.
+- The events of the maps are resolved from the `events.json` of the bundle, whatever the project id. In `online` mode they are never read from the bundle.
+
+### Draft in the Studio iframe
+
+The data source is chosen without a rebuild. A page opened with `?editor` or `?preview` reads the draft from the API (`online`), every other URL reads the published bundle. When the draft routes of the Studio are private, send a preview token: set `previewToken`, or pass it in the URL (`?preview=<token>`). The token is sent in the `x-studio-preview-token` header, never in the URL of a request; a token found in the address is kept for the tab (`sessionStorage`) and taken off the address bar.
+
+### Plugins
+
+`GameDataProvider.getPlugins(projectId?)` returns the enabled plugins of the project, `[{ pluginId, version, scripts: [{ name, tree }] }]`: from `plugins.json` for a bundle (empty when absent) and from `/game/plugins` for the API. `provideStudioGame({ installPlugins })` receives them when the server starts, to install their scripts in the script interpreter of the game. Call `loadStudioPlugins(install)` again to reinstall them after the data was invalidated. A shared runtime (`resolveStartup`) has no single project: its host loads the plugins of each project itself. The interpreter is not part of `@rpgjs/studio`.
+
 ## Offline mode
 
 Offline mode lets the game run from exported Studio data without calling the Studio API. Export the project data from Studio into the game public directory, using the default bundle path:

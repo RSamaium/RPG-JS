@@ -6,8 +6,10 @@ import type {
   GameRuntimeMode,
   PlayerStartConfigQuery,
   ProviderConfig,
+  StudioPlugin,
 } from './types';
 import { resolveRuntimeModeOrNull } from './runtime-mode';
+import { STUDIO_PREVIEW_TOKEN_HEADER, resolveStudioDraftRequestFromPage } from './draft-request';
 
 const getDefaultConfig = (): ProviderConfig => ({
   apiBaseUrl: apiUrl,
@@ -83,6 +85,16 @@ class AutoFallbackGameDataProvider implements GameDataProvider {
     }
     return this.http.getDatabase(projectId);
   }
+
+  async getPlugins(projectId?: string): Promise<StudioPlugin[]> {
+    try {
+      const localValue = await this.local.getPlugins(projectId);
+      if (localValue.length > 0) return localValue;
+    } catch (error) {
+      console.warn('[AutoFallbackGameDataProvider] local plugins failed, fallback to online', error);
+    }
+    return this.http.getPlugins(projectId);
+  }
 }
 
 class CachedGameDataProvider implements GameDataProvider {
@@ -92,6 +104,7 @@ class CachedGameDataProvider implements GameDataProvider {
   private mediaById = new Map<string, Promise<any>>();
   private mediaGroupById = new Map<string, Promise<any[]>>();
   private databaseByProjectId = new Map<string, Promise<any[]>>();
+  private pluginsByProjectId = new Map<string, Promise<StudioPlugin[]>>();
 
   constructor(private readonly source: GameDataProvider) {
     this.kind = source.kind;
@@ -100,6 +113,7 @@ class CachedGameDataProvider implements GameDataProvider {
   invalidateProject(projectId: string): void {
     this.projectByKey.delete(`projectId:${projectId}`);
     this.databaseByProjectId.delete(projectId);
+    this.pluginsByProjectId.delete(projectId);
   }
 
   getProject(query: { projectId?: string | null; mapId?: string | null }): Promise<any> {
@@ -188,6 +202,11 @@ class CachedGameDataProvider implements GameDataProvider {
     return this.getOrCreate(this.databaseByProjectId, key, () => this.source.getDatabase(projectId));
   }
 
+  getPlugins(projectId?: string): Promise<StudioPlugin[]> {
+    const key = String(projectId ?? '');
+    return this.getOrCreate(this.pluginsByProjectId, key, () => this.source.getPlugins?.(projectId) ?? Promise.resolve([]));
+  }
+
   getPlayerStartConfig?(query: PlayerStartConfigQuery): Promise<any> {
     return this.source.getPlayerStartConfig?.(query) ?? Promise.resolve(null);
   }
@@ -215,10 +234,34 @@ type StudioGameRuntimeConfig = {
   runtimeMode?: GameRuntimeMode;
   apiBaseUrl?: string;
   bundleBasePath?: string;
+  /** Token a draft request (`?editor` / `?preview`) sends in the `x-studio-preview-token` header. */
+  previewToken?: string;
 };
 
 let runtimeConfig: StudioGameRuntimeConfig = {
   projectId: null,
+};
+
+/**
+ * The runtime mode the data is really read with. A game configured for the published snapshot reads the draft instead when the
+ * page asks for it (`?editor` or `?preview`), so the iframe of the Studio edits and tests the draft while every other URL plays
+ * the published bundle, without a rebuild.
+ */
+export const resolveEffectiveRuntimeMode = (): GameRuntimeMode => {
+  const mode = resolveRuntimeModeFromConfig();
+  if (mode === 'published' && resolveStudioDraftRequestFromPage().draft) return 'online';
+  return mode;
+};
+
+/**
+ * Whether the events of a map are read from the `events.json` of a bundle instead of being embedded in the map. A published
+ * snapshot always does, whatever the project id (a published game needs its project id for accounts, saves and start); a
+ * bundle without a project id does too. The draft (`online`) never does.
+ */
+export const shouldReadEventsFromBundle = (options: { runtimeMode?: string | null; hasProjectId: boolean }): boolean => {
+  const mode = options.runtimeMode === 'published' && resolveStudioDraftRequestFromPage().draft ? 'online' : options.runtimeMode;
+  if (mode === 'published') return true;
+  return mode !== 'online' && !options.hasProjectId;
 };
 
 const resolveRuntimeModeFromConfig = (): GameRuntimeMode => {
@@ -238,9 +281,12 @@ const resolveRuntimeModeFromConfig = (): GameRuntimeMode => {
 
 const resolveProviderConfig = (): ProviderConfig => {
   const defaultConfig = getDefaultConfig();
+  const draft = resolveStudioDraftRequestFromPage();
+  const previewToken = draft.token ?? runtimeConfig.previewToken;
   return {
     apiBaseUrl: runtimeConfig.apiBaseUrl || defaultConfig.apiBaseUrl,
     bundleBasePath: runtimeConfig.bundleBasePath || defaultConfig.bundleBasePath,
+    ...(draft.draft && previewToken ? { requestHeaders: { [STUDIO_PREVIEW_TOKEN_HEADER]: previewToken } } : {}),
   };
 };
 
@@ -249,10 +295,10 @@ export const createGameDataProvider = (
   config: ProviderConfig = getDefaultConfig()
 ): GameDataProvider => {
   const httpProvider = new HttpGameDataProvider(config);
-  const localProvider = new LocalBundleGameDataProvider(config);
+  const localProvider = new LocalBundleGameDataProvider(config, mode === 'published' ? 'published' : 'offline');
 
   if (mode === 'online') return httpProvider;
-  if (mode === 'offline') return localProvider;
+  if (mode === 'offline' || mode === 'published') return localProvider;
   return new AutoFallbackGameDataProvider(localProvider, httpProvider);
 };
 
@@ -284,7 +330,7 @@ export const invalidateGameDataProviderProject = (projectId: string): void => {
 
 export const getGameDataProvider = (): GameDataProvider => {
   if (providerInstance) return providerInstance;
-  const mode = resolveRuntimeModeFromConfig();
+  const mode = resolveEffectiveRuntimeMode();
   providerInstance = createCachedGameDataProvider(
     createGameDataProvider(mode, resolveProviderConfig())
   );

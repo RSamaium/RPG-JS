@@ -1,14 +1,10 @@
-import type { GameDataProvider, ProviderConfig, ProjectQuery } from './types';
+import type { GameDataProvider, GameRuntimeMode, ProviderConfig, ProjectQuery, StudioPlugin } from './types';
+import { normalizeBundleBasePath } from './bundle-path';
 
 interface MediaIndex {
   byId?: Record<string, any>;
   items?: any[];
 }
-
-const ensureLeadingSlash = (path: string): string => {
-  if (!path) return '/game-data';
-  return path.startsWith('/') ? path : `/${path}`;
-};
 
 const normalizeMediaId = (mediaId: string): string => {
   return mediaId.startsWith('#') ? mediaId.slice(1) : mediaId;
@@ -84,12 +80,13 @@ const createPlaceholderMedia = (mediaId: string): any => {
 };
 
 export class LocalBundleGameDataProvider implements GameDataProvider {
-  readonly kind = 'offline' as const;
+  readonly kind: Extract<GameRuntimeMode, 'offline' | 'published'>;
   private readonly basePath: string;
   private mediaIndexPromise: Promise<MediaIndex> | null = null;
 
-  constructor(config: ProviderConfig) {
-    this.basePath = ensureLeadingSlash(config.bundleBasePath);
+  constructor(config: ProviderConfig, kind: 'offline' | 'published' = 'offline') {
+    this.kind = kind;
+    this.basePath = normalizeBundleBasePath(config.bundleBasePath);
   }
 
   async getProject(_query: ProjectQuery): Promise<any> {
@@ -181,6 +178,17 @@ export class LocalBundleGameDataProvider implements GameDataProvider {
       return Array.isArray(value) ? value : [];
     } catch (error) {
       console.warn('[LocalBundleGameDataProvider] fallback empty database', error);
+      return [];
+    }
+  }
+
+  /** The enabled plugins of the snapshot (`plugins.json`); none when the bundle has no such file. */
+  async getPlugins(_projectId?: string): Promise<StudioPlugin[]> {
+    try {
+      const value = await fetchJson(`${this.basePath}/plugins.json`, 'plugins read');
+      return Array.isArray(value) ? value : [];
+    } catch (error) {
+      console.warn('[LocalBundleGameDataProvider] no plugins in the bundle', error);
       return [];
     }
   }

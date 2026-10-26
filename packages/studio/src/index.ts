@@ -4,7 +4,7 @@ import { createModule, type RpgProvider } from "@rpgjs/common";
 import { createStudioMapClientProviders } from "./client-provider";
 import { configureStudioGameRuntime } from "./data-provider";
 import { configureStudioConstants } from "./constants";
-import type { GameRuntimeMode } from "./data-provider/types";
+import type { GameRuntimeMode, StudioPlugin } from "./data-provider/types";
 import type { StudioMapPlugin } from "./studio-map-plugins";
 import type { StudioStartupResolver } from "./startup";
 import { configureStudioBlockExecutors } from "./block-executor";
@@ -48,6 +48,8 @@ export {
 } from "./item-workflow";
 export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./enemy-interaction";
 export { runStudioEvent } from "./run-event";
+export { loadStudioPlugins } from "./server";
+export type { StudioPlugin, StudioPluginScript } from "./data-provider/types";
 export { runStudioSkillTrigger } from "./skill-workflow";
 export type {
   StudioItemWorkflowHooks,
@@ -57,9 +59,29 @@ export type {
 
 export interface StudioGameModuleConfig {
   projectId?: string | null;
+  /**
+   * Where the game reads its data: `online` (the draft of the project), `offline` (a local bundle, no project id),
+   * `published` (the bundle of a published snapshot, with the project id) or `auto`.
+   *
+   * With `published`, the data comes from `bundleBasePath` (for example `<api>/published/<projectId>`), the events from its
+   * `events.json`, and a page opened with `?editor` or `?preview` still reads the draft online, so the Studio iframe edits
+   * the draft while every other URL plays the published snapshot.
+   */
   runtimeMode?: GameRuntimeMode;
   apiBaseUrl?: string;
+  /** Base path or complete URL of the bundle read by `offline` and `published`. Defaults to `/game-data`. */
   bundleBasePath?: string;
+  /**
+   * Token a draft request (`?editor` or `?preview`) sends in the `x-studio-preview-token` header, for a Studio whose draft
+   * routes are private. The URL can also carry it (`?preview=<token>`): it is then kept for the tab and taken off the address.
+   */
+  previewToken?: string;
+  /**
+   * Receives the enabled plugins of the project (their parsed scripts) when the server starts, to install them in the script
+   * interpreter of the game. Read from the bundle (`plugins.json`) or the API (`/game/plugins`). Call
+   * `loadStudioPlugins()` again to reinstall them after the data was invalidated.
+   */
+  installPlugins?: (plugins: StudioPlugin[]) => void | Promise<void>;
   isProduction?: boolean;
   isPreprod?: boolean;
   baseUrl?: string;
@@ -159,6 +181,7 @@ export function provideStudioGame(config: StudioGameModuleConfig = {}): RpgProvi
     runtimeMode: config.runtimeMode ?? (config.resolveStartup ? "online" : undefined),
     apiBaseUrl: config.apiBaseUrl ?? resolvedApiUrl,
     bundleBasePath: config.bundleBasePath ?? "/game-data",
+    previewToken: config.previewToken,
   });
 
   const clientProviders = createStudioMapClientProviders?.() ?? [];
