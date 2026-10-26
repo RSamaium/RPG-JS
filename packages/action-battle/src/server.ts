@@ -387,6 +387,20 @@ export function applyActionBattleEntityHit(
       raw: result.rawDamage,
       reaction: result.reaction,
     });
+  } else if (!result.cancelled && !result.defense) {
+    // A target without AI (a player hit by a player) has no `handleDamage` to emit the hurt feedback: give it the
+    // same flash, damage number and hurt animation as an enemy, as `applyDamageEffect()` does for a skill.
+    withActionBattleAnimationUnlocked(target, () => {
+      emitActionBattleClientVisual({
+        moment: "hurt",
+        entity: target,
+        target,
+        attacker,
+        damage: result.damage,
+        defeated: result.defeated,
+        result,
+      });
+    });
   }
 
   return result as HitResult;
