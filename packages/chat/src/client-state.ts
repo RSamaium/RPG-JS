@@ -19,7 +19,7 @@ export const chatChannels = signal(chatClientOptions().channels);
 /** The channel the next message goes to. */
 export const chatSelectedChannel = signal<ChatChannel>(chatClientOptions().channels[0]!.id);
 /** Open (log and input), or reduced to a pill with the number of unread messages. */
-export const chatExpanded = signal(true);
+export const chatExpanded = signal(chatClientOptions().startExpanded);
 export const chatUnread = signal(0);
 /** A message was sent and the server has not answered yet: the GUI shows a loading. */
 export const chatSending = signal(false);
@@ -57,7 +57,7 @@ export function configureChatClient(options: ResolvedChatClientOptions): void {
   chatSelectedChannel.set(options.channels[0]!.id);
   chatMessages.set([]);
   showChatError(null);
-  chatExpanded.set(true);
+  chatExpanded.set(options.startExpanded);
   chatUnread.set(0);
   endChatSending();
   chatTall.set(false);

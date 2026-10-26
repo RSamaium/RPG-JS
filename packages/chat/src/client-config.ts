@@ -29,6 +29,7 @@ export function normalizeChatClientOptions(
     component: options.component || (() => null),
     renderer: options.renderer || "canvas",
     autoOpen: options.autoOpen ?? true,
+    startExpanded: options.startExpanded ?? false,
     position: options.position || "bottom-left",
     maxMessages: positiveInteger(options.maxMessages, 100),
     maxLength: positiveInteger(options.maxLength, 180),

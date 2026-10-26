@@ -56,6 +56,10 @@ export default createServer({
 Configure the same `maxLength` on both sides so the built-in input matches the
 server-authoritative validation limit.
 
+The chat is closed when the player arrives on the map: it shows as a small pill with the number of
+unread messages, and the player opens it. Pass `startExpanded: true` in the `client` options to start
+with the log and the input open.
+
 Import the default semantic styles in the client entry:
 
 ```ts

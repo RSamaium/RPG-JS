@@ -19,6 +19,7 @@ const message: ChatMessage = {
 
 const clientOptions: ChatClientOptions = {
   maxLength: 320,
+  startExpanded: true,
 };
 
 const serverOptions: ChatServerOptions = {

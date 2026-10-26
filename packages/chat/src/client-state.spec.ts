@@ -59,9 +59,9 @@ describe("state of the chat on the client", () => {
   });
   afterEach(() => vi.useRealTimers());
 
-  test("starts empty, open, on the first channel, at the default height", () => {
+  test("starts empty, closed (a pill), on the first channel, at the default height", () => {
     expect(chatMessages()).toEqual([]);
-    expect(chatExpanded()).toBe(true);
+    expect(chatExpanded()).toBe(false);
     expect(chatUnread()).toBe(0);
     expect(chatTall()).toBe(false);
     expect(chatSelectedChannel()).toBe("map");
@@ -99,6 +99,7 @@ describe("state of the chat on the client", () => {
     });
 
     test("counts nothing while the chat is open", () => {
+      setChatExpanded(true);
       addChatMessage(message("1"), "me");
 
       expect(chatUnread()).toBe(0);
@@ -165,7 +166,7 @@ describe("state of the chat on the client", () => {
   test("forgets the previous game when it is configured again", () => {
     addChatMessage(message("1"), "me");
     selectChatChannel("global");
-    setChatExpanded(false);
+    setChatExpanded(true);
     setChatTall(true);
     startChatSending();
     showChatError({ key: "x" });
@@ -174,9 +175,16 @@ describe("state of the chat on the client", () => {
 
     expect(chatMessages()).toEqual([]);
     expect(chatSelectedChannel()).toBe("map");
-    expect(chatExpanded()).toBe(true);
+    expect(chatExpanded()).toBe(false);
     expect(chatTall()).toBe(false);
     expect(chatSending()).toBe(false);
     expect(chatError()).toBeNull();
+  });
+
+  test("is open when the game asks for it with startExpanded", () => {
+    configureChatClient(normalizeChatClientOptions({ startExpanded: true }));
+    expect(chatExpanded()).toBe(true);
+    configureChatClient(normalizeChatClientOptions());
+    expect(chatExpanded()).toBe(false);
   });
 });

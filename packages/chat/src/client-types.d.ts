@@ -22,6 +22,11 @@ export interface ChatClientOptions {
   component?: GuiComponent;
   renderer?: GuiRenderer;
   autoOpen?: boolean;
+  /**
+   * Whether the chat box is open (log and input) when the player arrives on the map. Defaults to `false`: the chat starts reduced
+   * to its pill, with the number of unread messages, and the player opens it. The player's choice then stays until the next start.
+   */
+  startExpanded?: boolean;
   position?: ChatPosition;
   maxMessages?: number;
   maxLength?: number;
@@ -37,6 +42,7 @@ export interface ResolvedChatClientOptions {
   component: GuiComponent;
   renderer: GuiRenderer;
   autoOpen: boolean;
+  startExpanded: boolean;
   position: ChatPosition;
   maxMessages: number;
   maxLength: number;
