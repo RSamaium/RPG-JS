@@ -10,7 +10,7 @@ import { GAME_SIGNALS } from "./signals";
 const VALUE = "string | number | boolean | null | object";
 
 /**
- * The API of scripts in a game, as data: `$player`, `$map`, `$room`, `$event`, `$shared`, `$hook`, `$state`, the functions `wait`, `random`,
+ * The API of scripts in a game, as data: `$player`, `$map`, `$room`, `$event`, `$shared`, `$data`, `$hook`, `$state`, the functions `wait`, `random`,
  * `Item`, `Graphic`, and the signals of the game. What each name does is in `GAME_API_IMPL`, over a `ScriptWorld`.
  */
 export const GAME_API_DESCRIPTION: ApiDescription = {
@@ -103,6 +103,13 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         },
       },
       dynamic: { keyDoc: "name: string", type: "number | string | boolean | null", writable: true },
+    },
+    $data: {
+      doc: "The database of the game, read only: the records of its collections (item, skill, enemy…, and the ones a plugin adds, such as quests_quest). A record is a copy of its fields, with its id and its type.",
+      methods: {
+        get: { sig: "(type: string, id: string): { id: string; type: string; [field: string]: any } | undefined", doc: 'A copy of a record of a collection, or undefined when there is none: $data.get("quests_quest", "wolves").' },
+        list: { sig: "(type: string): { id: string; type: string; [field: string]: any }[]", doc: "Copies of the records of a collection, 1 000 at most." },
+      },
     },
     $hook: {
       doc: "The payload of the signal that fired the script (the handler receives the same data as its argument).",

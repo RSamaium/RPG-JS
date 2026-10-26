@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type EventOptions, type EventSnapshot, type LightingTransition, type MapPort, type PlayerPort, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type LightingTransition, type MapPort, type PlayerPort, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -153,6 +153,29 @@ export function sharedPropsOf(place: RpgMap | RpgPlayerRoom | null | undefined, 
   return { has, get: nowhere, set: nowhere };
 }
 
+/**
+ * The database of the game as a script reads it. RPGJS keeps it in the room (`database()`); a Studio game puts a record of any
+ * collection in it as plain data, with `_type` for its collection. A record that is not plain data (a class of the game) is not given.
+ */
+export function dataPortOf(place: RpgMap | RpgPlayerRoom | null | undefined): DataPort {
+  const entries = (): [string, Record<string, unknown>][] => {
+    const database = (place as { database?: unknown } | null | undefined)?.database;
+    const all = (typeof database === "function" ? (database as () => unknown).call(place) : database) as Record<string, unknown> | undefined;
+    return Object.entries(all ?? {}).filter((entry): entry is [string, Record<string, unknown>] => typeof entry[1] === "object" && entry[1] !== null);
+  };
+  const recordOf = (id: string, data: Record<string, unknown>): DataRecord => {
+    const { _type, ...fields } = data;
+    return { ...fields, id, type: String(_type ?? "") };
+  };
+  return {
+    get(type, id) {
+      const found = entries().find(([key]) => key === id);
+      return found && found[1]["_type"] === type ? recordOf(found[0], found[1]) : undefined;
+    },
+    list: (type) => entries().filter(([, data]) => data["_type"] === type).map(([id, data]) => recordOf(id, data)),
+  };
+}
+
 /** What the world of a script is built from: the player it acts for, the event and the map, the shared properties it declared, and the payload that fired it. */
 export interface RpgjsWorldOptions {
   player: RpgPlayer;
@@ -242,6 +265,7 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     wait: (seconds) => new Promise<void>((resolve) => setTimeout(resolve, Math.min(Math.max(seconds, 0), MAX_WAIT_SECONDS) * 1000)),
     rand: options.rand ?? ((min, max) => min + Math.floor(Math.random() * (max - min + 1))),
     sharedProps: sharedPropsOf(room, options.shared ?? []),
+    data: dataPortOf(room),
     stateProps: options.state ?? { get: (key) => data.get(key), set: (key, value) => void data.set(key, value) },
     hook: options.hook ?? {},
   };

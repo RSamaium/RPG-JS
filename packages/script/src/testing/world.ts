@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DialogOptions, type EventOptions, type EventSnapshot, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -188,6 +188,8 @@ export interface WorldInit {
   shapes?: { name: string; x?: number; y?: number; width?: number; height?: number }[];
   /** Events of the game that are on the map: scripts can read them, and cannot remove them. */
   events?: { id: string; name?: string; x?: number; y?: number }[];
+  /** The records of the database of the game, by collection: a script reads them with `$data`. Each has an `id`. */
+  data?: Record<string, { id: string; [field: string]: unknown }[]>;
   /** The event the script runs for. */
   event?: { id?: string; name?: string; x?: number; y?: number };
   /** Answers `showChoices`, after any delay, instead of `choices`. */
@@ -212,6 +214,8 @@ export class SimWorld implements ScriptWorld {
   map?: SimMap;
   event = { id: "event_1", name: "", x: 5, y: 3 };
   state: Record<string, unknown> = {};
+  /** The database of the game: the records of each collection. */
+  private readonly records: Record<string, { id: string; [field: string]: unknown }[]>;
   hook: Record<string, unknown> = {};
   shared: SharedStore;
   effects: { name: string; params: unknown }[] = [];
@@ -226,6 +230,7 @@ export class SimWorld implements ScriptWorld {
     Object.assign(this.state, JSON.parse(JSON.stringify(init.state ?? {})));
     Object.assign(this.hook, init.hook ?? {});
     this.shared = init.shared ?? new SharedStore();
+    this.records = JSON.parse(JSON.stringify(init.data ?? {}));
     this.seed = init.seed ?? 1;
     this.dice = [...(init.dice ?? [])];
     this.player.answers = [...(init.choices ?? [])];
@@ -245,6 +250,15 @@ export class SimWorld implements ScriptWorld {
     get: (name) => this.shared.values[name],
     set: (name, value, op, operand) => { this.shared.values[name] = value; this.effects.push({ name: "sync", params: { name, op, value: operand } }); },
   };
+
+  readonly data: DataPort = {
+    get: (type, id) => this.recordsOf(type).find((record) => record.id === id),
+    list: (type) => this.recordsOf(type),
+  };
+
+  private recordsOf(type: string): DataRecord[] {
+    return (this.records[type] ?? []).map((record) => ({ ...record, type }));
+  }
 
   readonly stateProps: ScriptWorld["stateProps"] = {
     get: (key) => this.state[key],
