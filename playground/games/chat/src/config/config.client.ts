@@ -28,6 +28,7 @@ export default {
       client: {
         position: "bottom-left",
         maxMessages: 50,
+        channels: ["map", "global"],
       },
     }),
     provideClientModules([]),
