@@ -1,7 +1,7 @@
 import { connectionRoom } from "@signe/sync/client";
 import { RpgGui } from "../Gui/Gui";
 import { RpgClientEngine } from "../RpgClientEngine";
-import { AbstractWebsocket, SocketQuery, SocketUpdateProperties, WebSocketToken } from "./AbstractSocket";
+import { AbstractWebsocket, ConnectionClosedInfo, SocketQuery, SocketUpdateProperties, WebSocketToken } from "./AbstractSocket";
 import { UpdateMapService, UpdateMapToken, type RpgContext, type RpgProvider } from "@rpgjs/common";
 import { provideKeyboardControls } from "./keyboardControls";
 import { provideSaveClient } from "./save";
@@ -23,6 +23,12 @@ export interface MmorpgOptions {
     connectionAcceptanceTimeoutMs?: number;
     /** Render the client and its GUIs before opening the initial WebSocket. */
     deferConnection?: boolean;
+    /**
+     * Called for every connection that ends, including after the player moved from the lobby to a map room, except
+     * a clean close (code 1000) and the closes of a room change or of `disconnect()`. A server that ends a session
+     * on purpose closes with a 4xxx code, for example `conn.close(4401, "Authentication required")`.
+     */
+    onConnectionClosed?: (info: ConnectionClosedInfo) => void;
 }
 
 export class BridgeWebsocket extends AbstractWebsocket {
@@ -36,6 +42,8 @@ export class BridgeWebsocket extends AbstractWebsocket {
   private targetRoom: string;
   private transferQuery?: SocketQuery;
   private targetHost?: string;
+  private deliberateClose = false;
+  private closeWatcherSocket?: any;
 
   constructor(protected context: RpgContext, private options: MmorpgOptions = {}) {
     super(context);
@@ -99,6 +107,7 @@ export class BridgeWebsocket extends AbstractWebsocket {
         },
     }, instance)
 
+    this.watchConnectionClose();
     const pendingOn = this.pendingOn;
     this.pendingOn = [];
     pendingOn
@@ -113,6 +122,28 @@ export class BridgeWebsocket extends AbstractWebsocket {
       .forEach(({ event, callback }) => this.attachEvent(event, callback));
     this.emitAcceptedOpen();
     listeners?.(this.socket)
+  }
+
+  /**
+   * The physical socket is the same object across room changes, so one listener sees every close, wherever the
+   * engine's own listeners were attached.
+   */
+  private watchConnectionClose() {
+    const conn = this.socket?.conn;
+    if (!conn || this.closeWatcherSocket === conn) return;
+    this.closeWatcherSocket = conn;
+    conn.addEventListener("close", (event: CloseEvent) => {
+      if (this.deliberateClose || event.code === 1000) return;
+      const rawReason: unknown = (event as any).reason;
+      const code = typeof event.code === "number" ? event.code : 0;
+      const info: ConnectionClosedInfo = {
+        code,
+        reason: typeof rawReason === "string" ? rawReason : "",
+        willReconnect: !(code >= 4000 && code < 5000) && Number(this.options.socketOptions?.maxRetries ?? 0) > 0,
+      };
+      this.options.onConnectionClosed?.(info);
+      this.connectionClosedHandler?.(info);
+    });
   }
 
   on(key: string, callback: (data: any) => void) {
@@ -188,12 +219,18 @@ export class BridgeWebsocket extends AbstractWebsocket {
       this.options.connectionAcceptanceTimeoutMs ?? 10_000,
       { ignoreCleanClose: true },
     );
-    conn.reconnect();
-    await connected;
+    this.deliberateClose = true;
+    try {
+      conn.reconnect();
+      await connected;
+    } finally {
+      this.deliberateClose = false;
+    }
     this.emitAcceptedOpen();
   }
 
   disconnect(): void {
+    this.deliberateClose = true;
     this.socket?.conn?.close?.();
     this.socket = undefined;
   }

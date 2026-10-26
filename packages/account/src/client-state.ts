@@ -7,6 +7,8 @@ import type {
 
 export const accountSession = signal<AccountSession | null>(null);
 export const accountError = signal<AccountErrorPayload | null>(null);
+/** i18n key of a notice the account screen shows above the form (for example after the session ended). */
+export const accountNotice = signal<string>("");
 export const accountPending = signal(false);
 export const accountClientOptions = signal<ResolvedAccountClientOptions | null>(null);
 

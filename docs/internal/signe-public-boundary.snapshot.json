@@ -1217,6 +1217,7 @@
       "ClientVisualPayload",
       "ClientVisualPosition",
       "ClientVisualRegistry",
+      "ConnectionClosedInfo",
       "Control",
       "DialogboxComponent",
       "EquipMenuComponent",

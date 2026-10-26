@@ -247,6 +247,8 @@ export default (config: StudioGameModuleConfig) => {
   if (typeof window !== "undefined" && config.projectId && !resolveStudioClientStartupQuery(window.location.search).directMapId) {
     warmUpStartupData(getGameDataProvider(), { projectId: config.projectId, startMapId: config.startMapId });
   }
+  // Title screen waiting for a deferred connection (see `onConnected`).
+  let pendingTitleScreen: (() => Promise<void>) | undefined;
   return defineModule<RpgClient>({
     engine: {
       async onStart(engine: RpgClientEngine<any>) {
@@ -361,7 +363,7 @@ export default (config: StudioGameModuleConfig) => {
           : config.displayTitleScreen
           ?? response.menus?.titleScreen?.enabled
           ?? true;
-        if (displayTitleScreen) {
+        const showTitleScreen = async () => {
           const backgroundImage = await resolveStudioMediaSource(
             response.menus?.titleScreen?.settings?.backgroundImage,
           );
@@ -386,7 +388,22 @@ export default (config: StudioGameModuleConfig) => {
           });
           // The title screen is the first screen the player sees: the startup splash has done its job.
           dismissStartupSplash();
+        };
+        if (displayTitleScreen) {
+          if (engine.isConnectionDeferred?.() && !engine.isConnected?.()) {
+            // A sign-in screen (or any deferred connection) comes first: the title waits for the connection, and the
+            // startup splash gives way to that first screen.
+            pendingTitleScreen = showTitleScreen;
+            dismissStartupSplash();
+          } else {
+            await showTitleScreen();
+          }
         }
+      },
+      async onConnected() {
+        const show = pendingTitleScreen;
+        pendingTitleScreen = undefined;
+        await show?.();
       },
     },
     sprite: {
