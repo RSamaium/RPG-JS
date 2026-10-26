@@ -6,6 +6,7 @@ import { context as serverContext } from "../core/context";
 import { setInject } from "../core/inject";
 import { provideServerModules } from "../module";
 import { createMapUpdateHeaders, createMapUpdatePayload, MAP_UPDATE_TOKEN_ENV, resolveMapUpdateToken, updateMap } from "./map";
+import { reconcileRestoredRoom } from "./session-restore";
 import type {
   CreateRpgServerTransportOptions,
   HandleNodeRequestOptions,
@@ -236,6 +237,7 @@ export class RpgServerTransport {
       async onStart() {
         await owner.ensureServerContext();
         await super.onStart?.();
+        await owner.reconcileRestoredRoom(this as RpgTransportServer);
         const roomId = (this as any).room?.id;
         console.log(`Server started for room: ${roomId}`);
 
@@ -257,6 +259,45 @@ export class RpgServerTransport {
       },
       storage: options.storage ?? createMemoryNodeRoomStorage(),
     });
+  }
+
+  /**
+   * A room that starts from a storage that already holds players (SQLite) is restored in a process where nobody
+   * is connected: the connections that were open when the previous process stopped are gone. Their sessions are
+   * given the reconnect window they would have had, and the players nobody can claim are dropped, so that they
+   * do not stay in the map, with a physics body, for ever.
+   */
+  private async reconcileRestoredRoom(server: RpgTransportServer): Promise<void> {
+    const room = (server as unknown as { room?: RpgHostedRoom }).room;
+    const host = server as unknown as {
+      isHibernate?: boolean;
+      subRoom?: { players?: () => Record<string, unknown>; sessionExpiryTime?: number };
+      garbageCollector?: (options: { sessionExpiryTime: number }) => Promise<void>;
+    };
+    // Connections that outlive the process (a hibernated Durable Object) are still there: nothing to repair.
+    if (!room || host.isHibernate || [...room.getConnections()].length > 0) return;
+
+    try {
+      const players = typeof host.subRoom?.players === "function" ? host.subRoom.players() : undefined;
+      const report = await reconcileRestoredRoom({ storage: room.storage, ...(players ? { players } : {}) });
+      if (report.sessionsDisconnected.length === 0 && report.playersDiscarded.length === 0) return;
+      console.log(
+        `Room ${room.id} restored: ${report.sessionsDisconnected.length} session(s) wait for their player to reconnect, ${report.playersDiscarded.length} player(s) without a session discarded`,
+      );
+
+      // Sessions are collected when someone connects, which may be much later: collect them when their window ends too.
+      const window = host.subRoom?.sessionExpiryTime;
+      if (report.sessionsDisconnected.length > 0 && typeof window === "number" && Number.isFinite(window) && window >= 0 && typeof host.garbageCollector === "function") {
+        const timer = setTimeout(() => {
+          void host.garbageCollector!.call(server, { sessionExpiryTime: window }).catch((error: unknown) => {
+            console.error("Error collecting the sessions of a restored room:", error);
+          });
+        }, window + 100);
+        timer.unref?.();
+      }
+    } catch (error) {
+      console.error(`Error restoring the sessions of room ${room.id}:`, error);
+    }
   }
 
   private async ensureServerContext(): Promise<void> {
