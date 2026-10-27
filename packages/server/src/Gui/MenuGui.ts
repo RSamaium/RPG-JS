@@ -52,6 +52,15 @@ export interface MenuCustomEntry {
     label: string
     disabled?: boolean
     panel?: MenuPanel
+    /**
+     * Where the entry goes. By default after the last entry. `before` / `after` give the id of an entry (a built-in one, or an
+     * entry of the game given earlier in the list); `index` is a position in the list (`0` is the first entry, a value past the
+     * end puts it last). When several are given, `before` wins over `after`, and `after` over `index`. An id that is not in the
+     * menu leaves the entry last.
+     */
+    before?: string
+    after?: string
+    index?: number
 }
 
 /** What `onEntryAction` receives: the action of a panel the player pressed, already checked against what the panel offers. */
@@ -164,6 +173,25 @@ export const resolveMenuCustomEntries = (entries: MenuGuiOptions['entries']): Me
     })
 }
 
+/**
+ * Puts the entries of the game in the list of the menu, one after the other in the order given (so an entry can be placed
+ * relative to an earlier one): `before`, then `after`, then `index`, else last.
+ */
+export const placeMenuCustomEntries = <T extends { id: string }>(menus: T[], entries: MenuCustomEntry[]): Array<T | { id: string; label: string; disabled: boolean }> => {
+    const list: Array<T | { id: string; label: string; disabled: boolean }> = [...menus]
+    for (const entry of entries) {
+        const placed = { id: entry.id, label: entry.label, disabled: entry.disabled === true }
+        const target = (id: unknown) => (typeof id === 'string' ? list.findIndex((candidate) => candidate.id === id) : -1)
+        const before = target(entry.before)
+        const after = target(entry.after)
+        if (before >= 0) list.splice(before, 0, placed)
+        else if (after >= 0) list.splice(after + 1, 0, placed)
+        else if (typeof entry.index === 'number' && Number.isFinite(entry.index)) list.splice(Math.max(0, Math.min(Math.trunc(entry.index), list.length)), 0, placed)
+        else list.push(placed)
+    }
+    return list
+}
+
 export class MenuGui extends Gui {
     private menuOptions: MenuGuiOptions = {}
 
@@ -197,14 +225,14 @@ export class MenuGui extends Gui {
             { id: 'exit', label: 'rpg.menu.exit' }
         ]
         const customEntries = resolveMenuCustomEntries(options.entries)
-        const menus = [
-            ...(options.menus && options.menus.length ? options.menus : defaultMenus)
+        const menus = placeMenuCustomEntries(
+            (options.menus && options.menus.length ? options.menus : defaultMenus)
                 .map(menu => ({
                     ...menu,
                     disabled: menu.disabled || disabledSet.has(menu.id)
                 })),
-            ...customEntries.map(entry => ({ id: entry.id, label: entry.label, disabled: entry.disabled === true })),
-        ]
+            customEntries,
+        )
         const panels: Record<string, MenuPanel> = {}
         for (const entry of customEntries) {
             const panel = sanitizeMenuPanel(entry.panel)

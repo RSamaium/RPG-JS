@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
-import { MenuGui, resolveMenuCustomEntries, sanitizeMenuPanel } from "../src/Gui/MenuGui";
+import { MenuGui, placeMenuCustomEntries, resolveMenuCustomEntries, sanitizeMenuPanel } from "../src/Gui/MenuGui";
 import { signal } from "@signe/reactive";
 import { createHotbarState } from "@rpgjs/common";
 
@@ -178,5 +178,58 @@ describe("the actions of a panel are validated by the server", () => {
     expect(updates(sent)).toHaveLength(1);
     gui.close();
     await pending;
+  });
+});
+
+describe("where an entry of the game goes in the menu", () => {
+  const BUILT_IN = ["status", "items", "skills", "equip", "options", "save", "exit"];
+  const order = (entries: any[]) => {
+    const { player, sent } = createPlayer();
+    const gui = new MenuGui(player);
+    const pending = gui.open({ entries });
+    const ids = sent.find((event) => event.type === "gui.open").value.data.menus.map((entry: any) => entry.id);
+    gui.close();
+    return pending.then(() => ids as string[]);
+  };
+
+  test("goes last by default", async () => {
+    expect(await order([{ id: "quests", label: "Quests" }])).toEqual([...BUILT_IN, "quests"]);
+  });
+
+  test("goes before or after a built-in entry", async () => {
+    expect(await order([{ id: "quests", label: "Quests", before: "options" }])).toEqual(["status", "items", "skills", "equip", "quests", "options", "save", "exit"]);
+    expect(await order([{ id: "quests", label: "Quests", after: "skills" }])).toEqual(["status", "items", "skills", "quests", "equip", "options", "save", "exit"]);
+    expect(await order([{ id: "quests", label: "Quests", before: "exit" }]).then((ids) => ids.at(-2))).toBe("quests");
+  });
+
+  test("goes at an index, and a value past the end or below zero is bounded", async () => {
+    expect((await order([{ id: "quests", label: "Quests", index: 1 }])).slice(0, 3)).toEqual(["status", "quests", "items"]);
+    expect((await order([{ id: "quests", label: "Quests", index: 0 }]))[0]).toBe("quests");
+    expect((await order([{ id: "quests", label: "Quests", index: 99 }])).at(-1)).toBe("quests");
+    expect((await order([{ id: "quests", label: "Quests", index: -5 }]))[0]).toBe("quests");
+  });
+
+  test("before wins over after, and after over index", async () => {
+    expect((await order([{ id: "q", label: "Q", before: "items", after: "exit", index: 99 }])).indexOf("q")).toBe(1);
+    expect((await order([{ id: "q", label: "Q", after: "status", index: 99 }])).indexOf("q")).toBe(1);
+  });
+
+  test("an id that is not in the menu leaves the entry last, and then the index is tried", async () => {
+    expect((await order([{ id: "q", label: "Q", before: "nothing" }])).at(-1)).toBe("q");
+    expect((await order([{ id: "q", label: "Q", before: "nothing", index: 2 }])).indexOf("q")).toBe(2);
+  });
+
+  test("an entry can be placed relative to an entry of the game given before it", async () => {
+    const ids = await order([
+      { id: "quests", label: "Quests", after: "items" },
+      { id: "bestiary", label: "Bestiary", after: "quests" },
+      { id: "journal", label: "Journal", before: "quests" },
+    ]);
+    expect(ids.slice(0, 6)).toEqual(["status", "items", "journal", "quests", "bestiary", "skills"]);
+  });
+
+  test("keeps the built-in entries, even when a game gives its own list of menus", () => {
+    const menus = [{ id: "status", label: "S" }, { id: "exit", label: "E" }];
+    expect(placeMenuCustomEntries(menus, [{ id: "q", label: "Q", before: "exit" }]).map((entry) => entry.id)).toEqual(["status", "q", "exit"]);
   });
 });

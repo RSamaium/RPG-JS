@@ -339,6 +339,7 @@ player.callMainMenu({
 ```
 
 - `entries` is a list, or a function the server reads again each time the menu refreshes (after an action, an item use, an equip), so a panel can show the state of the player.
+- By default an entry goes after the last one. `before` / `after` (the id of an entry) or `index` (a position, `0` is the first) put it elsewhere: `{ id: "quests", label: "Quests", before: "options" }`. `before` wins over `after`, and `after` over `index`; an id that is not in the menu leaves the entry last. The entries are placed in the order given, so one can be placed relative to an earlier one of the game.
 - An entry cannot reuse a built-in id (`status`, `items`, `skills`, `equip`, `options`, `save`, `exit`), and an id is used once.
 - Selecting an entry with a panel shows it in the right column, like the built-in views: the pointer, the keyboard (up and down to choose a row, the action key to run the first action, the Back key to leave) and the gamepad work. Rows can have `subtitle`, `text`, a `badge` and a `progress` bar; `actions` on a row apply to that row, `actions` on the panel to the whole panel.
 - Whatever the client sends is checked: the entry must exist with a panel and not be disabled, and the action must be offered by the panel (or by the row `item`) and not be disabled. Anything else is dropped before `onEntryAction` runs.
