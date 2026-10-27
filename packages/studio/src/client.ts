@@ -24,6 +24,7 @@ import {
   getStudioGameRuntimeConfig,
 } from "./data-provider";
 import type { StudioGameModuleConfig } from ".";
+import { applyStudioTheme } from "./client-theme";
 import { createStudioMapPlugins, type StudioMapPlugin } from "./studio-map-plugins";
 import { bindInitialStudioEventHitboxes } from "./initial-event-hitboxes-client";
 import { collectStudioActionBattleMediaRefs } from "./action-battle-animation-preload";
@@ -285,6 +286,8 @@ export default (config: StudioGameModuleConfig) => {
           warmUpStartupData(provider, { startMapId: response.startMapId });
         }
         window.gameConfig = response;
+        // The look of the interfaces: the one theme the project chose, or the default one.
+        applyStudioTheme(response.theme);
 
         const debugCollisions = config.debugCollisions === true || response.debugCollisions === true || engine.globalConfig?.debugCollisions === true;
 
