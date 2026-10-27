@@ -44,6 +44,18 @@ export const MAX_SCRIPT_EVENTS = 50;
 /** The most zones scripts make on one map. */
 export const MAX_SCRIPT_SHAPES = 50;
 
+/** A record of the database of the game as a script reads it: its fields, its `id` and its `type` (the collection it belongs to). A copy. */
+export interface DataRecord { id: string; type: string; [field: string]: unknown }
+
+/** The most records `$data.list` gives. */
+export const MAX_DATA_RECORDS = 1000;
+
+/** The database of the game, read only: the records of the collections (`item`, `skill`, and the ones a plugin adds). */
+export interface DataPort {
+  get(type: string, id: string): DataRecord | undefined;
+  list(type: string): DataRecord[];
+}
+
 /** The map of the script, with the names of `RpgMap`. Not there when the room is not a map. */
 export interface MapPort {
   readonly id: string;
@@ -119,6 +131,8 @@ export interface ScriptWorld {
   rand(min: number, max: number): number;
   /** Properties shared by the players of a map. `set` receives the new value, the operator and its operand. */
   sharedProps: { has(name: string): boolean; get(name: string): unknown; set(name: string, value: unknown, op: string, operand: unknown): void };
+  /** The database of the game. */
+  data: DataPort;
   /** Persistent data of the script's plugin. */
   stateProps: { get(key: string): unknown; set(key: string, value: unknown): void };
   /** The payload of the signal that fired the script, read as `$hook.xxx`. */
@@ -157,6 +171,12 @@ function plain(value: unknown, depth = 0): VariableValue {
   if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, plain(v, depth + 1)]));
   throw new Error("a variable holds a text, a number, true/false, null, or plain data; use removeVariable() to remove one");
 }
+const collection = (v: unknown) => {
+  if (typeof v !== "string" || !v || v.length > 100) throw new Error("a collection is named by a text of 1 to 100 characters");
+  return v;
+};
+/** A record is given as a copy of plain data: a script never holds what the game holds. */
+const copyOf = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 const EVENT_KEYS = ["id", "x", "y", "name", "graphic", "hitbox", "through"];
 const EVENT_ID = /^[A-Za-z0-9_.-]{1,100}$/;
 const COORDINATE = 100_000;
@@ -343,6 +363,15 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         showAnimation: (w, [p, graphic, name]) => mapOf(w).showAnimation(position(p), text(graphic, "a graphic id"), name === undefined ? "default" : text(name, "an animation name")),
         showComponentAnimation: (w, [id, p, params]) => mapOf(w).showComponentAnimation(text(id, "an animation id"), position(p), params === undefined ? {} : (stateData(params, "params") as object)),
         shakeMap: (w, [o]) => mapOf(w).shakeMap(shakeOptions(o)),
+      },
+    },
+    $data: {
+      methods: {
+        get: (w, [type, id]) => {
+          const record = w.data.get(collection(type), text(id, "a record id"));
+          return record ? copyOf(record) : undefined;
+        },
+        list: (w, [type]) => w.data.list(collection(type)).slice(0, MAX_DATA_RECORDS).map(copyOf),
       },
     },
     $room: { members: { kind: { read: (w) => w.room.kind }, id: { read: (w) => w.room.id } } },

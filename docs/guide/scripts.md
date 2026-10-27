@@ -266,6 +266,31 @@ take the last one.
 
 `$state` is data kept by the script, in memory: assign a whole value, `$state.crafted = { ...$state.crafted, potion: 1 }`.
 
+### The database: `$data`
+
+A script reads the records of the database of the game, and never changes them:
+
+```js
+on("event.action", { where: { "event.name": "old-man" } }, () => {
+  const quest = $data.get("quests_quest", "wolves");   // a copy, or undefined
+  if (!quest) return;
+  $player.showText(`${quest.name}: ${quest.story}`);
+  $player.setVariable("quest_wolves", "started");
+  $player.gold += quest.reward;
+});
+```
+
+| Name | What it gives |
+| --- | --- |
+| `$data.get(type, id)` | a copy of the record of that collection with that id, or `undefined`. It has its fields, its `id` and its `type`. |
+| `$data.list(type)` | copies of the records of the collection, **1 000 at most**. |
+
+`type` is the collection: `item`, `skill`, or any type of record a game puts in its database (a collection that Studio plugins add, for
+example). On a real game the records are the ones RPGJS keeps in the database of the room (`map.database()`): a record is plain
+data with `_type` for its collection, as `@rpgjs/studio` loads it; a record that is a class of the game is not given. A record is
+a copy of plain data: what a script changes of it changes nothing, and the next read is as the game has it. A collection that does
+not exist gives `undefined` and `[]`.
+
 ### Helpers
 
 | Name | What it is |
@@ -322,7 +347,7 @@ await runTests(source, [
 ```
 
 The world of a simulation is a map called `start` by default; `world: { room: { id: "battle-1", kind: "battle" } }` makes it a room
-that is not a map, `events` and `shapes` put the events and the zones of the game on the map.
+that is not a map, `events` and `shapes` put the events and the zones of the game on the map, and `data` (`{ quests_quest: [{ id: "wolves", name: "Wolves" }] }`) the records of its database, for `$data`.
 
 `expect` keys are `returns`, `error`, `effects`, `effectsInclude`, `effectsExclude`, `texts`, `notifications`, and paths
 `player.gold`, `player.items.<id>`, `shared.<name>`, `state.<key>`, `vars.<name>`; a value is exact or `{ min, max }`.
