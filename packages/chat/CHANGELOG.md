@@ -1,5 +1,12 @@
 # @rpgjs/chat
 
+## 5.1.0
+
+### Minor Changes
+
+- f6dfb8a: Chat: declare several channels (`channels` accepts definitions with `label`, `color`, `canSend`, `audience`), moderate with `middleware`, route messages with `deliver`, and react to refusals with `onRejected`. The default GUI gains a channel selector, a sending state, a taller/shorter toggle, a collapsible pill with an unread badge and a `chat:delete` event. Existing options (`channels: ["map", "global"]`, `beforeSend`, `afterSend`, `broadcastGlobal`) keep working.
+- 520a2a3: The chat is closed by default when the player arrives on the map: it starts reduced to its pill with the number of unread messages, and the player opens it. The new client option `startExpanded: true` brings back the open chat at the start.
+
 ## 5.0.1
 
 ### Patch Changes

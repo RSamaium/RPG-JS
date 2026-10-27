@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/script",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "description": "Sandboxed scripts for RPGJS: a JavaScript subset run by its own interpreter, which listens to the signals of the game",
   "type": "module",
   "main": "dist/index.js",

@@ -333,15 +333,15 @@ importers:
 
   packages/script:
     dependencies:
-      acorn:
-        specifier: ^8.16.0
-        version: 8.17.0
       '@rpgjs/common':
         specifier: workspace:^
         version: link:../common
       '@rpgjs/server':
         specifier: workspace:^
         version: link:../server
+      acorn:
+        specifier: ^8.16.0
+        version: 8.17.0
     devDependencies:
       vite:
         specifier: ^8.0.16

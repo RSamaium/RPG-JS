@@ -1,5 +1,61 @@
 # @rpgjs/studio
 
+## 5.3.0
+
+### Minor Changes
+
+- 353eb32: New startup flow `{ projectId, flow: "new-game", startMapId? }` for `provideStudioGame({ resolveStartup })`. It keeps the framework-owned new-game flow without the title screen: the character selection first (when the project enabled `menus.characterSelect`), then the actor, the default stats and the start map, exactly as after "Start" on the title screen. A shared MMORPG runtime can now send a player who has a save straight to their map with `direct`, and a new player to the character selection with `new-game`. Set `displayTitleScreen: false` in the client options as well so the title is not drawn.
+- 32312a3: The game loads the client files of the plugins of a Studio project, before the engine starts. A plugin is `.ce` components (each one a GUI named `<pluginId>_<file>`) and `.js` modules (`index.js` default-exports a client module of RPGJS); a file imports the runtime of CanvasEngine, the client API (`defineModule`, `hoverPopover`…) and the other files of its plugin through `host.require`. `loadStudioPluginClientModules(projectId)` gives the modules to `provideClientModules`; `StudioPlugin` has an optional `client` list.
+- 0400b58: The game applies the theme of the project (`project.theme`: `{ id, base, css }`): the boundary `data-rpg-theme` and the class of its built-in base (`rpg-ui-theme-default` or `-pixel`) on `#rpg`, and its css in one `<style>`. One theme applies at a time; a project with none keeps the default look. `applyStudioTheme` is exported.
+- ab20ff9: New `published` runtime mode for `provideStudioGame` (and `configureStudioGameRuntime`): the game reads the bundle of a published snapshot (`bundleBasePath`, a path or the complete URL such as `<api>/published/<projectId>`), keeps its project id, and resolves the events of the maps from the `events.json` of the bundle whatever the project id. A page opened with `?editor` or `?preview` still reads the draft online, with an optional preview token sent in the `x-studio-preview-token` header (`previewToken`, or `?preview=<token>`, kept for the tab and taken off the address bar). `GameDataProvider.getPlugins(projectId?)` reads `plugins.json` of a bundle or `/game/plugins` of the API. With `provideStudioGame({ scripts })` (the `ScriptService` of `@rpgjs/script`) the plugins are installed when the server starts (`<pluginId>/<scriptName>`) and kept in step with the data: read again, replaced or uninstalled when the data of the project is invalidated. `installPlugins` hands the same list to another interpreter. In an MMORPG the plugins come with the published version (`plugins` of the map update): they are installed or replaced in every room together with its maps, and a room that restarts reads the version it runs.
+
+### Patch Changes
+
+- ca75784: Follow-ups of the review of the map builder branch.
+
+  - `keyValueMapStore` keeps its log in memory after the first read instead of reading the storage on every appended change.
+  - Colliders are resynced after an `element.data` patch.
+  - Studio: a failed import of the map builder layers is no longer cached, the cell size of a v2 map is a named constant, and the docs of the map extension context are on the right methods.
+
+- c8457f2: Temporary, opt-in link with `@rpgjs/map-builder` (experimental). With `mapBuilderRenderer: true` in the global configuration of the client, the map elements that the map builder can draw (plain sprites: no shadow, light, liquid submersion or drawing rule) go through it; the others stay on the Studio renderer. Off by default, and nothing is loaded when it is off. Also keeps spec files out of the declaration build, which failed since the reference snapshots spec was added.
+- 4d3d3d1: A Studio map extension can teach the map an element set it was not loaded with: `context.addElementTileset(tileset)` makes the elements of a set that was added while editing resolvable, drawn and solid like those of the sets the map came with, without loading the map again.
+- e73e238: With `mapBuilderRenderer`, the elements drawn by the map builder in the ground and high layers are now one container per element carrying its sort key, so they are sorted by depth together with the elements the Studio renderer keeps, instead of all being drawn above them.
+- 86cb9d4: `@rpgjs/studio` gets one extension point, `registerStudioMapExtension`: a function called each time a Studio map is loaded, with the engine, the id and size of the map, the placed elements as stored, the function that resolves one of them to what the runtime draws, and `updateData` to give the scene new data. Tools, overlays or an editor plug into it; the runtime knows nothing of what goes through. `@rpgjs/map-builder` gets `@rpgjs/map-builder/embed` (a game embedded in an iframe lets another page join its map as a trusted session, drive its tools and pause it) and a `draw: false` option for `createMapView`, for a host that draws the map itself and only wants the selection and the tools.
+
+  The editor channels also carry named commands (`frame.command("copy", args)`, registered by the game with `commands`) and values the game keeps for the Studio (`host.publish(key, value)`, `frame.onState(key, listener)`).
+
+  The extension context also gives `tilesetImage(tilesetId)`, the address of the picture of an element tileset, for an overlay that shows the element about to be placed, `readData()`, the data the scene shows now, and `resolveAsset(fileName)`, the address a stored asset is served from, and `normalizeMorphology(layer)`, the holes and walls the runtime draws for a stored terrain morphology layer.
+
+- 3dba915: The collisions of a Studio map can follow its placed elements while it runs. `@rpgjs/common` gets `map.replaceStaticHitboxes(match, hitboxes)`, which replaces the static hitboxes whose id matches, whether they came with the map data or from a streamed chunk. `@rpgjs/studio` gets `rebuildElementCollisions({ low })` in the context of a map extension, which rebuilds the hitboxes of the placed elements on the client map and tells the server, and `createStudioElementCollisionsServer({ authorize })` (from `@rpgjs/studio/server`), the server module that applies it for the players it allows, on a standalone or an online (MMORPG) server.
+- 1f0f84a: A Studio map extension can hide the events the game runs: `updateData({ hideEvents: true })` stops drawing them (the characters of the players are still drawn) and `false` draws them again. A map editor uses it to show the events of the map as its own markers while the map is edited.
+
+  `@rpgjs/studio/client` also gives `resolveStudioEventDisplay({ media, frame, hitbox })`: how big an event is on the map as the game runs it (the size its character is drawn at, and its hitbox once a generated character has scaled it), for a map editor that draws events at the size the player sees.
+
+- 3dba915: A Studio map can be drawn with some of its layers see-through: `updateData({ layerOpacity: { terrain: 0.4, elementsLow: 0.6 } })` (from `registerStudioMapExtension`) sets the opacity, from 0 to 1, of the `terrain`, `elementsAlwaysLow`, `elementsLow` and `elementsHigh` layers. A layer that is not named stays opaque, and characters and events are never affected.
+- 4de4837: Choosing a hero in the character selection of an MMORPG no longer leaves the player on a black screen. The player is still in the lobby at that moment, and `setActor` looks the class and the skills of the actor up in the database of its room, which only received the Studio records once the player joined a map (`The ID=<skill> data is not found in the database`, then the transfer to the start map never happened). The Studio database is now registered in the room of the player before `setActor`.
+- 1f0f84a: A map editor in the page can change the events the game runs without loading the map again. The server map gets `placeStudioEvent(record, { x, y, runtimeId })` (puts an event of the project on the map as the load does: media resolved, workflows and hitbox of the project, so an enemy attacks and a character answers), `moveStudioEvent(runtimeId, x, y)`, `removeStudioEvent(runtimeId)` and `listStudioEvents()`. Positions are those the map stores; the game applies the map scale.
+
+  A map can give a size to one placement of an event: `scale` (multiplies its character and its hitbox) and `hitbox` (`{ width, height }`, instead of the hitbox of the event). The runtime applies them when it makes the event, `resolveStudioEventDisplay` takes a `scale`, and `placeStudioEvent` takes both. The graphic scale of an event no longer reads its position (`x`, `y`) as a scale.
+
+- 7dd8403: Drawing a terrain chunk again no longer pays for the whole liquid hole each time. The edges of a hole's surface (its contact band, inner transitions and meniscus) are made once per surface instead of once per chunk, and the masks and surfaces of a morphology feature are kept from one render to the next, since a feature that changed is another object. On a map with a large water hole this takes a chunk from about 480 ms to about 110 ms after the first one, and the load of the map takes about half the time. `setStudioTerrainChunkSize(size)` sets the chunk size of the terrain renderers created afterwards, for an editor that wants smaller chunks.
+
+  When only some chunks are drawn again (a stroke touched them), the masks and surfaces of the relief are made for those chunks and their surroundings instead of the whole feature, so redrawing after an erase follows the size of what was erased.
+
+  The water level of a filled hole (its projected mask and the scan of its pixels) and the foam dots along the edge of a liquid surface are made once per render instead of once per chunk. Redrawing the chunks of a map with a large water hole takes about 60 ms per chunk, from about 270 ms.
+
+  The size of a liquid hole (what its water level, insets and edge widths are made from) no longer depends on the part of it that was made when only some chunks are drawn again. A large water hole used to get a smaller, shifted shore after a brush stroke elsewhere, because the geometry was measured on the mask cut to the chunks being redrawn; it is now measured on the strokes of the whole feature.
+
+  A stream update of the terrain renderer no longer loses chunks when the camera moves while it draws: the chunks it asked for and did not draw yet stay pending for the next call (and the ones in view are drawn first), the chunks in view that were never drawn are drawn by the next call, and the chunks shown are those of the view the camera has when the drawing ends, not of the one it had when it began.
+
+  The terrain renderer draws once more, when the camera rests, the chunks of a stream update that were drawn while the camera moved, so a row of the map cannot stay out of date on screen.
+
+  The terrain container of the Studio map has no width or height any more: Pixi scaled it so that the chunks drawn at that moment filled the map width, so the terrain was drawn larger than the map (and out of line with the elements) once the map data was updated while the camera had moved.
+
+- e7095ad: With a deferred connection (`provideMmorpg({ deferConnection: true })`), Studio no longer draws the title screen over the sign-in screen at start: it waits for the connection, then shows the title. The client engine gets `isConnectionDeferred()` and `isConnected()` for this.
+- dbfc241: The context of a Studio map extension gets `updateParams(patch)` and `resolveAudio(value)`. `updateParams({ scale: 2, backgroundMusic: "<url>" })` changes the params of the map the scene shows without loading it again: they go to the params the map is drawn from and, for `backgroundMusic` and `backgroundAmbientSound`, to where the client plays the music and the ambient sound from (`undefined` takes a key off, which stops the sound). `resolveAudio(value)` gives the address a sound of the map settings is played from. A map editor uses them to apply the map settings without a reload.
+- Updated dependencies [84494ca]
+  - @rpgjs/render-map2d@5.0.1
+
 ## 5.2.0
 
 ### Minor Changes

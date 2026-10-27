@@ -1,5 +1,36 @@
 # @rpgjs/client
 
+## 5.3.0
+
+### Minor Changes
+
+- 0285d7e: `provideMmorpg({ onConnectionClosed({ code, reason, willReconnect }) })` and the client module hook `engine.onConnectionClosed(engine, info)` report every connection that ends, including after the player moved from the lobby to a map room (a server ending a session with `conn.close(4401, ...)` was not reported to the game). A clean close (code 1000), the close of a room change and `disconnect()` are not reported. `willReconnect` is `false` for the application codes 4000-4999.
+- f0c26af: A game or a Studio plugin can add entries with a data panel to the main menu: `player.callMainMenu({ entries: [{ id: "quests", label: "Quests", panel: { list: [...] } }], onEntryAction })`. The entries come after the built-in ones by default (`before`, `after` or `index` on an entry put it elsewhere), a built-in id cannot be redefined, and `entries` can be a function read again at each refresh so the panel follows the state of the player. A panel is plain data (rows with a title, subtitle, text, badge, progress bar and actions) that the built-in menu draws in the right column with the pointer, the keyboard and the gamepad. The actions are validated by the server against what the panel offers before `onEntryAction` runs; an entry without a panel calls `onEntryAction` with the action `open`. New types `MenuCustomEntry`, `MenuPanel`, `MenuPanelItem`, `MenuPanelAction` and `MenuEntryActionContext`.
+- a4faebf: The characters that are not the current player now walk to each position received from the server instead of jumping to it. The walk lasts 1.5 times the measured time between two updates (between 16 and 150 ms), interpolates without overshooting, and jumps for the first position, a long silence or a teleport. Tune it or turn it off with `remoteSmoothing` in the client global config (`false` gets the previous behaviour back). See `docs/advanced/remote-smoothing.md`.
+- e7095ad: With a deferred connection (`provideMmorpg({ deferConnection: true })`), Studio no longer draws the title screen over the sign-in screen at start: it waits for the connection, then shows the title. The client engine gets `isConnectionDeferred()` and `isConnected()` for this.
+
+### Patch Changes
+
+- 5ed53bc: `player.changeMap(map, { x, y })` while the player is moving no longer leaves the sprite and the camera on the coordinates of the source map. The first position received from the destination map is now applied immediately instead of waiting behind the pending movement inputs.
+- 56df984: The `onDisconnect(engine, reason, socket)` hook of a client module now runs when the connection closes. The engine fired `client-engine-onDisconnected`, a name no declared hook matched, so `onDisconnect` never ran. `reason` is the close reason of the server (an empty string when there is none). `client-engine-onDisconnected` is still fired, for the modules that used that name.
+- 3a7d5f5: The hotbar no longer swallows the clicks meant for the game and for the other GUIs. Pixi sets `pointer-events: auto` on the element of every `DOMContainer`, which its full-screen root (`pointer-events: none`) lost to; the rule is now `!important`, as the notification GUI already does.
+- 3dba915: The collisions of a Studio map can follow its placed elements while it runs. `@rpgjs/common` gets `map.replaceStaticHitboxes(match, hitboxes)`, which replaces the static hitboxes whose id matches, whether they came with the map data or from a streamed chunk. `@rpgjs/studio` gets `rebuildElementCollisions({ low })` in the context of a map extension, which rebuilds the hitboxes of the placed elements on the client map and tells the server, and `createStudioElementCollisionsServer({ authorize })` (from `@rpgjs/studio/server`), the server module that applies it for the players it allows, on a standalone or an online (MMORPG) server.
+- 5b50670: A player or event whose graphic id cannot be resolved to a spritesheet yet (for example `default_character` before the server applies the real graphic after joining a map) no longer crashes the client with `Cannot read properties of undefined (reading 'textures')`. The sprite is simply not drawn until an id resolves, and the rest of the scene and the GUIs keep working.
+- Updated dependencies [3c819b4]
+- Updated dependencies [f6dfb8a]
+- Updated dependencies [90d44b6]
+- Updated dependencies [f15d95a]
+- Updated dependencies [f0c26af]
+- Updated dependencies [aa0fa28]
+- Updated dependencies [50ffe5a]
+- Updated dependencies [374516d]
+- Updated dependencies [f63bddb]
+- Updated dependencies [88fd2e7]
+- Updated dependencies [3dba915]
+  - @rpgjs/server@5.2.0
+  - @rpgjs/ui-css@5.3.0
+  - @rpgjs/common@5.1.1
+
 ## 5.2.0
 
 ### Minor Changes

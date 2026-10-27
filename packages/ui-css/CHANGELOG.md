@@ -1,5 +1,12 @@
 # @rpgjs/ui-css
 
+## 5.3.0
+
+### Minor Changes
+
+- f6dfb8a: Chat: declare several channels (`channels` accepts definitions with `label`, `color`, `canSend`, `audience`), moderate with `middleware`, route messages with `deliver`, and react to refusals with `onRejected`. The default GUI gains a channel selector, a sending state, a taller/shorter toggle, a collapsible pill with an unread badge and a `chat:delete` event. Existing options (`channels: ["map", "global"]`, `beforeSend`, `afterSend`, `broadcastGlobal`) keep working.
+- f0c26af: A game or a Studio plugin can add entries with a data panel to the main menu: `player.callMainMenu({ entries: [{ id: "quests", label: "Quests", panel: { list: [...] } }], onEntryAction })`. The entries come after the built-in ones by default (`before`, `after` or `index` on an entry put it elsewhere), a built-in id cannot be redefined, and `entries` can be a function read again at each refresh so the panel follows the state of the player. A panel is plain data (rows with a title, subtitle, text, badge, progress bar and actions) that the built-in menu draws in the right column with the pointer, the keyboard and the gamepad. The actions are validated by the server against what the panel offers before `onEntryAction` runs; an entry without a panel calls `onEntryAction` with the action `open`. New types `MenuCustomEntry`, `MenuPanel`, `MenuPanelItem`, `MenuPanelAction` and `MenuEntryActionContext`.
+
 ## 5.2.0
 
 ### Minor Changes
