@@ -94,8 +94,10 @@
 </DOMContainer>
 
 <style>
+  /* Pixi sets pointer-events: auto on the element of every DOMContainer, which a plain rule loses to: this full-screen root would
+     swallow the clicks meant for the game and for the other GUIs. Only the dock (below) takes the pointer. */
   .rpg-hotbar-root {
-    pointer-events: none;
+    pointer-events: none !important;
     font-family: var(--rpg-hotbar-font-family, inherit);
   }
 
