@@ -1,0 +1,120 @@
+<DOMContainer width="100%" height="100%" controls={controls}>
+  <div class="rpg-ui-menu-panel rpg-ui-panel rpg-ui-menu-data-panel">
+    <div class="rpg-ui-menu-panel-header">{title()}</div>
+    <div class="rpg-ui-menu-panel-body rpg-ui-menu-data-body">
+      <div class="rpg-ui-menu-panel-list rpg-ui-menu rpg-ui-menu-panel-list-full">
+        @if (!rows().length) {
+          <div class="rpg-ui-empty-state"><span aria-hidden="true">✦</span><p>{emptyText()}</p></div>
+        }
+        @for ((row,index) of rows()) {
+          <div
+            class="rpg-ui-menu-item rpg-ui-menu-row rpg-ui-menu-data-row"
+            data-selected={selected() === index ? "true" : "false"}
+            tabindex={index}
+            click={selectRow(index)}
+          >
+            <div class="rpg-ui-menu-data-row-main">
+              <div class="rpg-ui-menu-data-row-title">{row.title}</div>
+              @if (row.subtitle) {
+                <div class="rpg-ui-menu-data-row-subtitle">{row.subtitle}</div>
+              }
+              @if (row.text) {
+                <div class="rpg-ui-menu-data-row-text">{row.text}</div>
+              }
+              @if (row.progress) {
+                <div class="rpg-ui-menu-data-progress" role="progressbar" aria-valuemin="0" aria-valuemax={row.progress.max} aria-valuenow={row.progress.value}>
+                  <div class="rpg-ui-menu-data-progress-fill" style={{width: progressPercent(row.progress)}}></div>
+                </div>
+              }
+            </div>
+            @if (row.badge) {
+              <span class="rpg-ui-menu-data-badge">{row.badge}</span>
+            }
+          </div>
+        }
+      </div>
+      @if (actionButtons().length) {
+        <div class="rpg-ui-menu-data-actions">
+          @for (action of actionButtons()) {
+            <button
+              type="button"
+              class="rpg-ui-menu-confirm-btn"
+              aria-disabled={action.disabled ? "true" : "false"}
+              click={runAction(action)}
+            >{action.label}</button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+</DOMContainer>
+
+<script>
+    import { signal, computed } from "canvasengine";
+    import { inject } from "../../../core/inject";
+    import { RpgClientEngine } from "../../../RpgClientEngine";
+    import { getKeyboardControlBind } from "../../../services/actionInput";
+    import { menuGamepadControls } from "../../../services/gamepadControls";
+
+    const engine = inject(RpgClientEngine);
+    const keyboardControls = engine.globalConfig.keyboardControls;
+    // Like the other views: `data` is the data of the main menu (it changes at each refresh of the server), `entry` the id of the
+    // entry shown. The plain data of its panel is `data().panels[entry]`: `{ title?, list?, empty?, actions? }`.
+    const { data: menuData, entry, onAction, onBack } = defineProps();
+
+    const resolve = (value) => typeof value === "function" ? value() : value;
+    const data = computed(() => resolve(menuData)?.panels?.[resolve(entry)] || {});
+    const label = computed(() => resolve(menuData)?.menus?.find((candidate) => candidate.id === resolve(entry))?.label || "");
+    const title = computed(() => data().title || label() || "");
+    const rows = computed(() => Array.isArray(data().list) ? data().list : []);
+    const emptyText = computed(() => data().empty || "");
+    const selected = signal(0);
+    const currentRow = computed(() => rows()[Math.min(selected(), Math.max(0, rows().length - 1))]);
+
+    // The actions of the selected row, then the ones of the whole panel.
+    const actionButtons = computed(() => [
+        ...(currentRow()?.actions || []).map((action) => ({ ...action, item: currentRow().id })),
+        ...(Array.isArray(data().actions) ? data().actions : []),
+    ]);
+
+    const progressPercent = (progress) => `${Math.max(0, Math.min(100, (progress.value / (progress.max || 1)) * 100))}%`;
+
+    function selectRow(index) {
+        return function() {
+            selected.set(index);
+            engine.playUiSound("navigate");
+        }
+    }
+
+    function runAction(action) {
+        return function() {
+            if (!action || action.disabled) {
+                engine.playUiSound("error");
+                return;
+            }
+            engine.playUiSound("confirm");
+            onAction?.(action.id, action.item);
+        }
+    }
+
+    const moveRow = (delta) => {
+        const count = rows().length;
+        if (!count) return;
+        selected.set((selected() + delta + count) % count);
+        engine.playUiSound("navigate");
+    };
+
+    const controls = signal({
+        up: { repeat: true, bind: keyboardControls.up, throttle: 150, keyDown() { moveRow(-1); } },
+        down: { repeat: true, bind: keyboardControls.down, throttle: 150, keyDown() { moveRow(1); } },
+        action: {
+            bind: getKeyboardControlBind(keyboardControls.action),
+            keyDown() {
+                const first = actionButtons().find((action) => !action.disabled);
+                if (first) runAction(first)();
+            }
+        },
+        escape: { bind: keyboardControls.escape, keyDown() { onBack?.(); } },
+        gamepad: menuGamepadControls
+    });
+</script>

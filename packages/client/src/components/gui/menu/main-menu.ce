@@ -102,6 +102,9 @@
                 @if (view() === "exit") {
                     <ExitMenu onConfirm={confirmExit} onBack={goBack} />
                 }
+                @if (customPanel()) {
+                    <PanelMenu data={data} entry={view} onAction={onPanelAction} onBack={goBack} />
+                }
             </div>
         </div>
         @if (hotbarAssignmentOpen()) {
@@ -137,6 +140,7 @@
     import EquipMenu from "./equip-menu.ce";
     import OptionsMenu from "./options-menu.ce";
     import ExitMenu from "./exit-menu.ce";
+    import PanelMenu from "./panel-menu.ce";
     import HotbarSlotPicker from "./hotbar-slot-picker.ce";
     import { getEntityProp } from "../../../utils/getEntityProp";
     import { delay, Direction } from "@rpgjs/common";
@@ -165,12 +169,15 @@
         { id: "exit", label: t("rpg.menu.exit") }
     ]);
 
+    const resolveProp = (value) => typeof value === "function" ? value() : value;
+    const BUILT_IN_VIEWS = ["status", "items", "skills", "equip", "options", "save", "exit"];
+    // The data is read again at each refresh of the server: the entries and the panels follow the state of the player.
     const menuEntries = computed(() => {
-        if (menus && Array.isArray(menus) && menus.length) return menus.map(entry => ({ ...entry, label: entry.label?.startsWith("rpg.") ? t(entry.label) : entry.label }));
+        const list = resolveProp(data)?.menus ?? menus;
+        if (list && Array.isArray(list) && list.length) return list.map(entry => ({ ...entry, label: entry.label?.startsWith("rpg.") ? t(entry.label) : entry.label }));
         return defaultMenus();
     });
 
-    const resolveProp = (value) => typeof value === "function" ? value() : value;
     const saveLoadData = computed(() => resolveProp(saveLoad) || {});
     const saveLoadMode = computed(() => saveLoadData().mode || "load");
     const saveLoadSlots = computed(() => saveLoadData().slots || []);
@@ -186,6 +193,10 @@
 
     const selectedMenu = signal(0);
     const view = signal("menu");
+    // An entry a game added with a panel: its id is not a built-in view and the server sent its data.
+    const customPanels = computed(() => resolveProp(data)?.panels || {});
+    const customPanel = computed(() => (BUILT_IN_VIEWS.includes(view()) || view() === "menu") ? null : (customPanels()[view()] || null));
+    const onPanelAction = (action, item) => onInteraction?.("entryAction", { entry: view(), action, ...(item ? { item } : {}) });
     const saveOverlay = signal(false);
     const hotbarAssignmentEntry = signal(null);
     const hotbarAssignmentOpen = computed(() => Boolean(hotbarAssignmentEntry()));
@@ -244,6 +255,11 @@
             view.set("exit");
             return;
         }
+        if (!BUILT_IN_VIEWS.includes(entry.id) && !customPanels()[entry.id]) {
+            // An entry of the game without a panel: the game handles it.
+            onInteraction?.("open:" + entry.id);
+            return;
+        }
         view.set(entry.id === "status" ? "menu" : entry.id);
     };
 
@@ -262,7 +278,9 @@
     // Entries that open a panel; "save" (overlay) and "exit" (confirmation) are not tabs.
     const tabIndexes = computed(() => selectableIndexes().filter((index) => {
         const id = menuEntries()[index]?.id;
-        return id !== "save" && id !== "exit";
+        if (id === "save" || id === "exit") return false;
+        // A panel of the game is a tab; an entry of the game without a panel is not.
+        return BUILT_IN_VIEWS.includes(id) || Boolean(customPanels()[id]);
     }));
 
     const switchTab = (delta) => {

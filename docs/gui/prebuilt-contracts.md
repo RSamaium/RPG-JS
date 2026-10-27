@@ -282,6 +282,7 @@ Data:
 | Field | Type | Description |
 | --- | --- | --- |
 | `menus` | `{ id; label; disabled? }[]` | Menu entries. Default IDs are `items`, `skills`, `equip`, `options`, `save`, `exit`. |
+| `panels` | `Record<string, MenuPanel>` | The plain data of the panel of each entry a game added (see [Entries with a panel](#entries-with-a-panel)), by entry id. |
 | `items` | `MenuItem[]` | Inventory entries with `id`, `name`, `description`, `quantity`, `icon`, stats, `type`, `usable`, `equipped`. |
 | `equips` | `MenuItem[]` | Inventory entries whose type is `weapon` or `armor`. |
 | `skills` | `{ id; name; description; spCost }[]` | Player skills. |
@@ -297,8 +298,52 @@ Interactions:
 | `equipItem` | `{ id, equip }` | Calls `player.equip(id, equip)` and refreshes menu data. |
 | `openSave` | none | Closes the main menu and opens `rpg-save` in save mode. |
 | `exit` | none | Closes the menu and resolves with `'exit'`. |
+| `entryAction` | `{ entry, action, item? }` | An action of a panel an entry added. The server checks that the panel offers it, then calls `onEntryAction` and refreshes the menu. |
+| `open:<id>` | none | An entry added without a panel was selected: calls `onEntryAction` with the action `open`. |
 
 The built-in client also applies optimistic updates for `useItem` and `equipItem`. Custom Vue and CanvasEngine replacements can use the same interaction names and still benefit from those reducers.
+
+### Entries with a panel
+
+A game (or a Studio plugin) can add entries after the built-in ones, with a panel the built-in menu draws. A panel is plain data: no code of the game runs on the client.
+
+```ts
+player.callMainMenu({
+  entries: () => [
+    {
+      id: "quests",
+      label: "Quests",
+      panel: {
+        title: "Quests",
+        empty: "No quest",
+        list: [
+          {
+            id: "wolves",
+            title: "Wolves of the north",
+            subtitle: "Talk to the hunter",
+            text: "Hunt 5 wolves near the forest.",
+            badge: "2/5",
+            progress: { value: 2, max: 5 },
+            actions: [{ id: "track", label: "Track" }],
+          },
+        ],
+        actions: [{ id: "refresh", label: "Refresh" }],
+      },
+    },
+    { id: "bestiary", label: "Bestiary" }, // no panel: selecting it calls onEntryAction with the action "open"
+  ],
+  onEntryAction({ player, entry, action, item }) {
+    if (entry === "quests" && action === "track") player.setVariable("TRACKED_QUEST", item)
+  },
+})
+```
+
+- `entries` is a list, or a function the server reads again each time the menu refreshes (after an action, an item use, an equip), so a panel can show the state of the player.
+- By default an entry goes after the last one. `before` / `after` (the id of an entry) or `index` (a position, `0` is the first) put it elsewhere: `{ id: "quests", label: "Quests", before: "options" }`. `before` wins over `after`, and `after` over `index`; an id that is not in the menu leaves the entry last. The entries are placed in the order given, so one can be placed relative to an earlier one of the game.
+- An entry cannot reuse a built-in id (`status`, `items`, `skills`, `equip`, `options`, `save`, `exit`), and an id is used once.
+- Selecting an entry with a panel shows it in the right column, like the built-in views: the pointer, the keyboard (up and down to choose a row, the action key to run the first action, the Back key to leave) and the gamepad work. Rows can have `subtitle`, `text`, a `badge` and a `progress` bar; `actions` on a row apply to that row, `actions` on the panel to the whole panel.
+- Whatever the client sends is checked: the entry must exist with a panel and not be disabled, and the action must be offered by the panel (or by the row `item`) and not be disabled. Anything else is dropped before `onEntryAction` runs.
+- Custom client code for a panel (a CanvasEngine component) is a separate piece: that is the GUI of a plugin.
 
 ## Shop
 
