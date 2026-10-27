@@ -59,6 +59,8 @@ export { loadStudioPlugins } from "./server";
 export { studioPluginScriptId, syncStudioPluginsToScripts } from "./plugins";
 export type { StudioPluginSyncReport, StudioScriptHost, StudioScriptInstall } from "./plugins";
 export type { StudioPlugin, StudioPluginClientFile, StudioPluginScript } from "./data-provider/types";
+export { applyStudioTheme } from "./client-theme";
+export type { StudioTheme } from "./client-theme";
 export { buildStudioPluginClientModules, studioPluginGuiId } from "./client-plugins";
 export type { StudioPluginClientModule, StudioPluginHost, StudioPluginLoadReport } from "./client-plugins";
 export { loadStudioPluginClientModules, studioPluginHost } from "./client-plugin-host";
