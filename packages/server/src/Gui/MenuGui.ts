@@ -13,8 +13,70 @@ export interface MenuEntry {
     disabled?: boolean
 }
 
+/** An action a panel offers: a button the player presses, validated by the server before `onEntryAction` runs. */
+export interface MenuPanelAction {
+    id: string
+    label: string
+    disabled?: boolean
+}
+
+/** A row of the list of a panel. Plain data: the built-in component draws it, no code of the game runs on the client. */
+export interface MenuPanelItem {
+    id: string
+    title: string
+    subtitle?: string
+    text?: string
+    /** A short tag at the end of the row: a state, a count (`"Done"`, `"3/5"`). */
+    badge?: string
+    progress?: { value: number; max: number }
+    /** Actions offered for this row, in addition to the ones of the panel. */
+    actions?: MenuPanelAction[]
+}
+
+/** What an entry of the main menu shows in the right column when it is selected. */
+export interface MenuPanel {
+    title?: string
+    list?: MenuPanelItem[]
+    /** Text shown when the list is empty. */
+    empty?: string
+    /** Actions offered for the whole panel. */
+    actions?: MenuPanelAction[]
+}
+
+/**
+ * An entry a game adds to the main menu after the built-in ones. With a `panel`, selecting it shows the panel; without,
+ * selecting it sends `open:<id>` to the server (`onEntryAction` with the action `open`).
+ */
+export interface MenuCustomEntry {
+    id: string
+    label: string
+    disabled?: boolean
+    panel?: MenuPanel
+}
+
+/** What `onEntryAction` receives: the action of a panel the player pressed, already checked against what the panel offers. */
+export interface MenuEntryActionContext {
+    player: RpgPlayer
+    /** Id of the entry of the main menu. */
+    entry: string
+    /** Id of the action (`open` for an entry without panel that was selected). */
+    action: string
+    /** Id of the row the action belongs to, when it is the action of a row. */
+    item?: string
+}
+
 export interface MenuGuiOptions {
     menus?: MenuEntry[]
+    /**
+     * Entries added after the built-in ones, in the order given: `{ id, label, panel? }`. A built-in id cannot be redefined. A
+     * function is read again each time the menu refreshes, so a panel can show the state of the player.
+     */
+    entries?: MenuCustomEntry[] | (() => MenuCustomEntry[])
+    /**
+     * The player pressed an action of a panel (or selected an entry without panel). The menu refreshes afterwards, and a
+     * function given as `entries` is read again.
+     */
+    onEntryAction?: (context: MenuEntryActionContext) => void | Promise<void>
     disabled?: MenuEntryId[]
     saveSlots?: SaveSlot[]
     saveMaxSlots?: number
@@ -31,6 +93,75 @@ function readField(source: any, key: string, fallback?: any) {
     const value = source?.[key]
     const resolved = readReactiveValue(value, source)
     return resolved ?? fallback
+}
+
+const BUILT_IN_ENTRY_IDS: ReadonlySet<string> = new Set(['status', 'items', 'skills', 'equip', 'options', 'save', 'exit'])
+
+const text = (value: unknown): string | undefined => (typeof value === 'string' ? value : undefined)
+
+const sanitizeActions = (actions: unknown): MenuPanelAction[] | undefined => {
+    if (!Array.isArray(actions)) return undefined
+    const seen = new Set<string>()
+    const clean: MenuPanelAction[] = []
+    for (const action of actions) {
+        const id = text(action?.id)
+        const label = text(action?.label)
+        if (!id || label === undefined || seen.has(id)) continue
+        seen.add(id)
+        clean.push({ id, label, ...(action.disabled === true ? { disabled: true } : {}) })
+    }
+    return clean.length ? clean : undefined
+}
+
+const sanitizeItem = (item: any): MenuPanelItem | null => {
+    const id = text(item?.id)
+    const title = text(item?.title)
+    if (!id || title === undefined) return null
+    const progress = item.progress
+    const value = Number(progress?.value)
+    const max = Number(progress?.max)
+    return {
+        id,
+        title,
+        ...(text(item.subtitle) !== undefined ? { subtitle: item.subtitle } : {}),
+        ...(text(item.text) !== undefined ? { text: item.text } : {}),
+        ...(text(item.badge) !== undefined ? { badge: item.badge } : {}),
+        ...(Number.isFinite(value) && Number.isFinite(max) && max > 0 ? { progress: { value: Math.max(0, Math.min(value, max)), max } } : {}),
+        ...(sanitizeActions(item.actions) ? { actions: sanitizeActions(item.actions) } : {}),
+    }
+}
+
+/** Keeps only plain data of a panel: what the client may draw. Anything else (functions, unknown keys) is left out. */
+export const sanitizeMenuPanel = (panel: unknown): MenuPanel | undefined => {
+    if (!panel || typeof panel !== 'object') return undefined
+    const source = panel as Record<string, unknown>
+    const seen = new Set<string>()
+    const list = (Array.isArray(source.list) ? source.list : [])
+        .map(sanitizeItem)
+        .filter((item): item is MenuPanelItem => {
+            if (!item || seen.has(item.id)) return false
+            seen.add(item.id)
+            return true
+        })
+    return {
+        ...(text(source.title) !== undefined ? { title: source.title as string } : {}),
+        list,
+        ...(text(source.empty) !== undefined ? { empty: source.empty as string } : {}),
+        ...(sanitizeActions(source.actions) ? { actions: sanitizeActions(source.actions) } : {}),
+    }
+}
+
+/** The entries a game added, without the ones that reuse a built-in id or an id already taken. */
+export const resolveMenuCustomEntries = (entries: MenuGuiOptions['entries']): MenuCustomEntry[] => {
+    const list = typeof entries === 'function' ? entries() : entries
+    if (!Array.isArray(list)) return []
+    const seen = new Set<string>()
+    return list.filter((entry) => {
+        const id = text(entry?.id)
+        if (!id || text(entry?.label) === undefined || BUILT_IN_ENTRY_IDS.has(id) || seen.has(id)) return false
+        seen.add(id)
+        return true
+    })
 }
 
 export class MenuGui extends Gui {
@@ -65,11 +196,20 @@ export class MenuGui extends Gui {
             { id: 'save', label: 'rpg.menu.save' },
             { id: 'exit', label: 'rpg.menu.exit' }
         ]
-        const menus = (options.menus && options.menus.length ? options.menus : defaultMenus)
-            .map(menu => ({
-                ...menu,
-                disabled: menu.disabled || disabledSet.has(menu.id)
-            }))
+        const customEntries = resolveMenuCustomEntries(options.entries)
+        const menus = [
+            ...(options.menus && options.menus.length ? options.menus : defaultMenus)
+                .map(menu => ({
+                    ...menu,
+                    disabled: menu.disabled || disabledSet.has(menu.id)
+                })),
+            ...customEntries.map(entry => ({ id: entry.id, label: entry.label, disabled: entry.disabled === true })),
+        ]
+        const panels: Record<string, MenuPanel> = {}
+        for (const entry of customEntries) {
+            const panel = sanitizeMenuPanel(entry.panel)
+            if (panel) panels[entry.id] = panel
+        }
 
         const player = this.player as any
         const databaseById = player.databaseById?.bind(player)
@@ -143,12 +283,31 @@ export class MenuGui extends Gui {
         const saveLoad = this.buildSaveLoad(options)
         const hotbar = buildPlayerHotbarData(this.player)
 
-        return { menus, items, equips: menuEquips, skills, hotbar, saveLoad, playerStats: buildStats(), expForNextlevel: readReactiveValue(player.expForNextlevel) }
+        return { menus, panels, items, equips: menuEquips, skills, hotbar, saveLoad, playerStats: buildStats(), expForNextlevel: readReactiveValue(player.expForNextlevel) }
     }
 
     private refreshMenu(clientActionId?: string) {
         const data = this.buildMenuData(this.menuOptions)
         this.update(data, { clientActionId })
+    }
+
+    /**
+     * An action reaches the game only if the panel offers it now: the entry exists with a panel and is not disabled, the action
+     * is one of the panel (or of the row `item` of its list) and is not disabled. Whatever the client sends is checked.
+     */
+    private isEntryActionAllowed(entry?: string, action?: string, item?: string): boolean {
+        if (typeof entry !== 'string' || typeof action !== 'string') return false
+        const custom = resolveMenuCustomEntries(this.menuOptions.entries).find((candidate) => candidate.id === entry)
+        if (!custom || custom.disabled || !custom.panel) return false
+        const panel = sanitizeMenuPanel(custom.panel)
+        if (!panel) return false
+        let offered = panel.actions ?? []
+        if (item !== undefined) {
+            const row = panel.list?.find((candidate) => candidate.id === item)
+            if (!row) return false
+            offered = [...(row.actions ?? []), ...offered]
+        }
+        return offered.some((candidate) => candidate.id === action && !candidate.disabled)
     }
 
     private notifyError(err: any) {
@@ -215,6 +374,35 @@ export class MenuGui extends Gui {
                 this.refreshMenu(clientActionId)
             }
         })
+        this.on('entryAction', async ({ entry, action, item, clientActionId }: { entry?: string; action?: string; item?: string; clientActionId?: string }) => {
+            try {
+                if (!this.isEntryActionAllowed(entry, action, item)) return
+                await options.onEntryAction?.({ player: this.player, entry: entry!, action: action!, ...(item ? { item } : {}) })
+                this.player.syncChanges()
+            }
+            catch (err: any) {
+                this.notifyError(err)
+            }
+            finally {
+                this.refreshMenu(clientActionId)
+            }
+        })
+        // An entry without a panel: selecting it only tells the game.
+        for (const entry of resolveMenuCustomEntries(options.entries)) {
+            if (entry.panel || entry.disabled) continue
+            this.on(`open:${entry.id}`, async ({ clientActionId }: { clientActionId?: string } = {}) => {
+                try {
+                    await options.onEntryAction?.({ player: this.player, entry: entry.id, action: 'open' })
+                    this.player.syncChanges()
+                }
+                catch (err: any) {
+                    this.notifyError(err)
+                }
+                finally {
+                    this.refreshMenu(clientActionId)
+                }
+            })
+        }
         this.on('openSave', async () => {
             this.close()
             const gui = new SaveLoadGui(this.player)

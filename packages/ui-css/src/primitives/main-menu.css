@@ -743,3 +743,65 @@
     overflow: auto;
   }
 }
+
+/* A panel the game adds to the main menu (rows of plain data: title, subtitle, text, badge, progress, actions) */
+.rpg-ui-menu-data-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 0;
+}
+
+.rpg-ui-menu-data-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+
+.rpg-ui-menu-data-row-main {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rpg-ui-menu-data-row-title {
+  font-weight: 600;
+}
+
+.rpg-ui-menu-data-row-subtitle,
+.rpg-ui-menu-data-row-text {
+  font-size: 0.85em;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.rpg-ui-menu-data-badge {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border: 1px solid var(--rpg-ui-accent);
+  border-radius: 999px;
+  font-size: 0.75em;
+  white-space: nowrap;
+}
+
+.rpg-ui-menu-data-progress {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--rpg-ui-accent), transparent 80%);
+}
+
+.rpg-ui-menu-data-progress-fill {
+  height: 100%;
+  background: var(--rpg-ui-gradient-bar);
+}
+
+.rpg-ui-menu-data-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
