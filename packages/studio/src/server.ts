@@ -1449,6 +1449,10 @@ export default (_config?: unknown) => {
 
         // Add block execution utility to the event
         const eventObj: any = {};
+        // RPGJS names the instance after `name`; scripts filter on `event.name`
+        if (typeof object.name === "string" && object.name) {
+          eventObj.name = object.name;
+        }
 
         // If the event has triggers defined, add execution methods
         if (object.triggers && Array.isArray(object.triggers)) {
