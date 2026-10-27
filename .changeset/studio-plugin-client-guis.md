@@ -2,4 +2,4 @@
 "@rpgjs/studio": minor
 ---
 
-The client of a Studio game loads the client files of the plugins of the project: each one is a module `(host) => component` (what Studio compiles a `.ce` into) registered as the GUI `<pluginId>_<file>`, not displayed until a script or the game opens it. `StudioPlugin` has an optional `client` list.
+The game loads the client files of the plugins of a Studio project, before the engine starts. A plugin is `.ce` components (each one a GUI named `<pluginId>_<file>`) and `.js` modules (`index.js` default-exports a client module of RPGJS); a file imports the runtime of CanvasEngine, the client API (`defineModule`, `hoverPopover`…) and the other files of its plugin through `host.require`. `loadStudioPluginClientModules(projectId)` gives the modules to `provideClientModules`; `StudioPlugin` has an optional `client` list.
