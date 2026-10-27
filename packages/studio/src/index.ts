@@ -58,7 +58,10 @@ export { runStudioEvent } from "./run-event";
 export { loadStudioPlugins } from "./server";
 export { studioPluginScriptId, syncStudioPluginsToScripts } from "./plugins";
 export type { StudioPluginSyncReport, StudioScriptHost, StudioScriptInstall } from "./plugins";
-export type { StudioPlugin, StudioPluginScript } from "./data-provider/types";
+export type { StudioPlugin, StudioPluginClientFile, StudioPluginScript } from "./data-provider/types";
+export { buildStudioPluginClientModules, studioPluginGuiId } from "./client-plugins";
+export type { StudioPluginClientModule, StudioPluginHost, StudioPluginLoadReport } from "./client-plugins";
+export { loadStudioPluginClientModules, studioPluginHost } from "./client-plugin-host";
 export { runStudioSkillTrigger } from "./skill-workflow";
 export type {
   StudioItemWorkflowHooks,

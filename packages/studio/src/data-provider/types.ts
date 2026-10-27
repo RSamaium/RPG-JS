@@ -17,11 +17,19 @@ export interface StudioPluginScript {
   tree: unknown;
 }
 
+/** A client file of a plugin, compiled by Studio into a module `(host) => component`: never the source. */
+export interface StudioPluginClientFile {
+  name: string;
+  code: string;
+}
+
 /** A plugin installed in a project (`plugins.json` of a bundle, `/game/plugins` of the API). */
 export interface StudioPlugin {
   pluginId: string;
   version: number;
   scripts: StudioPluginScript[];
+  /** The GUI components of the plugin. Absent from a bundle published before plugins had client files. */
+  client?: StudioPluginClientFile[];
 }
 
 export interface ProjectQuery {
