@@ -93,6 +93,7 @@ installed, and a listener that fails does not stop the next one.
 | `player.outShape` | `onOutShape` of the player: leaves a zone | the same |
 | `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
+| `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
 
@@ -173,9 +174,31 @@ The player of the signal, with the names of `RpgPlayer`.
 | `showChoices(text, choices)` | 2 to 8 choices `{ text, value }`; gives the choice picked, or `null` when the player closes it |
 | `showNotification(message, options?)` | a notification. Options: `type` (`info`, `warn`, `error`), `time` |
 | `changeMap(map, { x, y }?)` | moves the player to a map |
+| `openGui(id, data?, options?)`, `updateGui(id, data)`, `closeGui(id, data?)` | a GUI of the client, as `player.gui(id).open(data, options)`, `.update(data)` and `player.removeGui(id, data)` do. See [GUIs](#guis-of-the-client) |
 
 RPGJS has variables, not switches: a flag is a variable (`$player.setVariable("tournament", true)`). A private switch of an event is
 a variable of the player named after the event (`$event.id + "_opened"`), as the chest of the playground does.
+
+### GUIs of the client
+
+A script opens the GUIs the client has (a component added with `RpgGui`, a CanvasEngine `.ce` file or a Vue component):
+
+```ts
+on("player.joinMap", () => {
+  $player.openGui("quests_panel", { count: 2 }, { blockPlayerInput: true });
+});
+
+// the component sent an interaction: onInteraction("accept", { quest: "wolves" })
+on("gui.action", { where: { gui: "quests_panel", event: "accept" } }, (e) => {
+  $player.setVariable("quest", e.data.quest);
+  $player.closeGui("quests_panel");
+});
+```
+
+- The id is `a-z`, `0-9` and `_`. The GUIs of the game (`rpg-main-menu`, `rpg-title-screen`…) have a hyphen and **cannot** be opened or closed by a script. A GUI that the client does not have is an error of the client, as in RPGJS.
+- `data` is plain data of at most 2 000 characters, copied; the component receives it as `data`.
+- `blockPlayerInput` is the only option. The script **does not wait** for the GUI (`waitingAction` has no place in a script): it listens to `gui.action`.
+- `gui.action` fires for every interaction of every GUI, including the ones of the game, and whether or not the server listens to the event with `player.gui(id).on(name, ...)`. The server hook behind it is `player.onGuiInteraction(player, { guiId, name, data })`.
 
 ### Where the script is: `$room`, `$event`
 
@@ -351,7 +374,7 @@ that is not a map, `events` and `shapes` put the events and the zones of the gam
 
 `expect` keys are `returns`, `error`, `effects`, `effectsInclude`, `effectsExclude`, `texts`, `notifications`, and paths
 `player.gold`, `player.items.<id>`, `shared.<name>`, `state.<key>`, `vars.<name>`; a value is exact or `{ min, max }`.
-The effects are named after the call that made them: `showText`, `showNotification`, `showChoices`, `changeMap`, `addItem`,
+The effects are named after the call that made them: `showText`, `showNotification`, `showChoices`, `changeMap`, `openGui`, `addItem`,
 `removeItem`, `setVariable`, `removeVariable`, `gold` (with the new `value`), `wait`, `sync` (a shared property), `state`, and the
 ones of the map: `createDynamicEvent`, `removeEvent`, `createShape`, `removeShape`, `setMapVariable`, `removeMapVariable`,
 `setWeather`, `patchWeather`, `clearWeather`, `setLighting`, `patchLighting`, `clearLighting`, `setDay`, `setNight`,

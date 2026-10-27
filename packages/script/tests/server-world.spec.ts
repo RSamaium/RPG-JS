@@ -114,6 +114,20 @@ describe("a script that runs on a real RPGJS player", () => {
     expect(showNotification).toHaveBeenCalledWith("Found it", { type: "info", time: 2000 });
   });
 
+  it("opens, updates and closes a GUI of the client through player.gui(id), player.getGui(id) and player.removeGui(id)", async () => {
+    const open = vi.fn().mockResolvedValue(null);
+    const update = vi.fn();
+    vi.spyOn(player, "gui").mockReturnValue({ open } as any);
+    vi.spyOn(player, "getGui").mockReturnValue({ update } as any);
+    const removeGui = vi.spyOn(player, "removeGui").mockImplementation(() => undefined);
+
+    await run(`export function f() { $player.openGui("quests_panel", { count: 2 }, { blockPlayerInput: true }); $player.updateGui("quests_panel", { count: 3 }); $player.closeGui("quests_panel", { done: true }); }`);
+
+    expect(open).toHaveBeenCalledWith({ count: 2 }, { blockPlayerInput: true });
+    expect(update).toHaveBeenCalledWith({ count: 3 });
+    expect(removeGui).toHaveBeenCalledWith("quests_panel", { done: true });
+  });
+
   it("asks the player to choose and gives the choice, or null when nothing is picked", async () => {
     const showChoices = vi.spyOn(player, "showChoices");
     showChoices.mockResolvedValueOnce({ text: "No", value: "no" } as any).mockResolvedValueOnce(null as any);

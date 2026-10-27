@@ -1179,6 +1179,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     if (gui) {
       await gui.emit(value.name, value.data)
     }
+    await player.execMethod('onGuiInteraction', [{ guiId: value.guiId, name: value.name, data: value.data }])
     player.syncChanges();
   }
 

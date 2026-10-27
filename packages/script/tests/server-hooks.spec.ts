@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createModule, defineModule } from "@rpgjs/common";
+import type { RpgClient } from "@rpgjs/client";
 import type { RpgActionInput, RpgPlayer, RpgServer } from "@rpgjs/server";
 import { testing, type TestingFixture } from "@rpgjs/testing";
 import { ScriptService, provideScripts, signalBinding, type ScriptSource } from "../src/server";
@@ -24,9 +25,9 @@ const serverModule = defineModule<RpgServer>({
 });
 
 /** A game with a real server, a real map and a connected player, running the given scripts. */
-async function start(scripts: ScriptSource[] | ScriptService) {
+async function start(scripts: ScriptSource[] | ScriptService, clientModule: RpgClient = {}) {
   const provider = scripts instanceof ScriptService ? provideScripts(scripts) : provideScripts({ scripts });
-  fixture = await testing(createModule("ScriptHooksTest", [{ server: serverModule, client: defineModule({}) }]), {}, { providers: [provider] });
+  fixture = await testing(createModule("ScriptHooksTest", [{ server: serverModule, client: defineModule<RpgClient>(clientModule) }]), {}, { providers: [provider] });
   const client = await fixture.createClient();
   const player: RpgPlayer = await client.waitForMapChange("test-map");
   return { player, map: player.getCurrentMap()! };
@@ -260,5 +261,22 @@ describe("the mapping from hooks to signals can be extended", () => {
     await player.execMethod("onInput", [{ action: "use" }]);
 
     expect(player.getVariable(`quiet_${n}`)).toBeUndefined();
+  });
+
+  it("opens a GUI for the player, and runs when the player acts in it (gui.action) with the GUI, the event and the data", async () => {
+    const { player, map } = await start([{
+      id: "quests_gui",
+      source: `
+        on("player.joinMap", () => { $player.openGui("quests_panel", { count: 2 }); });
+        on("gui.action", { where: { gui: "quests_panel", event: "accept" } }, (e) => { $player.setVariable("accepted_${n}", e.data.quest); $player.closeGui("quests_panel"); });
+      `,
+    }], { gui: [{ name: "quests_panel", component: () => null }] } as RpgClient);
+
+    await settled(() => expect(player.getGui(`quests_panel`)).toBeDefined());
+    await (map as any).guiInteraction(player, { guiId: `quests_panel`, name: "refuse", data: { quest: "no" } });
+    await (map as any).guiInteraction(player, { guiId: `quests_panel`, name: "accept", data: { quest: "wolves" } });
+
+    await settled(() => expect(player.getVariable(`accepted_${n}`)).toBe("wolves"));
+    await settled(() => expect(player.getGui(`quests_panel`)).toBeUndefined());
   });
 });

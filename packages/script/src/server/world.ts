@@ -247,6 +247,15 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     async showNotification(message, opts = {}) {
       await p.showNotification(message, opts);
     },
+    async openGui(id, data, options = {}) {
+      await p.gui(id).open(data, options);
+    },
+    updateGui(id, data) {
+      p.getGui(id)?.update(data);
+    },
+    closeGui(id, data) {
+      p.removeGui(id, data);
+    },
     async changeMap(mapId, positions) {
       await p.changeMap(mapId, positions);
     },

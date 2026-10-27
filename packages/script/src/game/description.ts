@@ -42,6 +42,12 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         },
         showNotification: { sig: '(message: string, options?: { type?: "info" | "warn" | "error"; time?: number }): void', doc: "Shows a notification." },
         changeMap: { sig: "(map: string, positions?: { x: number; y: number }): void", doc: "Moves the player to a map, at a position when given." },
+        openGui: {
+          sig: "(id: string, data?: object, options?: { blockPlayerInput?: boolean }): void",
+          doc: 'Opens a GUI of the client for the player, as player.gui(id).open(data, options) does in RPGJS. A GUI of a plugin is named <pluginId>_<file> (the file panel.ce of the plugin quests is "quests_panel"); the GUIs of the game (rpg-…) are not for scripts. The data (2 000 characters at most) reaches the component. blockPlayerInput stops the player from moving while it is open. The script does not wait: listen to "gui.action" for what the player does in it.',
+        },
+        updateGui: { sig: "(id: string, data: object): void", doc: "Sends new data to a GUI that is open, as player.gui(id).update(data) does." },
+        closeGui: { sig: "(id: string, data?: object): void", doc: "Closes a GUI, as player.removeGui(id, data) does." },
       },
     },
     $map: {
