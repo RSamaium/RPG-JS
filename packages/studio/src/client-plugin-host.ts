@@ -1,15 +1,16 @@
 import * as canvasengine from "canvasengine";
-import { defineModule, draggable, dragToTile, hoverPopover, selectable } from "@rpgjs/client";
+import * as rpgjs from "@rpgjs/client";
 import { buildStudioPluginClientModules, type StudioPluginClientModule, type StudioPluginHost, type StudioPluginLoadReport } from "./client-plugins";
 import { getGameDataProvider } from "./data-provider";
 
 /**
  * What a client file of a plugin can use of the game, as `host`: the runtime of CanvasEngine (`import { h } from 'canvasengine'`) and the
- * client API of RPGJS (`import { defineModule, hoverPopover } from '@rpgjs/client'`). A plugin never brings its own copy.
+ * whole client API of RPGJS (`import { defineModule, inject, RpgClientEngine, RpgGui, hoverPopover } from '@rpgjs/client'`), as the guides of
+ * RPGJS write it. A plugin never brings its own copy, so `inject` finds the engine of the game.
  */
 export const studioPluginHost = (): StudioPluginHost => ({
   canvasengine,
-  rpgjs: { defineModule, hoverPopover, selectable, draggable, dragToTile },
+  rpgjs,
 });
 
 /**
