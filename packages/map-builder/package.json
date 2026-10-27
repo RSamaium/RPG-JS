@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/map-builder",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "private": true,
   "description": "Modifiable map model, renderer and editing features for RPGJS games and editors (experimental)",
   "type": "module",

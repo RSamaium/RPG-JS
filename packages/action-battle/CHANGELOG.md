@@ -1,5 +1,13 @@
 # @rpgjs/action-battle
 
+## 5.1.1
+
+### Patch Changes
+
+- 9f3f6cc: The enemies of `@rpgjs/action-battle` also stand still, and stop walking, while their map has `battleAiHeld` set to `true`. Unlike `setAutoTick(false)` this does not pause the map: it goes on running (the players move, the clock goes on) and only the AI of the enemies is held. A map editor sets it while it works on a map.
+- 3c819b4: The enemies of `@rpgjs/action-battle` stand still while their map is paused with `map.setAutoTick(false)`: their AI has its own timer, so it went on fighting. `RpgMap.isAutoTickEnabled()` tells whether the map runs its loop.
+- 0bc0171: A player hit by a basic attack of another player (PVP, through `combat.targets.canTarget`) now gets the same hurt feedback as an enemy: flash, floating damage number and hurt animation. `applyActionBattleEntityHit()` only emitted a visual for a block or a parry, and relied on `battleAi.handleDamage()` for the `hurt` visual, which a player does not have. A target without AI now gets the `hurt` visual as in the skill path; a blocked or parried hit still gives only the block or parry visual.
+
 ## 5.1.0
 
 ### Minor Changes

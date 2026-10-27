@@ -1,5 +1,13 @@
 # @rpgjs/common
 
+## 5.1.1
+
+### Patch Changes
+
+- 3dba915: The collisions of a Studio map can follow its placed elements while it runs. `@rpgjs/common` gets `map.replaceStaticHitboxes(match, hitboxes)`, which replaces the static hitboxes whose id matches, whether they came with the map data or from a streamed chunk. `@rpgjs/studio` gets `rebuildElementCollisions({ low })` in the context of a map extension, which rebuilds the hitboxes of the placed elements on the client map and tells the server, and `createStudioElementCollisionsServer({ authorize })` (from `@rpgjs/studio/server`), the server module that applies it for the players it allows, on a standalone or an online (MMORPG) server.
+- Updated dependencies [aa0fa28]
+  - @rpgjs/physic@5.0.4
+
 ## 5.1.0
 
 ### Minor Changes
