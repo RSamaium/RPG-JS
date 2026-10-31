@@ -2,8 +2,26 @@
   <Sprite image="background.png" width={1024} height={768} />
   <Rect width={1024} height={768} color="#111827" alpha={0.18} />
   <EventLayerComponent />
+  <Rect width={1024} height={768} color="#ffffff" alpha={0.001} pointerdown={throwAtPointer} />
 </Container>
 
 <script>
-  import { EventLayerComponent } from "@rpgjs/client";
+  import { mount } from "canvasengine";
+  import { EventLayerComponent, inject, RpgClientEngine } from "@rpgjs/client";
+
+  const client = inject(RpgClientEngine);
+  let mapContainer = null;
+
+  mount((element) => {
+    mapContainer = element.componentInstance;
+  });
+
+  // Click: throw a bomb at the pointer. Shift + click: throw the boomerang.
+  function throwAtPointer(event) {
+    const global = event?.global ?? event?.data?.global;
+    const local = mapContainer && global ? mapContainer.toLocal(global) : null;
+    if (!local || !Number.isFinite(local.x) || !Number.isFinite(local.y)) return;
+    const action = event?.shiftKey ? "loot:boomerang" : "loot:bomb";
+    client.processAction(action, { target: { x: local.x, y: local.y } });
+  }
 </script>

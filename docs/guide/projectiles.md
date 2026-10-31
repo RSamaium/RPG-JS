@@ -231,6 +231,96 @@ player.projectiles.emit({
 })
 ```
 
+## Trajectories
+
+`trajectory.type` picks the path. The server simulates it and the client draws
+it with the same function, so only its name and parameters are synchronized.
+
+| Type | Path | Parameters |
+| --- | --- | --- |
+| `linear` (default) | Straight line | `speed`, `range`, `ttl` |
+| `instant` | Hit-scan ray | `range` |
+| `arc` | Lob landing at `range`, peaking at `height` | `range`, `duration` or `speed`, `height` |
+| `return` | Out to `range`, then back to the launcher | `speed`, `range` |
+
+```ts
+// A bomb lobbed over the enemies
+player.projectiles.emit({
+  type: 'bomb',
+  trajectory: { type: 'arc', range: 180, duration: 0.55, height: 56 },
+  linger: { ms: 1100 },
+  onEnd({ map, x, y }) {
+    map.showAnimation({ x, y }, 'explosion')
+  }
+})
+
+// A boomerang that flies through the enemies and comes back
+player.projectiles.emit({
+  type: 'boomerang',
+  trajectory: { type: 'return', speed: 320, range: 190 },
+  pierce: true,
+  wall: 'return',
+  onHit({ target }) {
+    // apply damage
+  }
+})
+```
+
+The way back of `return` aims at the current position of the launcher, on the
+server and on the client.
+
+### Custom trajectories
+
+Register a trajectory once in shared code (imported by both the server and the
+client). It is a pure function of the elapsed time:
+
+```ts
+import { defineTrajectory } from '@rpgjs/common'
+
+defineTrajectory('sine', (t, { origin, direction, params }) => {
+  const distance = Math.min(params.speed * t, params.range)
+  const wave = Math.sin(distance / 20) * (params.amplitude ?? 16)
+  return {
+    x: origin.x + direction.x * distance - direction.y * wave,
+    y: origin.y + direction.y * distance + direction.x * wave,
+    z: 0,
+    phase: 'out',
+    done: distance >= params.range
+  }
+})
+
+player.projectiles.emit({
+  type: 'wisp',
+  trajectory: { type: 'sine', speed: 200, range: 300, amplitude: 24 }
+})
+```
+
+The context also gives `owner()`, the current center of the launcher. `z` is the
+height above the ground and `phase` is a free label sent to the component.
+
+## Behaviors
+
+These options work with every trajectory:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `collide` | `always` (`none` for `arc`) | What the projectile collides with in flight: `always`, `walls` (static obstacles only) or `none`. |
+| `pierce` | `false` | Fly through targets: `true`, or the maximum number of targets. Each target is hit once. |
+| `wall` | `stop` | Against a wall: `stop`, `bounce`, `return` (back to the launcher) or `stick` (stays planted). |
+| `linger` | none | `{ ms }`: keep the projectile visible where it ended, for a fuse or a planted arrow. |
+
+Hooks of one projectile, on the server:
+
+| Hook | Called when |
+| --- | --- |
+| `onHit({ target, hit })` | It hits an entity. |
+| `onWall({ hit })` | It hits a wall. |
+| `onLand({ x, y })` | An `arc` projectile lands. |
+| `onEnd({ reason, x, y })` | It is gone, after `linger`. `reason` is `hit`, `range`, `land`, `return`, `end` or `ttl`. |
+
+Every hook receives `projectile`, `owner` and `map`. Bounces, returns and
+planted projectiles are sent to the clients as compact updates.
+
 ## Impact Hooks
 
 Use projectile hooks to apply gameplay effects when the server confirms an
@@ -356,6 +446,11 @@ Common props:
 - `id`, `type`, `ownerId`
 - `x`, `y`, `origin`, `direction`, `angle`
 - `speed`, `range`, `ttl`, `distance`, `elapsed`, `progress`
+- `z`, the height above the ground: draw the sprite at `y - z` and a shadow at
+  `y`
+- `phase`, the part of the path (`out`, `back`, or `stuck` once the projectile
+  is planted or lingering)
+- `trajectory`, its name and parameters
 - `impactProgress` from `0` to `1` while the client keeps an impacted
   projectile visible for its impact animation
 - `index`, `count` for repeated or patterned projectiles
@@ -366,7 +461,7 @@ Common props:
   `distance` to a locally predicted impact point; `impact` remains undefined
   until the server confirms the collision.
 
-Position and progress props (`x`, `y`, `angle`, `distance`, `elapsed`,
+Position and progress props (`x`, `y`, `z`, `phase`, `angle`, `distance`, `elapsed`,
 `progress`, `impact`, `impactElapsed`, `impactProgress`, `destroyed`) are
 updated on every frame without rebuilding the component. Before an impact,
 `impact` is `null` and `impactElapsed` / `impactProgress` are `0`.

@@ -22,3 +22,4 @@ export * from "./map-streaming";
 export * from "./gameplay-room";
 export * from "./foundation";
 export * from "./loot";
+export * from "./trajectory";

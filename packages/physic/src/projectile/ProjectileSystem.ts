@@ -3,7 +3,26 @@ import type { Entity } from '../physics/Entity';
 import type { RaycastHit } from '../collision/raycast';
 import type { PhysicsEngine } from '../api/PhysicsEngine';
 
-export type ProjectileDestroyReason = 'hit' | 'range' | 'ttl' | 'manual';
+export type ProjectileDestroyReason = 'hit' | 'range' | 'ttl' | 'manual' | 'end';
+
+/**
+ * Position of a projectile following a custom path, at a given age.
+ * `done` ends the projectile with the `end` reason.
+ */
+export interface ProjectilePathPoint {
+  x: number;
+  y: number;
+  done?: boolean;
+}
+
+/**
+ * What a projectile does after hitting an entity:
+ * - `stop` destroys it;
+ * - `continue` keeps it flying and ignores that entity from now on (pierce);
+ * - `redirect` keeps it flying on the path set by `update()` during the hit,
+ *   for a bounce or an early return. The entity can be hit again later.
+ */
+export type ProjectileHitResolution = 'stop' | 'continue' | 'redirect';
 
 export interface ProjectileSpawnConfig {
   id: string;
@@ -18,6 +37,13 @@ export interface ProjectileSpawnConfig {
   ignoreOwner?: boolean;
   filter?: (entity: Entity, projectile: ProjectileState) => boolean;
   metadata?: Record<string, unknown>;
+  /**
+   * Custom path sampled by age in seconds. When set, `speed` and `range` are
+   * not used to move the projectile; collisions are tested on each segment.
+   */
+  path?: (age: number) => ProjectilePathPoint;
+  /** Decide whether the projectile stops or keeps flying after a hit. */
+  resolveHit?: (hit: RaycastHit, projectile: ProjectileState) => ProjectileHitResolution;
 }
 
 export interface ProjectileState {
@@ -62,7 +88,14 @@ export type ProjectileHandler<T> = (event: T) => void;
 interface ProjectileRecord {
   state: ProjectileState;
   filter?: (entity: Entity, projectile: ProjectileState) => boolean;
+  path?: (age: number) => ProjectilePathPoint;
+  resolveHit?: ProjectileSpawnConfig['resolveHit'];
+  /** Entities already hit by a projectile that keeps flying. */
+  hitEntities: Set<string>;
 }
+
+/** Maximum entities a projectile can pass through in one step. */
+const MAX_HITS_PER_STEP = 8;
 
 /**
  * Lightweight deterministic projectile simulation for server-authoritative RPGs.
@@ -91,12 +124,12 @@ export class ProjectileSystem {
       throw new Error('Projectile direction must be non-zero');
     }
 
-    const speed = config.speed;
+    const speed = config.path ? config.speed || 1 : config.speed;
     if (!Number.isFinite(speed) || speed <= 0) {
       throw new Error('Projectile speed must be a positive number');
     }
 
-    const rangeOption = config.range ?? this.options.defaultRange;
+    const rangeOption = config.range ?? this.options.defaultRange ?? (config.path ? Number.MAX_SAFE_INTEGER : undefined);
     if (rangeOption === undefined || !Number.isFinite(rangeOption) || rangeOption <= 0) {
       throw new Error('Projectile range must be a positive number');
     }
@@ -125,8 +158,10 @@ export class ProjectileSystem {
     if (config.collisionMask !== undefined) state.collisionMask = config.collisionMask;
     if (config.metadata !== undefined) state.metadata = config.metadata;
 
-    const record: ProjectileRecord = { state };
+    const record: ProjectileRecord = { state, hitEntities: new Set() };
     if (config.filter !== undefined) record.filter = config.filter;
+    if (config.path !== undefined) record.path = config.path;
+    if (config.resolveHit !== undefined) record.resolveHit = config.resolveHit;
     this.projectiles.set(config.id, record);
     this.emit(this.spawnHandlers, { projectile: this.cloneState(state) });
     return this.cloneState(state);
@@ -152,6 +187,20 @@ export class ProjectileSystem {
       return false;
     }
     this.destroyRecord(record, reason);
+    return true;
+  }
+
+  /**
+   * Change a flying projectile: a new path (a bounce, an early return) or a new
+   * position. The age is kept, so a new path is sampled from the current age.
+   */
+  public update(id: string, patch: { path?: (age: number) => ProjectilePathPoint; position?: { x: number; y: number } }): boolean {
+    const record = this.projectiles.get(id);
+    if (!record) {
+      return false;
+    }
+    if (patch.path) record.path = patch.path;
+    if (patch.position) record.state.position = this.toVector(patch.position);
     return true;
   }
 
@@ -186,46 +235,83 @@ export class ProjectileSystem {
   private stepProjectile(record: ProjectileRecord, dt: number): void {
     const projectile = record.state;
     const remainingTtl = projectile.ttl - projectile.age;
-    const remainingRange = projectile.range - projectile.distanceTraveled;
     const stepTime = Math.min(dt, remainingTtl);
-    const stepDistance = Math.min(projectile.speed * stepTime, remainingRange);
 
     if (stepTime <= 0) {
       this.destroyRecord(record, 'ttl');
       return;
     }
 
-    if (stepDistance <= 0) {
-      this.destroyRecord(record, 'range');
-      return;
+    let target: Vector2;
+    let pathDone = false;
+    if (record.path) {
+      const point = record.path(projectile.age + stepTime);
+      target = new Vector2(point.x, point.y);
+      pathDone = point.done === true;
+    } else {
+      const remainingRange = projectile.range - projectile.distanceTraveled;
+      const stepDistance = Math.min(projectile.speed * stepTime, remainingRange);
+      if (stepDistance <= 0) {
+        this.destroyRecord(record, 'range');
+        return;
+      }
+      target = projectile.position.add(projectile.direction.mul(stepDistance));
     }
 
-    const start = projectile.position.clone();
-    const hit = this.engine.raycast(
-      start,
-      projectile.direction,
-      stepDistance,
-      projectile.collisionMask,
-      (entity) => this.shouldHit(entity, record),
-    );
+    // Test the segment, and keep testing after each hit the projectile flies through.
+    let start = projectile.position.clone();
+    for (let hits = 0; hits < MAX_HITS_PER_STEP; hits += 1) {
+      const delta = target.sub(start);
+      const length = delta.length();
+      if (length <= 0) break;
+      const direction = delta.mul(1 / length);
+      const hit = this.engine.raycast(
+        start,
+        direction,
+        length,
+        projectile.collisionMask,
+        (entity) => this.shouldHit(entity, record),
+      );
+      if (!hit) break;
 
-    if (hit) {
-      projectile.position = hit.point.clone();
       projectile.distanceTraveled += hit.distance;
-      projectile.age += hit.distance / projectile.speed;
+      projectile.position = hit.point.clone();
+      projectile.direction = direction;
+      const resolution = record.resolveHit?.(hit, this.cloneState(projectile)) ?? 'stop';
       this.emit(this.hitHandlers, {
         projectile: this.cloneState(projectile),
         hit,
       });
-      this.destroyRecord(record, 'hit', hit);
+      if (resolution === 'stop' || !this.projectiles.has(projectile.id)) {
+        this.destroyRecord(record, 'hit', hit);
+        return;
+      }
+      if (resolution === 'continue') {
+        record.hitEntities.add(hit.entity.uuid);
+        start = hit.point.clone();
+      } else {
+        // Step off the surface so the next segment does not hit it again at once.
+        start = hit.point.add(hit.normal.mul(0.5));
+        projectile.position = start.clone();
+      }
+      // A hit handler may have changed the path (bounce, early return).
+      if (record.path) {
+        const point = record.path(projectile.age + stepTime);
+        target = new Vector2(point.x, point.y);
+        pathDone = point.done === true;
+      }
+    }
+
+    projectile.distanceTraveled += target.sub(start).length();
+    projectile.position = target;
+    projectile.age += stepTime;
+
+    if (pathDone) {
+      this.destroyRecord(record, 'end');
       return;
     }
 
-    projectile.position = start.add(projectile.direction.mul(stepDistance));
-    projectile.distanceTraveled += stepDistance;
-    projectile.age += stepTime;
-
-    if (projectile.distanceTraveled >= projectile.range) {
+    if (!record.path && projectile.distanceTraveled >= projectile.range) {
       this.destroyRecord(record, 'range');
       return;
     }
@@ -238,6 +324,9 @@ export class ProjectileSystem {
   private shouldHit(entity: Entity, record: ProjectileRecord): boolean {
     const projectile = record.state;
     if (projectile.ignoreOwner && projectile.ownerId !== undefined && entity.uuid === projectile.ownerId) {
+      return false;
+    }
+    if (record.hitEntities.has(entity.uuid)) {
       return false;
     }
     return record.filter ? record.filter(entity, this.cloneState(projectile)) : true;
