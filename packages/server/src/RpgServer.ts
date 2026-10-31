@@ -17,6 +17,8 @@ import type {
     ProjectileDestroyHookContext,
     ProjectileHookContext,
     ProjectileImpactHookContext,
+    ProjectileServerState,
+    ProjectileTargetHitContext,
 } from "./projectiles"
 
 type RpgClassMap<T> = new () => T
@@ -428,6 +430,18 @@ export interface RpgPlayerHooks<TAuthData = unknown> {
     onInShape?: (player: RpgPlayer, shape: RpgShape) => MaybePromise<void>
 
     /**
+     * Called when a projectile hits a player.
+     *
+     * @example
+     * ```ts
+     * onProjectileHit(player, projectile, { owner }) {
+     *   if (projectile.type === "snowball") player.hp -= 1
+     * }
+     * ```
+     */
+    onProjectileHit?: (player: RpgPlayer, projectile: ProjectileServerState, context: ProjectileTargetHitContext) => MaybePromise<void>
+
+    /**
      *  When the player leaves the shape
      * 
      * @prop { (player: RpgPlayer, shape: RpgShape) => void | Promise<void> } [onOutShape]
@@ -694,6 +708,12 @@ export interface RpgEventHooks {
      * ```
      */
     onPlayerTouch?: (event: RpgEvent, player: RpgPlayer) => MaybePromise<void>
+
+    /**
+     * Called when a projectile hits an event. Module hooks are notified only:
+     * the event's own `onProjectileHit` decides what the projectile does.
+     */
+    onProjectileHit?: (event: RpgEvent, projectile: ProjectileServerState, context: ProjectileTargetHitContext) => MaybePromise<void>
 
     /** Called when an event starts touching a player or another event. */
     onTouch?: (event: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => MaybePromise<void>

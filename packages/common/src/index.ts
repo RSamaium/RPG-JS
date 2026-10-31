@@ -23,3 +23,4 @@ export * from "./gameplay-room";
 export * from "./foundation";
 export * from "./emotion-bubble";
 export * from "./loot";
+export * from "./trajectory";

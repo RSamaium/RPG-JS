@@ -1,0 +1,22 @@
+<Container x={x} y={y} rotation={spin} zIndex={1000}>
+  <Graphics draw={drawBoomerang} />
+</Container>
+
+<script>
+  import { computed } from "canvasengine";
+
+  const { x, y, elapsed } = defineProps({
+    x: Number,
+    y: Number,
+    elapsed: { type: Number, default: 0 },
+  });
+
+  const spin = computed(() => (elapsed() ?? 0) * Math.PI * 6);
+
+  function drawBoomerang(g) {
+    g.clear();
+    g.poly([-12, -4, 0, -10, 12, -4, 8, 0, 0, -5, -8, 0]);
+    g.fill({ color: 0xd97706 });
+    g.stroke({ color: 0x78350f, width: 1.5 });
+  }
+</script>

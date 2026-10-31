@@ -231,6 +231,145 @@ player.projectiles.emit({
 })
 ```
 
+## Trajectories
+
+`trajectory.type` picks the path. The server simulates it and the client draws
+it with the same function, so only its name and parameters are synchronized.
+
+| Type | Path | Parameters |
+| --- | --- | --- |
+| `linear` (default) | Straight line | `speed`, `range`, `ttl` |
+| `instant` | Hit-scan ray | `range` |
+| `arc` | Lob landing at `range`, peaking at `height` | `range`, `duration` or `speed`, `height` |
+| `return` | Out to `range`, then back to the launcher | `speed`, `range` |
+
+```ts
+// A bomb lobbed over the enemies
+player.projectiles.emit({
+  type: 'bomb',
+  trajectory: { type: 'arc', range: 180, duration: 0.55, height: 56 },
+  linger: { ms: 1100 },
+  onEnd({ map, x, y }) {
+    map.showAnimation({ x, y }, 'explosion')
+  }
+})
+
+// A boomerang that flies through the enemies and comes back
+player.projectiles.emit({
+  type: 'boomerang',
+  trajectory: { type: 'return', speed: 320, range: 190 },
+  pierce: true,
+  wall: 'return',
+  onHit({ target }) {
+    // apply damage
+  }
+})
+```
+
+The way back of `return` aims at the current position of the launcher, on the
+server and on the client.
+
+### Custom trajectories
+
+Register a trajectory once in shared code (imported by both the server and the
+client). It is a pure function of the elapsed time:
+
+```ts
+import { defineTrajectory } from '@rpgjs/common'
+
+defineTrajectory('sine', (t, { origin, direction, params }) => {
+  const distance = Math.min(params.speed * t, params.range)
+  const wave = Math.sin(distance / 20) * (params.amplitude ?? 16)
+  return {
+    x: origin.x + direction.x * distance - direction.y * wave,
+    y: origin.y + direction.y * distance + direction.x * wave,
+    z: 0,
+    phase: 'out',
+    done: distance >= params.range
+  }
+})
+
+player.projectiles.emit({
+  type: 'wisp',
+  trajectory: { type: 'sine', speed: 200, range: 300, amplitude: 24 }
+})
+```
+
+The context also gives `owner()`, the current center of the launcher. `z` is the
+height above the ground and `phase` is a free label sent to the component.
+
+## Behaviors
+
+These options work with every trajectory:
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `collide` | `always` (`none` for `arc`) | What the projectile collides with in flight: `always`, `walls` (static obstacles only) or `none`. |
+| `pierce` | `false` | Fly through targets: `true`, or the maximum number of targets. Each target is hit once. |
+| `wall` | `stop` | Against a wall: `stop`, `bounce`, `return` (back to the launcher) or `stick` (stays planted). |
+| `linger` | none | `{ ms }`: keep the projectile visible where it ended, for a fuse or a planted arrow. |
+
+Hooks of one projectile, on the server:
+
+| Hook | Called when |
+| --- | --- |
+| `onHit({ target, hit })` | It hits an entity. |
+| `onWall({ hit })` | It hits a wall. |
+| `onLand({ x, y })` | An `arc` projectile lands. |
+| `onEnd({ reason, x, y })` | It is gone, after `linger`. `reason` is `hit`, `range`, `land`, `return`, `end` or `ttl`. |
+
+Every hook receives `projectile`, `owner` and `map`. Bounces, returns and
+planted projectiles are sent to the clients as compact updates.
+
+## Targets Reacting To Impacts
+
+Any event (or player) hit by a projectile can react itself with
+`onProjectileHit`, without changing the weapon. It runs on the server, before
+the projectile `onHit`, and its reply decides what the projectile does:
+
+| Reply | Effect |
+| --- | --- |
+| nothing | Keep the projectile behavior (`pierce`...). |
+| `"stop"` | Stop the projectile, even with `pierce`. |
+| `"pass"` | Let the projectile fly through this target. |
+| `"stick"` | Keep the projectile planted in the target (use `linger` to keep it visible). |
+
+```ts
+import type { EventDefinition } from '@rpgjs/server'
+
+// A switch toggled by any projectile
+export const Switch: EventDefinition = {
+  name: 'Switch',
+  onProjectileHit(projectile, { owner }) {
+    owner?.getCurrentMap()?.setVariable('door-open', true)
+    return 'stop'
+  }
+}
+
+// A bush cut by any projectile: it lets it through and drops loot
+export const Bush: EventDefinition = {
+  name: 'Bush',
+  onProjectileHit(projectile, { owner }) {
+    this.dropLoot({ gold: 3 }, { owner, ownership: 'player' })
+    this.remove()
+    return 'pass'
+  }
+}
+
+// A wooden target where arrows stay planted
+export const Target: EventDefinition = {
+  onProjectileHit(projectile) {
+    return projectile.type === 'arrow' ? 'stick' : 'stop'
+  }
+}
+```
+
+The hook receives the projectile (`type`, `ownerId`, `params`, `trajectory`) and
+`{ owner, map, x, y, hit }`. Module hooks are notified too, without a reply:
+`event.onProjectileHit` and `player.onProjectileHit` in `defineModule()`.
+
+Loot pickups never stop projectiles: they fly over them.
+
 ## Impact Hooks
 
 Use projectile hooks to apply gameplay effects when the server confirms an
@@ -356,6 +495,11 @@ Common props:
 - `id`, `type`, `ownerId`
 - `x`, `y`, `origin`, `direction`, `angle`
 - `speed`, `range`, `ttl`, `distance`, `elapsed`, `progress`
+- `z`, the height above the ground: draw the sprite at `y - z` and a shadow at
+  `y`
+- `phase`, the part of the path (`out`, `back`, or `stuck` once the projectile
+  is planted or lingering)
+- `trajectory`, its name and parameters
 - `impactProgress` from `0` to `1` while the client keeps an impacted
   projectile visible for its impact animation
 - `index`, `count` for repeated or patterned projectiles
@@ -366,10 +510,94 @@ Common props:
   `distance` to a locally predicted impact point; `impact` remains undefined
   until the server confirms the collision.
 
-Position and progress props (`x`, `y`, `angle`, `distance`, `elapsed`,
+Position and progress props (`x`, `y`, `z`, `phase`, `angle`, `distance`, `elapsed`,
 `progress`, `impact`, `impactElapsed`, `impactProgress`, `destroyed`) are
 updated on every frame without rebuilding the component. Before an impact,
 `impact` is `null` and `impactElapsed` / `impactProgress` are `0`.
 
 Do not apply damage in the component. Components are visual only; gameplay
 effects belong in server projectile hooks.
+
+### Recipe: an arrow with a trail
+
+A component can keep its own state. This arrow remembers its last positions to
+draw a fading trail, stops the trail once planted (`phase` is `stuck`), and
+reads its color from the `params` sent by the server:
+
+```ts
+// server
+player.projectiles.emit({
+  type: 'arrow',
+  trajectory: { type: 'linear', speed: 320, range: 260 },
+  wall: 'stick',
+  linger: { ms: 3000 },
+  params: { color: '#60a5fa' }
+})
+```
+
+```html
+<!-- components/arrow.ce -->
+<Container x={x} y={y} zIndex={1000}>
+  <Graphics draw={drawTrail} />
+  <Container y={lift} rotation={angle}>
+    @if (impact()) {
+      <Graphics draw={drawImpact} />
+    } @else {
+      <Graphics draw={drawArrow} />
+    }
+  </Container>
+</Container>
+
+<script>
+  import { computed, tick } from 'canvasengine'
+
+  const { x, y, z, angle, phase, impact, impactProgress, params } = defineProps()
+
+  const color = computed(() => parseInt((params()?.color ?? '#e5e7eb').slice(1), 16))
+  // Draw the arrow above its ground position when the trajectory has a height.
+  const lift = computed(() => -(z() ?? 0))
+
+  // Last positions, newest first.
+  const trail = []
+  tick(() => {
+    if (impact() || phase() === 'stuck') {
+      trail.length = 0
+      return
+    }
+    trail.unshift({ x: x(), y: y() - (z() ?? 0) })
+    if (trail.length > 10) trail.pop()
+  })
+
+  function drawTrail(g) {
+    g.clear()
+    for (let i = 1; i < trail.length; i++) {
+      const a = trail[i - 1]
+      const b = trail[i]
+      const fade = 1 - i / trail.length
+      g.moveTo(a.x - x(), a.y - y())
+      g.lineTo(b.x - x(), b.y - y())
+      g.stroke({ color: color(), width: 3 * fade, alpha: 0.6 * fade })
+    }
+  }
+
+  function drawArrow(g) {
+    g.clear()
+    g.rect(-12, -1, 18, 2)
+    g.fill({ color: 0x8b5a2b })
+    g.poly([6, -4, 12, 0, 6, 4])
+    g.fill({ color: color() })
+  }
+
+  function drawImpact(g) {
+    g.clear()
+    const t = impactProgress() ?? 0
+    g.circle(0, 0, 4 + t * 12)
+    g.fill({ color: color(), alpha: 0.6 * (1 - t) })
+  }
+</script>
+```
+
+Register it like any projectile component:
+`projectiles: { components: { arrow: ArrowProjectile } }`. For a particle trail,
+use `<Fx name="..." loop />` from `@canvasengine/presets` instead of the
+`Graphics` line.

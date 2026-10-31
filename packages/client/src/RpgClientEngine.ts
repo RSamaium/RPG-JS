@@ -296,6 +296,12 @@ export class RpgClientEngine<T = any> {
     this.projectiles = new ProjectileManager(
       this.hooks,
       (projectile) => predictProjectileImpact((this.sceneMap as any)?.physic, projectile),
+      (ownerId) => {
+        const owner = (this.scene as any)?.getObjectById?.(ownerId);
+        if (!owner?.x) return undefined;
+        const hitbox = owner.hitbox?.() ?? { w: 0, h: 0 };
+        return { x: owner.x() + hitbox.w / 2, y: owner.y() + hitbox.h / 2 };
+      },
     );
     this.globalConfig = inject(GlobalConfigToken)
 
@@ -886,6 +892,13 @@ export class RpgClientEngine<T = any> {
     this.webSocket.on("projectile:impactBatch", (data) => {
       if (!this.shouldProcessProjectilePacket(data)) return;
       this.projectiles.impactBatch(data?.impacts ?? [], {
+        mapId: data?.mapId,
+      });
+    });
+
+    this.webSocket.on("projectile:updateBatch", (data) => {
+      if (!this.shouldProcessProjectilePacket(data)) return;
+      this.projectiles.updateBatch(data?.projectiles ?? [], {
         mapId: data?.mapId,
       });
     });

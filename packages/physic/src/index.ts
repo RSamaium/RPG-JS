@@ -109,6 +109,8 @@ export {
   type ProjectileDestroyEvent,
   type ProjectileDestroyReason,
   type ProjectileHitEvent,
+  type ProjectileHitResolution,
+  type ProjectilePathPoint,
   type ProjectileSpawnConfig,
   type ProjectileSpawnEvent,
   type ProjectileState,

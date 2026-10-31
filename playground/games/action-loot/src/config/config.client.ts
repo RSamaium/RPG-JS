@@ -7,6 +7,8 @@ import {
 import { provideActionBattle } from "@rpgjs/action-battle/client";
 import MapComponent from "../components/map.ce";
 import RubyLoot from "../components/ruby-loot.ce";
+import BombProjectile from "../components/bomb.ce";
+import BoomerangProjectile from "../components/boomerang.ce";
 
 const MAP_WIDTH = 1024;
 const MAP_HEIGHT = 768;
@@ -35,6 +37,19 @@ export default {
           components: { ruby: RubyLoot },
           collectText: true,
         },
+        projectiles: {
+          components: { bomb: BombProjectile, boomerang: BoomerangProjectile },
+        },
+        spritesheets: [
+          {
+            id: "explosion",
+            image: "exp.png",
+            width: 1024,
+            height: 1024,
+            ...Presets.AnimationSpritesheetPreset(4, 4),
+            scale: [0.35, 0.35],
+          },
+        ],
         spritesheetResolver: async (id: string) => {
           if (id === "hero" || id === "monster") {
             return Presets.LPCSpritesheetPreset({

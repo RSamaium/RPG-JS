@@ -9,6 +9,7 @@ import type {
 import type { EventMode } from "../decorators/event";
 import type { RpgEvent, RpgPlayer } from "../Player/Player";
 import type { RpgMap } from "./map";
+import type { ProjectileServerState, ProjectileTargetHitContext, ProjectileTargetReaction } from "../projectiles";
 
 /**
  * Interface for input controls configuration
@@ -60,6 +61,18 @@ export interface EventHooks {
   onAction?: (this: RpgEvent, player: RpgPlayer, input: RpgActionInput<unknown>) => void | Promise<void>;
   /** Called when a player touches this event */
   onPlayerTouch?: (this: RpgEvent, player: RpgPlayer) => void;
+  /**
+   * Called when a projectile hits this event, before the projectile `onHit`.
+   *
+   * Return `"pass"` to let the projectile fly through, `"stick"` to keep it
+   * planted in the event, `"stop"` to stop it, or nothing to keep the
+   * projectile behavior.
+   */
+  onProjectileHit?: (
+    this: RpgEvent,
+    projectile: ProjectileServerState,
+    context: ProjectileTargetHitContext
+  ) => ProjectileTargetReaction | void;
   /** Called when this event starts touching a player or another event */
   onTouch?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
   /** Called when this event stops touching a player or another event */
