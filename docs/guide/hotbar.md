@@ -227,7 +227,10 @@ await player.useActiveHotbarSlot(target)
 
 Battle or targeting modules can inspect `player.getHotbar()` and route the
 selected entry through their own authoritative action. `@rpgjs/action-battle`
-does this automatically, including cooldowns, projectiles, and targeting.
+does this automatically, including cooldowns, projectiles, and targeting. It
+also lets items that declare an `action` (a bomb, a boomerang) be thrown from
+the hotbar, including items that are not consumable: see
+[Thrown items in the hotbar](/guide/battle-ai#thrown-items-in-the-hotbar).
 
 Modules can observe every state transition:
 

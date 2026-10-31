@@ -1,7 +1,9 @@
 import {
   RpgEvent,
   RpgPlayer,
+  getHotbarEntryType,
   isLootEvent,
+  registerHotbarEntryType,
   type HotbarGuiOptions,
   type RpgServer,
 } from "@rpgjs/server";
@@ -13,7 +15,7 @@ import {
   ActionBattleHotbarSkill,
   ActionBattleOptions,
 } from "./types";
-import { isActionBattleEnabled, normalizeActionBattleOptions, setActionBattleOptions } from "./config";
+import { getActionBattleOptions, isActionBattleEnabled, normalizeActionBattleOptions, setActionBattleOptions } from "./config";
 import {
   getActionBattleEntityTile,
   getActionBattleTileSize,
@@ -1317,6 +1319,78 @@ const handleActionBattleSkillUse = (
   return finishUse(targets);
 };
 
+/**
+ * Use an item that declares an `action` (a bomb, a boomerang, a bow) through
+ * the combat flow instead of `useItem()`. The item is aimed at `target` when
+ * the client sends a point, otherwise in the facing direction, and it is
+ * removed from the inventory unless it is `consumable: false`.
+ */
+const handleActionBattleItemUse = (
+  player: RpgPlayer,
+  itemId: string,
+  target: { x: number; y: number } | undefined,
+  options: ActionBattleOptions,
+) => {
+  if (!player.hasItem(itemId)) return false;
+  const itemData = resolveItemData(player, itemId);
+  const actionConfig = getActionBattleActionConfig(itemData);
+  if (!itemData || !actionConfig) return false;
+  const cooldownKey = `item:${itemId}`;
+  const cooldowns = getPlayerSkillCooldowns(player);
+  if ((cooldowns.get(cooldownKey) ?? 0) > Date.now()) return false;
+
+  const usable = aimActionBattleItem(player, itemData, actionConfig, target);
+  let used = false;
+  try {
+    used = executeActionBattleUse({ attacker: player, target: null, usable });
+  } catch {
+    return false;
+  }
+  if (!used) return false;
+
+  if (resolveSignal(itemData.consumable) !== false) {
+    player.removeItem(itemId, 1);
+  }
+  const cooldownMs = Math.max(0, Number(actionConfig.cooldownMs ?? 0));
+  if (cooldownMs > 0) {
+    const readyAt = Date.now() + cooldownMs;
+    cooldowns.set(cooldownKey, readyAt);
+    setTimeout(() => {
+      if (cooldowns.get(cooldownKey) !== readyAt) return;
+      cooldowns.delete(cooldownKey);
+      updateActionBattleHotbar(player, options);
+    }, cooldownMs);
+  }
+  updateActionBattleHotbar(player, options);
+  updateActionBattleActionBar(player, options);
+  return true;
+};
+
+/**
+ * Point a projectile item at the aimed point: the direction goes toward it,
+ * and an `arc` lands on it when it is in range.
+ */
+const aimActionBattleItem = (
+  player: RpgPlayer,
+  itemData: any,
+  actionConfig: any,
+  target: { x: number; y: number } | undefined,
+) => {
+  if (actionConfig.mode !== "projectile" || !target) return itemData;
+  const hitbox = player.hitbox();
+  const from = { x: player.x() + hitbox.w / 2, y: player.y() + hitbox.h / 2 };
+  const dx = target.x - from.x;
+  const dy = target.y - from.y;
+  const distance = Math.hypot(dx, dy);
+  if (!Number.isFinite(distance) || distance < 1) return itemData;
+  const projectile = { ...actionConfig.projectile, direction: { x: dx / distance, y: dy / distance } };
+  const trajectory = projectile.trajectory;
+  if (trajectory?.type === "arc" && typeof trajectory.range === "number") {
+    projectile.trajectory = { ...trajectory, range: Math.min(distance, trajectory.range) };
+  }
+  return { ...itemData, action: { ...actionConfig, projectile } };
+};
+
 const handleActionBattleHotbarUse = (
   player: RpgPlayer,
   slot: number,
@@ -1329,11 +1403,49 @@ const handleActionBattleHotbarUse = (
   if (entry.type === "skill") {
     return handleActionBattleSkillUse(player, entry.id, target, options);
   }
+  if (entry.type === "item" && getActionBattleActionConfig(resolveItemData(player, entry.id))) {
+    const used = handleActionBattleItemUse(player, entry.id, target, options);
+    if (!player.getItem(entry.id)) player.clearHotbarSlot(slot);
+    return used;
+  }
   try {
     return player.useHotbarSlot(slot, target);
   } catch {
     return false;
   }
+};
+
+let actionItemsRegistered = false;
+
+/**
+ * Extend the core `item` hotbar entry: an item with an `action` (a bomb, a
+ * boomerang) can be assigned even when it is not consumable, and its use goes
+ * through the combat flow. Other items keep the core behavior.
+ */
+const registerActionBattleHotbarItems = () => {
+  if (actionItemsRegistered) return;
+  const native = getHotbarEntryType("item");
+  if (!native) return;
+  actionItemsRegistered = true;
+  const hasAction = (player: RpgPlayer, id: string) =>
+    !!getActionBattleActionConfig(resolveItemData(player, id));
+  registerHotbarEntryType({
+    ...native,
+    validate(player, id) {
+      if (!hasAction(player, id)) return native.validate(player, id);
+      if (!player.getItem(id)) throw new Error(`Item "${id}" is not in the inventory`);
+    },
+    use(player, id, context) {
+      if (!hasAction(player, id)) return native.use(player, id, context);
+      const target = context.target as { x?: number; y?: number } | undefined;
+      const point = typeof target?.x === "number" && typeof target?.y === "number"
+        ? { x: target.x, y: target.y }
+        : undefined;
+      const used = handleActionBattleItemUse(player, id, point, getActionBattleOptions());
+      if (!player.getItem(id)) player.clearHotbarSlot(context.slot);
+      return used;
+    },
+  });
 };
 
 export const createActionBattleServer = (
@@ -1342,6 +1454,7 @@ export const createActionBattleServer = (
   const options = normalizeActionBattleOptions(rawOptions);
   setActionBattleOptions(options);
   setActionBattleSystems(options);
+  registerActionBattleHotbarItems();
   return defineModule<RpgServer>({
     player: {
       /**
@@ -1692,6 +1805,7 @@ export type {
   ActionBattleActionTarget,
   ActionBattleProjectileImpactContext,
   ActionBattleProjectileOptions,
+  ActionBattleAreaOptions,
   ActionBattleTargetContext,
   ActionBattleTargetOptions,
   ActionBattleTargetSelector,
