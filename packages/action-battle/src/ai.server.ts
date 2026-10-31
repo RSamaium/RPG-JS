@@ -74,6 +74,8 @@ import type {
 import type { ActionBattleAnimationOptions } from "./types";
 import type { ActionBattleAudioOptions } from "./types";
 import { updateActionBattleThreat } from "./audio";
+import { dropActionBattleLoot } from "./loot.server";
+import type { ActionBattleLootOptions } from "./core/loot";
 
 type RpgEventWithBattleAi = RpgEvent & {
   battleAi?: BattleAi;
@@ -116,10 +118,25 @@ export interface BattleAiRewards {
   gold?: number;
   items?: Array<BattleAiRewardItem | string>;
   showNotification?: boolean;
+  /**
+   * Pop the gold and the items into the world as collectable loot instead of
+   * adding them to the inventory. Experience is still granted on defeat.
+   * `true` uses the default loot settings.
+   *
+   * @example
+   * ```ts
+   * rewards: { exp: 10, gold: 25, items: [{ itemId: "potion", chance: 40 }], drop: true }
+   * ```
+   */
+  drop?: boolean | ActionBattleLootOptions;
 }
 
 export interface BattleAiDefeatReward {
   readonly awarded: boolean;
+  /**
+   * Give the rewards to a player. With `rewards.drop`, the experience is
+   * granted and the gold and items are popped as loot owned by that player.
+   */
   giveTo(player?: RpgPlayer | null): void;
 }
 
@@ -318,9 +335,15 @@ const getRewardItemName = (inventoryItem: any, itemRef: any): string => {
 };
 
 const createDefeatReward = (
-  rewards: BattleAiRewards | undefined
+  rewards: BattleAiRewards | undefined,
+  event?: RpgEvent
 ): BattleAiDefeatReward => {
   let awarded = false;
+  // Snapshot the origin now: the event is removed while the loot spawns.
+  const hitbox = (event as any)?.hitbox?.() ?? { w: 32, h: 32 };
+  const origin = event
+    ? { x: event.x() + hitbox.w / 2, y: event.y() + hitbox.h / 2 }
+    : undefined;
   return {
     get awarded() {
       return awarded;
@@ -330,6 +353,18 @@ const createDefeatReward = (
       awarded = true;
 
       const exp = rewards.exp ?? 0;
+      const map = event?.getCurrentMap?.() ?? getPlayerMap(player);
+      if (rewards.drop && origin && map) {
+        if (exp > 0) player.exp += exp;
+        void dropActionBattleLoot(map, {
+          ...(typeof rewards.drop === "object" ? rewards.drop : {}),
+          ...origin,
+          rewards,
+          owner: player,
+        });
+        return;
+      }
+
       const gold = rewards.gold ?? 0;
       if (exp > 0) player.exp += exp;
       if (gold > 0) player.gold += gold;
@@ -2845,7 +2880,7 @@ export class BattleAi {
       animationDelay,
       deathPresentation === false ? 0 : deathPresentation.durationMs
     );
-    const reward = createDefeatReward(this.rewards);
+    const reward = createDefeatReward(this.rewards, this.event);
     let removed = false;
     const remove = () => {
       if (removed) return;

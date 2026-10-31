@@ -6,6 +6,7 @@ import {
 } from "@rpgjs/server";
 import { Control, defineModule } from "@rpgjs/common";
 import { BattleAi, HitResult, ApplyHitHooks, DEFAULT_KNOCKBACK } from "./ai.server";
+import { isActionBattleLoot } from "./loot.server";
 import {
   ActionBattleActionBarData,
   ActionBattleActionBarSkill,
@@ -198,7 +199,7 @@ const getVisibleActionEvents = (
 
   const eventsById = new Map<string, RpgEvent>();
   const addEvent = (event: RpgEvent | undefined) => {
-    if (!event) return;
+    if (!event || isActionBattleLoot(event)) return;
     const isVisible =
       typeof (map as any).isEventVisibleForPlayer === "function"
         ? (map as any).isEventVisibleForPlayer(event, player)
@@ -1760,3 +1761,9 @@ export type {
   BattleAiRewards,
   HitResult,
 } from "./ai.server";
+export {
+  dropActionBattleLoot,
+  isActionBattleLoot,
+  type ActionBattleLootCollectContext,
+  type DropActionBattleLootOptions,
+} from "./loot.server";
