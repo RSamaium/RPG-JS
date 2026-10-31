@@ -6,7 +6,7 @@ import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
-import { LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
+import { EMOTION_BUBBLE_ANIMATION_ID, LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
 import type { EventComponentConfig, RpgLootHooks } from "./RpgClient";
 import type { RpgClientEvent } from "./Game/Event";
 import { load } from "@signe/sync";
@@ -333,6 +333,10 @@ export class RpgClientEngine<T = any> {
     this.addComponentAnimation({
       id: "animation",
       component: PrebuiltComponentAnimations.Animation
+    })
+    this.addComponentAnimation({
+      id: EMOTION_BUBBLE_ANIMATION_ID,
+      component: PrebuiltComponentAnimations.EmotionBubble
     })
     this.addComponentAnimation({
       id: LOOT_TEXT_ANIMATION_ID,
