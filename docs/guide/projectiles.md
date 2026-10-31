@@ -517,3 +517,87 @@ updated on every frame without rebuilding the component. Before an impact,
 
 Do not apply damage in the component. Components are visual only; gameplay
 effects belong in server projectile hooks.
+
+### Recipe: an arrow with a trail
+
+A component can keep its own state. This arrow remembers its last positions to
+draw a fading trail, stops the trail once planted (`phase` is `stuck`), and
+reads its color from the `params` sent by the server:
+
+```ts
+// server
+player.projectiles.emit({
+  type: 'arrow',
+  trajectory: { type: 'linear', speed: 320, range: 260 },
+  wall: 'stick',
+  linger: { ms: 3000 },
+  params: { color: '#60a5fa' }
+})
+```
+
+```html
+<!-- components/arrow.ce -->
+<Container x={x} y={y} zIndex={1000}>
+  <Graphics draw={drawTrail} />
+  <Container y={lift} rotation={angle}>
+    @if (impact()) {
+      <Graphics draw={drawImpact} />
+    } @else {
+      <Graphics draw={drawArrow} />
+    }
+  </Container>
+</Container>
+
+<script>
+  import { computed, tick } from 'canvasengine'
+
+  const { x, y, z, angle, phase, impact, impactProgress, params } = defineProps()
+
+  const color = computed(() => parseInt((params()?.color ?? '#e5e7eb').slice(1), 16))
+  // Draw the arrow above its ground position when the trajectory has a height.
+  const lift = computed(() => -(z() ?? 0))
+
+  // Last positions, newest first.
+  const trail = []
+  tick(() => {
+    if (impact() || phase() === 'stuck') {
+      trail.length = 0
+      return
+    }
+    trail.unshift({ x: x(), y: y() - (z() ?? 0) })
+    if (trail.length > 10) trail.pop()
+  })
+
+  function drawTrail(g) {
+    g.clear()
+    for (let i = 1; i < trail.length; i++) {
+      const a = trail[i - 1]
+      const b = trail[i]
+      const fade = 1 - i / trail.length
+      g.moveTo(a.x - x(), a.y - y())
+      g.lineTo(b.x - x(), b.y - y())
+      g.stroke({ color: color(), width: 3 * fade, alpha: 0.6 * fade })
+    }
+  }
+
+  function drawArrow(g) {
+    g.clear()
+    g.rect(-12, -1, 18, 2)
+    g.fill({ color: 0x8b5a2b })
+    g.poly([6, -4, 12, 0, 6, 4])
+    g.fill({ color: color() })
+  }
+
+  function drawImpact(g) {
+    g.clear()
+    const t = impactProgress() ?? 0
+    g.circle(0, 0, 4 + t * 12)
+    g.fill({ color: color(), alpha: 0.6 * (1 - t) })
+  }
+</script>
+```
+
+Register it like any projectile component:
+`projectiles: { components: { arrow: ArrowProjectile } }`. For a particle trail,
+use `<Fx name="..." loop />` from `@canvasengine/presets` instead of the
+`Graphics` line.
