@@ -109,6 +109,24 @@ export interface WorldMap {
 }
 
 
+/** What changed in the inventory: the id of the item and how many. */
+export interface RpgItemChangePayload {
+    itemId: string
+    quantity: number
+}
+
+/** The new gold of the player and how much it changed. */
+export interface RpgGoldChangePayload {
+    gold: number
+    delta: number
+}
+
+/** A tick of a map: the delta in milliseconds that was processed and the cumulative tick. */
+export interface RpgMapTickPayload {
+    deltaMs: number
+    tick: number
+}
+
 export interface RpgServerEngineHooks<TAuthData = unknown> {
     /**
      *  When the server starts
@@ -381,6 +399,47 @@ export interface RpgPlayerHooks<TAuthData = unknown> {
     * @memberof RpgPlayerHooks
     */
     onSkillChange?: (player: RpgPlayer, payload: SkillChangePayload) => MaybePromise<void>
+
+    /**
+    *  When an item is added to the inventory of the player. Called in addition to the `onAdd` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload) => void | Promise<void> } [onItemAdd]
+    * @memberof RpgPlayerHooks
+    */
+    onItemAdd?: (player: RpgPlayer, payload: RpgItemChangePayload) => MaybePromise<void>
+
+    /**
+    *  When an item is removed from the inventory of the player (also when it is consumed by `useItem()`).
+    *  Called in addition to the `onRemove` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload) => void | Promise<void> } [onItemRemove]
+    * @memberof RpgPlayerHooks
+    */
+    onItemRemove?: (player: RpgPlayer, payload: RpgItemChangePayload) => MaybePromise<void>
+
+    /**
+    *  When the player uses an item with success. Called in addition to the `onUse` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload) => void | Promise<void> } [onItemUse]
+    * @memberof RpgPlayerHooks
+    */
+    onItemUse?: (player: RpgPlayer, payload: RpgItemChangePayload) => MaybePromise<void>
+
+    /**
+    *  When the player equips or unequips an item (`payload.equipped`). Called in addition to the `onEquip` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload & { equipped: boolean }) => void | Promise<void> } [onItemEquip]
+    * @memberof RpgPlayerHooks
+    */
+    onItemEquip?: (player: RpgPlayer, payload: RpgItemChangePayload & { equipped: boolean }) => MaybePromise<void>
+
+    /**
+    *  When the gold of the player changes (`delta` is negative when the player spends gold).
+    *
+    * @prop { (player: RpgPlayer, payload: RpgGoldChangePayload) => void | Promise<void> } [onGoldChange]
+    * @memberof RpgPlayerHooks
+    */
+    onGoldChange?: (player: RpgPlayer, payload: RpgGoldChangePayload) => MaybePromise<void>
 
     /**
     *  When the player initializes, assigns, clears, selects, or refreshes a hotbar
@@ -893,6 +952,16 @@ export interface RpgMapHooks {
      * @memberof RpgMapHooks
      */
     onPhysicsReset?: (map: RpgMap) => MaybePromise<void>
+
+    /**
+     * Called after each server tick of a map that has at least one player. Observing it does not change the map.
+     *
+     * @param {RpgMap} map - The map instance
+     * @param {RpgMapTickPayload} payload - Time processed by the tick and the cumulative tick
+     * @returns {void | Promise<void>}
+     * @memberof RpgMapHooks
+     */
+    onTick?: (map: RpgMap, payload: RpgMapTickPayload) => MaybePromise<void>
 }
 
 export interface RpgProjectileHooks {

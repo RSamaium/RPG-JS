@@ -393,6 +393,15 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
 
       return { ...snapshot, equipments };
     }
+    /** Tells the modules (`player.onItemAdd`, ...) about a change of the inventory; never throws. */
+    _emitItemHook(hook: string, itemId: string, quantity: number, extra: Record<string, unknown> = {}): void {
+      try {
+        void (this as any)["execMethod"](hook, [{ itemId, quantity, ...extra }]).catch(() => {});
+      } catch {
+        // the player has no hooks yet (not attached to a room)
+      }
+    }
+
     addItem(item: ItemClass | ItemObject | string, nb: number = 1): Item {
       const map = this._getItemMap();
       const { itemId, data, itemInstance } = this._resolveItemInput(item, map);
@@ -435,6 +444,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       const hookTarget = (instance as any)._itemInstance || instance;
       // Only call onAdd if it exists and is a function
       (this as any)["execMethod"]("onAdd", [this], hookTarget);
+      this._emitItemHook("onItemAdd", itemId, nb);
       this["refreshHotbar"]?.();
       return instance;
     }
@@ -459,6 +469,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       if (hookTarget && typeof hookTarget.onRemove === 'function') {
         this["execMethod"]("onRemove", [this], hookTarget);
       }
+      this._emitItemHook("onItemRemove", item.id(), Math.min(nb, currentNb));
       this["refreshHotbar"]?.();
       return this.items()[itemIndex];
     }
@@ -491,7 +502,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       if (this._gold() < totalPrice) {
         throw ItemLog.notEnoughGold(itemId, nb);
       }
-      this._gold.update((gold) => gold - totalPrice);
+      (this as any).gold -= totalPrice;
       return this.addItem(item, nb);
     }
 
@@ -509,7 +520,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       if (!data.price) {
         throw ItemLog.haveNotPrice(itemId);
       }
-      this._gold.update((gold) => gold + (data.price / 2) * nbToSell);
+      (this as any).gold += (data.price / 2) * nbToSell;
       this.removeItem(itemClass, nbToSell);
       return inventory;
     }
@@ -587,6 +598,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       (this as any).applyEffect?.(itemData);
       (this as any).applyStates?.(this, itemData);
       this["execMethod"]("onUse", [this], hookTarget);
+      this._emitItemHook("onItemUse", itemId, 1);
       this.removeItem(itemClass);
       return inventory;
     }
@@ -635,6 +647,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       // Call onEquip hook - use stored instance if available
       const hookTarget = (item as any)._itemInstance || item;
       this["execMethod"]("onEquip", [this, equipState], hookTarget);
+      this._emitItemHook("onItemEquip", itemId, 1, { equipped: equipState });
       this["refreshHotbar"]?.();
     }
   } as unknown as TBase;
