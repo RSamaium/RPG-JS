@@ -334,6 +334,16 @@ const getRewardItemName = (inventoryItem: any, itemRef: any): string => {
   return "item";
 };
 
+const resolveLootDropDelay = () => {
+  const feedback = getActionBattleOptions().feedback;
+  if (!feedback || feedback.hitStop === false) return 0;
+  return Math.max(
+    feedback.hitStopMs ?? 0,
+    feedback.heavyHitStopMs ?? 0,
+    feedback.parryHitStopMs ?? 0
+  ) + 60;
+};
+
 const createDefeatReward = (
   rewards: BattleAiRewards | undefined,
   event?: RpgEvent
@@ -356,12 +366,16 @@ const createDefeatReward = (
       const map = event?.getCurrentMap?.() ?? getPlayerMap(player);
       if (rewards.drop && origin && map) {
         if (exp > 0) player.exp += exp;
-        void dropActionBattleLoot(map, {
-          ...(typeof rewards.drop === "object" ? rewards.drop : {}),
-          ...origin,
-          rewards,
-          owner: player,
-        });
+        // Wait for the client hit-stop: sprites mounted while the map is
+        // frozen would not receive their position.
+        setTimeout(() => {
+          void dropActionBattleLoot(map, {
+            ...(typeof rewards.drop === "object" ? rewards.drop : {}),
+            ...origin,
+            rewards,
+            owner: player,
+          });
+        }, resolveLootDropDelay());
         return;
       }
 

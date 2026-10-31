@@ -249,6 +249,7 @@ describe("BattleAi defeat flow", () => {
   });
 
   test("pops gold and items as world loot with rewards.drop", () => {
+    vi.useFakeTimers();
     const event = createEvent();
     const createDynamicEvent = vi.fn(async () => undefined);
     event.getCurrentMap = vi.fn(() => ({ createDynamicEvent, data: () => null }) as any);
@@ -265,6 +266,9 @@ describe("BattleAi defeat flow", () => {
     expect(attacker.exp).toBe(12);
     expect(attacker.gold).toBe(0);
     expect(attacker.addItem).not.toHaveBeenCalled();
+    // The loot waits for the client hit-stop before spawning.
+    expect(createDynamicEvent).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(200);
     expect(createDynamicEvent).toHaveBeenCalledTimes(3);
     expect(createDynamicEvent.mock.calls[0][0]).toMatchObject({
       scenarioOwnerId: "player-1",
