@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { testing, type TestingFixture } from "@rpgjs/testing";
 import { createModule, defineModule } from "@rpgjs/common";
-import type { RpgEvent, RpgPlayer } from "@rpgjs/server";
+import { isLootEvent, type RpgEvent, type RpgPlayer } from "@rpgjs/server";
 import { createActionEnemy } from "./enemies/factory";
-import { isActionBattleLoot } from "./loot.server";
 
 let fixture: TestingFixture;
 let player: RpgPlayer;
@@ -44,7 +43,7 @@ describe("enemy loot in a real map", () => {
     (slime as any).battleAi.handleDamage(player, { damage: 10, defeated: true });
     await new Promise((resolve) => setTimeout(resolve, 250));
 
-    const loot = map.getEvents().filter(isActionBattleLoot);
+    const loot = map.getEvents().filter(isLootEvent);
     expect(loot.length).toBeGreaterThan(0);
     for (const event of loot) {
       expect(Math.hypot(event.x() - 600, event.y() - 400)).toBeLessThan(90);

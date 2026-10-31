@@ -12,24 +12,36 @@ import {
 import {
   createActionEnemy,
   defineActionBattleEnemy,
-  dropActionBattleLoot,
   provideActionBattle,
 } from "@rpgjs/action-battle/server";
 
 const MAP_WIDTH = 1024;
 const MAP_HEIGHT = 768;
 
+// The `loot` config of an item drives how it looks and behaves on the ground.
 const Wood = {
   id: "wood",
   name: "Wood",
   icon: "wood",
   _type: "item" as const,
+  loot: { color: "#c98a1c" },
 };
 
-const Gem = {
-  id: "gem",
-  name: "Gem",
+const Apple = {
+  id: "apple",
+  name: "Apple",
+  hpValue: 30,
   _type: "item" as const,
+  // Eaten as soon as it is picked up.
+  loot: { use: true, color: "#ef4444" },
+};
+
+const Ruby = {
+  id: "ruby",
+  name: "Ruby",
+  _type: "item" as const,
+  // Drawn by the client `ruby` component, with a stronger glow.
+  loot: { visual: "ruby", rarity: "rare" as const, color: "#ff4d6d" },
 };
 
 // One object declares the whole enemy: graphic, stats, AI and loot.
@@ -42,8 +54,8 @@ const Slime = defineActionBattleEnemy({
     exp: 5,
     gold: 18,
     items: [
-      { itemId: "wood", chance: 60 },
-      { itemId: "gem", chance: 25 },
+      { itemId: "apple", chance: 40 },
+      { itemId: "ruby", chance: 20 },
     ],
     drop: true,
   },
@@ -92,17 +104,38 @@ const Chest: EventDefinition = {
       [Components.text("Chest", { fill: "#fff4c7", fontSize: 10, fontWeight: "700" })],
     ]);
   },
-  // The same loot outside combat: scripted rewards, chests, barrels.
-  async onAction(this: RpgEvent, player: RpgPlayer) {
-    const map = this.getCurrentMap();
-    if (!map) return;
-    await dropActionBattleLoot(map, {
-      x: this.x() + 16,
-      y: this.y() + 16,
-      rewards: { gold: 30, items: ["wood", "gem"] },
-      spread: [30, 70],
-      height: 56,
-    });
+  // A chest: the loot is picked up with the action key, one pickup at a time.
+  onAction(this: RpgEvent) {
+    this.dropLoot(
+      { gold: 30, items: ["ruby", { itemId: "wood", amount: 3 }] },
+      { pickup: "action", spread: [30, 60], height: 56 }
+    );
+  },
+};
+
+const TREE_HITS = 3;
+
+// A tree cut with the action key: no combat needed, only `dropLoot()`.
+const Tree: EventDefinition = {
+  name: "Tree",
+  onInit() {
+    this.setComponentsCenter([
+      [Components.shape({ type: "circle", fill: "#2f855a", radius: 22 })],
+      [Components.shape({ type: "rect", fill: "#7c4a1e", width: 10, height: 14 })],
+    ]);
+    (this as any).hits = 0;
+  },
+  onAction(this: RpgEvent, player: RpgPlayer) {
+    const tree = this as RpgEvent & { hits: number };
+    tree.hits += 1;
+    this.flash({ type: "tint", tint: "white", duration: 120 });
+    if (tree.hits < TREE_HITS) return;
+    tree.hits = 0;
+    // Only the player who cut the tree sees and collects its wood.
+    this.dropLoot(
+      { items: [{ itemId: "wood", amount: 2 }, { itemId: "apple", chance: 30 }] },
+      { owner: player, ownership: "player" }
+    );
   },
 };
 
@@ -137,7 +170,7 @@ export default createServer({
     provideActionBattle(),
     provideServerModules([
       {
-        database: async () => ({ wood: Wood, gem: Gem }),
+        database: async () => ({ wood: Wood, apple: Apple, ruby: Ruby }),
         player,
         maps: [
           {
@@ -150,7 +183,10 @@ export default createServer({
               { id: "left-wall", x: 0, y: 0, width: 4, height: MAP_HEIGHT },
               { id: "right-wall", x: MAP_WIDTH - 4, y: 0, width: 4, height: MAP_HEIGHT },
             ],
-            events: [{ id: "chest", x: 140, y: 660, event: Chest }],
+            events: [
+              { id: "chest", x: 140, y: 660, event: Chest },
+              { id: "tree", x: 640, y: 640, event: Tree },
+            ],
           } as any,
         ],
       },

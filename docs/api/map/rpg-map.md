@@ -26,6 +26,7 @@ Reference for the `RpgMap` class.
 - [database](#database)
 - [dataIsReady$](#dataisready)
 - [deleteWorldMaps](#deleteworldmaps)
+- [Drop Loot](#drop-loot)
 - [events](#events)
 - [Find spawn position](#find-spawn-position)
 - [getBody](#getbody)
@@ -52,7 +53,9 @@ Reference for the `RpgMap` class.
 - [hooks](#hooks)
 - [id](#id)
 - [interceptorPacket](#interceptorpacket)
+- [isAutoTickEnabled](#isautotickenabled)
 - [isMoving](#ismoving)
+- [loot](#loot)
 - [maps](#maps)
 - [nextTick](#nexttick)
 - [off](#off)
@@ -601,11 +604,7 @@ const player: RpgPlayerHooks = {
 
 ## damageFormulas
 
-Damage formulas configuration for the map
-
-Contains formulas for calculating damage from skills, physical attacks,
-critical hits, and element coefficients. Default formulas are merged
-with custom formulas when the map is loaded.
+Default formulas until a `/map/update` request publishes its own (a restored room never receives one).
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `property`
@@ -703,6 +702,54 @@ const deleted = map.deleteWorldMaps('my-world');
 if (deleted) {
   console.log('World manager removed');
 }
+```
+
+## Drop Loot
+
+Pop collectable loot at a world position.
+
+The gold is split into coins and every item that passes its `chance`
+becomes a pickup. Each pickup arcs out of `x, y`, bounces, then is
+collected according to `pickup`: it flies to the first player in the
+magnet radius (`magnet`, default), when a player walks on it (`touch`), or
+when a player presses the action key next to it (`action`).
+
+The server rolls, places and grants the loot; the client only animates it.
+Works in standalone RPG and MMORPG modes. With `ownership: "player"`, the
+pickups are scenario events that only `owner` receives.
+
+Items can declare a `loot` config in the database (`visual`, `color`,
+`sound`, `rarity`, `use`). Prefer `event.dropLoot()` to pop the loot from an
+event.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Member of: `Map`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+map.dropLoot(options)
+```
+
+### Parameters
+
+- `options`: `MapDropLootOptions`
+
+### Returns
+
+Ids of the spawned pickup events
+
+### Examples
+
+```ts
+await map.dropLoot({
+  x: 320,
+  y: 240,
+  rewards: { gold: 30, items: [{ itemId: "potion", chance: 50 }] },
+  pickup: "magnet",
+});
 ```
 
 ## events
@@ -1463,6 +1510,21 @@ Modified packet with timestamp and ack info, or null if player is invalid
 // You typically don't call it directly
 ```
 
+## isAutoTickEnabled
+
+Whether the map runs its own loop (see {@link setAutoTick}). Systems that keep their own timers, such as the AI of enemies,
+read it to stand still while the map is paused.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+isAutoTickEnabled(): boolean
+```
+
 ## isMoving
 
 Check if an entity is currently moving
@@ -1492,6 +1554,20 @@ Boolean indicating if the entity is in motion
 if (map.isMoving('player1')) {
   // Player is in motion
 }
+```
+
+## loot
+
+Loot pickups dropped on this map. Prefer `dropLoot()` to spawn them.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `property`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+loot
 ```
 
 ## maps
@@ -2304,8 +2380,7 @@ Enable or disable automatic server tick processing
 
 When disabled, the unified input/physics/projectile loop will not run
 automatically. This is useful for unit tests where you want manual control
-over server ticks. A map editor that holds the map also holds the enemies of `@rpgjs/action-battle`:
-their AI reads `map.isAutoTickEnabled()` (`true` unless the loop was disabled) and stands still while it is `false`. To hold only the enemies while the map goes on running, set `map.battleAiHeld = true` (and `false` to let them go).
+over server ticks.
 
 - Source: `packages/server/src/rooms/map.ts`
 - Kind: `method`

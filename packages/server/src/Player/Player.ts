@@ -37,6 +37,8 @@ import { IItemManager, WithItemManager } from "./ItemManager";
 import { bufferTime, combineLatest, debounceTime, distinctUntilChanged, filter, lastValueFrom, map, Observable, pairwise, sample, throttleTime } from "rxjs";
 import { IEffectManager, WithEffectManager } from "./EffectManager";
 import { AGI, DEX, INT, MAXHP, MAXSP, STR } from "@rpgjs/common";
+import type { LootRewards } from "@rpgjs/common";
+import type { DropLootOptions } from "../loot";
 import { AGI_CURVE, DEX_CURVE, INT_CURVE, MAXHP_CURVE, MAXSP_CURVE, STR_CURVE } from "../presets";
 import { IElementManager, WithElementManager } from "./ElementManager";
 import { ISkillManager, WithSkillManager } from "./SkillManager";
@@ -1605,6 +1607,43 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     this.showComponentAnimation("hit", {
       text,
       direction: this.direction(),
+    });
+  }
+
+  /**
+   * Pop collectable loot out of this event or player.
+   *
+   * The pickups arc out of the center of the character, then are collected
+   * with the `pickup` mode (`magnet` by default). Use it for a tree that is
+   * cut, a chest, a barrel, or any scripted reward. See `map.dropLoot()` for
+   * every option.
+   *
+   * @title Drop Loot
+   * @method event.dropLoot(rewards, options?)
+   * @param rewards - Gold and items with their drop chance
+   * @param options - Pickup mode, magnet, owner, lifetime and hooks
+   * @returns Ids of the spawned pickup events
+   * @memberof Player
+   *
+   * @example
+   * ```ts
+   * onAction(player) {
+   *   this.dropLoot(
+   *     { items: [{ itemId: "wood", amount: 2 }, { itemId: "apple", chance: 30 }] },
+   *     { owner: player, ownership: "player" }
+   *   );
+   * }
+   * ```
+   */
+  dropLoot(rewards: LootRewards, options: DropLootOptions = {}): Promise<string[]> {
+    const map = this.getCurrentMap();
+    if (!map) return Promise.resolve([]);
+    const hitbox = this.hitbox();
+    return map.dropLoot({
+      ...options,
+      x: this.x() + hitbox.w / 2,
+      y: this.y() + hitbox.h / 2,
+      rewards,
     });
   }
 

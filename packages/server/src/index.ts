@@ -22,6 +22,8 @@ export * from "./services/save";
 export * from "./services/time";
 export * from "./storage";
 export * from "./projectiles";
+export { isLootEvent, type DropLootOptions, type LootCollectContext, type MapDropLootOptions } from "./loot";
+export type { ItemLootConfig, LootDrop, LootMagnetOptions, LootOptions, LootPickupMode, LootRarity, LootRewardItem, LootRewards } from "@rpgjs/common";
 export { provideServerMapStreaming } from "./map-streaming";
 export type {
   ServerMapStreamingAdapter,

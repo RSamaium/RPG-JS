@@ -6,6 +6,7 @@ import {
 } from "@rpgjs/client";
 import { provideActionBattle } from "@rpgjs/action-battle/client";
 import MapComponent from "../components/map.ce";
+import RubyLoot from "../components/ruby-loot.ce";
 
 const MAP_WIDTH = 1024;
 const MAP_HEIGHT = 768;
@@ -29,6 +30,11 @@ export default {
     provideClientGlobalConfig(),
     provideClientModules([
       {
+        // Loot presentation: custom pickup components and the "+2 Wood" text.
+        loot: {
+          components: { ruby: RubyLoot },
+          collectText: true,
+        },
         spritesheetResolver: async (id: string) => {
           if (id === "hero" || id === "monster") {
             return Presets.LPCSpritesheetPreset({

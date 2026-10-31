@@ -300,18 +300,6 @@ export {
   type ActionBattleEnemyPresetMap,
   type ActionBattleEnemyStats,
 } from "./enemies/factory";
-export {
-  dropActionBattleLoot,
-  isActionBattleLoot,
-  type ActionBattleLootCollectContext,
-  type DropActionBattleLootOptions,
-} from "./loot.server";
-export {
-  ACTION_BATTLE_LOOT_COMPONENT_ID,
-  type ActionBattleLootDrop,
-  type ActionBattleLootOptions,
-  type ActionBattleLootVisual,
-} from "./core/loot";
 
 // Server exports
 export {

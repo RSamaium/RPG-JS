@@ -251,8 +251,8 @@ describe("BattleAi defeat flow", () => {
   test("pops gold and items as world loot with rewards.drop", () => {
     vi.useFakeTimers();
     const event = createEvent();
-    const createDynamicEvent = vi.fn(async () => undefined);
-    event.getCurrentMap = vi.fn(() => ({ createDynamicEvent, data: () => null }) as any);
+    const dropLoot = vi.fn(async () => []);
+    event.getCurrentMap = vi.fn(() => ({ dropLoot }) as any);
     (event as any).hitbox = () => ({ w: 32, h: 32 });
     event.x = vi.fn(() => 100);
     event.y = vi.fn(() => 50);
@@ -267,12 +267,15 @@ describe("BattleAi defeat flow", () => {
     expect(attacker.gold).toBe(0);
     expect(attacker.addItem).not.toHaveBeenCalled();
     // The loot waits for the client hit-stop before spawning.
-    expect(createDynamicEvent).not.toHaveBeenCalled();
+    expect(dropLoot).not.toHaveBeenCalled();
     vi.advanceTimersByTime(200);
-    expect(createDynamicEvent).toHaveBeenCalledTimes(3);
-    expect(createDynamicEvent.mock.calls[0][0]).toMatchObject({
-      scenarioOwnerId: "player-1",
-    });
+    expect(dropLoot).toHaveBeenCalledWith(expect.objectContaining({
+      x: 116,
+      y: 66,
+      ownership: "attacker",
+      owner: attacker,
+      rewards: expect.objectContaining({ gold: 9 }),
+    }));
   });
 
   test("supports the context onDefeated callback and manual reward control", () => {

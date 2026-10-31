@@ -74,8 +74,7 @@ import type {
 import type { ActionBattleAnimationOptions } from "./types";
 import type { ActionBattleAudioOptions } from "./types";
 import { updateActionBattleThreat } from "./audio";
-import { dropActionBattleLoot } from "./loot.server";
-import type { ActionBattleLootOptions } from "./core/loot";
+import type { DropLootOptions } from "@rpgjs/server";
 
 type RpgEventWithBattleAi = RpgEvent & {
   battleAi?: BattleAi;
@@ -128,7 +127,7 @@ export interface BattleAiRewards {
    * rewards: { exp: 10, gold: 25, items: [{ itemId: "potion", chance: 40 }], drop: true }
    * ```
    */
-  drop?: boolean | ActionBattleLootOptions;
+  drop?: boolean | Omit<DropLootOptions, "owner">;
 }
 
 export interface BattleAiDefeatReward {
@@ -369,7 +368,7 @@ const createDefeatReward = (
         // Wait for the client hit-stop: sprites mounted while the map is
         // frozen would not receive their position.
         setTimeout(() => {
-          void dropActionBattleLoot(map, {
+          void map.dropLoot({
             ...(typeof rewards.drop === "object" ? rewards.drop : {}),
             ...origin,
             rewards,

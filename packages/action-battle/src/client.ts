@@ -49,9 +49,6 @@ import DamagePopupComponent from "./components/damage-popup.ce";
 import SoftTargetComponent from "./components/soft-target.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import SkillProjectileComponent from "./components/skill-projectile.ce";
-// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
-import LootDropComponent from "./components/loot-drop.ce";
-import { ACTION_BATTLE_LOOT_COMPONENT_ID } from "./core/loot";
 import { activateActionBattleSkill } from "./ui/skill-activation";
 
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
@@ -238,9 +235,6 @@ export const createActionBattleClient = (
     sprite: {
       componentsBehind: resolvedUi.sprite.componentsBehind,
       componentsInFront: resolvedUi.sprite.componentsInFront,
-      components: {
-        [ACTION_BATTLE_LOOT_COMPONENT_ID]: LootDropComponent,
-      },
     },
     sceneMap: {
       onAfterLoading() {
