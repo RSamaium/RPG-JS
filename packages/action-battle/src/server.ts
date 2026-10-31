@@ -1,6 +1,7 @@
 import {
   RpgEvent,
   RpgPlayer,
+  isLootEvent,
   type HotbarGuiOptions,
   type RpgServer,
 } from "@rpgjs/server";
@@ -198,7 +199,7 @@ const getVisibleActionEvents = (
 
   const eventsById = new Map<string, RpgEvent>();
   const addEvent = (event: RpgEvent | undefined) => {
-    if (!event) return;
+    if (!event || isLootEvent(event)) return;
     const isVisible =
       typeof (map as any).isEventVisibleForPlayer === "function"
         ? (map as any).isEventVisibleForPlayer(event, player)

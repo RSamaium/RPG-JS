@@ -21,3 +21,4 @@ export * from "./i18n";
 export * from "./map-streaming";
 export * from "./gameplay-room";
 export * from "./foundation";
+export * from "./loot";

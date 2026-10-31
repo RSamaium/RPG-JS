@@ -262,6 +262,15 @@ export function provideClientModules(modules: RpgClientModule[]): RpgFactoryProv
           },
         };
       }
+      if (module.loot) {
+        const loot = { ...module.loot };
+        module.loot = {
+          ...loot,
+          load: (engine: RpgClientEngine) => {
+            engine.configureLoot(loot);
+          },
+        } as any;
+      }
       if (module.interactions) {
         const interactions = module.interactions;
         module.interactions = {

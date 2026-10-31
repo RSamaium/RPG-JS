@@ -1,0 +1,9 @@
+<Container>
+  <Sprite image="background.png" width={1024} height={768} />
+  <Rect width={1024} height={768} color="#111827" alpha={0.18} />
+  <EventLayerComponent />
+</Container>
+
+<script>
+  import { EventLayerComponent } from "@rpgjs/client";
+</script>
