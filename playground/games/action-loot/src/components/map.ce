@@ -16,12 +16,15 @@
     mapContainer = element.componentInstance;
   });
 
-  // Click: throw a bomb at the pointer. Shift + click: throw the boomerang.
+  // Click: throw the item of hotbar slot 1 (bomb) at the pointer.
+  // Shift + click: slot 2 (boomerang). Keys 1 and 2 throw them straight ahead.
   function throwAtPointer(event) {
     const global = event?.global ?? event?.data?.global;
     const local = mapContainer && global ? mapContainer.toLocal(global) : null;
     if (!local || !Number.isFinite(local.x) || !Number.isFinite(local.y)) return;
-    const action = event?.shiftKey ? "loot:boomerang" : "loot:bomb";
-    client.processAction(action, { target: { x: local.x, y: local.y } });
+    client.processAction("action-battle:use-hotbar", {
+      slot: event?.shiftKey ? 1 : 0,
+      target: { x: local.x, y: local.y },
+    });
   }
 </script>
