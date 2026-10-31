@@ -2,6 +2,7 @@ import {
   ATK,
   Components,
   MAXHP,
+  PDEF,
   RpgEvent,
   RpgPlayer,
   createServer,
@@ -34,8 +35,9 @@ const Gem = {
 // One object declares the whole enemy: graphic, stats, AI and loot.
 const Slime = defineActionBattleEnemy({
   graphic: "monster",
-  stats: { maxHp: 40, atk: 6, pdef: 2 },
+  stats: { maxHp: 40, atk: 16, pdef: 2 },
   visionRange: 260,
+  attackCooldown: 2400,
   rewards: {
     exp: 5,
     gold: 18,
@@ -112,8 +114,12 @@ const player = {
     player.param[MAXHP] = 400;
     player.hp = 400;
     player.param[ATK] = 30;
-    player.setComponentsTop([Components.text("{_gold} G", { fill: "#ffd166", fontSize: 14, fontWeight: "700", stroke: "#111827" })], {
-      height: 18,
+    player.param[PDEF] = 8;
+    player.setComponentsTop([
+      [Components.text("{_gold} G", { fill: "#ffd166", fontSize: 14, fontWeight: "700", stroke: "#111827" })],
+      [Components.hpBar({ width: 48, height: 5 }, null)],
+    ], {
+      height: 26,
       marginBottom: 4,
     });
     player.changeMap("loot-arena", { x: MAP_WIDTH / 2 - 16, y: MAP_HEIGHT / 2 - 16 });
@@ -144,7 +150,7 @@ export default createServer({
               { id: "left-wall", x: 0, y: 0, width: 4, height: MAP_HEIGHT },
               { id: "right-wall", x: MAP_WIDTH - 4, y: 0, width: 4, height: MAP_HEIGHT },
             ],
-            events: [{ id: "chest", x: 600, y: 370, event: Chest }],
+            events: [{ id: "chest", x: 140, y: 660, event: Chest }],
           } as any,
         ],
       },
