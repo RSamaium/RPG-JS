@@ -1,0 +1,8 @@
+{
+  "id": "action-loot",
+  "title": "Action Loot",
+  "description": "Enemies pop coins and items that arc out, bounce, and fly to the player when collected.",
+  "tags": ["combat", "loot", "rewards"],
+  "modes": ["standalone", "mmorpg"],
+  "port": 5194
+}

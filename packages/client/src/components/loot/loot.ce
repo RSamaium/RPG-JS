@@ -1,0 +1,280 @@
+<Container zIndex={900} alpha={opacity}>
+  <Graphics draw={drawShadow} />
+  <Container x={bodyX} y={bodyY} scale={bodyScale}>
+    <Graphics draw={drawGlow} />
+    @if (custom) {
+      <custom.component
+        kind={kind}
+        amount={amount}
+        icon={icon}
+        name={name}
+        color={color}
+        rarity={rarity}
+        state={state}
+        progress={stateProgress}
+      />
+    } @else if (iconSheet()) {
+      <Sprite sheet={iconSheet} width={22} height={22} x={-11} y={-11} objectFit="contain" />
+    } @else if (isGold()) {
+      <Graphics draw={drawCoin} />
+    } @else {
+      <Graphics draw={drawGem} />
+    }
+    @if (badge()) {
+      <Text text={badge} x={8} y={2} size={10} color="#ffffff" fontWeight="700" />
+    }
+  </Container>
+</Container>
+
+<script>
+  import { computed, signal, tick } from "canvasengine";
+  import { LOOT_TEXT_ANIMATION_ID, sampleLootArc } from "@rpgjs/common";
+  import { inject } from "../../core/inject";
+  import { RpgClientEngine } from "../../RpgClientEngine";
+  import { nextLootTextOffset } from "./loot-text-stack";
+
+  // Server-owned pickup: the props only describe how to animate and draw it.
+  const {
+    object,
+    kind,
+    amount,
+    icon,
+    name,
+    visual,
+    color,
+    rarity,
+    sound,
+    fromX,
+    fromY,
+    height,
+    flightMs,
+    delayMs,
+    spawnedAt,
+  } = defineProps({
+    kind: { default: "gold" },
+    amount: { default: 1 },
+    icon: { default: null },
+    name: { default: null },
+    visual: { default: null },
+    color: { default: null },
+    rarity: { default: "common" },
+    sound: { default: null },
+    fromX: { default: 0 },
+    fromY: { default: 0 },
+    height: { default: 40 },
+    flightMs: { default: 560 },
+    delayMs: { default: 0 },
+    spawnedAt: { default: 0 },
+  });
+
+  const engine = inject(RpgClientEngine);
+  const sprite = typeof object === "function" ? object() : object;
+  const config = engine.lootConfig ?? {};
+  const COLLECT_MS = 240;
+  const EXPIRE_MS = 380;
+
+  const isGold = computed(() => kind() === "gold");
+  const customComponent = visual() ? config.components?.[visual()] : undefined;
+  const custom = customComponent ? { component: customComponent } : null;
+  const glowColor = (() => {
+    const value = color();
+    if (typeof value === "string" && value.startsWith("#")) return parseInt(value.slice(1), 16);
+    return isGold() ? 0xffd166 : 0x8be9fd;
+  })();
+  const glowStrength = rarity() === "epic" ? 2.2 : rarity() === "rare" ? 1.6 : 1;
+  const badge = computed(() => (!isGold() && Number(amount()) > 1 ? `x${amount()}` : ""));
+
+  const arcVisual = {
+    fromX: Number(fromX()) || 0,
+    fromY: Number(fromY()) || 0,
+    height: Number(height()) || 0,
+    flightMs: Number(flightMs()) || 1,
+  };
+
+  // A player joining long after the drop sees the pickup already on the ground.
+  const skipArc = Date.now() - Number(spawnedAt() || 0) > 5000;
+  const elapsed = signal(skipArc ? arcVisual.flightMs + 1 : -Number(delayMs() || 0));
+  const time = signal(0);
+  const ending = signal(null);
+  const endingElapsed = signal(0);
+  let landed = skipArc;
+
+  const iconDefinition = signal(null);
+  const iconId = icon();
+  if (!custom && typeof iconId === "string" && iconId) {
+    const definition = engine.getSpriteSheet(iconId);
+    if (definition && typeof definition.then === "function") {
+      definition.then((value) => iconDefinition.set(value ?? null));
+    } else {
+      iconDefinition.set(definition ?? null);
+    }
+  }
+  const iconSheet = computed(() =>
+    iconDefinition() ? { definition: iconDefinition(), playing: "default" } : null
+  );
+
+  const readRemoveContext = () => {
+    const raw = sprite?._removeTransition?.();
+    if (!raw || typeof raw !== "string") return null;
+    try {
+      const context = JSON.parse(raw);
+      return context?.active ? context : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const centerOf = (entity) => {
+    const hitbox = entity?.hitbox?.() ?? { w: 0, h: 0 };
+    return { x: entity.x() + hitbox.w / 2, y: entity.y() + hitbox.h / 2 };
+  };
+
+  const findObject = (id) => (id ? engine.scene?.getObjectById?.(id) : null);
+
+  // Where the pickup is when the ending starts, so the flight starts there.
+  let endingFrom = { x: 0, y: 0, z: 0 };
+
+  const arc = computed(() => sampleLootArc(arcVisual, elapsed()));
+  const idleZ = computed(() => (arc().done ? 3 + Math.sin(time() / 260) * 2 : 0));
+
+  const state = computed(() => {
+    const current = ending();
+    if (current?.reason === "collected") return "collecting";
+    if (current) return "expiring";
+    return arc().done ? "idle" : "flying";
+  });
+  const stateProgress = computed(() => {
+    if (ending()) {
+      const duration = ending().reason === "collected" ? COLLECT_MS : EXPIRE_MS;
+      return Math.min(1, endingElapsed() / duration);
+    }
+    return arc().done ? 0 : Math.max(0, elapsed()) / arcVisual.flightMs;
+  });
+
+  const collectTarget = () => {
+    const collector = findObject(ending()?.collectorId);
+    if (!collector || !sprite) return { x: 0, y: -24 };
+    const self = centerOf(sprite);
+    const target = centerOf(collector);
+    return { x: target.x - self.x, y: target.y - self.y - 8 };
+  };
+
+  const position = computed(() => {
+    const current = ending();
+    if (current?.reason === "collected") {
+      const t = Math.min(1, endingElapsed() / COLLECT_MS);
+      const ease = t * t;
+      const target = collectTarget();
+      return {
+        x: endingFrom.x + (target.x - endingFrom.x) * ease,
+        y: endingFrom.y + (target.y - endingFrom.y) * ease,
+        z: endingFrom.z + Math.sin(t * Math.PI) * 14,
+      };
+    }
+    if (current) return endingFrom;
+    const point = arc();
+    return { x: point.x, y: point.y, z: point.z + idleZ() };
+  });
+
+  const bodyX = computed(() => position().x);
+  const bodyY = computed(() => position().y - position().z - 6);
+  const bodyScale = computed(() => {
+    if (custom) return 1;
+    if (state() === "collecting") return 1 - 0.6 * stateProgress();
+    // Small squash when the pickup touches the ground.
+    const point = arc();
+    if (!point.done && point.z < 2 && elapsed() > arcVisual.flightMs * 0.7) return 1.15;
+    return 1;
+  });
+  const opacity = computed(() => {
+    if (elapsed() < 0) return 0;
+    if (state() === "expiring" && !custom) {
+      const t = stateProgress();
+      return Math.floor(endingElapsed() / 60) % 2 === 0 ? 1 - t : 0.3 * (1 - t);
+    }
+    return 1;
+  });
+
+  const collectText = () => {
+    const value = Number(amount()) || 0;
+    if (isGold()) return engine.t("rpg.loot.gold", { amount: value });
+    return engine.t("rpg.loot.item", { amount: value, name: name() ?? "" });
+  };
+
+  // Sounds and text are local feedback: only the collector hears the pickup.
+  const onCollected = (collectorId) => {
+    if (!collectorId || collectorId !== engine.playerIdSignal?.()) return;
+    const soundId = sound() ?? config.sounds?.collect;
+    if (soundId) engine.playSound(soundId);
+    const collector = findObject(collectorId);
+    if (config.collectText && collector?.showComponentAnimation) {
+      collector.showComponentAnimation(LOOT_TEXT_ANIMATION_ID, {
+        text: collectText(),
+        color: isGold() ? "#ffd166" : "#ffffff",
+        offsetY: nextLootTextOffset(engine),
+      });
+    }
+  };
+
+  tick(({ deltaTime }) => {
+    time.update((value) => value + deltaTime);
+    if (ending()) {
+      endingElapsed.update((value) => value + deltaTime);
+      return;
+    }
+    const context = readRemoveContext();
+    if (context) {
+      endingFrom = { ...position() };
+      ending.set({ reason: context.reason, collectorId: context.data?.collectorId });
+      if (context.reason === "collected") onCollected(context.data?.collectorId);
+      return;
+    }
+    if (!arc().done) {
+      elapsed.update((value) => value + deltaTime);
+    } else if (!landed) {
+      landed = true;
+      if (config.sounds?.land) engine.playSound(config.sounds.land);
+    }
+  });
+
+  function drawShadow(g) {
+    g.clear();
+    if (state() === "collecting") return;
+    const point = position();
+    const lift = Math.min(1, point.z / Math.max(1, arcVisual.height));
+    g.ellipse(point.x, point.y + 2, 7 * (1 - lift * 0.5), 3 * (1 - lift * 0.5));
+    g.fill({ color: 0x000000, alpha: 0.3 * (1 - lift * 0.6) });
+  }
+
+  function drawGlow(g) {
+    g.clear();
+    if (state() !== "idle") return;
+    const pulse = 0.5 + Math.sin(time() / 220) * 0.5;
+    g.circle(0, 0, (10 + pulse * 3) * glowStrength);
+    g.fill({ color: glowColor, alpha: Math.min(0.6, (0.12 + pulse * 0.12) * glowStrength) });
+  }
+
+  function drawCoin(g) {
+    g.clear();
+    // Spinning coin: the width follows a cosine so it reads as a 3D turn.
+    const spin = Math.abs(Math.cos(time() / 180));
+    const width = 2 + 5 * spin;
+    g.ellipse(0, 0, width, 7);
+    g.fill({ color: 0xc98a1c });
+    g.ellipse(0, 0, Math.max(1, width - 1.5), 5.5);
+    g.fill({ color: 0xffd166 });
+    if (spin > 0.4) {
+      g.ellipse(-width * 0.3, -2, Math.max(0.6, width * 0.25), 1.6);
+      g.fill({ color: 0xfff4c7, alpha: 0.9 });
+    }
+  }
+
+  function drawGem(g) {
+    g.clear();
+    g.poly([0, -9, 7, -2, 0, 9, -7, -2]);
+    g.fill({ color: 0x3fa7d6 });
+    g.stroke({ color: 0x1b4f72, width: 1.5 });
+    g.poly([0, -9, 7, -2, 0, -1, -7, -2]);
+    g.fill({ color: 0x8be9fd, alpha: 0.9 });
+  }
+</script>

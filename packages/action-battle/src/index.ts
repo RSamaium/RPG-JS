@@ -298,6 +298,7 @@ export {
   defineActionBattleEnemy,
   type ActionBattleEnemyPreset,
   type ActionBattleEnemyPresetMap,
+  type ActionBattleEnemyStats,
 } from "./enemies/factory";
 
 // Server exports

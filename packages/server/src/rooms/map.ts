@@ -49,6 +49,7 @@ import { Log } from "../logs/log";
 import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV } from "../map-update";
 import { emitServerStep } from "../server-step";
 import { RpgMapProjectiles } from "../projectiles";
+import { RpgMapLoot, type MapDropLootOptions } from "../loot";
 import type { DamageFormulas } from "../Player/BattleManager";
 import { runPlayerAuthenticationHooks } from "../auth";
 import {
@@ -291,6 +292,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private _scenarioEventIdsByPlayer: Map<string, Set<string>> = new Map();
   private _syncChangesDepth = 0;
   projectiles = new RpgMapProjectiles(this);
+  /** Loot pickups dropped on this map. Prefer `dropLoot()` to spawn them. */
+  loot = new RpgMapLoot(this);
 
   autoSync: boolean = true;
 
@@ -394,6 +397,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         this.touchCollisions.refreshTrackedTouchCollisions();
         hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
+        this.loot.step();
         refreshMapStreaming(this);
       },
     });
@@ -413,6 +417,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         this.touchCollisions.refreshTrackedTouchCollisions();
         await hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
+        this.loot.step();
         refreshMapStreaming(this);
       },
     });
@@ -433,6 +438,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   clearPhysic(): void {
     super.clearPhysic();
     this.projectiles.clear();
+    this.loot.clear();
   }
 
   private isPositiveNumber(value: unknown): value is number {
@@ -2045,8 +2051,45 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   }
 
   /**
+   * Pop collectable loot at a world position.
+   *
+   * The gold is split into coins and every item that passes its `chance`
+   * becomes a pickup. Each pickup arcs out of `x, y`, bounces, then is
+   * collected according to `pickup`: it flies to the first player in the
+   * magnet radius (`magnet`, default), when a player walks on it (`touch`), or
+   * when a player presses the action key next to it (`action`).
+   *
+   * The server rolls, places and grants the loot; the client only animates it.
+   * Works in standalone RPG and MMORPG modes. With `ownership: "player"`, the
+   * pickups are scenario events that only `owner` receives.
+   *
+   * Items can declare a `loot` config in the database (`visual`, `color`,
+   * `sound`, `rarity`, `use`). Prefer `event.dropLoot()` to pop the loot from an
+   * event.
+   *
+   * @title Drop Loot
+   * @method map.dropLoot(options)
+   * @param options - Origin, reward table and loot settings
+   * @returns Ids of the spawned pickup events
+   * @memberof Map
+   *
+   * @example
+   * ```ts
+   * await map.dropLoot({
+   *   x: 320,
+   *   y: 240,
+   *   rewards: { gold: 30, items: [{ itemId: "potion", chance: 50 }] },
+   *   pickup: "magnet",
+   * });
+   * ```
+   */
+  dropLoot(options: MapDropLootOptions): Promise<string[]> {
+    return this.loot.drop(options);
+  }
+
+  /**
    * Creates a dynamic event on the map
-   * 
+   *
    * This method handles both class-based events and object-based events with hooks.
    * For class-based events, it creates a new instance of the class.
    * For object-based events, it creates a dynamic class that extends RpgEvent and 

@@ -11,14 +11,19 @@ Hooks for events created as plain objects, as shown in the create-event guide.
 
 - [onAction](#onaction)
 - [onChanges](#onchanges)
+- [onDayChange](#ondaychange)
 - [onDetectInShape](#ondetectinshape)
 - [onDetectOutShape](#ondetectoutshape)
 - [onInit](#oninit)
 - [onInShape](#oninshape)
+- [onLightingPhaseChange](#onlightingphasechange)
 - [onOutShape](#onoutshape)
+- [onPhaseChange](#onphasechange)
 - [onPlayerTouch](#onplayertouch)
+- [onTimeChange](#ontimechange)
 - [onTouch](#ontouch)
 - [onTouchEnd](#ontouchend)
+- [onWeatherChange](#onweatherchange)
 
 ## onAction
 
@@ -50,6 +55,20 @@ chest, a hidden door, or a conditional NPC graphic.
 
 ```ts
 onChanges: (this: RpgEvent, player: RpgPlayer) => void
+```
+
+## onDayChange
+
+Called when the TimeManager observes a day transition
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onDayChange: (this: RpgEvent, payload: TimeDayTransitionPayload) => void | Promise<void>
 ```
 
 ## onDetectInShape
@@ -111,6 +130,20 @@ Called when a player enters a shape attached to the event
 onInShape: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void
 ```
 
+## onLightingPhaseChange
+
+Called when the TimeManager applies a lighting phase transition
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onLightingPhaseChange: (this: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => void | Promise<void>
+```
+
 ## onOutShape
 
 Called when a player exits a shape attached to the event
@@ -125,6 +158,20 @@ Called when a player exits a shape attached to the event
 onOutShape: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void
 ```
 
+## onPhaseChange
+
+Same transition as `onLightingPhaseChange`, named for gameplay rules
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onPhaseChange: (this: RpgEvent, payload: TimeLightingPhaseTransitionPayload) => void | Promise<void>
+```
+
 ## onPlayerTouch
 
 Called when a player touches this event
@@ -137,6 +184,20 @@ Called when a player touches this event
 
 ```ts
 onPlayerTouch: (this: RpgEvent, player: RpgPlayer) => void
+```
+
+## onTimeChange
+
+Called when the TimeManager observes a time transition
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onTimeChange: (this: RpgEvent, payload: TimeTransitionPayload) => void | Promise<void>
 ```
 
 ## onTouch
@@ -165,4 +226,18 @@ Called when this event stops touching a player or another event
 
 ```ts
 onTouchEnd: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>
+```
+
+## onWeatherChange
+
+Called when the TimeManager applies a weather ambience transition
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onWeatherChange: (this: RpgEvent, payload: TimeWeatherTransitionPayload) => void | Promise<void>
 ```
