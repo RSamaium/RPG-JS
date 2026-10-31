@@ -2494,6 +2494,8 @@
       "ProjectilePatternOptions",
       "ProjectileRepeatOptions",
       "ProjectileServerState",
+      "ProjectileTargetHitContext",
+      "ProjectileTargetReaction",
       "ProjectileTrajectory",
       "ProjectileWallBehavior",
       "Routes",

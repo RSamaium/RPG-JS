@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 import { Hooks, PhysicsEngine } from "@rpgjs/common";
 import { RpgMapProjectiles } from "../src/projectiles";
 
-function createMap() {
+function createMap(objects: Record<string, any> = {}) {
   const broadcasts: any[] = [];
   const physic = new PhysicsEngine();
   const owner = { id: "owner", x: () => 0, y: () => 0, hitbox: () => ({ w: 0, h: 0 }) };
@@ -10,7 +10,7 @@ function createMap() {
     physic,
     hooks: new Hooks([], "server"),
     getTick: () => physic.getTick(),
-    getObjectById: (id: string) => (id === "owner" ? owner : { id }),
+    getObjectById: (id: string) => (id === "owner" ? owner : objects[id] ?? { id }),
     getPlayer: (id: string) => (id === "owner" ? owner : undefined),
     $broadcast: (message: any) => broadcasts.push(message),
   };
@@ -149,5 +149,65 @@ describe("projectile trajectories", () => {
     expect(onEnd).not.toHaveBeenCalled();
     run(projectiles, 0.6);
     expect(onEnd).toHaveBeenCalledTimes(1);
+  });
+
+  describe("targets reacting to impacts", () => {
+    const emitArrow = (projectiles: RpgMapProjectiles, extra: Record<string, unknown> = {}) =>
+      projectiles.emit({
+        type: "arrow",
+        origin: { x: 0, y: 0 },
+        direction: { x: 1, y: 0 },
+        trajectory: { type: "linear", speed: 400, range: 200 },
+        ...extra,
+      });
+
+    test("the target's onProjectileHit runs before the projectile onHit", () => {
+      const calls: string[] = [];
+      const lever = {
+        id: "lever",
+        isEvent: () => true,
+        onProjectileHit(projectile: any, context: any) {
+          calls.push(`lever:${projectile.type}:${Math.round(context.x)}`);
+        },
+      };
+      const { physic, projectiles } = createMap({ lever });
+      enemy(physic, "lever", 40);
+      emitArrow(projectiles, { onHit: () => calls.push("arrow") });
+      run(projectiles, 1);
+      expect(calls).toEqual(["lever:arrow:35", "arrow"]);
+    });
+
+    test("pass lets the projectile fly through, stop overrides pierce", () => {
+      const onHit = vi.fn();
+      const bush = { id: "bush", onProjectileHit: () => "pass" };
+      const shield = { id: "shield", onProjectileHit: () => "stop" };
+      const { physic, projectiles } = createMap({ bush, shield });
+      enemy(physic, "bush", 40);
+      enemy(physic, "shield", 80);
+      enemy(physic, "behind", 120);
+      emitArrow(projectiles, { pierce: true, onHit });
+      run(projectiles, 1);
+      expect(onHit.mock.calls.map(([context]) => context.hit.entity.uuid)).toEqual(["bush", "shield"]);
+    });
+
+    test("stick keeps the projectile planted in the target", () => {
+      const target = { id: "target", onProjectileHit: () => "stick" };
+      const { physic, projectiles, messages } = createMap({ target });
+      enemy(physic, "target", 60);
+      emitArrow(projectiles, { linger: { ms: 300 } });
+      run(projectiles, 0.3);
+      expect(messages("projectile:impactBatch")).toHaveLength(0);
+      expect(messages("projectile:updateBatch")[0].value.projectiles[0].stopAt.x).toBeCloseTo(55, 0);
+    });
+
+    test("projectiles fly over loot pickups", () => {
+      const onHit = vi.fn();
+      const pickup = { id: "pickup", __rpgLoot: "magnet" };
+      const { physic, projectiles } = createMap({ pickup });
+      enemy(physic, "pickup", 40);
+      emitArrow(projectiles, { onHit });
+      run(projectiles, 1);
+      expect(onHit).not.toHaveBeenCalled();
+    });
   });
 });

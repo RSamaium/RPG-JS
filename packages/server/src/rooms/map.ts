@@ -2176,6 +2176,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         onChanges?: (this: RpgEvent, player: RpgPlayer) => void;
         onAction?: (this: RpgEvent, player: RpgPlayer, input: RpgActionInput<unknown>) => void | Promise<void>;
         onPlayerTouch?: (this: RpgEvent, player: RpgPlayer) => void;
+        onProjectileHit?: EventHooks["onProjectileHit"];
         onTouch?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
         onTouchEnd?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
         onInShape?: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void;
@@ -2195,6 +2196,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
             this.interactive.set(true);
           }
           if (hookObj.onPlayerTouch) this.onPlayerTouch = hookObj.onPlayerTouch.bind(this);
+          if (hookObj.onProjectileHit) this.onProjectileHit = hookObj.onProjectileHit.bind(this);
           if (hookObj.onTouch) this.onTouch = hookObj.onTouch.bind(this);
           if (hookObj.onTouchEnd) this.onTouchEnd = hookObj.onTouchEnd.bind(this);
           if (hookObj.onInShape) this.onInShape = hookObj.onInShape.bind(this);

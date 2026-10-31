@@ -11,6 +11,7 @@ import {
   type TrajectoryContext,
 } from "@rpgjs/common";
 import { lastValueFrom } from "rxjs";
+import { isLootEvent } from "./loot";
 import type { RpgPlayer } from "./Player/Player";
 import type { RpgMap } from "./rooms/map";
 
@@ -63,6 +64,25 @@ export type ProjectileCollideMode = "always" | "walls" | "none";
  * `stick` (stays planted, see `linger`).
  */
 export type ProjectileWallBehavior = "stop" | "bounce" | "return" | "stick";
+
+/**
+ * Reply of a target's `onProjectileHit` hook:
+ * - `stop`: the projectile stops, even with `pierce`;
+ * - `pass`: the projectile flies through this target;
+ * - `stick`: the projectile stays planted in the target (see `linger`).
+ * Return nothing to keep the projectile behavior (`pierce`).
+ */
+export type ProjectileTargetReaction = "stop" | "pass" | "stick";
+
+/** Second argument of a target's `onProjectileHit` hook. */
+export interface ProjectileTargetHitContext {
+  owner?: RpgPlayer;
+  map: RpgMap;
+  /** Impact point. */
+  x: number;
+  y: number;
+  hit: RaycastHit;
+}
 
 export interface ProjectileEndHookContext extends ProjectileHookContext {
   /** `range`, `land`, `return`, `end`, `hit`, `ttl`... */
@@ -611,6 +631,15 @@ export class RpgMapProjectiles {
   private resolveHit(active: ActiveProjectile, hit: RaycastHit, state: ProjectileState): ProjectileHitResolution {
     const { options } = active;
     if (!isWall(hit.entity)) {
+      const point = { x: hit.point.x, y: hit.point.y };
+      const reaction = this.notifyTarget(active, hit, point);
+      if (reaction === "pass") return "continue";
+      if (reaction === "stick") {
+        active.stuckAt = point;
+        this.updateQueue.push({ id: active.state.id, stopAt: point });
+        return "stop";
+      }
+      if (reaction === "stop") return "stop";
       active.hits += 1;
       const pierce = options.pierce;
       if (pierce === true || (typeof pierce === "number" && active.hits < pierce)) {
@@ -647,6 +676,43 @@ export class RpgMapProjectiles {
         return "stop";
       default:
         return "stop";
+    }
+  }
+
+  /**
+   * Let the target react to the impact with its `onProjectileHit` hook. The
+   * hook runs synchronously so its reply decides what the projectile does.
+   * Module hooks (`server-event-onProjectileHit`, `server-player-onProjectileHit`)
+   * are notified too.
+   */
+  private notifyTarget(
+    active: ActiveProjectile,
+    hit: RaycastHit,
+    point: { x: number; y: number },
+  ): ProjectileTargetReaction | undefined {
+    const target = (this.map as any).getObjectById?.(hit.entity.uuid);
+    if (!target) return undefined;
+    const context: ProjectileTargetHitContext = {
+      owner: this.ownerOf(active.state),
+      map: this.map,
+      x: point.x,
+      y: point.y,
+      hit,
+    };
+    const isEvent = typeof target.isEvent === "function" && target.isEvent();
+    void lastValueFrom(
+      this.map.hooks.callHooks(isEvent ? "server-event-onProjectileHit" : "server-player-onProjectileHit", target, active.state, context),
+    ).catch((error) => console.error("[RPGJS] Error during onProjectileHit:", error));
+    const hook = target.onProjectileHit;
+    if (typeof hook !== "function") return undefined;
+    try {
+      const reaction = hook.call(target, active.state, context);
+      // Like `execMethod`, push the changes made by the hook to the clients.
+      target.syncChanges?.();
+      return reaction === "stop" || reaction === "pass" || reaction === "stick" ? reaction : undefined;
+    } catch (error) {
+      console.error("[RPGJS] Error during onProjectileHit:", error);
+      return undefined;
     }
   }
 
@@ -702,6 +768,10 @@ export class RpgMapProjectiles {
 
   private canHit(entity: Entity, projectile: ProjectileServerState, pending: PendingProjectile): boolean {
     if (projectile.ownerId && pending.config.ignoreOwner !== false && entity.uuid === projectile.ownerId) {
+      return false;
+    }
+    // Loot pickups lie on the ground: projectiles fly over them.
+    if (isLootEvent((this.map as any).getObjectById?.(entity.uuid))) {
       return false;
     }
     if (!pending.config.canHit) {

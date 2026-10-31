@@ -114,6 +114,40 @@ const Chest: EventDefinition = {
   },
 };
 
+// Targets react to projectiles themselves with `onProjectileHit`.
+const Switch: EventDefinition = {
+  name: "Switch",
+  onInit() {
+    this.setComponentsCenter([
+      [Components.shape({ type: "circle", fill: "#64748b", radius: 10 })],
+      [Components.text("OFF", { fill: "#ffffff", fontSize: 9, fontWeight: "700" })],
+    ]);
+  },
+  onProjectileHit() {
+    const on = !(this as any).switchedOn;
+    (this as any).switchedOn = on;
+    this.setComponentsCenter([
+      [Components.shape({ type: "circle", fill: on ? "#facc15" : "#64748b", radius: 10 })],
+      [Components.text(on ? "ON" : "OFF", { fill: "#ffffff", fontSize: 9, fontWeight: "700" })],
+    ]);
+    // Stop the projectile: the switch is hit, not crossed.
+    return "stop";
+  },
+};
+
+// A bush cut by any projectile: it lets it through and drops a few coins.
+const Bush: EventDefinition = {
+  name: "Bush",
+  onInit() {
+    this.setComponentsCenter([[Components.shape({ type: "circle", fill: "#4d7c0f", radius: 14 })]]);
+  },
+  onProjectileHit(_projectile, { owner }) {
+    this.dropLoot({ gold: 3 }, { owner, ownership: "player" });
+    this.remove();
+    return "pass";
+  },
+};
+
 const TREE_HITS = 3;
 
 // A tree cut with the action key: no combat needed, only `dropLoot()`.
@@ -245,6 +279,9 @@ export default createServer({
             events: [
               { id: "chest", x: 140, y: 660, event: Chest },
               { id: "tree", x: 640, y: 640, event: Tree },
+              { id: "switch", x: 660, y: 370, event: Switch },
+              { id: "bush-1", x: 600, y: 300, event: Bush },
+              { id: "bush-2", x: 630, y: 290, event: Bush },
             ],
           } as any,
         ],

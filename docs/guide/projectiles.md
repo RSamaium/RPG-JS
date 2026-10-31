@@ -321,6 +321,55 @@ Hooks of one projectile, on the server:
 Every hook receives `projectile`, `owner` and `map`. Bounces, returns and
 planted projectiles are sent to the clients as compact updates.
 
+## Targets Reacting To Impacts
+
+Any event (or player) hit by a projectile can react itself with
+`onProjectileHit`, without changing the weapon. It runs on the server, before
+the projectile `onHit`, and its reply decides what the projectile does:
+
+| Reply | Effect |
+| --- | --- |
+| nothing | Keep the projectile behavior (`pierce`...). |
+| `"stop"` | Stop the projectile, even with `pierce`. |
+| `"pass"` | Let the projectile fly through this target. |
+| `"stick"` | Keep the projectile planted in the target (use `linger` to keep it visible). |
+
+```ts
+import type { EventDefinition } from '@rpgjs/server'
+
+// A switch toggled by any projectile
+export const Switch: EventDefinition = {
+  name: 'Switch',
+  onProjectileHit(projectile, { owner }) {
+    owner?.getCurrentMap()?.setVariable('door-open', true)
+    return 'stop'
+  }
+}
+
+// A bush cut by any projectile: it lets it through and drops loot
+export const Bush: EventDefinition = {
+  name: 'Bush',
+  onProjectileHit(projectile, { owner }) {
+    this.dropLoot({ gold: 3 }, { owner, ownership: 'player' })
+    this.remove()
+    return 'pass'
+  }
+}
+
+// A wooden target where arrows stay planted
+export const Target: EventDefinition = {
+  onProjectileHit(projectile) {
+    return projectile.type === 'arrow' ? 'stick' : 'stop'
+  }
+}
+```
+
+The hook receives the projectile (`type`, `ownerId`, `params`, `trajectory`) and
+`{ owner, map, x, y, hit }`. Module hooks are notified too, without a reply:
+`event.onProjectileHit` and `player.onProjectileHit` in `defineModule()`.
+
+Loot pickups never stop projectiles: they fly over them.
+
 ## Impact Hooks
 
 Use projectile hooks to apply gameplay effects when the server confirms an
