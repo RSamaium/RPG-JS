@@ -2054,6 +2054,24 @@ export class RpgEvent extends RpgPlayer {
     }, timeoutMs);
   }
 
+  /**
+   * Whether the event is suspended: hidden, without collision, touch, action or route, until it is resumed.
+   * @see {@link RpgMap.suspendEvents}
+   */
+  get suspended(): boolean {
+    return !!this.getCurrentMap()?.isEventSuspended(this.id);
+  }
+
+  /** Hides the event and keeps its state, until {@link RpgEvent.resume}. */
+  suspend(): boolean {
+    return this.getCurrentMap()?.suspendEvent(this.id) ?? false;
+  }
+
+  /** Puts a suspended event back where it was, with its state. */
+  resume(): boolean {
+    return this.getCurrentMap()?.resumeEvent(this.id) ?? false;
+  }
+
   override isEvent(): boolean {
     return true;
   }
