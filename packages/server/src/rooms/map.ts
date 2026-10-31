@@ -1824,6 +1824,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
           fixedSteps,
           pendingInputs: this.inputProcessor.getPendingInputCount(),
         });
+        if (this.getPlayers().length > 0) {
+          await lastValueFrom(this.hooks.callHooks("server-map-onTick", this, { deltaMs: nextDelta, tick: this.getTick() }));
+        }
       }
     }
     finally {
