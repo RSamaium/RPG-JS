@@ -36,8 +36,8 @@ import { WithItemFixture } from "./ItemFixture";
 import { IItemManager, WithItemManager } from "./ItemManager";
 import { bufferTime, combineLatest, debounceTime, distinctUntilChanged, filter, lastValueFrom, map, Observable, pairwise, sample, throttleTime } from "rxjs";
 import { IEffectManager, WithEffectManager } from "./EffectManager";
-import { AGI, DEX, INT, MAXHP, MAXSP, STR } from "@rpgjs/common";
-import type { LootRewards } from "@rpgjs/common";
+import { AGI, DEX, INT, MAXHP, MAXSP, STR, EMOTION_BUBBLE_ANIMATION_ID } from "@rpgjs/common";
+import type { EmotionBubble, EmotionBubbleOptions, LootRewards } from "@rpgjs/common";
 import type { DropLootOptions } from "../loot";
 import { AGI_CURVE, DEX_CURVE, INT_CURVE, MAXHP_CURVE, MAXSP_CURVE, STR_CURVE } from "../presets";
 import { IElementManager, WithElementManager } from "./ElementManager";
@@ -1607,6 +1607,28 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
     this.showComponentAnimation("hit", {
       text,
       direction: this.direction(),
+    });
+  }
+
+  /**
+   * Show an emotion bubble above this player or event.
+   *
+   * The bubble pops in, follows the character while it moves, then pops out.
+   * It is visible to every client on the map.
+   *
+   * @param emotion - A built-in emotion name (`"like"`, `"surprise"`, `"idea"`...)
+   * @param options - Display time, size, offsets, or a custom icon sheet
+   *
+   * @example
+   * ```ts
+   * player.showEmotionBubble("like");
+   * event.showEmotionBubble("surprise", { size: 3, hold: 2500 });
+   * ```
+   */
+  showEmotionBubble(emotion: EmotionBubble | (string & {}), options: EmotionBubbleOptions = {}) {
+    this.showComponentAnimation(EMOTION_BUBBLE_ANIMATION_ID, {
+      ...options,
+      emotion,
     });
   }
 

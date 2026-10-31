@@ -21,4 +21,5 @@ export * from "./i18n";
 export * from "./map-streaming";
 export * from "./gameplay-room";
 export * from "./foundation";
+export * from "./emotion-bubble";
 export * from "./loot";
