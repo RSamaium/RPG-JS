@@ -75,6 +75,50 @@ describe("scripts listening to the hooks of a real RPGJS game", () => {
     await settled(() => expect(player.getVariable(`deaths_${n}`)).toBe(1));
   });
 
+  it("runs when items are added, used, removed and equipped, with the item and the quantity", async () => {
+    const Sword = { id: "Sword", name: "Sword", _type: "weapon" as const };
+    // The hooks are sent without waiting for each other: each signal writes a variable of its own
+    const { player } = await start([{
+      id: "inventory",
+      source: `
+        on("player.itemAdd", { where: { item: "Potion" } }, (e) => { $player.setVariable("add_${n}", e.quantity); });
+        on("player.itemUse", (e) => { $player.setVariable("use_${n}", e.item); });
+        on("player.itemRemove", (e) => { $player.setVariable("remove_${n}", [e.item, e.quantity]); });
+        on("player.itemEquip", { where: { equipped: true } }, (e) => { $player.setVariable("equip_${n}", e.item); });
+      `,
+    }]);
+
+    player.addItem("Potion", 2);
+    player.hp = 1;
+    await player.useItem("Potion");
+    player.addItem(Sword);
+    player.equip("Sword");
+
+    await settled(() => {
+      expect(player.getVariable(`add_${n}`)).toBe(2);
+      expect(player.getVariable(`use_${n}`)).toBe("Potion");
+      expect(player.getVariable(`remove_${n}`)).toEqual(["Potion", 1]);
+      expect(player.getVariable(`equip_${n}`)).toBe("Sword");
+    });
+  });
+
+  it("runs when the gold of a player changes, with the new gold and the difference", async () => {
+    const { player } = await start([{ id: "wallet", source: `on("player.goldChange", { where: { delta: { lt: 0 } } }, (e) => { $player.setVariable("spent_${n}", [e.gold, e.delta]); });` }]);
+    player.gold = 100;
+    player.gold = 70;
+
+    await settled(() => expect(player.getVariable(`spent_${n}`)).toEqual([70, -30]));
+  });
+
+  it("runs on the ticks of a map, for each of its players", async () => {
+    const { player, map } = await start([{ id: "clock", source: `on("map.tick", { where: { map: "test-map" } }, (e) => { $player.setVariable("ticks_${n}", ($player.getVariable("ticks_${n}") ?? 0) + 1); $player.setVariable("delta_${n}", e.deltaMs > 0); });` }]);
+
+    (map as any).setAutoTick(true);
+    await settled(() => expect(player.getVariable(`ticks_${n}`)).toBeGreaterThanOrEqual(3));
+    (map as any).setAutoTick(false);
+    expect(player.getVariable(`delta_${n}`)).toBe(true);
+  });
+
   it("runs when a player acts on an event, for that event, and only the one whose name matches", async () => {
     const { player, map } = await start([{
       id: "chest",

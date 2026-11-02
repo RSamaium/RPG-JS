@@ -93,6 +93,12 @@ installed, and a listener that fails does not stop the next one.
 | `player.outShape` | `onOutShape` of the player: leaves a zone | the same |
 | `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
+| `player.itemAdd` | `onItemAdd` of the player: items enter the inventory | `item` (id of the item), `quantity` |
+| `player.itemRemove` | `onItemRemove` of the player: items leave it (removed, sold, consumed by a use) | `item`, `quantity` |
+| `player.itemUse` | `onItemUse` of the player | `item`, `quantity` |
+| `player.itemEquip` | `onItemEquip` of the player: equips or takes off an item | `item`, `quantity`, `equipped` |
+| `player.goldChange` | `onGoldChange` of the player | `gold` (the gold after the change), `delta` (negative when the player spends) |
+| `map.tick` | `onTick` of a map with players, about 60 times a second, once for each player of the map | `map`, `deltaMs`, `tick` |
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |

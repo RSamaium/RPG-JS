@@ -25,8 +25,10 @@ export function scriptHooks(service: ScriptService): RpgServer {
     const [scope, hook] = id.split(".") as [HookScope, string];
     (module[scope] ??= {})[hook] = async (...args: unknown[]) => {
       for (const binding of bindings) {
-        const emission = await binding.emit(...args);
-        if (emission) await service.emit(binding.signal, emission.payload, emission.context);
+        // `map.tick` runs on every tick: nothing to compute when no script listens
+        if (service.listeners(binding.signal).length === 0) continue;
+        const emissions = await binding.emit(...args);
+        for (const emission of [emissions ?? []].flat()) await service.emit(binding.signal, emission.payload, emission.context);
       }
     };
   }

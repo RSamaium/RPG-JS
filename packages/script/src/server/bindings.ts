@@ -4,7 +4,7 @@
  * are the signals of the game; add your own with the `bindings` option of `provideScripts`, for example to turn a hook of
  * the projectiles or of a plugin into a signal.
  */
-import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
+import type { RpgEvent, RpgGoldChangePayload, RpgItemChangePayload, RpgMap, RpgMapTickPayload, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import type { SignalDesc } from "../core/filter";
 import type { SignalContext } from "./service";
 import { describeRoom } from "./world";
@@ -18,6 +18,9 @@ export interface SignalEmission {
   payload: Record<string, unknown>;
   context: SignalContext;
 }
+
+/** What the `emit` of a binding returns: one emission, one per player, or nothing. */
+export type SignalEmissions = SignalEmission | SignalEmission[] | undefined;
 
 /**
  * A hook of RPGJS turned into a signal. `TArgs` are the arguments of the hook, in the order RPGJS gives them.
@@ -43,8 +46,11 @@ export interface SignalBinding<TArgs extends unknown[] = unknown[]> {
   hook: string;
   /** What the signal carries. Needed for a signal that the game does not already have. */
   describe?: SignalDesc;
-  /** Gives the payload and the context of the signal, or nothing to emit nothing (a player who is on no map, say). */
-  emit(...args: TArgs): SignalEmission | undefined | Promise<SignalEmission | undefined>;
+  /**
+   * Gives the payload and the context of the signal, or nothing to emit nothing (a player who is on no map, say). A list emits the
+   * signal once per entry: a hook of a map, for each of its players.
+   */
+  emit(...args: TArgs): SignalEmissions | Promise<SignalEmissions>;
 }
 
 /** Types the arguments of the hook of a binding. */
@@ -62,10 +68,12 @@ const shapePayload = (shape: RpgShape) => ({ shape: { name: String(shape.name), 
 const eventPayload = (event: RpgEvent) => ({ event: { id: String(event.id ?? ""), name: String(typeof event.name === "function" ? (event.name as () => unknown)() : event.name ?? "") } });
 /** A signal of an event: events exist in maps only, so the map is the one of the player. */
 const ofEvent = (event: RpgEvent, player: RpgPlayer): SignalEmission => ({ payload: eventPayload(event), context: { player, event } });
+const itemPayload = (change: RpgItemChangePayload) => ({ item: String(change.itemId), quantity: Number(change.quantity) });
 
 /**
- * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp` and `onDead` of the player, and
- * `onAction` and `onPlayerTouch` of the events. The ones of the player fire in every kind of room, a map or not.
+ * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp`, `onDead`,
+ * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip` and `onGoldChange` of the player, `onAction` and `onPlayerTouch` of the events,
+ * and `onTick` of the maps. The ones of the player fire in every kind of room, a map or not.
  */
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer, RpgPlayerRoom]>({
@@ -107,6 +115,34 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer]>({
     signal: "player.dead", scope: "player", hook: "onDead",
     emit: (player) => ({ payload: {}, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload]>({
+    signal: "player.itemAdd", scope: "player", hook: "onItemAdd",
+    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload]>({
+    signal: "player.itemRemove", scope: "player", hook: "onItemRemove",
+    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload]>({
+    signal: "player.itemUse", scope: "player", hook: "onItemUse",
+    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload & { equipped: boolean }]>({
+    signal: "player.itemEquip", scope: "player", hook: "onItemEquip",
+    emit: (player, change) => ({ payload: { ...itemPayload(change), equipped: !!change.equipped }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgGoldChangePayload]>({
+    signal: "player.goldChange", scope: "player", hook: "onGoldChange",
+    emit: (player, change) => ({ payload: { gold: Number(change.gold), delta: Number(change.delta) }, context: { player } }),
+  }),
+  signalBinding<[RpgMap, RpgMapTickPayload]>({
+    signal: "map.tick", scope: "map", hook: "onTick",
+    // A script acts for a player: the tick runs once for each player of the map
+    emit: (map, tick) => map.getPlayers().map((player) => ({
+      payload: { map: String(map.id), deltaMs: Number(tick.deltaMs), tick: Number(tick.tick) },
+      context: { player, map },
+    })),
   }),
   signalBinding<[RpgEvent, RpgPlayer]>({
     signal: "event.action", scope: "event", hook: "onAction",
