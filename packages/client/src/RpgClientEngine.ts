@@ -266,6 +266,12 @@ export class RpgClientEngine<T = any> {
   /** True until the destination room's first local-player position (spawn / changeMap target) is applied. */
   private awaitingTransferSpawnSync = false;
   private currentMapRoomId?: string;
+  /**
+   * Incremented by every map or room change. A map load that resumes after a
+   * later change (for example `changeRoom()` during a streamed map load) is
+   * stale and must not touch the socket room, the map data or the active scene.
+   */
+  private sceneTransferGeneration = 0;
   private activeMapStreamController?: { attach(map: RpgClientMap): void; detach(): void };
   private socketListenersInitialized = false;
   private clientReadyForMapChanges = false;
@@ -1021,6 +1027,7 @@ export class RpgClientEngine<T = any> {
   }
 
   private async handleChangeMap(data: any) {
+    const generation = ++this.sceneTransferGeneration;
     const nextMapId = typeof data?.mapId === "string" ? data.mapId : undefined;
     const descriptor: RpgRoomDescriptor | undefined = nextMapId
       ? {
@@ -1031,12 +1038,14 @@ export class RpgClientEngine<T = any> {
       : undefined;
     if (descriptor) {
       await this.leaveActiveClientScene(descriptor);
+      if (generation !== this.sceneTransferGeneration) return;
       this.sceneRoom.reset();
       this.activeRoom.set(descriptor);
     }
     this.beginMapTransfer(nextMapId, data?.continueMovement === true);
     const transferToken = typeof data?.transferToken === "string" ? data.transferToken : undefined;
-    await this.loadScene(data.mapId, transferToken);
+    await this.loadScene(data.mapId, transferToken, generation);
+    if (generation !== this.sceneTransferGeneration) return;
     // Keep the custom room scene mounted until the destination map has valid
     // render data. Mounting SceneMap earlier can briefly feed a detached or
     // incomplete streamed map into its CanvasEngine component.
@@ -1064,6 +1073,7 @@ export class RpgClientEngine<T = any> {
       kind: packet.kind,
       name: packet.name,
     };
+    this.sceneTransferGeneration++;
 
     await this.leaveActiveClientScene(descriptor);
     this.sceneRoom.reset(descriptor);
@@ -1242,11 +1252,17 @@ export class RpgClientEngine<T = any> {
     });
   }
 
-  private async loadScene(mapId: string, transferToken?: string) {
+  private async loadScene(
+    mapId: string,
+    transferToken?: string,
+    generation = this.sceneTransferGeneration,
+  ) {
+    const isStale = () => generation !== this.sceneTransferGeneration;
     // Keep the previous scene mounted while async before-loading hooks install
     // and animate their transition UI. The hook contract is awaited, allowing
     // modules to report when the old scene is fully covered.
     await lastValueFrom(this.hooks.callHooks("client-sceneMap-onBeforeLoading", this.sceneMap));
+    if (isStale()) return;
 
     this.activeMapStreamController?.detach();
     this.activeMapStreamController = undefined;
@@ -1285,13 +1301,16 @@ export class RpgClientEngine<T = any> {
       await this.webSocket.reconnect()
     }
     catch (error) {
+      if (isStale()) return;
       this.mapTransitionInProgress = false;
       this.pendingMapTransferInput = undefined;
       this.stopPingPong();
       await this.callConnectError(error);
       throw error;
     }
+    if (isStale()) return;
     const res = await this.loadMapService.load(mapId)
+    if (isStale()) return;
     const loadedLighting = typeof res?.lighting !== "undefined"
       ? res.lighting
       : res?.data?.lighting;
