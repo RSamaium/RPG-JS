@@ -14,5 +14,8 @@ minimumReleaseAgeExclude:
   - '@canvasengine/testing@2.4.0'
   - '@canvasengine/tiled@2.4.0'
   - 'canvasengine@2.4.0'
+  - '@canvasengine/compiler@2.5.0'
+  - '@canvasengine/presets@2.5.0'
+  - 'canvasengine@2.5.0'
   - '@signe/room@3.2.1'
   - vite@8.1.1
