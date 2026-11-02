@@ -2,6 +2,8 @@ import { Context, inject } from "@signe/di";
 import {
   MAP_STREAM_EVENT,
   MAP_STREAM_REQUEST_EVENT,
+  MAP_VIEW_EVENT,
+  MAP_VIEW_REQUEST_EVENT,
   type MapChunkHitbox,
   type MapStreamChunk,
   type MapStreamManifest,
@@ -211,9 +213,90 @@ class MapStreamingClientService<TManifestData, TChunkData, TState> {
   }
 }
 
+type ViewWaiter = {
+  mapId?: string;
+  resolve(packet: MapStreamPacket<any, any>): void;
+  reject(error: Error): void;
+  timer: ReturnType<typeof setTimeout>;
+};
+
+/**
+ * Visual-only map stream served by a gameplay room. Its packets build render
+ * data once and are never attached to the physics of the map scene.
+ */
+class MapViewClientService<TManifestData, TChunkData, TState> {
+  private waiters: ViewWaiter[] = [];
+
+  constructor(
+    private readonly socket: AbstractWebsocket,
+    private readonly options: ClientMapStreamingOptions<TManifestData, TChunkData, TState>,
+  ) {
+    socket.on(MAP_VIEW_EVENT, (packet) => this.receive(packet));
+  }
+
+  async open(mapId?: string): Promise<MapData> {
+    const normalizedId = mapId?.replace(/^map-/, "");
+    const directLoad = this.socket.mode === "standalone" ? this.options.directLoad : undefined;
+    if (normalizedId && directLoad) return directLoad(normalizedId);
+
+    // A client that loads its maps itself only needs the room to name its map.
+    const packet = await this.request(normalizedId, Boolean(directLoad));
+    if (packet.manifest) return this.toMapData(packet);
+    // The map room has no compiled stream: a standalone game loads its maps on the client.
+    if (directLoad && packet.mapId) return directLoad(packet.mapId.replace(/^map-/, ""));
+    throw new Error(`Map '${packet.mapId}' has no visual stream for this room`);
+  }
+
+  private request(mapId: string | undefined, local: boolean): Promise<MapStreamPacket<TManifestData, TChunkData>> {
+    const promise = new Promise<MapStreamPacket<TManifestData, TChunkData>>((resolve, reject) => {
+      const timeoutMs = Math.max(1, this.options.timeoutMs ?? 10_000);
+      const waiter: ViewWaiter = { mapId, resolve, reject, timer: undefined as unknown as ReturnType<typeof setTimeout> };
+      waiter.timer = setTimeout(() => {
+        this.waiters = this.waiters.filter((entry) => entry !== waiter);
+        reject(new Error(`Map view${mapId ? ` '${mapId}'` : ""} was not received after ${timeoutMs}ms`));
+      }, timeoutMs);
+      this.waiters.push(waiter);
+    });
+    // Register the waiter before asking, so a local transport cannot answer first.
+    this.socket.emit(MAP_VIEW_REQUEST_EVENT, {
+      ...(mapId ? { mapId } : {}),
+      ...(local ? { local: true } : {}),
+    });
+    return promise;
+  }
+
+  private receive(packet: MapStreamPacket<TManifestData, TChunkData>): void {
+    if (!packet || typeof packet.mapId !== "string") return;
+    const mapId = packet.mapId.replace(/^map-/, "");
+    const matched = this.waiters.filter((waiter) => !waiter.mapId || waiter.mapId === mapId);
+    if (matched.length === 0) return;
+    this.waiters = this.waiters.filter((waiter) => !matched.includes(waiter));
+    matched.forEach((waiter) => {
+      clearTimeout(waiter.timer);
+      waiter.resolve(packet);
+    });
+  }
+
+  private toMapData(packet: MapStreamPacket<TManifestData, TChunkData>): MapData {
+    const { adapter } = this.options;
+    const manifest = packet.manifest!;
+    const state = adapter.createState(manifest);
+    packet.chunks.forEach((chunk) => adapter.applyChunk(state, chunk));
+    return {
+      id: manifest.mapId,
+      width: manifest.width,
+      height: manifest.height,
+      data: adapter.getData(state),
+      component: adapter.component,
+      params: adapter.getParams?.(manifest),
+    };
+  }
+}
+
 class MapStreamingLoadMapService<TManifestData, TChunkData, TState> {
   private socket?: AbstractWebsocket;
   private stream?: MapStreamingClientService<TManifestData, TChunkData, TState>;
+  private view?: MapViewClientService<TManifestData, TChunkData, TState>;
   private updateMap?: UpdateMapService;
 
   constructor(
@@ -225,6 +308,7 @@ class MapStreamingLoadMapService<TManifestData, TChunkData, TState> {
     if (this.stream) return;
     this.socket = inject<AbstractWebsocket>(this.context as Context, WebSocketToken);
     this.stream = new MapStreamingClientService(this.socket, this.options);
+    this.view = new MapViewClientService(this.socket, this.options);
   }
 
   async load(mapId: string): Promise<MapData> {
@@ -235,6 +319,16 @@ class MapStreamingLoadMapService<TManifestData, TChunkData, TState> {
     this.updateMap ??= inject<UpdateMapService>(this.context as Context, UpdateMapToken);
     await this.updateMap.update(map);
     return map;
+  }
+
+  /**
+   * Load the picture of a map for a custom gameplay-room scene. The map comes
+   * from the visual stream of the room (`@RpgRoom({ map })`), or from the
+   * direct loader in standalone mode; it never updates the map scene.
+   */
+  async openView(mapId?: string): Promise<MapData> {
+    this.initialize();
+    return this.view!.open(mapId);
   }
 }
 

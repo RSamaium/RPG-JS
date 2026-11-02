@@ -3,7 +3,7 @@ import BuiltinSceneMap from "./components/scenes/draw-map.ce";
 import { inject } from './core/inject'
 import { signal, bootstrapCanvas, Howl, Howler, trigger, type Trigger, type ControlsDirective } from "canvasengine";
 import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
-import { LoadMapService, LoadMapToken } from "./services/loadMap";
+import { LoadMapService, LoadMapToken, type MapData } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
 import { EMOTION_BUBBLE_ANIMATION_ID, LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
@@ -128,6 +128,8 @@ export class RpgClientEngine<T = any> {
   /** CanvasEngine component selected for a custom gameplay room. */
   public readonly activeRoomSceneComponent = signal<any>(undefined);
   private readonly clientSceneRegistry: RpgClientSceneRegistry;
+  /** Settles once the connection of the active custom room is open (map views wait for it). */
+  private sceneRoomConnected: Promise<void> = Promise.resolve();
   private activeClientScene?: RpgClientSceneDefinition;
   private selector: HTMLElement;
   public globalConfig: T;
@@ -264,6 +266,12 @@ export class RpgClientEngine<T = any> {
   /** True until the destination room's first local-player position (spawn / changeMap target) is applied. */
   private awaitingTransferSpawnSync = false;
   private currentMapRoomId?: string;
+  /**
+   * Incremented by every map or room change. A map load that resumes after a
+   * later change (for example `changeRoom()` during a streamed map load) is
+   * stale and must not touch the socket room, the map data or the active scene.
+   */
+  private sceneTransferGeneration = 0;
   private activeMapStreamController?: { attach(map: RpgClientMap): void; detach(): void };
   private socketListenersInitialized = false;
   private clientReadyForMapChanges = false;
@@ -1019,6 +1027,7 @@ export class RpgClientEngine<T = any> {
   }
 
   private async handleChangeMap(data: any) {
+    const generation = ++this.sceneTransferGeneration;
     const nextMapId = typeof data?.mapId === "string" ? data.mapId : undefined;
     const descriptor: RpgRoomDescriptor | undefined = nextMapId
       ? {
@@ -1029,12 +1038,14 @@ export class RpgClientEngine<T = any> {
       : undefined;
     if (descriptor) {
       await this.leaveActiveClientScene(descriptor);
+      if (generation !== this.sceneTransferGeneration) return;
       this.sceneRoom.reset();
       this.activeRoom.set(descriptor);
     }
     this.beginMapTransfer(nextMapId, data?.continueMovement === true);
     const transferToken = typeof data?.transferToken === "string" ? data.transferToken : undefined;
-    await this.loadScene(data.mapId, transferToken);
+    await this.loadScene(data.mapId, transferToken, generation);
+    if (generation !== this.sceneTransferGeneration) return;
     // Keep the custom room scene mounted until the destination map has valid
     // render data. Mounting SceneMap earlier can briefly feed a detached or
     // incomplete streamed map into its CanvasEngine component.
@@ -1062,9 +1073,14 @@ export class RpgClientEngine<T = any> {
       kind: packet.kind,
       name: packet.name,
     };
+    this.sceneTransferGeneration++;
 
     await this.leaveActiveClientScene(descriptor);
     this.sceneRoom.reset(descriptor);
+    // The scene mounts before the socket reaches the room: requests it sends on
+    // mount, such as a map view, must wait for the new connection.
+    let markConnected!: () => void;
+    this.sceneRoomConnected = new Promise<void>((resolve) => { markConnected = resolve; });
     await definition.onBeforeEnter?.(this.sceneRoom, descriptor);
     this.sceneMap.reset();
     this.sceneMap.configureClientPrediction(false);
@@ -1084,9 +1100,11 @@ export class RpgClientEngine<T = any> {
 
     try {
       await this.webSocket.reconnect();
+      markConnected();
       await definition.onEnter?.(this.sceneRoom, descriptor);
     }
     catch (error) {
+      markConnected();
       await this.callConnectError(error);
       throw error;
     }
@@ -1234,11 +1252,17 @@ export class RpgClientEngine<T = any> {
     });
   }
 
-  private async loadScene(mapId: string, transferToken?: string) {
+  private async loadScene(
+    mapId: string,
+    transferToken?: string,
+    generation = this.sceneTransferGeneration,
+  ) {
+    const isStale = () => generation !== this.sceneTransferGeneration;
     // Keep the previous scene mounted while async before-loading hooks install
     // and animate their transition UI. The hook contract is awaited, allowing
     // modules to report when the old scene is fully covered.
     await lastValueFrom(this.hooks.callHooks("client-sceneMap-onBeforeLoading", this.sceneMap));
+    if (isStale()) return;
 
     this.activeMapStreamController?.detach();
     this.activeMapStreamController = undefined;
@@ -1277,13 +1301,16 @@ export class RpgClientEngine<T = any> {
       await this.webSocket.reconnect()
     }
     catch (error) {
+      if (isStale()) return;
       this.mapTransitionInProgress = false;
       this.pendingMapTransferInput = undefined;
       this.stopPingPong();
       await this.callConnectError(error);
       throw error;
     }
+    if (isStale()) return;
     const res = await this.loadMapService.load(mapId)
+    if (isStale()) return;
     const loadedLighting = typeof res?.lighting !== "undefined"
       ? res.lighting
       : res?.data?.lighting;
@@ -2484,6 +2511,32 @@ export class RpgClientEngine<T = any> {
   /** Return the active map scene or synchronized custom gameplay room. */
   getCurrentRoom(): RpgClientMap | RpgClientRoom {
     return this.activeSceneKind() === "map" ? this.sceneMap : this.sceneRoom;
+  }
+
+  /**
+   * Load the picture of a map (terrain and static decor) for a custom
+   * gameplay-room scene, without its events, players, hitboxes, or physics.
+   *
+   * With a streamed map provider, the map comes from the room declared with
+   * `@RpgRoom({ map })`, and `mapId` may be omitted. A plain `provideLoadMap()`
+   * loader needs `mapId`. Prefer the `<MapView />` component, which calls it.
+   *
+   * @param mapId - Map to show, without the `map-` prefix
+   * @returns The component, render data, and params of the map
+   *
+   * @example
+   * ```ts
+   * const view = await engine.openMapView("forest")
+   * // <view.component data={view.data} params={view.params} viewOnly={true} />
+   * ```
+   */
+  async openMapView(mapId?: string): Promise<MapData> {
+    const service = this.loadMapService as LoadMapService & { openView?: (mapId?: string) => Promise<MapData> };
+    if (typeof service.openView !== "function") {
+      throw new Error("The installed map loader cannot open a map view");
+    }
+    await this.sceneRoomConnected;
+    return service.openView(mapId);
   }
 
   emitSceneMapHook(hookName: string, ...args: any[]): void {

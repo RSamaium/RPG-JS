@@ -6,7 +6,7 @@
     <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={elementsAlwaysLowPixiChildren} />
     <Container scale={eventLayerScale}>
-      <StudioEventLayer pixiChildren={eventLayerPixiChildren} hideEvents={eventsHidden} /> 
+      <StudioEventLayer pixiChildren={eventLayerPixiChildren} hideEvents={eventsHidden} hidePlayers={isViewOnly} /> 
     </Container>
     <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
 </Container>
@@ -65,9 +65,15 @@
       composeStudioMapPluginOptions
     } from '../studio-map-plugins'
 
-    const { data } = defineProps()
+    const { data, viewOnly } = defineProps({
+      viewOnly: { default: false }
+    })
 
     const engine = inject(RpgClientEngine);
+    // `<MapView />` of a gameplay room: draw the terrain and static decor only, and leave the
+    // map scene (its lighting, light spots, weather, events, and players) untouched.
+    const isViewOnly = (typeof viewOnly === 'function' ? viewOnly() : viewOnly) === true
+    const sceneMap = isViewOnly ? undefined : engine.sceneMap
     const terrainWallShadowWorld = new PixiContainer()
     const groundShadowWorld = new PixiContainer()
     const elementsAlwaysLowWorld = new PixiContainer()
@@ -221,7 +227,7 @@
 
     const mapLighting = computed(() => {
       const mapData = data()
-      return mapData?.lighting ?? engine.sceneMap.lighting?.() ?? null
+      return mapData?.lighting ?? sceneMap?.lighting?.() ?? null
     })
 
     const renderTerrainWallShadows = async () => {
@@ -271,9 +277,9 @@
         syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
         terrainWallOcclusionRenderer.destroy()
         terrainWallShadowRenderer.destroy()
-        elementsAlwaysLowRenderer.destroy(engine.sceneMap)
-        elementsLowRenderer.destroy(engine.sceneMap)
-        elementsHighRenderer.destroy(engine.sceneMap)
+        elementsAlwaysLowRenderer.destroy(sceneMap)
+        elementsLowRenderer.destroy(sceneMap)
+        elementsHighRenderer.destroy(sceneMap)
         builderLayers?.then((layers) => Object.values(layers).forEach((layer) => layer.destroy()))
         builderLayers = null
       }
@@ -592,7 +598,7 @@
     }
 
     // `hideEvents` is a key of the scene data a map extension sets while the map is edited: the events the game runs are not drawn.
-    const eventsHidden = computed(() => data().hideEvents === true)
+    const eventsHidden = computed(() => isViewOnly || data().hideEvents === true)
 
     const mapBounds = computed(() => {
       const mapData = map()
@@ -626,7 +632,7 @@
       const shadowBudget = { remaining: STUDIO_ELEMENT_SHADOW_CASTER_LIMIT }
       const renderOptions = {
         terrain: data().terrainRenderData,
-        sceneMap: engine.sceneMap,
+        sceneMap,
         lighting: mapLighting(),
         shadowBudget,
         shadowCasterLimit: STUDIO_ELEMENT_SHADOW_CASTER_LIMIT,
@@ -681,14 +687,15 @@
     const players = computed(() => engine.sceneMap.players)
     const events = computed(() => engine.sceneMap.events)
 
+    const mapWeather = computed(() => data().weather ?? data().params?.weather ?? null)
+
     effect(() => {
-      const weather = data().weather ?? data().params?.weather ?? null;
-      untracked(() => engine.sceneMap.setMapWeatherFallback(weather));
+      const weather = mapWeather();
+      if (sceneMap) untracked(() => sceneMap.setMapWeatherFallback(weather));
     })
 
     const weatherOptions = computed(() => {
-      const sceneMapWeather = (engine.sceneMap as any).weather;
-      const effectiveWeather = sceneMapWeather();
+      const effectiveWeather = sceneMap ? (sceneMap as any).weather() : mapWeather();
       if (!effectiveWeather) {
         return null;
       }

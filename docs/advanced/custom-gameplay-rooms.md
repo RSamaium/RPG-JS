@@ -172,6 +172,73 @@ loops, DOM listeners, and input handlers. RPGJS clears the synchronized room
 signals when the scene changes, but it cannot dispose listeners created by the
 feature itself.
 
+## Show the picture of a map
+
+A room can be played on top of a map: a tactical battle on its grid, a battle
+scene, a replay, or a lobby that shows its arena. The room declares which map
+it shows, and its scene renders `<MapView />`. The view draws the terrain and
+the static decor of the map with the renderer of the map scene, but no event,
+player, hitbox, prediction, or physics of that map. Every player of the room
+sees the same picture, and nobody's position on the map is shared.
+
+Name the map with the `map` option. It receives the path parameters and returns
+a map id, or `undefined` for a room instance that shows no map:
+
+```ts
+@RpgRoom({
+  kind: "tactical",
+  path: "tactical-{id}",
+  // "forest__battle-7" shows the map "forest"
+  map: (params) => params.id.split("__")[0],
+})
+export class TacticalRoom extends RpgGameplayRoom {}
+```
+
+The resolved id is available as `room.mapId` on the server. Render the view in
+the client scene, inside the scene's own camera:
+
+`tactical-scene.ce`:
+
+```html
+<Viewport worldWidth={1280} worldHeight={960}>
+  <MapView onLoad={onMapLoad} />
+  <!-- units, grid, and effects of the battle -->
+</Viewport>
+
+<script>
+  import { MapView } from "@rpgjs/client"
+
+  const onMapLoad = (map) => {
+    console.log(`Map ${map.id}: ${map.width}x${map.height}`)
+  }
+</script>
+```
+
+`<MapView />` accepts an optional `mapId`, and `onLoad` and `onError`
+callbacks. Without `onError`, a failure is logged to the console. The lower
+level `engine.openMapView(mapId?)` returns the same `{ id, width, height,
+component, data, params }` for a scene that renders the component itself; pass
+`viewOnly={true}` to that component.
+
+Where the picture comes from depends on the map loader of the game:
+
+| Map loader | Mode | Source of the picture |
+| --- | --- | --- |
+| Streamed maps (`provideClientMapStreaming`, Studio) | MMORPG | The room asks the map room for its compiled stream once, then sends the manifest and every chunk, without hitboxes, to each player |
+| Streamed maps with a `directLoad` loader | Standalone | The client loads the map itself, without updating the server map |
+| `provideLoadMap()` | Both | The loader is called on the client; `mapId` is required |
+
+In MMORPG mode, the room reaches the map room through the room-to-room channel
+of the server: an in-process request on Node.js, and a request between Durable
+Objects on Cloudflare, which wakes the map room if it sleeps. The request
+carries `RPGJS_MAP_UPDATE_TOKEN`, since the map room only discloses the whole
+map at once to the server. The room keeps the stream for its lifetime: a map
+published again while a battle runs is shown by the next room instance.
+
+The whole map is sent when a player opens the view, which suits arenas and
+battle maps. A map component that reads the map scene should honor `viewOnly`
+and leave the map scene untouched; the Studio map renderer does.
+
 ## Public and private state
 
 `RpgGameplayRoom.state` is synchronized to every connection in the room. Store

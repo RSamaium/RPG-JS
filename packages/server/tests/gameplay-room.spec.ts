@@ -1,9 +1,17 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { h, Container } from "canvasengine";
 import { testing, type TestingFixture } from "@rpgjs/testing";
-import { defineModule } from "@rpgjs/common";
 import { createStatesSnapshotDeep } from "@signe/sync";
 import {
+  defineModule,
+  getMapChunkKey,
+  MAP_VIEW_EVENT,
+  MAP_VIEW_REQUEST_EVENT,
+  type MapStreamDefinition,
+  type MapStreamPacket,
+} from "@rpgjs/common";
+import {
+  provideServerMapStreaming,
   provideServerRooms,
   RpgGameplayRoom,
   RpgPlayer,
@@ -37,6 +45,42 @@ class BattleRoom extends RpgGameplayRoom<BattleState> {
       lastPlayerId: player.id,
     }));
   }
+}
+
+@RpgRoom({
+  kind: "arena",
+  path: "arena-{id}",
+  map: (params) => params.id.split("__")[0],
+})
+class ArenaRoom extends RpgGameplayRoom {}
+
+function compileTestMap(mapId: string): MapStreamDefinition {
+  const chunks = Object.fromEntries([0, 1].map((x) => {
+    const key = getMapChunkKey(x, 0);
+    return [key, {
+      key,
+      x,
+      y: 0,
+      bounds: { x: x * 100, y: 0, width: 100, height: 100 },
+      renderData: { tile: x },
+      hitboxes: [{ x: x * 100, y: 0, width: 10, height: 10 }],
+    }];
+  }));
+  return {
+    manifest: {
+      protocol: 1,
+      mapId,
+      revision: "one",
+      width: 200,
+      height: 100,
+      chunkWidth: 100,
+      chunkHeight: 100,
+      columns: 2,
+      rows: 1,
+      renderData: {},
+    },
+    chunks,
+  };
 }
 
 @RpgRoom({ kind: "duel", path: "battle-{slug}" })
@@ -92,6 +136,45 @@ describe("custom gameplay rooms", () => {
     expect(() => new RpgRoomRegistry([BattleRoom, BattleRoom])).toThrow("Duplicate RPGJS room kind");
     expect(() => new RpgRoomRegistry([BattleRoom, AmbiguousBattleRoom])).toThrow("Duplicate RPGJS room path");
     expect(() => RpgRoom({ kind: "Invalid Kind", path: "invalid-{id}" })).toThrow("Invalid RPGJS room kind");
+  });
+
+  test("map room serves its visual stream without hitboxes, and the room names its map", async () => {
+    const compile = vi.fn((mapData: { id: string }) => compileTestMap(String(mapData.id).replace(/^map-/, "")));
+    fixture = await testing(
+      [{ server: serverModule, client: clientModule }, { server: provideServerMapStreaming({ compile }) }],
+      { providers: [provideClientScenes([{ kind: "arena", component: () => h(Container) }])] },
+      { providers: [provideServerRooms([ArenaRoom])] },
+    );
+    const client = await fixture.createClient();
+    expect(await client.player.changeMap("start", { x: 100, y: 100 })).toBe(true);
+    await fixture.wait(200);
+
+    // The route a gameplay room calls through the room-to-room channel in MMORPG mode.
+    const map = client.player.getCurrentMap() as any;
+    const response = await map.mapView(new Request("http://localhost/parties/main/map-start/map/view"));
+    expect(response).toMatchObject({ mapId: "start", revision: "one", manifest: { mapId: "start" }, removed: [] });
+    expect(response.chunks.map((chunk: { key: string }) => chunk.key)).toEqual(["0:0", "1:0"]);
+    expect(response.chunks.every((chunk: { hitboxes: unknown[] }) => chunk.hitboxes.length === 0)).toBe(true);
+
+    const arenaChange = client.waitForRoomChange("arena");
+    expect(await client.player.changeRoom({ kind: "arena", params: { id: "start__battle" } })).toBe(true);
+    const player = await arenaChange;
+    await fixture.wait(0);
+    expect(player.getCurrentRoom<ArenaRoom>()?.mapId).toBe("start");
+    expect(player.getCurrentMap()).toBeNull();
+    const compilations = compile.mock.calls.length;
+
+    // A client that loads its maps itself only asks the room which map it shows.
+    const packet = await new Promise<MapStreamPacket>((resolve) => {
+      const listener = (value: MapStreamPacket) => {
+        client.client.socket.off(MAP_VIEW_EVENT, listener);
+        resolve(value);
+      };
+      client.client.socket.on(MAP_VIEW_EVENT, listener);
+      client.client.socket.emit(MAP_VIEW_REQUEST_EVENT, { local: true });
+    });
+    expect(packet).toEqual({ mapId: "start", revision: "", chunks: [], removed: [] });
+    expect(compile.mock.calls.length).toBe(compilations);
   });
 
   test("transfers one player map -> battle -> map and hydrates authoritative state", async () => {
