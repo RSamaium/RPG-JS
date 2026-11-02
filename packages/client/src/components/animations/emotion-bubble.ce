@@ -1,0 +1,89 @@
+<Container x y scale zIndex={10000}>
+    <Sprite image rectangle anchor={[0.5, 1]} />
+</Container>
+
+<script>
+    import { animatedSignal, computed, mount } from "canvasengine";
+    import { EMOTION_BUBBLES, EMOTION_BUBBLE_SHEET } from "@rpgjs/common";
+    import defaultImage from "./emotion-bubble.png";
+
+    // The icon sheet comes from the animation params: the bundled sheet is only
+    // a default, so a game can send its own `image` and grid.
+    const {
+        object,
+        onFinish,
+        emotion,
+        image,
+        width,
+        height,
+        framesWidth,
+        framesHeight,
+        frame,
+        offsetX,
+        offsetY,
+        hold,
+        size,
+    } = defineProps({
+        image: { default: defaultImage },
+        width: { default: EMOTION_BUBBLE_SHEET.width },
+        height: { default: EMOTION_BUBBLE_SHEET.height },
+        framesWidth: { default: EMOTION_BUBBLE_SHEET.framesWidth },
+        framesHeight: { default: EMOTION_BUBBLE_SHEET.framesHeight },
+        frame: { default: [] },
+        offsetX: { default: 0 },
+        offsetY: { default: -8 },
+        hold: { default: 1700 },
+        size: { default: 2 },
+    });
+
+    const customCell = frame();
+    const cell = customCell?.length === 2 ? customCell : EMOTION_BUBBLES[emotion()];
+    if (!cell) {
+        console.warn(`[rpgjs] Unknown emotion bubble "${emotion()}"`);
+        onFinish?.();
+    }
+    const [column, row] = cell ?? [0, 0];
+
+    const frameWidth = width() / framesWidth();
+    const frameHeight = height() / framesHeight();
+    const rectangle = {
+        x: column * frameWidth,
+        y: row * frameHeight,
+        width: frameWidth,
+        height: frameHeight,
+    };
+
+    // `object` may arrive wrapped in a signal depending on how props are resolved.
+    const target = typeof object === "function" ? object() : object;
+
+    // Follow the character: read its live position every frame instead of
+    // snapshotting the spawn position.
+    const x = computed(() => {
+        const hitbox = target?.hitbox?.();
+        return target.x() + (hitbox?.w ?? 0) / 2 + offsetX();
+    });
+    const y = computed(() => target.y() + offsetY());
+
+    const easeOutBounce = (t) => {
+        const n1 = 7.5625;
+        const d1 = 2.75;
+        if (t < 1 / d1) return n1 * t * t;
+        if (t < 2 / d1) return n1 * (t -= 1.5 / d1) * t + 0.75;
+        if (t < 2.5 / d1) return n1 * (t -= 2.25 / d1) * t + 0.9375;
+        return n1 * (t -= 2.625 / d1) * t + 0.984375;
+    };
+    const easeInBounce = (t) => 1 - easeOutBounce(1 - t);
+
+    // Pop in with a bounce, stay visible, then shrink away.
+    const progress = animatedSignal(0, { duration: 500, ease: easeOutBounce });
+    const scale = computed(() => progress() * size());
+
+    mount(() => {
+        if (!cell) return;
+        progress
+            .set(1)
+            .then(() => new Promise((resolve) => setTimeout(resolve, hold())))
+            .then(() => progress.set(0, { duration: 500, ease: easeInBounce }))
+            .then(() => onFinish?.());
+    });
+</script>

@@ -1,0 +1,43 @@
+<Container x={x} y={y} zIndex={1000}>
+  <Graphics draw={drawShadow} />
+  <Container y={lift} scale={squash}>
+    <Graphics draw={drawBomb} />
+  </Container>
+</Container>
+
+<script>
+  import { computed } from "canvasengine";
+
+  // z is the height of the arc: the bomb is drawn above its shadow.
+  const { x, y, z, phase, elapsed } = defineProps({
+    x: Number,
+    y: Number,
+    z: { type: Number, default: 0 },
+    phase: { type: String, default: "out" },
+    elapsed: { type: Number, default: 0 },
+  });
+
+  const lift = computed(() => -(z() ?? 0) - 6);
+  const lit = computed(() => phase() === "stuck");
+  // The fuse blinks faster and faster once the bomb has landed.
+  const blink = computed(() => lit() && Math.sin((elapsed() ?? 0) * (8 + (elapsed() ?? 0) * 18)) > 0);
+  const squash = computed(() => (blink() ? 1.12 : 1));
+
+  function drawShadow(g) {
+    g.clear();
+    const height = z() ?? 0;
+    const size = Math.max(0.4, 1 - height / 90);
+    g.ellipse(0, 2, 9 * size, 3.5 * size);
+    g.fill({ color: 0x000000, alpha: 0.3 * size });
+  }
+
+  function drawBomb(g) {
+    g.clear();
+    g.circle(0, 0, 8);
+    g.fill({ color: blink() ? 0xef4444 : 0x1f2937 });
+    g.circle(-3, -3, 2.5);
+    g.fill({ color: 0xffffff, alpha: 0.5 });
+    g.rect(-1, -12, 2, 4);
+    g.fill({ color: 0xc98a1c });
+  }
+</script>

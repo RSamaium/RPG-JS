@@ -17,6 +17,7 @@ Core server-side player commands defined on the main Player class.
 - [changeRoom](#changeroom)
 - [clientVisual](#clientvisual)
 - [createDynamicEvent](#createdynamicevent)
+- [Drop Loot](#drop-loot)
 - [emit](#emit)
 - [flash](#flash)
 - [getCurrentRoom](#getcurrentroom)
@@ -353,6 +354,46 @@ createDynamicEvent(eventObj: EventPosOption): Promise<string | undefined> | unde
 ### Returns
 
 The created event id, or `undefined` if the player is not on a map.
+
+## Drop Loot
+
+Pop collectable loot out of this event or player.
+
+The pickups arc out of the center of the character, then are collected
+with the `pickup` mode (`magnet` by default). Use it for a tree that is
+cut, a chest, a barrel, or any scripted reward. See `map.dropLoot()` for
+every option.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Member of: `Player`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+event.dropLoot(rewards, options?)
+```
+
+### Parameters
+
+- `rewards`: `LootRewards`
+- `options?`: `DropLootOptions`
+
+### Returns
+
+Ids of the spawned pickup events
+
+### Examples
+
+```ts
+onAction(player) {
+  this.dropLoot(
+    { items: [{ itemId: "wood", amount: 2 }, { itemId: "apple", chance: 30 }] },
+    { owner: player, ownership: "player" }
+  );
+}
+```
 
 ## emit
 
@@ -1238,6 +1279,7 @@ player.showComponentAnimation("heal", {
   amount: 50
 });
 ```
+
 
 ## stopAllSounds
 

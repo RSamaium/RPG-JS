@@ -248,6 +248,36 @@ describe("BattleAi defeat flow", () => {
     });
   });
 
+  test("pops gold and items as world loot with rewards.drop", () => {
+    vi.useFakeTimers();
+    const event = createEvent();
+    const dropLoot = vi.fn(async () => []);
+    event.getCurrentMap = vi.fn(() => ({ dropLoot }) as any);
+    (event as any).hitbox = () => ({ w: 32, h: 32 });
+    event.x = vi.fn(() => 100);
+    event.y = vi.fn(() => 50);
+    const attacker = createPlayer();
+    const ai = new BattleAi(event as any, {
+      rewards: { exp: 12, gold: 9, items: ["potion"], drop: { ownership: "attacker" } },
+    });
+
+    ai.handleDamage(attacker as any, { damage: 10, defeated: true });
+
+    expect(attacker.exp).toBe(12);
+    expect(attacker.gold).toBe(0);
+    expect(attacker.addItem).not.toHaveBeenCalled();
+    // The loot waits for the client hit-stop before spawning.
+    expect(dropLoot).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(200);
+    expect(dropLoot).toHaveBeenCalledWith(expect.objectContaining({
+      x: 116,
+      y: 66,
+      ownership: "attacker",
+      owner: attacker,
+      rewards: expect.objectContaining({ gold: 9 }),
+    }));
+  });
+
   test("supports the context onDefeated callback and manual reward control", () => {
     const event = createEvent();
     const attacker = createPlayer();

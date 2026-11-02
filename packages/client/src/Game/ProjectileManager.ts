@@ -1,5 +1,5 @@
 import { computed, signal, type WritableSignal } from "canvasengine";
-import { Hooks } from "@rpgjs/common";
+import { Hooks, sampleTrajectory } from "@rpgjs/common";
 import { normalizeRoomMapId } from "../utils/mapId";
 
 export interface ClientProjectileSpawn {
@@ -19,7 +19,24 @@ export interface ClientProjectileSpawn {
   collisionMask?: number;
   ignoreOwner?: boolean;
   predictImpact?: boolean;
+  /** Trajectory name and parameters, sampled like the server does. */
+  trajectory?: { type: string; [param: string]: unknown };
 }
+
+/** Change of a flying projectile sent by the server (bounce, return, planted). */
+export interface ClientProjectileUpdate {
+  id: string;
+  origin?: { x: number; y: number };
+  direction?: { x: number; y: number };
+  trajectory?: { type: string; [param: string]: unknown };
+  /** Restart the trajectory clock from now. */
+  restart?: boolean;
+  /** Freeze the projectile at this point. */
+  stopAt?: { x: number; y: number };
+}
+
+/** Resolve the current center of a projectile launcher. */
+export type ProjectileOwnerResolver = (ownerId: string) => { x: number; y: number } | undefined;
 
 export interface ClientProjectileImpact {
   id: string;
@@ -49,6 +66,10 @@ export interface RenderedProjectileProps extends ClientProjectileSpawn {
   impactElapsed?: number;
   impactProgress?: number;
   destroyed?: boolean;
+  /** Height above the ground: draw the sprite at `y - z` and a shadow at `y`. */
+  z: number;
+  /** Part of the path: `out`, `back`, `stuck`... */
+  phase: string;
 }
 
 export interface RenderedProjectile {
@@ -79,6 +100,9 @@ interface RuntimeProjectile {
   impactStartedAt?: number;
   destroyAt?: number;
   destroyReason?: string;
+  /** Start of the current trajectory clock, after a restart. */
+  restartedAt?: number;
+  stopAt?: { x: number; y: number };
   /** Reactive props handed to the rendered component, updated every step. */
   renderProps?: ProjectileRenderProps;
 }
@@ -103,7 +127,7 @@ export interface ProjectileRenderItem {
 }
 
 const PROJECTILE_DYNAMIC_PROPS = [
-  "x", "y", "angle", "distance", "elapsed", "progress",
+  "x", "y", "z", "phase", "angle", "distance", "elapsed", "progress",
   "impact", "impactElapsed", "impactProgress", "destroyed",
 ] as const;
 
@@ -131,6 +155,7 @@ export class ProjectileManager {
   constructor(
     private readonly hooks: Hooks,
     private readonly predictionResolver?: ProjectilePredictionResolver,
+    private readonly ownerResolver?: ProjectileOwnerResolver,
   ) {}
 
   current = computed<RenderedProjectile[]>(() => {
@@ -266,6 +291,28 @@ export class ProjectileManager {
     this.touch();
   }
 
+  /**
+   * Apply server changes to flying projectiles: a bounce or an early return
+   * changes the trajectory, a planted projectile freezes where it stopped.
+   */
+  updateBatch(updates: ClientProjectileUpdate[], context: { mapId?: string } = {}): void {
+    if (!this.acceptsMap(context.mapId)) return;
+    const now = Date.now();
+    for (const update of updates) {
+      const projectile = this.projectiles.get(update.id);
+      if (!projectile) continue;
+      const spawn = projectile.spawn;
+      if (update.origin) spawn.origin = update.origin;
+      if (update.direction) spawn.direction = update.direction;
+      if (update.trajectory) spawn.trajectory = update.trajectory;
+      if (update.restart) projectile.restartedAt = now;
+      if (update.stopAt) projectile.stopAt = update.stopAt;
+      // The local prediction was made for the previous path.
+      projectile.predictedImpact = undefined;
+    }
+    this.touch();
+  }
+
   clear(): void {
     this.projectiles.clear();
     this.touch();
@@ -306,24 +353,12 @@ export class ProjectileManager {
     }
     const elapsed = elapsedMs / 1000;
     const ttl = Math.max(0.001, spawn.ttl);
-    const rawDistance = Math.min(spawn.speed * elapsed, spawn.range);
-    const predictedImpact = this.getActivePredictedImpact(projectile, now, rawDistance);
-    const visualImpact = projectile.visualImpact ?? projectile.impact;
-    const distance = visualImpact?.distance ?? predictedImpact?.distance ?? rawDistance;
-    const progress = Math.min(1, distance / spawn.range);
-    const x = visualImpact?.x ?? predictedImpact?.x ?? spawn.origin.x + spawn.direction.x * distance;
-    const y = visualImpact?.y ?? predictedImpact?.y ?? spawn.origin.y + spawn.direction.y * distance;
     const impactElapsedMs = projectile.impactStartedAt !== undefined
       ? Math.max(0, now - projectile.impactStartedAt)
       : undefined;
-    return {
+    const base = {
       ...spawn,
-      x,
-      y,
-      angle: Math.atan2(spawn.direction.y, spawn.direction.x),
-      distance,
       elapsed,
-      progress,
       impact: projectile.impact,
       impactElapsed: impactElapsedMs === undefined ? undefined : impactElapsedMs / 1000,
       impactProgress: impactElapsedMs === undefined
@@ -331,6 +366,77 @@ export class ProjectileManager {
         : Math.min(1, impactElapsedMs / this.impactDurationMs),
       destroyed: projectile.destroyAt !== undefined,
       ttl,
+    };
+
+    const trajectoryType = spawn.trajectory?.type ?? "linear";
+    if (trajectoryType !== "linear" || projectile.restartedAt !== undefined || projectile.stopAt) {
+      return this.toTrajectoryProps(projectile, base, now);
+    }
+
+    const rawDistance = Math.min(spawn.speed * elapsed, spawn.range);
+    const predictedImpact = this.getActivePredictedImpact(projectile, now, rawDistance);
+    const visualImpact = projectile.visualImpact ?? projectile.impact;
+    const distance = visualImpact?.distance ?? predictedImpact?.distance ?? rawDistance;
+    const progress = Math.min(1, distance / spawn.range);
+    const x = visualImpact?.x ?? predictedImpact?.x ?? spawn.origin.x + spawn.direction.x * distance;
+    const y = visualImpact?.y ?? predictedImpact?.y ?? spawn.origin.y + spawn.direction.y * distance;
+    return {
+      ...base,
+      x,
+      y,
+      z: 0,
+      phase: "out",
+      angle: Math.atan2(spawn.direction.y, spawn.direction.x),
+      distance,
+      progress,
+    };
+  }
+
+  /** Sample a named trajectory with the same parameters as the server. */
+  private toTrajectoryProps(
+    projectile: RuntimeProjectile,
+    base: Omit<RenderedProjectileProps, "x" | "y" | "z" | "phase" | "angle" | "distance" | "progress">,
+    now: number,
+  ): RenderedProjectileProps {
+    const spawn = projectile.spawn;
+    if (projectile.stopAt) {
+      return {
+        ...base,
+        x: projectile.stopAt.x,
+        y: projectile.stopAt.y,
+        z: 0,
+        phase: "stuck",
+        angle: Math.atan2(spawn.direction.y, spawn.direction.x),
+        distance: Math.hypot(projectile.stopAt.x - spawn.origin.x, projectile.stopAt.y - spawn.origin.y),
+        progress: 1,
+      };
+    }
+    const delayMs = (spawn.delay ?? 0) * 1000;
+    const startedAt = projectile.restartedAt ?? projectile.createdAt + delayMs;
+    const elapsed = Math.max(0, now - startedAt) / 1000;
+    const { type, ...params } = spawn.trajectory ?? { type: "linear" };
+    const context = {
+      origin: spawn.origin,
+      direction: spawn.direction,
+      params: { speed: spawn.speed, range: spawn.range, ...params },
+      owner: () => (spawn.ownerId ? this.ownerResolver?.(spawn.ownerId) : undefined),
+    };
+    const point = sampleTrajectory(type, elapsed, context);
+    const ahead = sampleTrajectory(type, elapsed + 1 / 60, context);
+    const heading = Math.hypot(ahead.x - point.x, ahead.y - point.y) > 0.01
+      ? Math.atan2(ahead.y - point.y, ahead.x - point.x)
+      : Math.atan2(spawn.direction.y, spawn.direction.x);
+    const visualImpact = projectile.visualImpact ?? projectile.impact;
+    const distance = Math.hypot(point.x - spawn.origin.x, point.y - spawn.origin.y);
+    return {
+      ...base,
+      x: visualImpact?.x ?? point.x,
+      y: visualImpact?.y ?? point.y,
+      z: visualImpact ? 0 : point.z,
+      phase: point.phase,
+      angle: heading,
+      distance,
+      progress: Math.min(1, elapsed / Math.max(0.001, spawn.ttl)),
     };
   }
 

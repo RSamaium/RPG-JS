@@ -49,6 +49,7 @@ import { Log } from "../logs/log";
 import { createMapUpdateHeaders, isMapUpdateAuthorized, MAP_UPDATE_TOKEN_ENV } from "../map-update";
 import { emitServerStep } from "../server-step";
 import { RpgMapProjectiles } from "../projectiles";
+import { RpgMapLoot, type MapDropLootOptions } from "../loot";
 import type { DamageFormulas } from "../Player/BattleManager";
 import { runPlayerAuthenticationHooks } from "../auth";
 import {
@@ -289,8 +290,12 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private _eventOwnerById: Map<string, string> = new Map();
   /** Runtime registry of spawned scenario event ids by player id */
   private _scenarioEventIdsByPlayer: Map<string, Set<string>> = new Map();
+  /** Events taken off the map by `suspendEvents()`, with their state, until `resumeEvents()` */
+  private _suspendedEvents: Map<string, RpgEvent> = new Map();
   private _syncChangesDepth = 0;
   projectiles = new RpgMapProjectiles(this);
+  /** Loot pickups dropped on this map. Prefer `dropLoot()` to spawn them. */
+  loot = new RpgMapLoot(this);
 
   autoSync: boolean = true;
 
@@ -394,6 +399,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         this.touchCollisions.refreshTrackedTouchCollisions();
         hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
+        this.loot.step();
         refreshMapStreaming(this);
       },
     });
@@ -413,6 +419,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         this.touchCollisions.refreshTrackedTouchCollisions();
         await hooks?.afterStep?.(tick);
         this.projectiles.step(fixedStep);
+        this.loot.step();
         refreshMapStreaming(this);
       },
     });
@@ -433,6 +440,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   clearPhysic(): void {
     super.clearPhysic();
     this.projectiles.clear();
+    this.loot.clear();
   }
 
   private isPositiveNumber(value: unknown): value is number {
@@ -1644,7 +1652,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.spatialVisibleEventIds.clear();
     this.spatialVisiblePlayerIds.clear();
 
-    for (const eventId of Object.keys(this.events())) {
+    for (const eventId of [...Object.keys(this.events()), ...this._suspendedEvents.keys()]) {
       this.removeEvent(eventId);
     }
 
@@ -2048,8 +2056,45 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   }
 
   /**
+   * Pop collectable loot at a world position.
+   *
+   * The gold is split into coins and every item that passes its `chance`
+   * becomes a pickup. Each pickup arcs out of `x, y`, bounces, then is
+   * collected according to `pickup`: it flies to the first player in the
+   * magnet radius (`magnet`, default), when a player walks on it (`touch`), or
+   * when a player presses the action key next to it (`action`).
+   *
+   * The server rolls, places and grants the loot; the client only animates it.
+   * Works in standalone RPG and MMORPG modes. With `ownership: "player"`, the
+   * pickups are scenario events that only `owner` receives.
+   *
+   * Items can declare a `loot` config in the database (`visual`, `color`,
+   * `sound`, `rarity`, `use`). Prefer `event.dropLoot()` to pop the loot from an
+   * event.
+   *
+   * @title Drop Loot
+   * @method map.dropLoot(options)
+   * @param options - Origin, reward table and loot settings
+   * @returns Ids of the spawned pickup events
+   * @memberof Map
+   *
+   * @example
+   * ```ts
+   * await map.dropLoot({
+   *   x: 320,
+   *   y: 240,
+   *   rewards: { gold: 30, items: [{ itemId: "potion", chance: 50 }] },
+   *   pickup: "magnet",
+   * });
+   * ```
+   */
+  dropLoot(options: MapDropLootOptions): Promise<string[]> {
+    return this.loot.drop(options);
+  }
+
+  /**
    * Creates a dynamic event on the map
-   * 
+   *
    * This method handles both class-based events and object-based events with hooks.
    * For class-based events, it creates a new instance of the class.
    * For object-based events, it creates a dynamic class that extends RpgEvent and 
@@ -2136,6 +2181,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         onChanges?: (this: RpgEvent, player: RpgPlayer) => void;
         onAction?: (this: RpgEvent, player: RpgPlayer, input: RpgActionInput<unknown>) => void | Promise<void>;
         onPlayerTouch?: (this: RpgEvent, player: RpgPlayer) => void;
+        onProjectileHit?: EventHooks["onProjectileHit"];
         onTouch?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
         onTouchEnd?: (this: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => void | Promise<void>;
         onInShape?: (this: RpgEvent, zone: RpgShape, player: RpgPlayer) => void;
@@ -2155,6 +2201,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
             this.interactive.set(true);
           }
           if (hookObj.onPlayerTouch) this.onPlayerTouch = hookObj.onPlayerTouch.bind(this);
+          if (hookObj.onProjectileHit) this.onProjectileHit = hookObj.onProjectileHit.bind(this);
           if (hookObj.onTouch) this.onTouch = hookObj.onTouch.bind(this);
           if (hookObj.onTouchEnd) this.onTouchEnd = hookObj.onTouchEnd.bind(this);
           if (hookObj.onInShape) this.onInShape = hookObj.onInShape.bind(this);
@@ -2386,7 +2433,111 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       }
     }
     this.clearEventRuntimeMetadata(eventId);
-    delete this.events()[eventId]
+    this._suspendedEvents.delete(eventId);
+    // A suspended event is no longer in the synchronized events: deleting a missing key throws on the proxy
+    if (this.events()[eventId]) {
+      delete this.events()[eventId]
+    }
+  }
+
+  /**
+   * Hides events of the map and keeps them, to bring them back with {@link resumeEvents}.
+   *
+   * A suspended event is taken out of the synchronized events: it has no sprite, no hitbox, so it does not collide,
+   * is not touched, cannot be acted on, and does not move (its routes are stopped). The instance is kept as it is:
+   * position, graphics, variables, self switches. A scenario event (one per player) is suspended like any other, and as only
+   * its owner sees it, only its owner loses it. Events that are already suspended are ignored.
+   *
+   * @param filter - Which events to suspend. All the events of the map when omitted.
+   * @returns The ids of the events that were suspended
+   *
+   * @example
+   * ```ts
+   * // a tactical battle takes over the map: hide the NPCs, keep the chests
+   * map.suspendEvents((event) => !event.id.startsWith('chest-'))
+   * // ...
+   * map.resumeEvents()
+   * ```
+   */
+  suspendEvents(filter?: (event: RpgEvent) => boolean): string[] {
+    const suspended: string[] = [];
+    for (const event of this.getEvents()) {
+      if (filter && !filter(event)) continue;
+      if (this.suspendEvent(event.id)) suspended.push(event.id);
+    }
+    return suspended;
+  }
+
+  /**
+   * Suspends one event. See {@link suspendEvents}.
+   *
+   * @param eventId - The id of the event
+   * @returns `true` when the event was suspended, `false` when it does not exist or is already suspended
+   */
+  suspendEvent(eventId: string): boolean {
+    const event = this.events()[eventId] as any;
+    if (!event || this._suspendedEvents.has(eventId)) return false;
+    try {
+      event.stopMoveTo?.();
+    }
+    catch {
+      // Ignore teardown race: the physics entity may already be gone.
+    }
+    try {
+      event.breakRoutes?.(true);
+    }
+    catch {
+      // Ignore teardown race in route manager.
+    }
+    this._suspendedEvents.set(eventId, event);
+    // Removing it from the synchronized events removes its sprite on the clients and its hitbox; the runtime metadata stays
+    delete this.events()[eventId];
+    return true;
+  }
+
+  /**
+   * Puts suspended events back where they were, with their state. An event that was moving on an infinite route moves again.
+   *
+   * @param filter - Which suspended events to resume. All of them when omitted.
+   * @returns The ids of the events that were resumed
+   */
+  resumeEvents(filter?: (event: RpgEvent) => boolean): string[] {
+    const resumed: string[] = [];
+    for (const [id, event] of [...this._suspendedEvents]) {
+      if (filter && !filter(event)) continue;
+      if (this.resumeEvent(id)) resumed.push(id);
+    }
+    return resumed;
+  }
+
+  /**
+   * Resumes one suspended event. See {@link resumeEvents}.
+   *
+   * @param eventId - The id of the event
+   * @returns `true` when the event was resumed, `false` when it is not suspended
+   */
+  resumeEvent(eventId: string): boolean {
+    const event = this._suspendedEvents.get(eventId) as any;
+    if (!event) return false;
+    this._suspendedEvents.delete(eventId);
+    this.events()[eventId] = event;
+    try {
+      event.replayRoutes?.();
+    }
+    catch {
+      // The event has no route to replay.
+    }
+    return true;
+  }
+
+  /** Whether the event is suspended (see {@link suspendEvents}). */
+  isEventSuspended(eventId: string): boolean {
+    return this._suspendedEvents.has(eventId);
+  }
+
+  /** The events that are suspended, by id. */
+  getSuspendedEvents(): RpgEvent[] {
+    return [...this._suspendedEvents.values()];
   }
 
   /**

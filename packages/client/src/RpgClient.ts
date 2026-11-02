@@ -357,6 +357,30 @@ export interface RpgSceneMapHooks extends RpgSceneHooks<SceneMap> {
     onPhysicsReset?: (scene: SceneMap) => any
 }
 
+/**
+ * Client presentation of the loot pickups spawned by `dropLoot()` on the server.
+ *
+ * The engine always animates the motion (arc, bounce, magnet, flight to the
+ * collector). These hooks only change what is drawn and heard.
+ */
+export interface RpgLootHooks {
+    /**
+     * Custom components drawing one pickup, addressed by the item `loot.visual`.
+     * They receive `kind`, `amount`, `icon`, `name`, `color`, `rarity`,
+     * `state` (`flying`, `idle`, `collecting`, `expiring`) and `progress`.
+     */
+    components?: Record<string, ComponentFunction>
+
+    /** Default sounds: `land` near the pickup, `collect` for the collector. */
+    sounds?: {
+        land?: string
+        collect?: string
+    }
+
+    /** Show a floating `+5` or `+2 Wood` above the collector. */
+    collectText?: boolean
+}
+
 export interface RpgProjectileHooks {
     /**
      * CanvasEngine components used to render server-authoritative projectiles.
@@ -793,6 +817,21 @@ export interface RpgClient {
      * compact spawn/impact/destroy events and the client predicts x/y locally.
      */
     projectiles?: RpgProjectileHooks
+
+    /**
+     * Customize the loot pickups: components per item, default sounds and the
+     * collect text.
+     *
+     * @example
+     * ```ts
+     * loot: {
+     *   components: { ruby: RubyLoot },
+     *   sounds: { land: "loot-land", collect: "coin" },
+     *   collectText: true,
+     * }
+     * ```
+     */
+    loot?: RpgLootHooks
 
     /**
      * Client-only pointer interactions attached to sprites.

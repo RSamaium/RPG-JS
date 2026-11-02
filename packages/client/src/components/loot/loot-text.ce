@@ -1,0 +1,30 @@
+<Container x y alpha zIndex={10000}>
+    <Text text color size={14} fontWeight="700" anchor={[0.5, 1]} />
+</Container>
+
+<script>
+    import { animatedSignal, computed, mount } from "canvasengine";
+
+    // Floating "+5" or "+2 Wood" above the collector, played with
+    // `showComponentAnimation`. The text is built by the loot component.
+    const { object, onFinish, text, color, duration, offsetY } = defineProps({
+        color: { default: "#ffd166" },
+        duration: { default: 900 },
+        offsetY: { default: 0 },
+    });
+
+    const target = typeof object === "function" ? object() : object;
+    const progress = animatedSignal(0, { duration: duration() });
+
+    // Follow the character while the text rises and fades.
+    const x = computed(() => {
+        const hitbox = target?.hitbox?.();
+        return target.x() + (hitbox?.w ?? 0) / 2;
+    });
+    const y = computed(() => target.y() - 8 + offsetY() - progress() * 28);
+    const alpha = computed(() => (progress() < 0.6 ? 1 : 1 - (progress() - 0.6) / 0.4));
+
+    mount(() => {
+        progress.set(1).then(() => onFinish?.());
+    });
+</script>

@@ -158,15 +158,24 @@ export class AABBCollider implements Collider {
    */
   public raycast(ray: Ray): RaycastHit | null {
     const bounds = this.getBounds();
-    const tMin = (bounds.minX - ray.origin.x) / ray.direction.x;
-    const tMax = (bounds.maxX - ray.origin.x) / ray.direction.x;
-    const tymin = (bounds.minY - ray.origin.y) / ray.direction.y;
-    const tymax = (bounds.maxY - ray.origin.y) / ray.direction.y;
+    // A ray parallel to an axis never crosses that slab: it is either inside it
+    // for its whole length or outside. Dividing would give 0/0 on an edge.
+    const slab = (min: number, max: number, origin: number, direction: number): [number, number] | null => {
+      if (direction === 0) {
+        return origin < min || origin > max ? null : [-Infinity, Infinity];
+      }
+      const a = (min - origin) / direction;
+      const b = (max - origin) / direction;
+      return a < b ? [a, b] : [b, a];
+    };
+    const slabX = slab(bounds.minX, bounds.maxX, ray.origin.x, ray.direction.x);
+    const slabY = slab(bounds.minY, bounds.maxY, ray.origin.y, ray.direction.y);
+    if (!slabX || !slabY) {
+      return null;
+    }
 
-    const t1 = Math.min(tMin, tMax);
-    const t2 = Math.max(tMin, tMax);
-    const t3 = Math.min(tymin, tymax);
-    const t4 = Math.max(tymin, tymax);
+    const [t1, t2] = slabX;
+    const [t3, t4] = slabY;
 
     const tNear = Math.max(t1, t3);
     const tFar = Math.min(t2, t4);

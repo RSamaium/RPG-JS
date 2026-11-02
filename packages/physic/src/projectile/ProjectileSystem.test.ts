@@ -143,4 +143,71 @@ describe('ProjectileSystem', () => {
     expect(projectiles.getProjectiles()).toHaveLength(1000);
     expect(engine.getEntities()).toHaveLength(0);
   });
+
+  it('follows a custom path and ends with the end reason', () => {
+    const engine = new PhysicsEngine();
+    const projectiles = new ProjectileSystem(engine);
+    const onDestroy = vi.fn();
+    projectiles.onDestroy(onDestroy);
+
+    projectiles.spawn({
+      id: 'lob',
+      origin: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speed: 1,
+      ttl: 10,
+      path: (age) => ({ x: Math.min(age, 1) * 100, y: 0, done: age >= 1 }),
+    });
+    projectiles.step(0.5);
+    expect(projectiles.getProjectile('lob')?.position.x).toBeCloseTo(50);
+    projectiles.step(0.5);
+    expect(onDestroy).toHaveBeenCalledWith(expect.objectContaining({ reason: 'end' }));
+  });
+
+  it('flies through entities with the continue resolution, once per entity', () => {
+    const engine = new PhysicsEngine();
+    engine.createStaticObstacle('a', { x: 20, y: -5, width: 4, height: 10 });
+    engine.createStaticObstacle('b', { x: 50, y: -5, width: 4, height: 10 });
+    const projectiles = new ProjectileSystem(engine);
+    const onHit = vi.fn();
+    projectiles.onHit(onHit);
+
+    projectiles.spawn({
+      id: 'boomerang',
+      origin: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speed: 100,
+      range: 100,
+      ttl: 10,
+      resolveHit: () => 'continue',
+    });
+    projectiles.step(1);
+
+    expect(onHit.mock.calls.map(([event]) => event.hit.entity.uuid)).toEqual(['a', 'b']);
+  });
+
+  it('keeps flying on a new path after a redirect', () => {
+    const engine = new PhysicsEngine();
+    engine.createStaticObstacle('wall', { x: 50, y: -10, width: 10, height: 20 });
+    const projectiles = new ProjectileSystem(engine);
+
+    projectiles.spawn({
+      id: 'disc',
+      origin: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      speed: 1,
+      ttl: 10,
+      path: (age) => ({ x: age * 100, y: 0 }),
+      resolveHit: (hit) => {
+        const bounceAt = hit.point.x;
+        projectiles.update('disc', { path: (age) => ({ x: bounceAt - (age * 100 - bounceAt), y: 0 }) });
+        return 'redirect';
+      },
+    });
+    projectiles.step(1);
+
+    const disc = projectiles.getProjectile('disc');
+    expect(disc).toBeDefined();
+    expect(disc!.position.x).toBeLessThan(50);
+  });
 });

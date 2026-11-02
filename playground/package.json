@@ -10,6 +10,8 @@
     "preview": "vite preview",
     "dev:action-battle": "pnpm --dir games/action-battle dev",
     "build:action-battle": "pnpm --dir games/action-battle build",
+    "dev:action-loot": "pnpm --dir games/action-loot dev",
+    "build:action-loot": "pnpm --dir games/action-loot build",
     "dev:projectiles": "pnpm --dir games/projectiles dev",
     "build:projectiles": "pnpm --dir games/projectiles build",
     "dev:dash": "pnpm --dir games/dash dev",

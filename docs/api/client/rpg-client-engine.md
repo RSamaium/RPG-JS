@@ -17,11 +17,14 @@ Reference for the `RpgClientEngine` class.
 - [addSound](#addsound)
 - [addSpriteComponentBehind](#addspritecomponentbehind)
 - [addSpriteComponentInFront](#addspritecomponentinfront)
+- [addWeather](#addweather)
 - [cameraFollowRevision](#camerafollowrevision)
 - [cameraFollowSmoothMove](#camerafollowsmoothmove)
 - [cameraFollowTargetId](#camerafollowtargetid)
+- [cameraPixelSnap](#camerapixelsnap)
 - [clear](#clear)
 - [clearClientPredictionStates](#clearclientpredictionstates)
+- [configureLoot](#configureloot)
 - [connect](#connect)
 - [dashDefaults](#dashdefaults)
 - [disconnect](#disconnect)
@@ -37,6 +40,9 @@ Reference for the `RpgClientEngine` class.
 - [getSpriteSheet](#getspritesheet)
 - [interactions](#interactions)
 - [interruptCurrentPlayerMovement](#interruptcurrentplayermovement)
+- [isConnected](#isconnected)
+- [isConnectionDeferred](#isconnectiondeferred)
+- [lootConfig](#lootconfig)
 - [mapShakeTrigger](#mapshaketrigger)
 - [music](#music)
 - [playClientVisual](#playclientvisual)
@@ -59,6 +65,7 @@ Reference for the `RpgClientEngine` class.
 - [stopAllSounds](#stopallsounds)
 - [stopSound](#stopsound)
 - [visualPause](#visualpause)
+- [weatherComponents](#weathercomponents)
 
 ## activeRoom
 
@@ -318,6 +325,34 @@ engine.addSpriteComponentInFront({
 });
 ```
 
+## addWeather
+
+Register a custom weather component.
+
+When the server sets a weather whose `effect` is this id, the scene renders
+the component instead of CanvasEngine's `<Weather>`. A custom id also
+replaces a built-in effect of the same name.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+addWeather(weather: { id: string, component: any })
+```
+
+### Parameters
+
+- `weather`: `{ id: string, component: any }`
+
+### Examples
+
+```ts
+engine.addWeather({ id: 'aurora', component: AuroraWeather })
+```
+
 ## cameraFollowRevision
 
 Incremented for each camera follow command so repeated commands on the same target are applied
@@ -358,6 +393,20 @@ ID of the sprite that the camera should follow. null means follow the current pl
 
 ```ts
 cameraFollowTargetId
+```
+
+## cameraPixelSnap
+
+Render the camera on whole pixels so tilemaps do not shimmer with a fractional camera. Set to false for a fully fluid camera.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+cameraPixelSnap
 ```
 
 ## clear
@@ -421,6 +470,25 @@ clearClientPredictionStates()
 // Clear prediction states when changing maps
 engine.clearClientPredictionStates();
 ```
+
+## configureLoot
+
+Merge a loot presentation config: custom pickup components, default sounds
+and the collect text. Modules call it through the `loot` client hook.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+configureLoot(loot: RpgLootHooks)
+```
+
+### Parameters
+
+- `loot`: `RpgLootHooks`
 
 ## connect
 
@@ -852,6 +920,49 @@ interruptCurrentPlayerMovement(player?: any): boolean
 
 ```ts
 engine.interruptCurrentPlayerMovement();
+```
+
+## isConnected
+
+Whether the connection to the server is open and accepted.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+isConnected(): boolean
+```
+
+## isConnectionDeferred
+
+Whether the client waits for the game to open the connection (`provideMmorpg({ deferConnection: true })`),
+for example behind a sign-in screen.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+isConnectionDeferred(): boolean
+```
+
+## lootConfig
+
+Loot presentation merged from the `loot` client hooks.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+lootConfig: RpgLootHooks
 ```
 
 ## mapShakeTrigger
@@ -1490,4 +1601,18 @@ hit-stop. It is deliberately separate from menu/gameplay pause ownership.
 
 ```ts
 visualPause
+```
+
+## weatherComponents
+
+Custom weather components by id, registered with the `weathers` module option.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `property`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+weatherComponents
 ```

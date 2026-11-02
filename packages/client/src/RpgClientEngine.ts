@@ -6,8 +6,8 @@ import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
-import { getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
-import type { EventComponentConfig } from "./RpgClient";
+import { EMOTION_BUBBLE_ANIMATION_ID, LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
+import type { EventComponentConfig, RpgLootHooks } from "./RpgClient";
 import type { RpgClientEvent } from "./Game/Event";
 import { load } from "@signe/sync";
 import { RpgClientMap } from "./Game/Map"
@@ -21,6 +21,7 @@ import TextComponent from "./components/dynamics/text.ce";
 import BarComponent from "./components/dynamics/bar.ce";
 import ShapeComponent from "./components/dynamics/shape.ce";
 import ImageComponent from "./components/dynamics/image.ce";
+import LootComponent from "./components/loot/loot.ce";
 import {
   PredictionController,
   type PredictionHistoryEntry,
@@ -208,6 +209,8 @@ export class RpgClientEngine<T = any> {
   spriteComponentsBehind = signal<any[]>([]);
   spriteComponentsInFront = signal<any[]>([]);
   spriteComponents: Map<string, any> = new Map();
+  /** Loot presentation merged from the `loot` client hooks. */
+  lootConfig: RpgLootHooks = { components: {}, sounds: {}, collectText: false };
   private eventComponentResolvers = new EventComponentResolverRegistry();
   /** ID of the sprite that the camera should follow. null means follow the current player */
   cameraFollowTargetId = signal<string | null>(null);
@@ -293,6 +296,12 @@ export class RpgClientEngine<T = any> {
     this.projectiles = new ProjectileManager(
       this.hooks,
       (projectile) => predictProjectileImpact((this.sceneMap as any)?.physic, projectile),
+      (ownerId) => {
+        const owner = (this.scene as any)?.getObjectById?.(ownerId);
+        if (!owner?.x) return undefined;
+        const hitbox = owner.hitbox?.() ?? { w: 0, h: 0 };
+        return { x: owner.x() + hitbox.w / 2, y: owner.y() + hitbox.h / 2 };
+      },
     );
     this.globalConfig = inject(GlobalConfigToken)
 
@@ -325,6 +334,14 @@ export class RpgClientEngine<T = any> {
       id: "animation",
       component: PrebuiltComponentAnimations.Animation
     })
+    this.addComponentAnimation({
+      id: EMOTION_BUBBLE_ANIMATION_ID,
+      component: PrebuiltComponentAnimations.EmotionBubble
+    })
+    this.addComponentAnimation({
+      id: LOOT_TEXT_ANIMATION_ID,
+      component: PrebuiltComponentAnimations.LootText
+    })
 
     this.registerSpriteComponent("rpg:text", TextComponent);
     this.registerSpriteComponent("rpg:hpBar", BarComponent);
@@ -332,6 +349,7 @@ export class RpgClientEngine<T = any> {
     this.registerSpriteComponent("rpg:bar", BarComponent);
     this.registerSpriteComponent("rpg:shape", ShapeComponent);
     this.registerSpriteComponent("rpg:image", ImageComponent);
+    this.registerSpriteComponent(LOOT_COMPONENT_ID, LootComponent);
 
     this.predictionEnabled = (this.globalConfig as any)?.prediction?.enabled !== false;
     this.localMovementAuthority = this.resolveLocalMovementAuthority();
@@ -512,6 +530,7 @@ export class RpgClientEngine<T = any> {
     this.hooks.callHooks("client-weathers-load", this).subscribe();
     this.hooks.callHooks("client-clientVisuals-load", this).subscribe();
     this.hooks.callHooks("client-projectiles-load", this).subscribe();
+    this.hooks.callHooks("client-loot-load", this).subscribe();
     this.hooks.callHooks("client-interactions-load", this).subscribe();
     this.hooks.callHooks("client-sprite-load", this).subscribe();
 
@@ -873,6 +892,13 @@ export class RpgClientEngine<T = any> {
     this.webSocket.on("projectile:impactBatch", (data) => {
       if (!this.shouldProcessProjectilePacket(data)) return;
       this.projectiles.impactBatch(data?.impacts ?? [], {
+        mapId: data?.mapId,
+      });
+    });
+
+    this.webSocket.on("projectile:updateBatch", (data) => {
+      if (!this.shouldProcessProjectilePacket(data)) return;
+      this.projectiles.updateBatch(data?.projectiles ?? [], {
         mapId: data?.mapId,
       });
     });
@@ -1861,6 +1887,21 @@ export class RpgClientEngine<T = any> {
   registerSpriteComponent(id: string, component: any) {
     this.spriteComponents.set(id, component);
     return component;
+  }
+
+  /**
+   * Merge a loot presentation config: custom pickup components, default sounds
+   * and the collect text. Modules call it through the `loot` client hook.
+   *
+   * @param loot - Components, sounds and collect text settings
+   */
+  configureLoot(loot: RpgLootHooks) {
+    const current = this.lootConfig;
+    this.lootConfig = {
+      components: { ...current.components, ...loot.components },
+      sounds: { ...current.sounds, ...loot.sounds },
+      collectText: loot.collectText ?? current.collectText,
+    };
   }
 
   /**

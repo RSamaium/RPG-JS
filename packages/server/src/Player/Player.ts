@@ -36,7 +36,9 @@ import { WithItemFixture } from "./ItemFixture";
 import { IItemManager, WithItemManager } from "./ItemManager";
 import { bufferTime, combineLatest, debounceTime, distinctUntilChanged, filter, lastValueFrom, map, Observable, pairwise, sample, throttleTime } from "rxjs";
 import { IEffectManager, WithEffectManager } from "./EffectManager";
-import { AGI, DEX, INT, MAXHP, MAXSP, STR } from "@rpgjs/common";
+import { AGI, DEX, INT, MAXHP, MAXSP, STR, EMOTION_BUBBLE_ANIMATION_ID } from "@rpgjs/common";
+import type { EmotionBubble, EmotionBubbleOptions, LootRewards } from "@rpgjs/common";
+import type { DropLootOptions } from "../loot";
 import { AGI_CURVE, DEX_CURVE, INT_CURVE, MAXHP_CURVE, MAXSP_CURVE, STR_CURVE } from "../presets";
 import { IElementManager, WithElementManager } from "./ElementManager";
 import { ISkillManager, WithSkillManager } from "./SkillManager";
@@ -1609,6 +1611,65 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   }
 
   /**
+   * Show an emotion bubble above this player or event.
+   *
+   * The bubble pops in, follows the character while it moves, then pops out.
+   * It is visible to every client on the map.
+   *
+   * @param emotion - A built-in emotion name (`"like"`, `"surprise"`, `"idea"`...)
+   * @param options - Display time, size, offsets, or a custom icon sheet
+   *
+   * @example
+   * ```ts
+   * player.showEmotionBubble("like");
+   * event.showEmotionBubble("surprise", { size: 3, hold: 2500 });
+   * ```
+   */
+  showEmotionBubble(emotion: EmotionBubble | (string & {}), options: EmotionBubbleOptions = {}) {
+    this.showComponentAnimation(EMOTION_BUBBLE_ANIMATION_ID, {
+      ...options,
+      emotion,
+    });
+  }
+
+  /**
+   * Pop collectable loot out of this event or player.
+   *
+   * The pickups arc out of the center of the character, then are collected
+   * with the `pickup` mode (`magnet` by default). Use it for a tree that is
+   * cut, a chest, a barrel, or any scripted reward. See `map.dropLoot()` for
+   * every option.
+   *
+   * @title Drop Loot
+   * @method event.dropLoot(rewards, options?)
+   * @param rewards - Gold and items with their drop chance
+   * @param options - Pickup mode, magnet, owner, lifetime and hooks
+   * @returns Ids of the spawned pickup events
+   * @memberof Player
+   *
+   * @example
+   * ```ts
+   * onAction(player) {
+   *   this.dropLoot(
+   *     { items: [{ itemId: "wood", amount: 2 }, { itemId: "apple", chance: 30 }] },
+   *     { owner: player, ownership: "player" }
+   *   );
+   * }
+   * ```
+   */
+  dropLoot(rewards: LootRewards, options: DropLootOptions = {}): Promise<string[]> {
+    const map = this.getCurrentMap();
+    if (!map) return Promise.resolve([]);
+    const hitbox = this.hitbox();
+    return map.dropLoot({
+      ...options,
+      x: this.x() + hitbox.w / 2,
+      y: this.y() + hitbox.h / 2,
+      rewards,
+    });
+  }
+
+  /**
    * Play a sound on the client side for this player only
    * 
    * This method emits an event to play a sound only for this specific player.
@@ -2052,6 +2113,24 @@ export class RpgEvent extends RpgPlayer {
     setTimeout(() => {
       map.removeEvent(this.id);
     }, timeoutMs);
+  }
+
+  /**
+   * Whether the event is suspended: hidden, without collision, touch, action or route, until it is resumed.
+   * @see {@link RpgMap.suspendEvents}
+   */
+  get suspended(): boolean {
+    return !!this.getCurrentMap()?.isEventSuspended(this.id);
+  }
+
+  /** Hides the event and keeps its state, until {@link RpgEvent.resume}. */
+  suspend(): boolean {
+    return this.getCurrentMap()?.suspendEvent(this.id) ?? false;
+  }
+
+  /** Puts a suspended event back where it was, with its state. */
+  resume(): boolean {
+    return this.getCurrentMap()?.resumeEvent(this.id) ?? false;
   }
 
   override isEvent(): boolean {
