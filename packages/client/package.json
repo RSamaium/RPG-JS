@@ -23,7 +23,7 @@
   "license": "MIT",
   "peerDependencies": {
     "@canvasengine/presets": "^2.5.0",
-    "canvasengine": "^2.5.0",
+    "canvasengine": "^2.5.1",
     "pixi.js": "^8.9.2"
   },
   "dependencies": {

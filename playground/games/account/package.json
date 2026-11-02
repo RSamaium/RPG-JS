@@ -15,7 +15,7 @@
     "@rpgjs/server": "workspace:*",
     "@rpgjs/ui-css": "workspace:*",
     "@rpgjs/vite": "workspace:*",
-    "canvasengine": "2.5.0",
+    "canvasengine": "2.5.1",
     "pixi.js": "^8.19.0"
   },
   "devDependencies": {

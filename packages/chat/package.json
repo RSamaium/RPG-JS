@@ -32,7 +32,7 @@
     "@rpgjs/common": "workspace:^",
     "@rpgjs/server": "workspace:^",
     "@rpgjs/vite": "workspace:^",
-    "canvasengine": "^2.5.0"
+    "canvasengine": "^2.5.1"
   },
   "devDependencies": {
     "@canvasengine/compiler": "2.5.0",

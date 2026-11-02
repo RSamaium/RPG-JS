@@ -17,5 +17,6 @@ minimumReleaseAgeExclude:
   - '@canvasengine/compiler@2.5.0'
   - '@canvasengine/presets@2.5.0'
   - 'canvasengine@2.5.0'
+  - 'canvasengine@2.5.1'
   - '@signe/room@3.2.1'
   - vite@8.1.1
