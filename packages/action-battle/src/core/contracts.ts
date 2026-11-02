@@ -68,10 +68,36 @@ export interface ActionBattleProjectileOptions {
   pattern?: any;
   payload?: Record<string, unknown>;
   params?: Record<string, unknown>;
+  /** What the projectile collides with in flight: `always`, `walls` or `none`. */
+  collide?: "always" | "walls" | "none";
+  /** Fly through targets: `true`, or the maximum number of targets. */
+  pierce?: boolean | number;
+  /** Behavior against walls: `stop`, `bounce`, `return` or `stick`. */
+  wall?: "stop" | "bounce" | "return" | "stick";
+  /** Keep the projectile visible where it ended, such as a bomb fuse. */
+  linger?: { ms: number };
   onImpact?: (
     context: ActionBattleProjectileImpactContext,
     action: ActionBattleUseContext
   ) => void;
+}
+
+/**
+ * Area effect of an action, such as a bomb explosion. The targets are found
+ * with `map.queryArea()` and hit through the Action Battle combat flow, with
+ * less damage toward the edge.
+ */
+export interface ActionBattleAreaOptions {
+  /** Radius of the circle, in pixels. */
+  radius: number;
+  /** Scale damage and knockback by the distance to the center. Defaults to `true`. */
+  falloff?: boolean;
+  /** Animation id shown at the center with `map.showAnimation()`. */
+  animation?: string;
+  /** Spritesheet id of the animation, when it is not the animation id. */
+  graphic?: string;
+  /** Hit the user too, like a bomb that catches its thrower. Defaults to `false`. */
+  hitsUser?: boolean;
 }
 
 export interface ActionBattleActionConfig {
@@ -80,6 +106,11 @@ export interface ActionBattleActionConfig {
   cooldownMs?: number;
   mode?: ActionBattleActionMode;
   projectile?: Omit<ActionBattleProjectileOptions, "onImpact">;
+  /**
+   * Area effect. With `mode: "projectile"`, it is applied where the projectile
+   * ends (after `linger`) instead of on the target it touches.
+   */
+  area?: ActionBattleAreaOptions;
   /**
    * Serializable client presentation hints for this action.
    * Gameplay remains authoritative on the server.
@@ -149,6 +180,8 @@ export interface ActionBattleUseContext {
     amount: number
   ): number;
   projectile(options?: ActionBattleProjectileOptions): any[];
+  /** Hit every target in an area around `center` through the combat flow. */
+  area(center: { x: number; y: number }, options: ActionBattleAreaOptions): any[];
 }
 
 export interface ActionBattleUsable {

@@ -1,4 +1,4 @@
-import { MAXHP } from "@rpgjs/server";
+import { AreaShape, MAXHP } from "@rpgjs/server";
 import { getActionBattleOptions } from "../config";
 import { emitActionBattleClientVisual } from "../visual";
 import { applyActionBattleHit } from "./hit";
@@ -13,6 +13,7 @@ import {
 import type {
   ActionBattleActionConfig,
   ActionBattleActionTarget,
+  ActionBattleAreaOptions,
   ActionBattleEntity,
   ActionBattleTargetOptions,
   ActionBattleProjectileImpactContext,
@@ -158,7 +159,7 @@ const applyDamageEffect = (
   }
 
   if (!result.cancelled) {
-    (attacker as any).applyStates?.(target, skill);
+    if (skill) (attacker as any).applyStates?.(target, skill);
     const targetAi = (target as any).battleAi;
     if (result.defense?.kind === "guard") {
       emitActionBattleClientVisual({
@@ -281,6 +282,39 @@ const buildActionContext = (input: {
         return total + nextHp - currentHp;
       }, 0);
     },
+    area(center: { x: number; y: number }, areaOptions: ActionBattleAreaOptions) {
+      const map = (input.attacker as any).getCurrentMap?.();
+      if (!map?.queryArea) return [];
+      if (areaOptions.animation) {
+        map.showAnimation?.(center, areaOptions.graphic ?? areaOptions.animation, areaOptions.graphic ? areaOptions.animation : undefined);
+      }
+      const attackerId = (input.attacker as any).id;
+      const hits = map.queryArea({
+        center,
+        shape: AreaShape.circle({ radius: areaOptions.radius }),
+        targets: ["players", "events"],
+        excludeIds: areaOptions.hitsUser ? [] : [attackerId],
+        filter: ({ target }: { target: ActionBattleEntity }) =>
+          (areaOptions.hitsUser && (target as any).id === attackerId) ||
+          canActionBattleUseTarget(
+            input.attacker,
+            target,
+            input.action?.target ?? "enemy",
+            getActionBattleOptions().combat?.targets
+          ),
+      });
+      return hits.map((hit: any) => {
+        const scale = areaOptions.falloff === false ? 1 : hit.falloff.linear();
+        return applyDamageEffect(input.attacker, hit.target, input.skill, input.profile?.reaction, {
+          actionId: resolveUsableField(input.usable, "id"),
+          actionType: resolveUsableField(input.usable, "_type"),
+          area: true,
+          damageMultiplier: (input.profile?.damageMultiplier ?? 1) * scale,
+          knockbackMultiplier: (input.profile?.knockbackMultiplier ?? 1) * scale,
+          visual: input.action?.visual,
+        });
+      });
+    },
     projectile(options: ActionBattleProjectileOptions = {}) {
       const map = (input.attacker as any).getCurrentMap?.();
       if (!map?.projectiles?.emit) return [];
@@ -318,6 +352,17 @@ const buildActionContext = (input: {
           collision: projectile.collision,
           repeat: projectile.repeat,
           pattern: projectile.pattern,
+          collide: projectile.collide,
+          pierce: projectile.pierce,
+          wall: projectile.wall,
+          linger: projectile.linger,
+          // An area action explodes where the projectile ends.
+          ...(input.action?.area
+            ? {
+                onEnd: ({ x, y }: { x: number; y: number }) =>
+                  action.area({ x, y }, input.action!.area!),
+              }
+            : {}),
           payload: {
             ...projectile.payload,
             actionBattle: true,
@@ -341,6 +386,9 @@ const buildActionContext = (input: {
           },
           canHit: ({ target }: { target?: ActionBattleEntity }) => {
             if (!target) return false;
+            // Events reacting to projectiles (a switch, a bush) are hit too,
+            // without damage: they decide what happens with `onProjectileHit`.
+            if (typeof (target as any).onProjectileHit === "function") return true;
             return canActionBattleUseTarget(
               input.attacker,
               target,
@@ -490,9 +538,33 @@ export const executeActionBattleUse = (input: {
     return true;
   }
 
+  if (actionConfig?.area) {
+    const center = firstTarget(input.target) ?? input.attacker;
+    const hitbox = (center as any).hitbox?.() ?? { w: 0, h: 0 };
+    action.area(
+      { x: (center as any).x() + hitbox.w / 2, y: (center as any).y() + hitbox.h / 2 },
+      actionConfig.area
+    );
+    return true;
+  }
+
   action.defaultEffect(input.target);
   return true;
 };
+
+/**
+ * A target that is only hit to react with `onProjectileHit` (a switch, a bush)
+ * and is not a valid combat target: it takes no damage.
+ */
+const isReactionOnlyTarget = (action: ActionBattleUseContext, target?: ActionBattleEntity | null) =>
+  !!target &&
+  typeof (target as any).onProjectileHit === "function" &&
+  !canActionBattleUseTarget(
+    action.attacker,
+    target,
+    action.action?.target ?? "enemy",
+    getActionBattleOptions().combat?.targets
+  );
 
 export const handleActionBattleProjectileImpact = (
   context: ActionBattleProjectileImpactContext
@@ -503,7 +575,8 @@ export const handleActionBattleProjectileImpact = (
   handler.action.target = target ?? handler.action.target;
   if (handler.onImpact) {
     handler.onImpact(context, handler.action);
-  } else {
+  } else if (!handler.action.action?.area && !isReactionOnlyTarget(handler.action, target)) {
+    // An area action deals its damage when the projectile ends, not on contact.
     handler.action.defaultEffect(target ?? undefined);
   }
 };
