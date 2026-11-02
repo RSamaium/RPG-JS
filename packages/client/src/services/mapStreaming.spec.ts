@@ -1,5 +1,11 @@
 import { Context, inject, injector } from "@signe/di";
-import { MAP_STREAM_EVENT, MAP_STREAM_REQUEST_EVENT, UpdateMapToken } from "@rpgjs/common";
+import {
+  MAP_STREAM_EVENT,
+  MAP_STREAM_REQUEST_EVENT,
+  MAP_VIEW_EVENT,
+  MAP_VIEW_REQUEST_EVENT,
+  UpdateMapToken,
+} from "@rpgjs/common";
 import { describe, expect, it, vi } from "vitest";
 import type { MapStreamChunk, MapStreamManifest } from "@rpgjs/common";
 import { LoadMapToken } from "./loadMap";
@@ -34,7 +40,7 @@ function chunk(key: string, x: number): MapStreamChunk<{ tile: number }> {
   };
 }
 
-async function createStreamingLoader(socket: unknown, timeoutMs?: number) {
+async function createStreamingLoader(socket: unknown, timeoutMs?: number, directLoad?: (mapId: string) => any) {
   const context = new Context();
   const update = vi.fn();
   await injector(context, [
@@ -49,10 +55,11 @@ async function createStreamingLoader(socket: unknown, timeoutMs?: number) {
         getData: (state: State) => [...state.keys],
       },
       timeoutMs,
+      directLoad,
     }),
   ]);
   return {
-    loader: inject<{ load(mapId: string): Promise<any> }>(context, LoadMapToken),
+    loader: inject<{ load(mapId: string): Promise<any>; openView(mapId?: string): Promise<any> }>(context, LoadMapToken),
     update,
   };
 }
@@ -250,5 +257,72 @@ describe("MapStreamClientController", () => {
     finally {
       vi.useRealTimers();
     }
+  });
+});
+
+describe("map view of a gameplay room", () => {
+  function createSocket(mode?: "standalone") {
+    const listeners = new Map<string, (packet: unknown) => void>();
+    return {
+      mode,
+      listeners,
+      on: vi.fn((event: string, callback: (packet: unknown) => void) => listeners.set(event, callback)),
+      emit: vi.fn(),
+    };
+  }
+
+  it("builds render data from the room stream without touching the map scene", async () => {
+    const socket = createSocket();
+    const { loader, update } = await createStreamingLoader(socket);
+
+    const view = loader.openView();
+    expect(socket.emit).toHaveBeenCalledWith(MAP_VIEW_REQUEST_EVENT, {});
+
+    // A packet of the map scene stream must not resolve the view.
+    socket.listeners.get(MAP_STREAM_EVENT)?.({
+      mapId: "demo",
+      revision: "one",
+      manifest: manifest("one"),
+      chunks: [chunk("0:0", 0)],
+      removed: [],
+    });
+    socket.listeners.get(MAP_VIEW_EVENT)?.({
+      mapId: "demo",
+      revision: "one",
+      manifest: manifest("one"),
+      chunks: [chunk("0:0", 0), chunk("1:0", 1)],
+      removed: [],
+    });
+
+    const map = await view;
+    expect(map).toMatchObject({ id: "demo", width: 200, height: 100, data: ["0:0", "1:0"] });
+    expect(map.streamController).toBeUndefined();
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("loads the map on the client in standalone mode without updating the server map", async () => {
+    const socket = createSocket("standalone");
+    const directLoad = vi.fn((mapId: string) => ({ id: mapId, data: { direct: true }, component: {} }));
+    const { loader, update } = await createStreamingLoader(socket, undefined, directLoad);
+
+    await expect(loader.openView("map-forest")).resolves.toMatchObject({ id: "forest", data: { direct: true } });
+    expect(socket.emit).not.toHaveBeenCalledWith(MAP_VIEW_REQUEST_EVENT, expect.anything());
+
+    // Without a map id, the room names its map and the client loads it locally.
+    const named = loader.openView();
+    expect(socket.emit).toHaveBeenCalledWith(MAP_VIEW_REQUEST_EVENT, { local: true });
+    socket.listeners.get(MAP_VIEW_EVENT)?.({ mapId: "cave", revision: "", chunks: [], removed: [] });
+    await expect(named).resolves.toMatchObject({ id: "cave" });
+    expect(update).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the room has no visual stream and no local loader", async () => {
+    const socket = createSocket();
+    const { loader } = await createStreamingLoader(socket);
+
+    const view = loader.openView("forest");
+    expect(socket.emit).toHaveBeenCalledWith(MAP_VIEW_REQUEST_EVENT, { mapId: "forest" });
+    socket.listeners.get(MAP_VIEW_EVENT)?.({ mapId: "forest", revision: "", chunks: [], removed: [] });
+    await expect(view).rejects.toThrow("Map 'forest' has no visual stream for this room");
   });
 });

@@ -17,6 +17,7 @@ import {
   type RpgActionInput,
   type RpgMovementInput,
   MAP_STREAM_REQUEST_EVENT,
+  createMapViewPacket,
 } from "@rpgjs/common";
 import {
   DEFAULT_DAY_LIGHTING,
@@ -54,6 +55,7 @@ import type { DamageFormulas } from "../Player/BattleManager";
 import { runPlayerAuthenticationHooks } from "../auth";
 import {
   filterMapStreamingProjectilePacket,
+  getMapStreamingDefinition,
   getMapStreamingVisibleEntityIds,
   hasMapStreamingRuntime,
   isMapStreamingPositionVisible,
@@ -1393,6 +1395,43 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     }
     await this.restoreMapStreamingRuntime();
     sendInitialMapStreaming(this, player);
+  }
+
+  /**
+   * Return the visual-only stream of this map for a gameplay room.
+   *
+   * The response holds the manifest and every compiled chunk without static
+   * hitboxes. It is protected by the map update token because it discloses the
+   * whole map at once, while a map client only receives its interest window.
+   * `RpgGameplayRoom` calls it through the room-to-room channel when its
+   * `@RpgRoom({ map })` option names this map.
+   *
+   * @param request - Internal request sent by a gameplay room
+   * @returns A `MapStreamPacket`, or 404 when the map has no compiled stream
+   *
+   * @example
+   * ```ts
+   * // GET /parties/main/map-forest/map/view
+   * // Header: x-rpgjs-map-update-token: <token>
+   * ```
+   */
+  @Request({
+    path: "/map/view",
+    method: "GET",
+  })
+  async mapView(request: Request) {
+    if (!isMapUpdateAuthorized(request.headers, this.getRuntimeMapUpdateToken())) {
+      return unauthorizedUpdateResponse("map", "/map/view");
+    }
+    await this.restoreMapStreamingRuntime();
+    const definition = getMapStreamingDefinition(this);
+    if (!definition) {
+      return new Response(JSON.stringify({ error: "Map has no compiled stream" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return createMapViewPacket(definition) as any;
   }
 
   @Action('save.save')
