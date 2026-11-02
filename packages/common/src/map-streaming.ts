@@ -4,6 +4,16 @@ export const MAP_STREAM_EVENT = "map:stream";
 /** Client action requesting a fresh manifest and initial interest chunks. */
 export const MAP_STREAM_REQUEST_EVENT = "map.stream.request";
 
+/**
+ * WebSocket event carrying the visual-only stream of a map to a gameplay room.
+ * It is distinct from {@link MAP_STREAM_EVENT} so the packets never reach the
+ * streamed map of the map scene, its physics, or its prediction.
+ */
+export const MAP_VIEW_EVENT = "map:view";
+
+/** Client action asking a gameplay room for the visual stream of its map. */
+export const MAP_VIEW_REQUEST_EVENT = "map.view.request";
+
 /** Coordinates of one map chunk in the provider-defined grid. */
 export interface MapChunkCoordinates {
   /** Zero-based horizontal chunk index. */
@@ -101,6 +111,22 @@ export interface MapStreamPacket<TManifestData = unknown, TChunkData = unknown> 
   chunks: MapStreamChunk<TChunkData>[];
   /** Keys that have left the retention window and must be discarded. */
   removed: string[];
+}
+
+/**
+ * Build the visual-only packet of a compiled map: the manifest and every chunk,
+ * without the static hitboxes, so the receiver cannot build map physics.
+ */
+export function createMapViewPacket<TManifestData, TChunkData>(
+  definition: MapStreamDefinition<TManifestData, TChunkData>,
+): MapStreamPacket<TManifestData, TChunkData> {
+  return {
+    mapId: definition.manifest.mapId,
+    revision: definition.manifest.revision,
+    manifest: definition.manifest,
+    chunks: Object.values(definition.chunks).map((chunk) => ({ ...chunk, hitboxes: [] })),
+    removed: [],
+  };
 }
 
 /** Create the stable key used by transports and adapters for a chunk. */

@@ -3,15 +3,30 @@ import { UnhandledAction } from "@signe/room";
 import { signal } from "@signe/reactive";
 import { sync, users } from "@signe/sync";
 import { lastValueFrom } from "rxjs";
-import type { RpgRoomDescriptor, RpgWritableSignal } from "@rpgjs/common";
+import {
+  MAP_VIEW_EVENT,
+  MAP_VIEW_REQUEST_EVENT,
+  type MapStreamPacket,
+  type RpgRoomDescriptor,
+  type RpgWritableSignal,
+} from "@rpgjs/common";
 import { context } from "../core/context";
 import { RpgPlayer } from "../Player/Player";
 import { BaseRoom } from "./BaseRoom";
 import { applyConnectionLocale } from "./locale";
+import { createMapUpdateHeaders, MAP_UPDATE_TOKEN_ENV } from "../map-update";
 import type { RpgRoomConnection } from "./map";
 import { getRpgRoomMetadata, RpgRoomAction } from "./registry";
 
 type ClientRoomListener = (player: RpgPlayer, data: unknown) => void | Promise<void>;
+
+type RoomStub = { fetch(path: string, init?: RequestInit): Promise<Response> };
+
+type GameplayPartyRoom = {
+  id?: string;
+  env?: Record<string, unknown>;
+  context?: { parties?: { main?: { get(roomId: string): RoomStub | Promise<RoomStub> } } };
+};
 
 /**
  * Map-independent gameplay room with RPGJS players and synchronized state.
@@ -56,10 +71,19 @@ export class RpgGameplayRoom<TState = Record<string, unknown>> extends BaseRoom 
   /** Whether Signe should automatically publish synchronized state changes. */
   autoSync = true;
 
-  private readonly clientListeners = new Map<string, Set<ClientRoomListener>>();
+  /**
+   * Map whose picture this room shows, resolved by `@RpgRoom({ map })` from the
+   * path parameters. `undefined` when the room shows no map.
+   */
+  readonly mapId: string | undefined;
 
-  constructor(room: { id?: string; env?: Record<string, unknown> }, params: Record<string, string> = {}) {
+  private readonly clientListeners = new Map<string, Set<ClientRoomListener>>();
+  private readonly partyRoom: GameplayPartyRoom;
+  private mapView?: Promise<MapStreamPacket | undefined>;
+
+  constructor(room: GameplayPartyRoom, params: Record<string, string> = {}) {
     super();
+    this.partyRoom = room;
     const metadata = getRpgRoomMetadata(this.constructor as new (room: unknown) => unknown);
     this.id = room?.id ?? metadata?.path ?? "";
     this.params = Object.freeze({ ...params });
@@ -68,6 +92,7 @@ export class RpgGameplayRoom<TState = Record<string, unknown>> extends BaseRoom 
       kind: metadata?.kind ?? "unknown",
       name: params.id ?? this.id,
     });
+    this.mapId = metadata?.map?.(this.params)?.replace(/^map-/, "") || undefined;
     if (metadata?.initialState) {
       this.state.set(metadata.initialState() as TState);
     }
@@ -136,6 +161,55 @@ export class RpgGameplayRoom<TState = Record<string, unknown>> extends BaseRoom 
   /** Broadcast an ephemeral packet to every client connected to this room. */
   broadcast<T = unknown>(type: string, value?: T): void {
     this.$broadcast({ type, value });
+  }
+
+  /**
+   * Send the visual stream of the room map to the player who asked for it.
+   *
+   * The packet holds the manifest and every chunk of the map, without hitboxes.
+   * A client that loads its maps itself (standalone `directLoad`) sends
+   * `{ local: true }`, and the packet then only names the map. So does a reply
+   * when the map room has no compiled stream.
+   */
+  @RpgRoomAction(MAP_VIEW_REQUEST_EVENT)
+  async onMapViewRequest(player: RpgPlayer, payload?: { local?: boolean }): Promise<void> {
+    const mapId = this.mapId;
+    if (!mapId) {
+      console.warn(`[RPGJS] Room ${this.id} received a map view request but declares no @RpgRoom({ map }) option`);
+      return;
+    }
+    const packet = payload?.local === true ? undefined : await this.loadMapView(mapId);
+    player.emit(MAP_VIEW_EVENT, packet ?? { mapId, revision: "", chunks: [], removed: [] });
+  }
+
+  /** Ask the map room for its visual stream once, then reuse it for every player. */
+  private loadMapView(mapId: string): Promise<MapStreamPacket | undefined> {
+    this.mapView ??= this.fetchMapView(mapId).then((packet) => {
+      // Retry on the next request when the map room was not ready yet.
+      if (!packet) this.mapView = undefined;
+      return packet;
+    });
+    return this.mapView;
+  }
+
+  private async fetchMapView(mapId: string): Promise<MapStreamPacket | undefined> {
+    const parties = this.partyRoom?.context?.parties?.main;
+    if (!parties) return undefined;
+    try {
+      const stub = await parties.get(`map-${mapId}`);
+      const token = this.partyRoom.env?.[MAP_UPDATE_TOKEN_ENV];
+      const response = await stub.fetch("/map/view", {
+        method: "GET",
+        headers: createMapUpdateHeaders(typeof token === "string" && token.length > 0 ? token : undefined),
+      });
+      if (!response.ok) return undefined;
+      const packet = await response.json() as MapStreamPacket;
+      return packet?.manifest ? packet : undefined;
+    }
+    catch (error) {
+      console.warn(`[RPGJS] Room ${this.id} could not load the view of map ${mapId}:`, error);
+      return undefined;
+    }
   }
 
   @RpgRoomAction("gui.interaction")

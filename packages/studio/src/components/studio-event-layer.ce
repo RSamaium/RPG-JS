@@ -5,8 +5,10 @@
         }
     }
 
-    @for ((player,id) of players) {
-        <CharacterComponent id={id} object={player} />
+    @if (!playersHidden()) {
+        @for ((player,id) of players) {
+            <CharacterComponent id={id} object={player} />
+        }
     }
 
     @for (child of children) {
@@ -19,17 +21,22 @@
     import { CharacterComponent, RpgClientEngine, inject } from "@rpgjs/client";
 
     const engine = inject(RpgClientEngine);
-    const { children, pixiChildren, hideEvents } = defineProps({
+    const { children, pixiChildren, hideEvents, hidePlayers } = defineProps({
         pixiChildren: {
             default: []
         },
         hideEvents: {
+            default: false
+        },
+        hidePlayers: {
             default: false
         }
     })
     const readValue = (value) => typeof value === "function" ? value() : value
     // A map editor shows the events as markers while the map is edited: the ones the game runs are not drawn.
     const eventsHidden = computed(() => readValue(hideEvents) === true)
+    // A map view of a gameplay room only draws the picture of the map.
+    const playersHidden = computed(() => readValue(hidePlayers) === true)
     let rootContainer = null
     let mountedPixiChildren = []
 
