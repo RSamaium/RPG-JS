@@ -9,14 +9,10 @@ allowBuilds:
   workerd: true
   ws: true
 minimumReleaseAgeExclude:
-  - '@canvasengine/compiler@2.4.0'
-  - '@canvasengine/presets@2.4.0'
-  - '@canvasengine/testing@2.4.0'
-  - '@canvasengine/tiled@2.4.0'
-  - 'canvasengine@2.4.0'
+  # pnpm applies only the first rule matching a package name: keep one rule
+  # per package, with every allowed version in a `||` union.
   - '@canvasengine/compiler@2.5.0'
   - '@canvasengine/presets@2.5.0'
-  - 'canvasengine@2.5.0'
-  - 'canvasengine@2.5.1'
+  - 'canvasengine@2.5.0 || 2.5.1'
   - '@signe/room@3.2.1'
   - vite@8.1.1
