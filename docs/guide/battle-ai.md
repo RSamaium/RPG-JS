@@ -817,6 +817,74 @@ const Claw = {
 };
 ```
 
+## Thrown items in the hotbar
+
+An item that declares an `action`, like a skill, is thrown from the hotbar
+through the combat flow instead of `useItem()`. It is removed from the inventory
+when it is thrown, unless it is `consumable: false`.
+
+```ts
+export const Bomb = {
+  id: "bomb",
+  name: "Bomb",
+  icon: "bomb",
+  _type: "item",
+  action: {
+    mode: "projectile",
+    projectile: {
+      type: "bomb",
+      trajectory: { type: "arc", range: 220, duration: 0.55, height: 56 },
+      linger: { ms: 1100 }
+    },
+    // Explodes where it lands: every target in the circle is hit,
+    // with less damage and knockback toward the edge.
+    area: { radius: 56, animation: "explosion" }
+  }
+};
+
+export const Boomerang = {
+  id: "boomerang",
+  name: "Boomerang",
+  icon: "boomerang",
+  _type: "item",
+  consumable: false,
+  action: {
+    mode: "projectile",
+    cooldownMs: 700,
+    projectile: {
+      type: "boomerang",
+      trajectory: { type: "return", speed: 320, range: 190 },
+      pierce: true,
+      wall: "return"
+    }
+  }
+};
+```
+
+```ts
+player.addItem(Bomb, 10);
+player.assignHotbarSlot(0, { type: "item", id: "bomb" });
+```
+
+- When the client sends a point with the hotbar action
+  (`engine.processAction("action-battle:use-hotbar", { slot, target })`), the
+  item is aimed at it and an `arc` lands on it when it is in range. Otherwise
+  it is thrown in the facing direction.
+- `action.projectile` accepts every projectile behavior: `trajectory`,
+  `collide`, `pierce`, `wall` and `linger`. See [Projectiles](/guide/projectiles).
+- `action.area` uses `map.queryArea()` and hits each target through the combat
+  flow (stats, knockback, hit-stop, damage numbers). With a projectile, it is
+  applied where the projectile ends instead of on contact. Set
+  `falloff: false` for full damage everywhere and `hitsUser: true` for a bomb
+  that also catches its thrower.
+- Events that react to projectiles with `onProjectileHit` (a switch, a bush)
+  are hit by these items too, without damage.
+- Items without `action` keep the regular hotbar behavior.
+
+Physical damage reads the attack of the equipped weapon (`ATK` comes from the
+equipment), so give the thrower a weapon or a damage formula that suits your
+game.
+
 ## Plugin-first extension points
 
 Action battle is structured as replaceable systems. You can keep the default

@@ -28,7 +28,7 @@ export default {
         { id: "right-wall", x: MAP_WIDTH - 4, y: 0, width: 4, height: MAP_HEIGHT },
       ],
     })),
-    provideActionBattle(),
+    provideActionBattle({ ui: { hotbar: { enabled: true, autoOpen: true, capacity: 4 } } }),
     provideClientGlobalConfig(),
     provideClientModules([
       {
