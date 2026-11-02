@@ -96,10 +96,10 @@ export interface ItemHooks {
  *   name: 'Health Potion',
  *   description: 'Restores 100 HP',
  *   price: 200,
- *   hpValue: 100,
+ *   hpValue: 100, // restored before `onUse` runs
  *   mpValue: 0,
  *   onUse(player) {
- *     player.hp += this.hpValue;
+ *     // `hpValue` and `mpValue` are already applied: only add what is specific to the item
  *   }
  * };
  * ```
@@ -111,9 +111,9 @@ export interface ItemData {
   description?: string;
   /** Item price */
   price?: number;
-  /** HP value restored when used */
+  /** HP value restored when used (limited to `maxHp`); can be negative */
   hpValue?: number;
-  /** MP/SP value restored when used */
+  /** SP value restored when used (named MP for historical reasons); can be negative */
   mpValue?: number;
   /** Chance to successfully use the item (0-1) */
   hitRate?: number;
@@ -151,7 +151,8 @@ export interface ItemData {
  *     console.log('Potion added!');
  *   },
  *   onUse(player) {
- *     player.hp += 100;
+ *     // `hpValue` (100 HP) is already applied before `onUse` runs
+ *     console.log('Potion used!');
  *   }
  * };
  * 
@@ -545,6 +546,22 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       return this.getParamItem(SDEF);
     }
 
+    /**
+     * Applies the HP / SP effect of an item (`hpValue`, `mpValue`).
+     * A missing, `0` or non-number value is ignored. The `hp` setter limits the result to
+     * `maxHp` (and calls `onDead` at `0`), `sp` is limited between `0` and `maxSp`.
+     */
+    applyEffect(item: { hpValue?: unknown; mpValue?: unknown } | null | undefined): void {
+      const hpValue = item?.hpValue;
+      const mpValue = item?.mpValue;
+      if (typeof hpValue === "number" && Number.isFinite(hpValue) && hpValue !== 0) {
+        (this as any).hp += hpValue;
+      }
+      if (typeof mpValue === "number" && Number.isFinite(mpValue) && mpValue !== 0) {
+        (this as any).sp = Math.max(0, (this as any).sp + mpValue);
+      }
+    }
+
     useItem(itemClass: ItemClass | string): Item {
       const itemId = isString(itemClass) ? itemClass : (itemClass as any).name;
       const inventory = this.getItem(itemClass);
@@ -584,7 +601,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
         this["execMethod"]("onUseFailed", [this], hookTarget);
         throw ItemLog.chanceToUseFailed(itemId);
       }
-      (this as any).applyEffect?.(itemData);
+      this.applyEffect(hookTarget);
       (this as any).applyStates?.(this, itemData);
       this["execMethod"]("onUse", [this], hookTarget);
       this.removeItem(itemClass);
@@ -864,6 +881,15 @@ export interface IItemManager {
    * ```
    */
   useItem(itemClass: ItemClass | string): Item;
+
+  /**
+   * Applies the HP / SP effect of an item (`hpValue` adds to `hp`, `mpValue` adds to `sp`).
+   * Called by `useItem()` before `onUse`. Values are limited to the maximum, `sp` never goes under `0`.
+   *
+   * @param item - Object carrying `hpValue` and / or `mpValue`; other values are ignored
+   * @method player.applyEffect(item)
+   */
+  applyEffect(item: { hpValue?: unknown; mpValue?: unknown } | null | undefined): void;
 
   /**
    * Equips a weapon or armor on a player
