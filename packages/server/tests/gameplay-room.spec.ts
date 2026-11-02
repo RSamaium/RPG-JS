@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { h, Container } from "canvasengine";
 import { testing, type TestingFixture } from "@rpgjs/testing";
+import { createStatesSnapshotDeep } from "@signe/sync";
 import {
   defineModule,
   getMapChunkKey,
@@ -13,10 +14,10 @@ import {
   provideServerMapStreaming,
   provideServerRooms,
   RpgGameplayRoom,
+  RpgPlayer,
   RpgRoom,
   RpgRoomAction,
   RpgRoomRegistry,
-  type RpgPlayer,
   type RpgServer,
 } from "../src";
 import {
@@ -265,5 +266,65 @@ describe("custom gameplay rooms", () => {
     player = await battleAgain;
     player.conn!.close();
     await vi.waitFor(() => expect(onDisconnected).toHaveBeenCalledOnce());
+  });
+
+  test("restores a player holding database records with the module database", async () => {
+    // Plain records, as the Studio database provides them.
+    const database = {
+      "item-potion": { id: "item-potion", name: "Potion", _type: "item", hpValue: 10 },
+      "weapon-sword": { id: "weapon-sword", name: "Sword", _type: "weapon", atk: 5 },
+      "skill-fire": { id: "skill-fire", name: "Fire", spCost: 2 },
+      "class-mage": { id: "class-mage", name: "Mage" },
+    };
+    const loadedBy: string[] = [];
+    fixture = await testing(
+      [{
+        server: defineModule<RpgServer>({
+          maps: [{ id: "start", file: "" }],
+          database: async (room) => {
+            loadedBy.push(room.id);
+            return database;
+          },
+        }),
+        client: clientModule,
+      }],
+      { providers: [provideClientScenes([{ kind: "battle", component: () => h(Container) }])] },
+      { providers: [provideServerRooms([BattleRoom])] },
+    );
+    const client = await fixture.createClient();
+    expect(await client.player.changeMap("start", { x: 100, y: 100 })).toBe(true);
+    await fixture.wait(200);
+    let player = client.player;
+    player.addItem("item-potion", 3);
+    player.addItem("weapon-sword");
+    player.equip("weapon-sword", true);
+    player.learnSkill("skill-fire");
+    player.setClass("class-mage");
+
+    const battleChange = client.waitForRoomChange("battle");
+    expect(await player.changeRoom({ kind: "battle", params: { id: "with-database" } })).toBe(true);
+    player = await battleChange;
+
+    const room = player.getCurrentRoom<BattleRoom>();
+    expect(room?.database()).toMatchObject(database);
+    expect(loadedBy.filter((id) => id === "battle-with-database")).toHaveLength(1);
+    expect(player.hasItem("item-potion")).toBe(true);
+    expect(player.getItem("item-potion")?.quantity()).toBe(3);
+    expect(player.equipments().map((item) => item.id())).toEqual(["weapon-sword"]);
+    expect(player.getSkill("skill-fire")).toBeTruthy();
+    expect(player._class()).toMatchObject({ id: "class-mage" });
+
+    // The Node and Cloudflare transports build a room (and rebuild it after
+    // hibernation) without calling `onStart()`: the restore still loads the
+    // module database before resolving the snapshot.
+    const snapshot = createStatesSnapshotDeep(player);
+    const coldRoom = new BattleRoom({ id: "battle-cold", env: { TEST: "true" } }, { id: "cold" });
+    expect(coldRoom.database()).toEqual({});
+    const restoredPlayer = new RpgPlayer();
+    const restored = await coldRoom.onSessionRestore({ userSnapshot: snapshot, user: restoredPlayer });
+    expect(coldRoom.database()).toMatchObject(database);
+    expect(loadedBy.filter((id) => id === "battle-cold")).toHaveLength(1);
+    expect((restored as { items: { id: () => string; quantity: () => number }[] }).items.map((item) => [item.id(), item.quantity()]))
+      .toEqual(expect.arrayContaining([["item-potion", 3], ["weapon-sword", 1]]));
   });
 });

@@ -274,6 +274,34 @@ Store the return map and position in server-owned match or player state before
 calling `changeRoom()`. Returning to spatial gameplay must use `changeMap()` so
 the normal map loading, streaming, movement, and physics lifecycle is restored.
 
+### Database in a gameplay room
+
+A transferred snapshot keeps the player's items, equipment, skills, states, and
+class as database ids. The custom room loads the module `database` once, before
+it restores the first player, so those ids resolve the same way they do on the
+map the player comes from. This works in standalone and MMORPG modes, including
+after a Cloudflare Durable Object wakes up from hibernation.
+
+A static `database` object needs nothing else. A `database` function receives
+the room that loads it, which is either a map or an `RpgGameplayRoom`. A loader
+that reads map-specific data, such as the map payload, must also return the
+records for a gameplay room:
+
+```ts
+import { RpgMap, type RpgGameplayRoom } from "@rpgjs/server"
+
+export default defineModule<RpgServer>({
+  async database(room: RpgMap | RpgGameplayRoom) {
+    // `descriptor` exists only on gameplay rooms.
+    if ("descriptor" in room) return await loadGameDatabase()
+    return await loadMapDatabase(room)
+  },
+})
+```
+
+With `@rpgjs/studio`, gameplay rooms read the project database from the Studio
+data provider configured in `provideStudioGame()`.
+
 Use the generic hooks when behavior should apply to every room:
 
 ```ts
