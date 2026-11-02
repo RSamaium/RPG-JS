@@ -6,7 +6,7 @@ import { lastValueFrom } from "rxjs";
 import type { RpgRoomDescriptor, RpgWritableSignal } from "@rpgjs/common";
 import { context } from "../core/context";
 import { RpgPlayer } from "../Player/Player";
-import { BaseRoom } from "./BaseRoom";
+import { BaseRoom, ensureRoomDatabase } from "./BaseRoom";
 import { applyConnectionLocale } from "./locale";
 import type { RpgRoomConnection } from "./map";
 import { getRpgRoomMetadata, RpgRoomAction } from "./registry";
@@ -77,6 +77,9 @@ export class RpgGameplayRoom<TState = Record<string, unknown>> extends BaseRoom 
   }
 
   async onSessionRestore(payload: { userSnapshot: unknown; user?: RpgPlayer }): Promise<unknown> {
+    // The snapshot references database ids (items, skills, states, class),
+    // so the module database must be in this room before they are resolved.
+    await ensureRoomDatabase(this);
     const restored = await BaseRoom.prototype.onSessionRestore.call(
       this,
       payload as { userSnapshot: any; user?: RpgPlayer },
@@ -102,6 +105,7 @@ export class RpgGameplayRoom<TState = Record<string, unknown>> extends BaseRoom 
   }
 
   async onJoin(player: RpgPlayer, conn: RpgRoomConnection, ctx?: { request?: { url: string } }): Promise<void> {
+    await ensureRoomDatabase(this);
     player.room = this;
     player.map = null;
     player.context = context;

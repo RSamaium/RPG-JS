@@ -1,6 +1,7 @@
 import { MapOptions } from "./decorators/map"
 import { RpgPlayer, type RpgPlayerRoom } from "./Player/Player"
 import { type RpgMap, type RpgRoomConnection } from "./rooms/map"
+import type { RpgGameplayRoom } from "./rooms/gameplay"
 import type { RpgServerEngine } from "./RpgServerEngine"
 import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput, type RpgRoomDescriptor,
     type TimeDayTransitionPayload,
@@ -28,6 +29,15 @@ type RpgMatchMaker = unknown
 type IStoreState = unknown
 
 export type ServerDatabase = Record<string, unknown> | unknown[]
+
+/**
+ * Loader of the module `database`. It receives the room that loads it: a map,
+ * or a custom gameplay room (`RpgGameplayRoom`). Declared as a method so a
+ * loader written for maps only, `(map: RpgMap) => ...`, stays assignable.
+ */
+type ServerDatabaseLoader = {
+    load(room: RpgMap | RpgGameplayRoom): MaybePromise<ServerDatabase>
+}["load"]
 
 /**
  * Metrics collected after one queued map tick has been processed.
@@ -1126,10 +1136,24 @@ export interface RpgServer {
      * })
      * ``` 
      * 
-     * @prop { { [dataName]: data } | (engine: RpgMap) => { [dataName]: data } | Promise<{ [dataName]: data }> } [database]
+     * The database is loaded in every map, and in every custom gameplay room
+     * (`RpgGameplayRoom`) before a player is restored there, so the items,
+     * skills, states and class of a player transferred with `changeRoom()`
+     * resolve in that room too. A function receives the room that loads it;
+     * check `"descriptor" in room` to tell a gameplay room from a map.
+     *
+     * ```ts
+     * export default defineModule<RpgServer>({
+     *      async database(room) {
+     *          return await fetchGameDatabase()
+     *      }
+     * })
+     * ```
+     *
+     * @prop { { [dataName]: data } | (room: RpgMap | RpgGameplayRoom) => { [dataName]: data } | Promise<{ [dataName]: data }> } [database]
      * @memberof RpgServer
      * */
-    database?: ServerDatabase | ((engine: RpgMap) => MaybePromise<ServerDatabase>),
+    database?: ServerDatabase | ServerDatabaseLoader,
 
     /** 
      * Array of all maps. Each element can be either a class (decorated with `@MapData` or not) or a `MapOptions` object

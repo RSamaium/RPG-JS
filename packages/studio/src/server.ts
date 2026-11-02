@@ -4,7 +4,7 @@ import { scaleHitboxToPlacement } from "./placement-scale";
 import { bindStudioCombatAnimationsToEntity } from "./action-battle-animations";
 import { runPlayerEventOnce } from "./event-execution-guard";
 import { createStudioRuntimeEventEditing } from "./runtime-event-editing";
-import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
+import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, type RpgGameplayRoom, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
 import { createBlockExecutionService } from "./block-executor";
 import { apiUrl, configureStudioConstants } from "./constants";
@@ -381,7 +381,7 @@ const ensureStartingItemsInDatabase = async (player: RpgPlayer, config: ProjectB
 const eventsCacheByBundlePath = new Map<string, Promise<any[]>>();
 const projectCacheByKey = new Map<string, Promise<any>>();
 
-const getPublishedStudioDatabase = (map?: RpgMap): any => {
+const getPublishedStudioDatabase = (map?: RpgMap | RpgGameplayRoom): any => {
   const publishedMapData =
     typeof (map as any)?.data === "function"
       ? (map as any).data()
@@ -1695,7 +1695,9 @@ export default (_config?: unknown) => {
         };
       },
     },
-    database: async (map: RpgMap) => {
+    // Also loaded by custom gameplay rooms (`RpgGameplayRoom`), which receive no map payload: they read the project database
+    // from the data provider, so a player transferred there with `changeRoom()` keeps its items, skills and class.
+    database: async (map: RpgMap | RpgGameplayRoom) => {
       const publishedMapData =
         typeof (map as any)?.data === "function"
           ? (map as any).data()
