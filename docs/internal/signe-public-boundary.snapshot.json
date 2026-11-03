@@ -2310,6 +2310,7 @@
       "SignalBinding",
       "SignalContext",
       "SignalEmission",
+      "SignalEmissions",
       "createRpgjsWorld",
       "provideScripts",
       "scriptHooks",

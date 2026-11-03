@@ -93,6 +93,12 @@ installed, and a listener that fails does not stop the next one.
 | `player.outShape` | `onOutShape` of the player: leaves a zone | the same |
 | `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
+| `player.itemAdd` | `onItemAdd` of the player: items enter the inventory | `item` (id of the item), `quantity` |
+| `player.itemRemove` | `onItemRemove` of the player: items leave it (removed, sold, consumed by a use) | `item`, `quantity` |
+| `player.itemUse` | `onItemUse` of the player | `item`, `quantity` |
+| `player.itemEquip` | `onItemEquip` of the player: equips or takes off an item | `item`, `quantity`, `equipped` |
+| `player.goldChange` | `onGoldChange` of the player | `gold` (the gold after the change), `delta` (negative when the player spends) |
+| `map.tick` | `onTick` of a map with players, about 60 times a second, once for each player of the map | `map`, `deltaMs`, `tick` |
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
@@ -100,6 +106,11 @@ installed, and a listener that fails does not stop the next one.
 The script acts for **the player of the signal** (`$player`) and, for the event signals, for **that event** (`$event`). The signals of
 the player fire in every kind of room, a map or not; `event.action` and `event.touch` only exist in a map, since events do. The zones
 of `player.inShape` are the ones of the game and the ones scripts make.
+
+`map.tick` runs on every tick of the server of a map with players (about 60 times a second), once for each player of the map, in
+standalone and in MMORPG alike. The map does not wait for it: while the listeners still run for a player (a `wait`, a `showText`
+or a `showChoices` the player has not answered), that player skips the next ticks. Keep a tick listener short, and use `e.deltaMs`
+to count time instead of `wait`. A listener that fails is written to the console once, not on every tick.
 
 ### The filter
 

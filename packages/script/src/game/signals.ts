@@ -16,13 +16,18 @@ const SHAPE: SignalDesc["payload"] = {
     fields: { name: { type: "string" }, x: { type: "number" }, y: { type: "number" }, width: { type: "number" }, height: { type: "number" } },
   },
 };
+const ITEM: SignalDesc["payload"] = {
+  item: { type: "string", doc: "Id of the item." },
+  quantity: { type: "number", doc: "How many." },
+};
 const EVENT: SignalDesc["payload"] = {
   event: { type: "object", fields: { id: { type: "string" }, name: { type: "string", doc: "Name of the event, empty when it has none." } } },
 };
 
 /**
  * The signals of the game: `player.joinRoom`, `player.leaveRoom`, `player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`,
- * `event.action`, `event.touch`. The room ones fire in every kind of room; the map and event ones only in a map.
+ * `player.itemAdd`, `player.itemRemove`, `player.itemUse`, `player.itemEquip`, `player.goldChange`, `map.tick`, `event.action`,
+ * `event.touch`. The room ones fire in every kind of room; the map and event ones only in a map.
  * A plugin adds its own with the `signals` option of `ScriptService`.
  */
 export const GAME_SIGNALS: Record<string, SignalDesc> = {
@@ -40,6 +45,28 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
   "player.inShape": { doc: "A player enters a zone of the map (a shape, made by the game or by a script).", payload: SHAPE },
   "player.outShape": { doc: "A player leaves a zone of the map.", payload: SHAPE },
   "player.dead": { doc: "A player has no health left.", payload: {} },
+  "player.itemAdd": { doc: "Items are added to the inventory of a player.", payload: ITEM },
+  "player.itemRemove": { doc: "Items leave the inventory of a player: removed, sold, or consumed by a use.", payload: ITEM },
+  "player.itemUse": { doc: "A player uses an item.", payload: ITEM },
+  "player.itemEquip": {
+    doc: "A player equips or unequips an item.",
+    payload: { ...ITEM, equipped: { type: "boolean", doc: "true when the item is now equipped, false when it is taken off." } },
+  },
+  "player.goldChange": {
+    doc: "The gold of a player changes.",
+    payload: {
+      gold: { type: "number", doc: "The gold after the change." },
+      delta: { type: "number", doc: "How much it changed: negative when the player spends." },
+    },
+  },
+  "map.tick": {
+    doc: "A tick of the server on a map with players, about 60 times a second. It runs once for each player of the map.",
+    payload: {
+      ...MAP,
+      deltaMs: { type: "number", doc: "The time the tick covers, in milliseconds." },
+      tick: { type: "number", doc: "The number of the tick since the map started." },
+    },
+  },
   "gui.action": {
     doc: "A player acts in a GUI of the client: a button, a choice. The component sends the event with a name and data; a script opens the GUI with $player.openGui.",
     payload: {

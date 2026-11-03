@@ -87,4 +87,8 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 | `player.inShape` / `player.outShape` | `onInShape` / `onOutShape` of the player | `shape` (`name`, `x`, `y`, `width`, `height`) |
 | `player.levelUp` | `onLevelUp` | `gained`. While it runs, `$player.level` is still the level before the gain |
 | `player.dead` | `onDead` | |
+| `player.itemAdd` / `player.itemRemove` / `player.itemUse` | `onItemAdd` / `onItemRemove` / `onItemUse` | `item`, `quantity` |
+| `player.itemEquip` | `onItemEquip` | `item`, `quantity`, `equipped` |
+| `player.goldChange` | `onGoldChange` | `gold`, `delta` |
+| `map.tick` | `onTick` of a map with players, once for each of its players. The map does not wait for it: a player whose listeners still run (`wait`, `showText`) skips the next ticks | `map`, `deltaMs`, `tick` |
 | `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |
