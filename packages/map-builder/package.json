@@ -1,8 +1,7 @@
 {
   "name": "@rpgjs/map-builder",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "1.0.0",
-  "private": true,
+  "version": "5.0.0",
   "description": "Modifiable map model, renderer and editing features for RPGJS games and editors (experimental)",
   "type": "module",
   "main": "./dist/index.js",
@@ -81,6 +80,9 @@
     "test:rpgjs": "vitest run --root ../.. packages/map-builder/tests"
   },
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "devDependencies": {
     "@rpgjs/client": "workspace:*",
     "@rpgjs/common": "workspace:*",
