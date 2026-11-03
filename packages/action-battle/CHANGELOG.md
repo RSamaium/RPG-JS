@@ -1,5 +1,20 @@
 # @rpgjs/action-battle
 
+## 5.2.0
+
+### Minor Changes
+
+- 060e98c: Throw items from the hotbar. An item that declares an `action` is used through the combat flow instead of `useItem()`: it is aimed at the point sent by the client (an `arc` lands on it), removed from the inventory unless `consumable: false`, and can be assigned to the hotbar even when it is not consumable. `action.projectile` accepts the new projectile behaviors (`collide`, `pierce`, `wall`, `linger`), and `action.area` hits every target around a point through `map.queryArea()` and the combat flow, with damage falling off toward the edge (applied where a projectile ends). Action Battle projectiles also hit events that define `onProjectileHit`, without damage.
+- d6040a3: Add world loot. `event.dropLoot()` and `map.dropLoot()` pop gold (split into coins) and items as pickups that arc out, bounce, and are collected by magnet, by touch or with the action key. Options cover owned loot (scenario events), magnet radius per player, lifetime, `canCollect` and `onCollect`. Items can declare a `loot` config (`visual`, `color`, `sound`, `rarity`, `use`), and the `loot` client hook registers custom pickup components, default sounds and a collect text.
+
+  Action Battle enemies pop their rewards as loot with `rewards.drop`, after the impact freeze. `defineActionBattleEnemy()` now accepts `graphic` and declarative `stats`, applied by `createActionEnemy()`.
+
+### Patch Changes
+
+- 10e24d8: Update CanvasEngine: `canvasengine` 2.5.1, `@canvasengine/compiler` and `@canvasengine/presets` 2.5.0. `@canvasengine/tiled` and `@canvasengine/testing` stay on 2.4.1, the latest published versions.
+
+  Action Battle enemy loot pops right on defeat again: CanvasEngine 2.5.1 replays the updates made during the impact freeze (hit-stop), so the loot no longer waits for its end.
+
 ## 5.1.1
 
 ### Patch Changes
