@@ -119,6 +119,30 @@ describe("scripts listening to the hooks of a real RPGJS game", () => {
     expect(player.getVariable(`delta_${n}`)).toBe(true);
   });
 
+  it("does not stop the map while a map.tick script waits, and skips the ticks of that player until it ends", async () => {
+    const { player, map } = await start([{ id: "slow-clock", source: `on("map.tick", () => { $player.setVariable("slow_${n}", ($player.getVariable("slow_${n}") ?? 0) + 1); wait(0.3); });` }]);
+    const before = map.getTick();
+
+    (map as any).setAutoTick(true);
+    await settled(() => expect(map.getTick()).toBeGreaterThan(before + 5));
+    expect(player.getVariable(`slow_${n}`)).toBe(1);
+    (map as any).setAutoTick(false);
+  });
+
+  it("reports a map.tick listener that fails once, not on every tick", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { player, map } = await start([
+      { id: `broken-clock-${n}`, source: `on("map.tick", () => { $shared_missing.x = 1; });` },
+      { id: "counting-clock", source: `on("map.tick", () => { $player.setVariable("count_${n}", ($player.getVariable("count_${n}") ?? 0) + 1); });` },
+    ]);
+
+    (map as any).setAutoTick(true);
+    await settled(() => expect(player.getVariable(`count_${n}`)).toBeGreaterThanOrEqual(5));
+    (map as any).setAutoTick(false);
+    const reports = error.mock.calls.filter((call) => String(call[0]).includes(`broken-clock-${n}`));
+    expect(reports).toHaveLength(1);
+  });
+
   it("runs when a player acts on an event, for that event, and only the one whose name matches", async () => {
     const { player, map } = await start([{
       id: "chest",

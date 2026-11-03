@@ -107,6 +107,11 @@ The script acts for **the player of the signal** (`$player`) and, for the event 
 the player fire in every kind of room, a map or not; `event.action` and `event.touch` only exist in a map, since events do. The zones
 of `player.inShape` are the ones of the game and the ones scripts make.
 
+`map.tick` runs on every tick of the server of a map with players (about 60 times a second), once for each player of the map, in
+standalone and in MMORPG alike. The map does not wait for it: while the listeners still run for a player (a `wait`, a `showText`
+or a `showChoices` the player has not answered), that player skips the next ticks. Keep a tick listener short, and use `e.deltaMs`
+to count time instead of `wait`. A listener that fails is written to the console once, not on every tick.
+
 ### The filter
 
 The filter is plain data, never computed, so it is known before anything runs. All of its entries must hold.

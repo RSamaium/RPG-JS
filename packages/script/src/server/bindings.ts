@@ -19,7 +19,19 @@ export interface SignalEmission {
   context: SignalContext;
 }
 
-/** What the `emit` of a binding returns: one emission, one per player, or nothing. */
+/**
+ * What the `emit` of a binding returns: one emission, one per player, or nothing.
+ *
+ * @example
+ * ```ts
+ * signalBinding<[RpgMap]>({
+ *   signal: "map.dawn", scope: "map", hook: "onDawn",
+ *   describe: { doc: "The sun rises on a map.", payload: {} },
+ *   // once for each player of the map, since a script acts for a player
+ *   emit: (map) => map.getPlayers().map((player) => ({ payload: {}, context: { player, map } })),
+ * })
+ * ```
+ */
 export type SignalEmissions = SignalEmission | SignalEmission[] | undefined;
 
 /**
@@ -47,8 +59,13 @@ export interface SignalBinding<TArgs extends unknown[] = unknown[]> {
   /** What the signal carries. Needed for a signal that the game does not already have. */
   describe?: SignalDesc;
   /**
+   * The hook does not wait for the scripts, and a player whose scripts still run for this signal skips it. For a hook that RPGJS
+   * waits for and calls often, such as `onTick` of a map: a script that waits (`wait`, `showText`) would otherwise stop the map.
+   */
+  background?: boolean;
+  /**
    * Gives the payload and the context of the signal, or nothing to emit nothing (a player who is on no map, say). A list emits the
-   * signal once per entry: a hook of a map, for each of its players.
+   * signal once per entry: a hook of a map, for each of its players. Not called while no script listens to the signal.
    */
   emit(...args: TArgs): SignalEmissions | Promise<SignalEmissions>;
 }
@@ -137,7 +154,7 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
     emit: (player, change) => ({ payload: { gold: Number(change.gold), delta: Number(change.delta) }, context: { player } }),
   }),
   signalBinding<[RpgMap, RpgMapTickPayload]>({
-    signal: "map.tick", scope: "map", hook: "onTick",
+    signal: "map.tick", scope: "map", hook: "onTick", background: true,
     // A script acts for a player: the tick runs once for each player of the map
     emit: (map, tick) => map.getPlayers().map((player) => ({
       payload: { map: String(map.id), deltaMs: Number(tick.deltaMs), tick: Number(tick.tick) },

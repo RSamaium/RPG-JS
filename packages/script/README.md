@@ -90,5 +90,5 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 | `player.itemAdd` / `player.itemRemove` / `player.itemUse` | `onItemAdd` / `onItemRemove` / `onItemUse` | `item`, `quantity` |
 | `player.itemEquip` | `onItemEquip` | `item`, `quantity`, `equipped` |
 | `player.goldChange` | `onGoldChange` | `gold`, `delta` |
-| `map.tick` | `onTick` of a map with players, once for each of its players | `map`, `deltaMs`, `tick` |
+| `map.tick` | `onTick` of a map with players, once for each of its players. The map does not wait for it: a player whose listeners still run (`wait`, `showText`) skips the next ticks | `map`, `deltaMs`, `tick` |
 | `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |

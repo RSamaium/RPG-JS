@@ -17,6 +17,8 @@ import type { ScriptService } from "./service";
 export function scriptHooks(service: ScriptService): RpgServer {
   const module: Partial<Record<HookScope, Record<string, (...args: unknown[]) => Promise<void>>>> = {};
   const byHook = new Map<string, SignalBinding[]>();
+  // The signals of `background` bindings whose scripts still run, per player
+  const running = new Set<string>();
   for (const binding of service.bindings) {
     const id = `${binding.scope}.${binding.hook}`;
     byHook.set(id, [...(byHook.get(id) ?? []), binding]);
@@ -28,7 +30,16 @@ export function scriptHooks(service: ScriptService): RpgServer {
         // `map.tick` runs on every tick: nothing to compute when no script listens
         if (service.listeners(binding.signal).length === 0) continue;
         const emissions = await binding.emit(...args);
-        for (const emission of [emissions ?? []].flat()) await service.emit(binding.signal, emission.payload, emission.context);
+        for (const emission of [emissions ?? []].flat()) {
+          if (!binding.background) {
+            await service.emit(binding.signal, emission.payload, emission.context);
+            continue;
+          }
+          const key = `${binding.signal}\0${emission.context.player.id}`;
+          if (running.has(key)) continue;
+          running.add(key);
+          void service.emit(binding.signal, emission.payload, emission.context).finally(() => running.delete(key));
+        }
       }
     };
   }
