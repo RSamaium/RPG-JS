@@ -97,6 +97,10 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 | `battle.command` | `onCommand` of the `battle` scope; a script observes it and never refuses it | `skill`, `hero`, `target` (tags) |
 | `battle.end` | `onEnd` of the `battle` scope | `result`, `troop`, `enemies` |
 | `combat.hit` | `combat.hooks.afterHit` of Action Battle, through `actionBattleHooks(scripts)`: for the attacker when it is a player, otherwise the target; nothing for a hit between two events | `damage`, `defeated`, `attacker`, `target` (`id`, `name`, `kind`) |
+| `player.hotbarChange` | `onHotbarChange` | `action`, `slots` |
+| `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y` |
+| `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y` |
+| `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` |
 | `map.tick` | `onTick` of a map with players, once for each of its players. The map does not wait for it: a player whose listeners still run (`wait`, `showText`) skips the next ticks | `map`, `deltaMs`, `tick` |
 | `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |
 

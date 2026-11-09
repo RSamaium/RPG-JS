@@ -71,6 +71,12 @@ export interface HotbarConfiguration {
   allowedEntryTypes?: HotbarAllowedEntryTypesResolver;
   /** Player-visible unlock hint or a per-slot resolver. */
   lockedSlotHint?: HotbarLockedSlotHintResolver;
+  /**
+   * Put an item the player receives in the first free accessible slot.
+   *
+   * Applies only when the hotbar allows items. Defaults to `true`.
+   */
+  autoAssignItems?: boolean;
 }
 
 /** Payload delivered to the server `onHotbarChange` player hook. */
@@ -544,6 +550,49 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
     }
 
     /**
+     * Place a received item in the first free accessible slot, unless it is
+     * already in the hotbar. Does nothing before the hotbar is seeded: the
+     * item then comes with the loadout seed. Called by `addItem()`; falls back to a refresh when nothing applies.
+     *
+     * @title Place Hotbar Item
+     * @method player.placeHotbarItem(id)
+     * @param id - Item id.
+     * @returns The detached hotbar state.
+     * @memberof RpgPlayer
+     */
+    placeHotbarItem(id: string): HotbarState {
+      if (
+        playerConfigurations.get(this)?.autoAssignItems === false
+        || !this.isHotbarEntryTypeAllowed("item")
+      ) {
+        return this.refreshHotbar();
+      }
+      try {
+        nativeItemDefinition.validate(this as unknown as RpgPlayer, id);
+      } catch {
+        return this.refreshHotbar();
+      }
+      const current = this.normalizeHotbar();
+      // A hotbar never seeded takes the item with the loadout seed
+      // (`initializeHotbar()`), which would otherwise be skipped.
+      if (!current.initialized) return this.refreshHotbar();
+      if (current.slots.some((slot) => slot?.type === "item" && slot.id === id)) {
+        return this.refreshHotbar();
+      }
+      const index = current.slots
+        .slice(0, current.capacity)
+        .findIndex((slot) => slot === null);
+      if (index === -1) return this.refreshHotbar();
+      const entry: HotbarEntry = { type: "item", id };
+      const slots = current.slots.map(cloneEntry);
+      slots[index] = entry;
+      return this.commitHotbar(
+        { ...current, slots },
+        { action: "assign", slot: index, entry: cloneEntry(entry) as HotbarEntry },
+      );
+    }
+
+    /**
      * Seed the hotbar once from explicit entries or the player loadout.
      *
      * Learned skills are placed before usable consumable items when `entries`
@@ -716,6 +765,7 @@ export interface IHotbarManager {
   isHotbarEntryTypeAllowed(type: string): boolean;
   getHotbarLockedSlotHint(slot: number): string | undefined;
   refreshHotbar(): HotbarState;
+  placeHotbarItem(id: string): HotbarState;
   initializeHotbar(entries?: HotbarEntry[]): HotbarState;
   assignHotbarSlot(slot: number, entry: HotbarEntry): HotbarState;
   clearHotbarSlot(slot: number): HotbarState;

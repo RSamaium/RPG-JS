@@ -24,6 +24,13 @@ const serverModule = defineModule({
       spCost: 2,
       hitRate: 1,
     },
+    elixir: {
+      id: "elixir",
+      _type: "item",
+      name: "Elixir",
+      consumable: true,
+      hitRate: 1,
+    },
     potion: {
       id: "potion",
       _type: "item",
@@ -305,5 +312,60 @@ describe("player hotbar", () => {
       null,
       null,
     ]);
+  });
+
+  describe("items received after the seed", () => {
+    test("puts a new usable item in the first free slot", () => {
+      player.initializeHotbar([{ type: "skill", id: "fire" }]);
+      player.addItem("elixir");
+
+      const hotbar = player.getHotbar();
+      expect(hotbar.slots[1]).toEqual({ type: "item", id: "elixir" });
+      expect(onHotbarChange).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ action: "assign", slot: 1 }),
+      );
+    });
+
+    test("keeps an item already in the hotbar where it is", () => {
+      player.initializeHotbar([{ type: "item", id: "potion" }]);
+      player.addItem("potion");
+
+      expect(player.getHotbar().slots[0]).toEqual({ type: "item", id: "potion" });
+      expect(player.getHotbar().slots.filter((slot) => slot?.id === "potion")).toHaveLength(1);
+    });
+
+    test("ignores equipment and non-consumable items", () => {
+      player.initializeHotbar([{ type: "skill", id: "fire" }]);
+      player.addItem("sword");
+      player.addItem("keepsake");
+
+      expect(player.getHotbar().slots.slice(1).every((slot) => slot === null)).toBe(true);
+    });
+
+    test("does nothing when the hotbar is full", () => {
+      player.configureHotbar({ capacity: 1 });
+      player.initializeHotbar([{ type: "skill", id: "fire" }]);
+      player.addItem("elixir");
+
+      expect(player.getHotbar().slots[0]).toEqual({ type: "skill", id: "fire" });
+      expect(player.getHotbar().slots.some((slot) => slot?.id === "elixir")).toBe(false);
+    });
+
+    test("does nothing when the hotbar does not show items", () => {
+      player.configureHotbar({ allowedEntryTypes: ["skill"] });
+      player.initializeHotbar();
+      player.addItem("elixir");
+
+      expect(player.getHotbar().slots.some((slot) => slot?.id === "elixir")).toBe(false);
+    });
+
+    test("can be turned off with autoAssignItems", () => {
+      player.configureHotbar({ autoAssignItems: false });
+      player.initializeHotbar([{ type: "skill", id: "fire" }]);
+      player.addItem("elixir");
+
+      expect(player.getHotbar().slots.some((slot) => slot?.id === "elixir")).toBe(false);
+    });
   });
 });
