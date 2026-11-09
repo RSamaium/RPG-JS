@@ -13,6 +13,7 @@ import {
   normalizeMorphologyFeatures,
 } from "./map-renderer";
 import { TerrainWorkerClient } from "./map-renderer/terrain-renderer/terrain-worker-client";
+import { mergeStudioTerrainSets } from "./map-renderer/terrain-renderer/terrain-set-atlas";
 import { collectEmbeddedMedia, isHydratedMedia } from "./media-reference";
 import { resolveStudioElementSize } from "./studio-element-size";
 import { STUDIO_DIRECT_LOAD_MARKER } from "./map-streaming";
@@ -1027,10 +1028,12 @@ export const loadMap = async (mapId: string) => {
     ...map,
     terrainByTileset,
   }) : [];
-  const terrainRenderData = isV2 ? createStudioTerrainRenderData({
+  const baseTerrainRenderData = isV2 ? createStudioTerrainRenderData({
     ...map,
     terrainByTileset,
   }) : null;
+  // A map that uses several terrain sets is painted from one atlas made of all of them.
+  const terrainRenderData = baseTerrainRenderData ? await mergeStudioTerrainSets(baseTerrainRenderData) : null;
   if (terrainRenderData) {
     // The terrain workers can fetch the atlas while the rest of the map loads.
     TerrainWorkerClient.prefetchImages([
