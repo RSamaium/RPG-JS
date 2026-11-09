@@ -90,5 +90,9 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 | `player.itemAdd` / `player.itemRemove` / `player.itemUse` | `onItemAdd` / `onItemRemove` / `onItemUse` | `item`, `quantity` |
 | `player.itemEquip` | `onItemEquip` | `item`, `quantity`, `equipped` |
 | `player.goldChange` | `onGoldChange` | `gold`, `delta` |
+| `player.hotbarChange` | `onHotbarChange` | `action`, `slots` |
+| `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y` |
+| `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y` |
+| `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` |
 | `map.tick` | `onTick` of a map with players, once for each of its players. The map does not wait for it: a player whose listeners still run (`wait`, `showText`) skips the next ticks | `map`, `deltaMs`, `tick` |
 | `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |
