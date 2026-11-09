@@ -241,12 +241,32 @@ export const configureStudioClientStartupProject = (
   });
 };
 
+/**
+ * The project and the map the page opens: the map of the URL (`?map=`) wins over the start map of the
+ * configuration, and the project of the URL (`?game=`) is used when the configuration has none.
+ */
+export const resolveStudioStartupWarmUp = (
+  config: Pick<StudioGameModuleConfig, "projectId" | "startMapId">,
+  search: string,
+): { projectId?: string; startMapId?: string } => {
+  const query = resolveStudioClientStartupQuery(search);
+  return {
+    projectId: (config.projectId === undefined ? query.projectId : config.projectId) || undefined,
+    startMapId: query.directMapId ?? (config.startMapId || undefined),
+  };
+};
+
 export default (config: StudioGameModuleConfig) => {
   // In a page the client and the server (standalone) ask for the same data: the answers are shared during the start-up.
   if (typeof window !== "undefined") keepStudioApiAnswers();
   // The module is created long before the engine starts: the game data is already asked for while the engine boots.
-  if (typeof window !== "undefined" && config.projectId && !resolveStudioClientStartupQuery(window.location.search).directMapId) {
-    warmUpStartupData(getGameDataProvider(), { projectId: config.projectId, startMapId: config.startMapId });
+  if (typeof window !== "undefined") {
+    const startup = resolveStudioStartupWarmUp(config, window.location.search);
+    if (startup.projectId) {
+      // The project of the URL is configured now (as `onStart` does), so the provider asked is the one the game keeps.
+      configureStudioClientStartupProject(startup.projectId, config);
+      warmUpStartupData(getGameDataProvider(), startup);
+    }
   }
   // Title screen waiting for a deferred connection (see `onConnected`).
   let pendingTitleScreen: (() => Promise<void>) | undefined;

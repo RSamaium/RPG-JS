@@ -4,6 +4,7 @@ import {
   configureStudioClientStartupProject,
   displayStudioHudOnce,
   resolveStudioClientStartupQuery,
+  resolveStudioStartupWarmUp,
 } from "../src/client";
 import {
   configureStudioGameRuntime,
@@ -24,6 +25,32 @@ describe("Studio client runtime", () => {
     expect(resolveStudioClientStartupQuery("?game=%20%20")).toEqual({
       projectId: undefined,
       directMapId: undefined,
+    });
+  });
+
+  test("warms up the project and the map the URL opens", () => {
+    expect(resolveStudioStartupWarmUp({}, "?game=project-a&map=town")).toEqual({
+      projectId: "project-a",
+      startMapId: "town",
+    });
+  });
+
+  test("the map of the URL wins over the start map, the project of the configuration over the URL", () => {
+    expect(
+      resolveStudioStartupWarmUp(
+        { projectId: "project-b", startMapId: "start" },
+        "?game=project-a&map=town",
+      ),
+    ).toEqual({ projectId: "project-b", startMapId: "town" });
+    expect(
+      resolveStudioStartupWarmUp({ projectId: "project-b", startMapId: "start" }, ""),
+    ).toEqual({ projectId: "project-b", startMapId: "start" });
+  });
+
+  test("warms up nothing without a project", () => {
+    expect(resolveStudioStartupWarmUp({}, "?map=town")).toEqual({
+      projectId: undefined,
+      startMapId: "town",
     });
   });
 
