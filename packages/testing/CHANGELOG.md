@@ -1,5 +1,14 @@
 # @rpgjs/testing
 
+## 5.0.5
+
+### Patch Changes
+
+- Updated dependencies [e05bfa1]
+- Updated dependencies [e3bbe79]
+  - @rpgjs/server@5.3.1
+  - @rpgjs/client@5.4.1
+
 ## 5.0.4
 
 ### Patch Changes

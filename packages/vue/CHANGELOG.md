@@ -1,5 +1,11 @@
 # @rpgjs/vue
 
+## 5.0.5
+
+### Patch Changes
+
+- @rpgjs/client@5.4.1
+
 ## 5.0.4
 
 ### Patch Changes

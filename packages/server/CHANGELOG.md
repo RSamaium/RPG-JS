@@ -1,5 +1,13 @@
 # @rpgjs/server
 
+## 5.3.1
+
+### Patch Changes
+
+- e05bfa1: Hotbar: an item received after the hotbar was seeded takes the first free accessible slot (`player.configureHotbar({ autoAssignItems: false })` turns it off).
+- e3bbe79: Projectiles: the hooks of a projectile launched by an event (`onHit`, `onEnd`, `onLand`, `canHit`, `onProjectileHit`, `projectiles.onImpact`) receive that event as `owner`, typed `ProjectileOwner`.
+  - @rpgjs/testing@5.0.5
+
 ## 5.3.0
 
 ### Minor Changes
