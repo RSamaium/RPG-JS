@@ -9,7 +9,7 @@
     "assets": "python3 tools/make-assets.py"
   },
   "dependencies": {
-    "@canvasengine/presets": "2.5.0",
+    "@canvasengine/presets": "2.6.0",
     "@rpgjs/client": "workspace:*",
     "@rpgjs/common": "workspace:*",
     "@rpgjs/map-builder": "workspace:*",
@@ -17,7 +17,7 @@
     "@rpgjs/ui-css": "workspace:*",
     "@rpgjs/vite": "workspace:*",
     "@signe/di": "3.1.0",
-    "canvasengine": "2.5.1",
+    "canvasengine": "2.5.2",
     "pixi.js": "^8.19.0"
   },
   "devDependencies": {

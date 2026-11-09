@@ -22,8 +22,8 @@
   "author": "Samuel Ronce",
   "license": "MIT",
   "peerDependencies": {
-    "@canvasengine/presets": "^2.5.0",
-    "canvasengine": "^2.5.1",
+    "@canvasengine/presets": "^2.6.0",
+    "canvasengine": "^2.5.2",
     "pixi.js": "^8.9.2"
   },
   "dependencies": {
