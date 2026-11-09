@@ -1,5 +1,14 @@
 # @rpgjs/map-builder
 
+## 5.0.1
+
+### Patch Changes
+
+- Updated dependencies [e05bfa1]
+- Updated dependencies [e3bbe79]
+  - @rpgjs/server@5.3.1
+  - @rpgjs/client@5.4.1
+
 ## 2.0.0
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @rpgjs/studio
 
+## 5.5.0
+
+### Minor Changes
+
+- ffa44a9: A map element can play a looping visual effect (`visualEffect: { id, x, y, effect? }`): it is alive only near the viewport, with a cap on the simultaneous effects (`params.maxLoopingEffects`, 24 by default) and a lower particle budget when the cap is reached.
+- 8479406: A map can use several terrain sets: its terrain layer lists them in `terrainSets`, and the renderer paints every set from one atlas built when the map loads. A palette entry is a texture id (the first set that has it) or `set::texture`.
+
+### Patch Changes
+
+- b9eed56: Studio: the start-up warm-up also runs when the URL names a map (`?game=…&map=…`, the editor): it asks for the project, the database and the map of the URL in parallel.
+
 ## 5.4.0
 
 ### Minor Changes

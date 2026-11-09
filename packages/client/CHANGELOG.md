@@ -1,5 +1,13 @@
 # @rpgjs/client
 
+## 5.4.1
+
+### Patch Changes
+
+- Updated dependencies [e05bfa1]
+- Updated dependencies [e3bbe79]
+  - @rpgjs/server@5.3.1
+
 ## 5.4.0
 
 ### Minor Changes
