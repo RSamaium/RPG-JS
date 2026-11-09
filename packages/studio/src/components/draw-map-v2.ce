@@ -9,6 +9,20 @@
       <StudioEventLayer pixiChildren={eventLayerPixiChildren} hideEvents={eventsHidden} hidePlayers={isViewOnly} /> 
     </Container>
     <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
+    <Container sortableChildren={true}>
+      @for (fx of liveVisualEffects) {
+        <Fx
+          name={fx.id}
+          preset={fx.effect}
+          loop={true}
+          autostart={true}
+          x={fx.x}
+          y={fx.y}
+          maxParticles={fx.maxParticles}
+          zIndex={fx.zIndex}
+        />
+      }
+    </Container>
 </Container>
 
 @if (weatherOptions()) {
@@ -47,14 +61,15 @@
 
   <script>
     import { computed, effect, mount, signal, tick, untracked } from 'canvasengine'
-    import { Weather } from "@canvasengine/presets";
+    import { Fx, Weather } from "@canvasengine/presets";
     import { preloadMapCinematics } from '../cinematic';
     import { RpgClientEngine, inject } from "@rpgjs/client";
     import { Container as PixiContainer, Graphics } from "pixi.js";
     import StudioTerrainMap from '../map-renderer/components/studio-terrain-map.ce'
     import StudioEventLayer from './studio-event-layer.ce'
     import { StudioTerrainWallOcclusionRenderer, StudioTerrainWallShadowRenderer } from '../map-renderer/terrain-renderer/terrain-chunk-renderer'
-    import { StudioElementRenderer } from '../map-renderer/studio-element-renderer'
+    import { StudioElementRenderer, resolveStudioElementVisualEffect } from '../map-renderer/studio-element-renderer'
+    import { DEFAULT_MAX_LOOPING_EFFECTS, selectLiveVisualEffects } from '../map-renderer/element-visual-effects'
     import { createMapBuilderElementLayer, partitionStudioElements } from '../map-renderer/map-builder-bridge'
     import { holdStudioMapReady } from '../studio-map-readiness'
     import { toCanvasWeatherOptions } from '@common/weather';
@@ -626,6 +641,43 @@
       return data().elementsLow || []
     })
     const elementsHigh = computed(() => data().elementsHigh || [])
+
+    // Looping visual effects of the elements: only the ones near the viewport are alive, up to a cap.
+    const VISUAL_EFFECT_CULL_GRID_SIZE = 64
+    const liveVisualEffects = signal([])
+    let lastVisualEffectCullKey = ""
+    const visualEffectCandidates = computed(() =>
+      [...elementsAlwaysLow(), ...elementsLow(), ...elementsHigh()]
+        .map((element) => resolveStudioElementVisualEffect(element))
+        .filter(Boolean)
+    )
+    const maxLoopingEffects = computed(() => {
+      const value = Number(data().params?.maxLoopingEffects)
+      return Number.isFinite(value) && value >= 0 ? Math.floor(value) : DEFAULT_MAX_LOOPING_EFFECTS
+    })
+
+    function updateVisualEffects() {
+      const candidates = visualEffectCandidates()
+      if (candidates.length === 0) {
+        if (liveVisualEffects().length > 0) liveVisualEffects.set([])
+        lastVisualEffectCullKey = ""
+        return
+      }
+      const bounds = getPixiLocalViewportBounds(engine, terrainWallShadowWorld)
+      const cullKey = bounds
+        ? [createViewportCullKey(bounds, VISUAL_EFFECT_CULL_GRID_SIZE), candidates.length, maxLoopingEffects()].join('|')
+        : ''
+      if (cullKey === lastVisualEffectCullKey) return
+      lastVisualEffectCullKey = cullKey
+      const alive = new Set(liveVisualEffects().map((fx) => fx.key))
+      const { live } = selectLiveVisualEffects(candidates, bounds, alive, { cap: maxLoopingEffects() })
+      const same = live.length === alive.size && live.every((fx) => alive.has(fx.key))
+      if (!same) liveVisualEffects.set(live)
+    }
+
+    tick(() => {
+      updateVisualEffects()
+    })
 
     const renderStudioElements = async () => {
       const currentSerial = ++studioElementRenderSerial

@@ -199,6 +199,7 @@ export function prepareElements(map: Record<string, any>): {
         extractGroundShadow: placement.extractGroundShadow ?? source.extractGroundShadow,
         submersion: normalizeElementSubmersion(placement.submersion),
         lightSpot: placement.lightSpot ?? source.lightSpot,
+        visualEffect: placement.visualEffect ?? source.visualEffect,
         zIndexOffset: finite(placement.zIndexOffset),
         sortMode: placement.sortMode ?? source.sortMode,
         ...(rule
