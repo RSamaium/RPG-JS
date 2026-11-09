@@ -267,6 +267,6 @@ describe("the tools that write a script", () => {
     const check = checkScript(`on("enemy.killed", () => {});`);
 
     expect(check.ok).toBe(false);
-    expect(check.diagnostics[0].message).toMatch(/unknown signal "enemy.killed".*event.action, event.touch, gui.action, map.tick, player.dead/);
+    expect(check.diagnostics[0].message).toMatch(/unknown signal "enemy.killed".*event.action, event.touch, gui.action, map.tick, player.connect, player.dead/);
   });
 });

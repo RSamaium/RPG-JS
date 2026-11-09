@@ -90,5 +90,33 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 | `player.itemAdd` / `player.itemRemove` / `player.itemUse` | `onItemAdd` / `onItemRemove` / `onItemUse` | `item`, `quantity` |
 | `player.itemEquip` | `onItemEquip` | `item`, `quantity`, `equipped` |
 | `player.goldChange` | `onGoldChange` | `gold`, `delta` |
+| `player.skillChange` | `onSkillChange` of the player | `action` (`learn`, `forget`), `skill` |
+| `player.connect` | `onConnected` of the player | |
+| `player.disconnect` | `onDisconnected` of the player | |
+| `battle.start` | `onStart` of the `battle` scope (a turn-based battle) | `troop`, `enemies` (tags) |
+| `battle.command` | `onCommand` of the `battle` scope; a script observes it and never refuses it | `skill`, `hero`, `target` (tags) |
+| `battle.end` | `onEnd` of the `battle` scope | `result`, `troop`, `enemies` |
+| `combat.hit` | `combat.hooks.afterHit` of Action Battle, through `actionBattleHooks(scripts)`: for the attacker when it is a player, otherwise the target; nothing for a hit between two events | `damage`, `defeated`, `attacker`, `target` (`id`, `name`, `kind`) |
 | `map.tick` | `onTick` of a map with players, once for each of its players. The map does not wait for it: a player whose listeners still run (`wait`, `showText`) skips the next ticks | `map`, `deltaMs`, `tick` |
 | `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |
+
+### Signals of a module and of Action Battle
+
+A module binds its own hooks with a scope of its own (`scope: "tactical"`), and the tools take the signals it adds:
+
+```ts
+checkScript(source, catalog, { signals });                              // a signal of a module is accepted only when given
+simulate({ source, signals, emit: { signal: "tactical.defeat", payload } });
+runTests(source, tests, catalog, signals);
+describeGameApi(signals);
+```
+
+`combat.hit` comes from Action Battle:
+
+```ts
+import { ScriptService, provideScripts, actionBattleHooks } from "@rpgjs/script/server";
+
+const scripts = new ScriptService();
+provideScripts(scripts);
+provideActionBattle({ combat: { hooks: actionBattleHooks(scripts) } });
+```
