@@ -12,7 +12,7 @@ minimumReleaseAgeExclude:
   # pnpm applies only the first rule matching a package name: keep one rule
   # per package, with every allowed version in a `||` union.
   - '@canvasengine/compiler@2.5.0'
-  - '@canvasengine/presets@2.5.0'
-  - 'canvasengine@2.5.0 || 2.5.1'
+  - '@canvasengine/presets@2.5.0 || 2.6.0'
+  - 'canvasengine@2.5.0 || 2.5.1 || 2.5.2'
   - '@signe/room@3.2.1'
   - vite@8.1.1

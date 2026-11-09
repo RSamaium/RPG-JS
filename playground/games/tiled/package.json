@@ -18,7 +18,7 @@
   },
   "private": true,
   "dependencies": {
-    "@canvasengine/presets": "2.5.0",
+    "@canvasengine/presets": "2.6.0",
     "@rpgjs/action-battle": "workspace:*",
     "@rpgjs/client": "workspace:*",
     "@rpgjs/common": "workspace:*",
@@ -28,7 +28,7 @@
     "@rpgjs/vite": "workspace:*",
     "@rpgjs/vue": "workspace:*",
     "@signe/di": "3.1.0",
-    "canvasengine": "2.5.1",
+    "canvasengine": "2.5.2",
     "pixi.js": "^8.19.0"
   },
   "type": "module"

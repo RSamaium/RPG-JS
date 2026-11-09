@@ -3702,6 +3702,7 @@
       "ProjectileEndHookContext",
       "ProjectileHookContext",
       "ProjectileImpactHookContext",
+      "ProjectileOwner",
       "ProjectilePatternOptions",
       "ProjectileRepeatOptions",
       "ProjectileServerState",
