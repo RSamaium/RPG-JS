@@ -114,6 +114,13 @@ export interface StudioTerrainStreamUpdate {
   activeRegions: StudioTerrainRenderBounds[];
 }
 
+/** A terrain set a map uses: its id, the picture of its atlas and its textures. */
+export interface StudioTerrainSet {
+  id: string;
+  sourceTexture: string;
+  asset: TerrainAssetMetadata;
+}
+
 export interface StudioTerrainRenderData {
   widthTiles: number;
   heightTiles: number;
@@ -122,6 +129,11 @@ export interface StudioTerrainRenderData {
   height: number;
   asset: TerrainAssetMetadata | null;
   sourceTexture: string;
+  /**
+   * The terrain sets of the map, the primary one first, when it uses several. `mergeStudioTerrainSets` turns them into one
+   * atlas (`asset`, `sourceTexture`) before the terrain is drawn. Absent for a map with one set.
+   */
+  terrainSets?: StudioTerrainSet[];
   terrainControl: StudioTerrainControlTexture | null;
   terrainGrid: StudioTerrainCell[][];
   morphologyFeatures: StudioTerrainMorphologyFeature[];

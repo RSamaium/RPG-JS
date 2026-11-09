@@ -6,6 +6,7 @@ import {
   type StudioTerrainMorphologyFeature,
   type StudioTerrainMorphologyOperation,
   type StudioTerrainRenderData,
+  type StudioTerrainSet,
   type StudioWaterAnimationOptions,
 } from "./types";
 import {
@@ -41,6 +42,7 @@ export function createStudioTerrainRenderData(map: any): StudioTerrainRenderData
     height,
     tileSize
   );
+  const terrainSets = useTileAtlas ? undefined : resolveMapTerrainSets(params, terrainLayer, terrainAssetSource, asset);
   const terrainGrid = resolveTerrainGrid(map, asset, widthTiles, heightTiles, useTileAtlas);
   const morphologyFeatures = normalizeMorphologyFeatures(map?.terrainMorphologyLayer);
   const waterAnimation = normalizeWaterAnimationOptions(map?.waterAnimation);
@@ -53,6 +55,7 @@ export function createStudioTerrainRenderData(map: any): StudioTerrainRenderData
     height,
     asset,
     sourceTexture,
+    ...(terrainSets ? { terrainSets } : {}),
     terrainControl,
     terrainGrid,
     morphologyFeatures,
@@ -66,9 +69,37 @@ export function createStudioTerrainRenderData(map: any): StudioTerrainRenderData
       JSON.stringify(waterAnimation),
       JSON.stringify(params?.baseTerrain?.updatedAt ?? ""),
       JSON.stringify(params?.primaryTerrainTileset?.updatedAt ?? ""),
+      terrainSets?.map((set) => set.id).join(",") ?? "",
       terrainControl?.source ?? "",
     ].join("|"),
   };
+}
+
+/**
+ * The terrain sets a map uses, the primary one first: the ones its terrain layer lists in `terrainSets` (ids of terrain tilesets
+ * of the project). Undefined when the map uses one set, which is the case of every map made before.
+ */
+function resolveMapTerrainSets(
+  params: any,
+  terrainLayer: Record<string, unknown> | null,
+  primarySource: any,
+  primaryAsset: ReturnType<typeof normalizeTerrainAssetMetadata>
+): StudioTerrainSet[] | undefined {
+  const listed = normalizeStringList(terrainLayer?.terrainSets);
+  if (listed.length === 0 || !primaryAsset) return undefined;
+  const primaryId = resolveId(primarySource) || "primary";
+  const available = normalizeList(params?.terrainTilesets);
+  const sets: StudioTerrainSet[] = [
+    { id: primaryId, sourceTexture: primaryAsset.sourceTexture ? resolveAssetSource(primaryAsset.sourceTexture) : "", asset: primaryAsset },
+  ];
+  for (const id of listed) {
+    if (sets.some((set) => set.id === id)) continue;
+    const source = available.find((tileset) => resolveId(tileset) === id);
+    const asset = normalizeTerrainAssetMetadata(source);
+    if (!asset?.sourceTexture) continue;
+    sets.push({ id, sourceTexture: resolveAssetSource(asset.sourceTexture), asset });
+  }
+  return sets.length > 1 ? sets : undefined;
 }
 
 function resolvePrimaryTerrainAsset(params: any): any {
