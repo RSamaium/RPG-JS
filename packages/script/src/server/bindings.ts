@@ -9,6 +9,7 @@ import type { SignalDesc } from "../core/filter";
 import type { SignalContext } from "./service";
 import { describeRoom } from "./world";
 import type { RpgShape } from "@rpgjs/common";
+import type { HotbarChangePayload, ProjectileDestroyHookContext, ProjectileServerState, ProjectileTargetHitContext } from "@rpgjs/server";
 
 /** Where a hook lives in a server module of RPGJS: `player`, `event`, `map`, `room`, `engine` or `projectiles`. */
 export type HookScope = "player" | "event" | "map" | "room" | "engine" | "projectiles";
@@ -87,9 +88,20 @@ const eventPayload = (event: RpgEvent) => ({ event: { id: String(event.id ?? "")
 const ofEvent = (event: RpgEvent, player: RpgPlayer): SignalEmission => ({ payload: eventPayload(event), context: { player, event } });
 const itemPayload = (change: RpgItemChangePayload) => ({ item: String(change.itemId), quantity: Number(change.quantity) });
 
+const projectilePayload = (projectile: ProjectileServerState) => ({
+  id: String(projectile.id),
+  type: String(projectile.type),
+  ...(typeof projectile.params?.projectileId === "string" ? { projectileId: projectile.params.projectileId } : {}),
+});
+/** A script acts for a player: a projectile launched by an event has no player to act for. */
+const playerOwner = (owner: unknown): RpgPlayer | undefined =>
+  owner && !(typeof (owner as { isEvent?: unknown }).isEvent === "function" && (owner as { isEvent(): boolean }).isEvent())
+    ? (owner as RpgPlayer)
+    : undefined;
+
 /**
  * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp`, `onDead`,
- * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip` and `onGoldChange` of the player, `onAction` and `onPlayerTouch` of the events,
+ * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip`, `onGoldChange`, `onHotbarChange` and `onProjectileHit` of the player, `onProjectileHit` of the events, `onDestroy` of the projectiles, `onAction` and `onPlayerTouch` of the events,
  * and `onTick` of the maps. The ones of the player fire in every kind of room, a map or not.
  */
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
@@ -152,6 +164,36 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer, RpgGoldChangePayload]>({
     signal: "player.goldChange", scope: "player", hook: "onGoldChange",
     emit: (player, change) => ({ payload: { gold: Number(change.gold), delta: Number(change.delta) }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, HotbarChangePayload]>({
+    signal: "player.hotbarChange", scope: "player", hook: "onHotbarChange",
+    emit: (player, change) => ({ payload: { action: String(change.action), slots: change.state.slots.map((slot) => (slot ? { type: slot.type, id: slot.id } : null)) }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, ProjectileServerState, ProjectileTargetHitContext]>({
+    signal: "player.projectileHit", scope: "player", hook: "onProjectileHit",
+    emit: (player, projectile, hit) => ({
+      payload: { projectile: projectilePayload(projectile), x: Number(hit.x), y: Number(hit.y) },
+      context: { player, map: hit.map },
+    }),
+  }),
+  signalBinding<[RpgEvent, ProjectileServerState, ProjectileTargetHitContext]>({
+    signal: "event.projectileHit", scope: "event", hook: "onProjectileHit",
+    emit: (event, projectile, hit) => {
+      const owner = playerOwner(hit.owner);
+      return owner ? { payload: { projectile: projectilePayload(projectile), x: Number(hit.x), y: Number(hit.y) }, context: { player: owner, map: hit.map, event } } : undefined;
+    },
+  }),
+  signalBinding<[ProjectileDestroyHookContext]>({
+    signal: "projectile.end", scope: "projectiles", hook: "onDestroy",
+    emit: (end) => {
+      const owner = playerOwner(end.owner);
+      if (!owner) return undefined;
+      const point = end.hit?.point;
+      return {
+        payload: { projectile: projectilePayload(end.projectile), reason: String(end.reason), x: Number(point?.x ?? end.projectile.origin.x), y: Number(point?.y ?? end.projectile.origin.y) },
+        context: { player: owner, map: end.map },
+      };
+    },
   }),
   signalBinding<[RpgMap, RpgMapTickPayload]>({
     signal: "map.tick", scope: "map", hook: "onTick", background: true,

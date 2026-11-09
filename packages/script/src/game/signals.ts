@@ -24,6 +24,19 @@ const EVENT: SignalDesc["payload"] = {
   event: { type: "object", fields: { id: { type: "string" }, name: { type: "string", doc: "Name of the event, empty when it has none." } } },
 };
 
+const PROJECTILE: SignalDesc["payload"] = {
+  projectile: {
+    type: "object",
+    fields: {
+      id: { type: "string", doc: "Id of this projectile in flight." },
+      type: { type: "string", doc: "The type of the projectile (its graphic, or the Studio projectile record)." },
+      projectileId: { type: "string", doc: "Id of the Studio projectile record, when it has one." },
+    },
+  },
+  x: { type: "number", doc: "X of the impact." },
+  y: { type: "number", doc: "Y of the impact." },
+};
+
 /**
  * The signals of the game: `player.joinRoom`, `player.leaveRoom`, `player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`,
  * `player.itemAdd`, `player.itemRemove`, `player.itemUse`, `player.itemEquip`, `player.goldChange`, `map.tick`, `event.action`,
@@ -73,6 +86,30 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
       gui: { type: "string", doc: "Id of the GUI, <pluginId>_<file> for a plugin." },
       event: { type: "string", doc: "Name of the event the component sent." },
       data: { type: "object", doc: "What the component sent with it (plain data), or nothing." },
+    },
+  },
+  "player.hotbarChange": {
+    doc: "The hotbar of a player changes: seeded, a slot assigned or cleared, a slot selected, or refreshed.",
+    payload: {
+      action: { type: "string", doc: '"initialize", "assign", "clear", "select" or "refresh".' },
+      slots: { type: "object", doc: "The slots after the change, in order: { type, id } or null for a free slot." },
+    },
+  },
+  "player.projectileHit": {
+    doc: "A projectile hits a player. The player the script acts for is the one hit. It does not change what the projectile does.",
+    payload: PROJECTILE,
+  },
+  "event.projectileHit": {
+    doc: "A projectile hits an event. The player the script acts for is the owner of the projectile, so nothing fires when an event launched it. It does not change what the projectile does.",
+    payload: PROJECTILE,
+  },
+  "projectile.end": {
+    doc: "A projectile is gone: it hit something, reached its range, expired or landed (a bomb). The player the script acts for is the owner; nothing fires when an event launched it.",
+    payload: {
+      projectile: PROJECTILE.projectile,
+      reason: { type: "string", doc: 'Why it ended: "hit", "range", "land", "return", "ttl"…' },
+      x: PROJECTILE.x,
+      y: PROJECTILE.y,
     },
   },
   "event.action": { doc: "A player acts on an event (the action key, next to it).", payload: EVENT },

@@ -59,6 +59,21 @@ export interface DataPort {
   list(type: string): DataRecord[];
 }
 
+/** What a script gives to launch a projectile from the map. */
+export interface ProjectileLaunchOptions {
+  /** The type of the projectile: its graphic, or the id of a Studio projectile record. */
+  projectile: string;
+  from: { x: number; y: number };
+  /** The point the projectile flies toward. */
+  toward: { x: number; y: number };
+  damage?: number;
+  speed?: number;
+  range?: number;
+}
+
+/** A slot of the hotbar: a skill, an item, or the entry of a plugin. */
+export interface HotbarEntryOptions { type: string; id: string }
+
 /** The map of the script, with the names of `RpgMap`. Not there when the room is not a map. */
 export interface MapPort {
   readonly id: string;
@@ -96,6 +111,8 @@ export interface MapPort {
   showAnimation(position: { x: number; y: number }, graphic: string, animationName: string): void | Promise<void>;
   showComponentAnimation(id: string, position: { x: number; y: number }, params: object): void | Promise<void>;
   shakeMap(options?: ShakeOptions): void | Promise<void>;
+  /** Launches a projectile from a point toward another one. Gives the id of the projectile. */
+  launchProjectile(options: ProjectileLaunchOptions): string | Promise<string>;
 }
 
 /** The player of the script, with the names of `RpgPlayer`. Every change is the engine's to apply. */
@@ -125,6 +142,8 @@ export interface PlayerPort {
   updateGui(id: string, data: VariableValue): void | Promise<void>;
   /** Closes a GUI, as `player.removeGui(id, data)` does. */
   closeGui(id: string, data?: VariableValue): void | Promise<void>;
+  /** Puts a skill, an item or a plugin entry in a slot of the hotbar, as `player.assignHotbarSlot(slot, entry)` does. */
+  assignHotbarSlot(slot: number, entry: HotbarEntryOptions): void | Promise<void>;
 }
 
 /** What a script run needs from its environment. */
@@ -307,6 +326,32 @@ const choices = (v: unknown): Choice[] => {
   });
 };
 
+const MAX_PROJECTILE_RANGE = 5000;
+const MAX_PROJECTILE_SPEED = 2000;
+const finite = (v: unknown, what: string) => {
+  if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${what} must be a finite number`);
+  return v;
+};
+const launchOptions = (v: unknown): ProjectileLaunchOptions => {
+  const o = opts(v);
+  const from = position(o.from), toward = position(o.toward);
+  if (from.x === toward.x && from.y === toward.y) throw new Error("toward must be another point than from");
+  const out: ProjectileLaunchOptions = { projectile: text(o.projectile, "a projectile id"), from, toward };
+  if (o.damage !== undefined) out.damage = Math.max(0, finite(o.damage, "damage"));
+  if (o.speed !== undefined) out.speed = Math.min(MAX_PROJECTILE_SPEED, Math.max(1, finite(o.speed, "speed")));
+  if (o.range !== undefined) out.range = Math.min(MAX_PROJECTILE_RANGE, Math.max(1, finite(o.range, "range")));
+  return out;
+};
+const hotbarEntry = (v: unknown): HotbarEntryOptions => {
+  const o = opts(v);
+  return { type: text(o.type, "the type of a hotbar entry"), id: text(o.id, "the id of a hotbar entry") };
+};
+const hotbarSlot = (v: unknown): number => {
+  const n = Number(v);
+  if (!Number.isInteger(n) || n < 0 || n > 9) throw new Error("a hotbar slot is a whole number from 0 to 9");
+  return n;
+};
+
 /**
  * What each name of `GAME_API_DESCRIPTION` does, over a `ScriptWorld`. Written once: the game and a simulation provide a world, and the
  * behavior (checks, limits, what is refused) is the same in both.
@@ -347,6 +392,7 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         openGui: (w, [id, d, o]) => w.player.openGui(guiId(id), d === undefined ? undefined : guiData(d), guiOptions(o)),
         updateGui: (w, [id, d]) => w.player.updateGui(guiId(id), guiData(d)),
         closeGui: (w, [id, d]) => w.player.closeGui(guiId(id), d === undefined ? undefined : guiData(d)),
+        assignHotbarSlot: (w, [slot, entry]) => w.player.assignHotbarSlot(hotbarSlot(slot), hotbarEntry(entry)),
         changeMap: (w, [m, p]) => {
           const map = text(m, "a map id");
           if (p === undefined) return w.player.changeMap(map);
@@ -392,6 +438,7 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         showAnimation: (w, [p, graphic, name]) => mapOf(w).showAnimation(position(p), text(graphic, "a graphic id"), name === undefined ? "default" : text(name, "an animation name")),
         showComponentAnimation: (w, [id, p, params]) => mapOf(w).showComponentAnimation(text(id, "an animation id"), position(p), params === undefined ? {} : (stateData(params, "params") as object)),
         shakeMap: (w, [o]) => mapOf(w).shakeMap(shakeOptions(o)),
+        launchProjectile: (w, [o]) => mapOf(w).launchProjectile(launchOptions(o)),
       },
     },
     $data: {

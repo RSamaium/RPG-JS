@@ -48,6 +48,10 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         },
         updateGui: { sig: "(id: string, data: object): void", doc: "Sends new data to a GUI that is open, as player.gui(id).update(data) does." },
         closeGui: { sig: "(id: string, data?: object): void", doc: "Closes a GUI, as player.removeGui(id, data) does." },
+        assignHotbarSlot: {
+          sig: '(slot: number, entry: { type: "skill" | "item" | string; id: string }): void',
+          doc: "Puts a skill the player knows, a usable item or the entry of a plugin in a slot of the hotbar (0 to 9), as player.assignHotbarSlot does. The entry that was elsewhere in the hotbar moves. Listen to player.hotbarChange for the changes.",
+        },
       },
     },
     $map: {
@@ -88,6 +92,10 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         stopSound: { sig: "(id: string): void" },
         showAnimation: { sig: "(position: { x: number; y: number }, graphic: string, animationName?: string): void", doc: 'Shows an animation of a graphic at a position of the map, for its players. animationName is "default" when not given.' },
         showComponentAnimation: { sig: "(id: string, position: { x: number; y: number }, params?: object): void", doc: "Shows an animation made by a component of the game, with plain data as params." },
+        launchProjectile: {
+          sig: "(options: { projectile: string; from: { x: number; y: number }; toward: { x: number; y: number }; damage?: number; speed?: number; range?: number }): string",
+          doc: "Launches a projectile of the map from a point toward another one and gives its id. `projectile` is the type of the projectile (its graphic, or a Studio projectile record). Listen to event.projectileHit, player.projectileHit and projectile.end for what it does. speed is at most 2 000 and range at most 5 000.",
+        },
         shakeMap: { sig: '(options?: { intensity?: number; duration?: number; frequency?: number; direction?: "x" | "y" | "both" }): void', doc: "Shakes the screen of the players of the map." },
       },
     },
