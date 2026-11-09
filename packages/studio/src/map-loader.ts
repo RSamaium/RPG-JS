@@ -831,6 +831,7 @@ export const loadMap = async (mapId: string) => {
             : tilesetElement.extractGroundShadow,
         submersion: normalizeElementSubmersion(element.submersion),
         lightSpot: element.lightSpot !== undefined ? element.lightSpot : tilesetElement.lightSpot,
+        visualEffect: element.visualEffect !== undefined ? element.visualEffect : tilesetElement.visualEffect,
         zIndexOffset,
         sortMode: element.sortMode ?? tilesetElement.sortMode,
       }
