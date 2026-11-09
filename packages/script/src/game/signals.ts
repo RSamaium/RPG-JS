@@ -24,6 +24,17 @@ const EVENT: SignalDesc["payload"] = {
   event: { type: "object", fields: { id: { type: "string" }, name: { type: "string", doc: "Name of the event, empty when it has none." } } },
 };
 
+const TAGS = (what: string): SignalDesc["payload"][string] => ({ type: "string[]", doc: `The tags of ${what}, to filter with where: { "x.tags": { has: "fire" } }.` });
+const FIGHTER: SignalDesc["payload"][string] = {
+  type: "object",
+  fields: {
+    id: { type: "string" },
+    name: { type: "string" },
+    kind: { type: "string", doc: '"player" or "event".' },
+  },
+  doc: "Who it is: the id, the name and whether it is a player or an event.",
+};
+
 const PROJECTILE: SignalDesc["payload"] = {
   projectile: {
     type: "object",
@@ -39,7 +50,7 @@ const PROJECTILE: SignalDesc["payload"] = {
 
 /**
  * The signals of the game: `player.joinRoom`, `player.leaveRoom`, `player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`,
- * `player.itemAdd`, `player.itemRemove`, `player.itemUse`, `player.itemEquip`, `player.goldChange`, `map.tick`, `event.action`,
+ * `player.itemAdd`, `player.itemRemove`, `player.itemUse`, `player.itemEquip`, `player.goldChange`, `player.skillChange`, `player.connect`, `player.disconnect`, `battle.start`, `battle.command`, `battle.end`, `combat.hit`, `map.tick`, `event.action`,
  * `event.touch`. The room ones fire in every kind of room; the map and event ones only in a map.
  * A plugin adds its own with the `signals` option of `ScriptService`.
  */
@@ -86,6 +97,47 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
       gui: { type: "string", doc: "Id of the GUI, <pluginId>_<file> for a plugin." },
       event: { type: "string", doc: "Name of the event the component sent." },
       data: { type: "object", doc: "What the component sent with it (plain data), or nothing." },
+    },
+  },
+  "player.skillChange": {
+    doc: "A player learns or forgets a skill.",
+    payload: {
+      action: { type: "string", doc: '"learn" or "forget".' },
+      skill: { type: "string", doc: "Id of the skill." },
+    },
+  },
+  "player.connect": { doc: "A player connects to the game.", payload: {} },
+  "player.disconnect": { doc: "A player disconnects from the game.", payload: {} },
+  "battle.start": {
+    doc: "A turn-based battle starts. The player the script acts for is the hero.",
+    payload: {
+      troop: TAGS("the troop"),
+      enemies: TAGS("the enemies"),
+    },
+  },
+  "battle.command": {
+    doc: "The player picks a command in a turn-based battle (a skill on a target). A script observes it and never refuses it.",
+    payload: {
+      skill: TAGS("the skill"),
+      hero: TAGS("the hero"),
+      target: TAGS("the target"),
+    },
+  },
+  "battle.end": {
+    doc: "A turn-based battle ends.",
+    payload: {
+      result: { type: "string", doc: 'How it ended: "victory", "defeat" or "escape".' },
+      troop: TAGS("the troop"),
+      enemies: TAGS("the enemies"),
+    },
+  },
+  "combat.hit": {
+    doc: "A hit lands in an action battle, for the player of the hit: the attacker, otherwise the target. A hit between two events emits nothing.",
+    payload: {
+      damage: { type: "number", doc: "The damage dealt." },
+      defeated: { type: "boolean", doc: "true when the target has no health left." },
+      attacker: FIGHTER,
+      target: FIGHTER,
     },
   },
   "player.hotbarChange": {

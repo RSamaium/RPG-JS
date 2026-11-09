@@ -12,7 +12,7 @@ import type { RpgShape } from "@rpgjs/common";
 import type { HotbarChangePayload, ProjectileDestroyHookContext, ProjectileServerState, ProjectileTargetHitContext } from "@rpgjs/server";
 
 /** Where a hook lives in a server module of RPGJS: `player`, `event`, `map`, `room`, `engine` or `projectiles`. */
-export type HookScope = "player" | "event" | "map" | "room" | "engine" | "projectiles";
+export type HookScope = "player" | "event" | "map" | "room" | "engine" | "projectiles" | (string & {});
 
 /** What a hook gives a signal: its payload, and where it happened (the player the scripts act for, the map, the event). */
 export interface SignalEmission {
@@ -100,8 +100,25 @@ const playerOwner = (owner: unknown): RpgPlayer | undefined =>
     : undefined;
 
 /**
+ * What the hooks of a turn-based battle give (scope `battle`, hooks `onStart`, `onCommand`, `onEnd`): the hero the script acts for
+ * and the tags of what is in the battle. A battle module calls them with this context.
+ */
+export interface BattleHookContext {
+  player: RpgPlayer;
+  map?: RpgMap | null;
+  /** How the battle ended, for `onEnd`. */
+  result?: string;
+  troop?: string[];
+  enemies?: string[];
+  skill?: string[];
+  hero?: string[];
+  target?: string[];
+}
+const tags = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
+
+/**
  * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp`, `onDead`,
- * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip`, `onGoldChange`, `onHotbarChange` and `onProjectileHit` of the player, `onProjectileHit` of the events, `onDestroy` of the projectiles, `onAction` and `onPlayerTouch` of the events,
+ * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip`, `onGoldChange`, `onSkillChange`, `onConnected`, `onDisconnected`, `onHotbarChange` and `onProjectileHit` of the player, `onStart`, `onCommand` and `onEnd` of a turn-based battle (scope `battle`), `onProjectileHit` of the events, `onDestroy` of the projectiles, `onAction` and `onPlayerTouch` of the events,
  * and `onTick` of the maps. The ones of the player fire in every kind of room, a map or not.
  */
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
@@ -164,6 +181,31 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer, RpgGoldChangePayload]>({
     signal: "player.goldChange", scope: "player", hook: "onGoldChange",
     emit: (player, change) => ({ payload: { gold: Number(change.gold), delta: Number(change.delta) }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, { action: string; skillId: string }]>({
+    signal: "player.skillChange", scope: "player", hook: "onSkillChange",
+    emit: (player, change) => ({ payload: { action: String(change.action), skill: String(change.skillId) }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer]>({
+    signal: "player.connect", scope: "player", hook: "onConnected",
+    emit: (player) => ({ payload: {}, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer]>({
+    signal: "player.disconnect", scope: "player", hook: "onDisconnected",
+    emit: (player) => ({ payload: {}, context: { player } }),
+  }),
+  signalBinding<[BattleHookContext]>({
+    signal: "battle.start", scope: "battle", hook: "onStart",
+    emit: (battle) => ({ payload: { troop: tags(battle.troop), enemies: tags(battle.enemies) }, context: { player: battle.player, map: battle.map } }),
+  }),
+  signalBinding<[BattleHookContext]>({
+    signal: "battle.command", scope: "battle", hook: "onCommand",
+    // a script observes the command: it never refuses it, whatever the script does
+    emit: (battle) => ({ payload: { skill: tags(battle.skill), hero: tags(battle.hero), target: tags(battle.target) }, context: { player: battle.player, map: battle.map } }),
+  }),
+  signalBinding<[BattleHookContext]>({
+    signal: "battle.end", scope: "battle", hook: "onEnd",
+    emit: (battle) => ({ payload: { result: String(battle.result ?? ""), troop: tags(battle.troop), enemies: tags(battle.enemies) }, context: { player: battle.player, map: battle.map } }),
   }),
   signalBinding<[RpgPlayer, HotbarChangePayload]>({
     signal: "player.hotbarChange", scope: "player", hook: "onHotbarChange",

@@ -3496,6 +3496,7 @@
   "@rpgjs/script/server": {
     "entry": "packages/script/dist/server/index.d.ts",
     "exports": [
+      "BattleHookContext",
       "DEFAULT_SIGNAL_BINDINGS",
       "HookScope",
       "RpgjsWorldOptions",
@@ -3508,6 +3509,7 @@
       "SignalContext",
       "SignalEmission",
       "SignalEmissions",
+      "actionBattleHooks",
       "createRpgjsWorld",
       "provideScripts",
       "scriptHooks",
@@ -3523,6 +3525,7 @@
       "packages/script/dist/game/description.d.ts",
       "packages/script/dist/game/impl.d.ts",
       "packages/script/dist/game/signals.d.ts",
+      "packages/script/dist/server/action-battle.d.ts",
       "packages/script/dist/server/bindings.d.ts",
       "packages/script/dist/server/hooks.d.ts",
       "packages/script/dist/server/index.d.ts",
@@ -3536,6 +3539,7 @@
       "CheckOptions",
       "CheckResult",
       "Diagnostic",
+      "ModuleSignals",
       "RunSpec",
       "SharedStore",
       "SimPlayer",

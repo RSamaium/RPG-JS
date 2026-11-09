@@ -3,7 +3,8 @@
  * They run against the in-memory world of `./world` and cost nothing but compute.
  */
 import { compileProgram, CompileError, CompileErrors, type Limits, type Program } from "../core/interpreter";
-import type { ListenFilter } from "../core/filter";
+import type { ListenFilter, SignalDesc } from "../core/filter";
+import type { ApiDescription } from "../core/api";
 import { SignalRegistry, type ListenerReport } from "../core/signals";
 import { apiInfo, describeApi, globalNames, hostFromApi } from "../core/api";
 import { GAME_API_DESCRIPTION } from "../game/description";
@@ -30,10 +31,20 @@ export interface CheckResult {
 /** The world of a simulation, as an agent writes it: `shared` may be plain values (`{ stock: 5 }`) as well as a store. */
 export type SimulatedWorld = Omit<WorldInit, "shared"> & { shared?: SharedStore | Record<string, unknown> };
 
+/** The signals a module adds to the ones of the game (the `signals` option of `ScriptService`), by name. */
+export type ModuleSignals = Record<string, SignalDesc>;
+
+/** The API of the game, with the signals of the modules a game uses: a script is checked and simulated against these too. */
+const descriptionWith = (signals?: ModuleSignals): ApiDescription =>
+  signals ? { ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...signals } } : GAME_API_DESCRIPTION;
+
 const strip = (m: string) => m.replace(/^line \S+: /, "");
 
-/** Options of `checkScript`: the exported functions the request requires, which make the check fail when missing. */
-export interface CheckOptions { requiredExports?: string[] }
+/**
+ * Options of `checkScript`: the exported functions the request requires, which make the check fail when missing, and the signals
+ * of the modules a game uses (a signal of a module is accepted only when it is given here).
+ */
+export interface CheckOptions { requiredExports?: string[]; signals?: ModuleSignals }
 /**
  * Checks a script without running it: parses it, compiles it against the API, and reports what it declares. Free to call, so it can
  * be called after every edit.
@@ -56,7 +67,8 @@ export function checkScript(source: string, catalog?: Record<string, string[]>, 
     return { ok: false, diagnostics: [{ line: e.loc?.line ?? 0, message: `syntax error: ${strip(String(e.message))}` }], ...empty };
   }
   try {
-    const program = compileProgram(ast, globalNames(GAME_API_DESCRIPTION), apiInfo(GAME_API_DESCRIPTION, catalog));
+    const description = descriptionWith(options.signals);
+    const program = compileProgram(ast, globalNames(description), apiInfo(description, catalog));
     const missing = (options.requiredExports ?? []).filter((n) => !program.exported.has(n));
     if (missing.length) return { ok: false, diagnostics: missing.map((n) => ({ line: 0, message: `missing exported function "${n}": the request requires it, write export function ${n}(...) { ... }` })), ...empty };
     return {
@@ -82,6 +94,8 @@ export interface RunSpec {
   emit?: { signal: string; payload?: unknown };
   world?: SimulatedWorld;
   limits?: Limits;
+  /** The signals of the modules the game uses, for `emit` and for the check of the script. */
+  signals?: ModuleSignals;
 }
 /** A simulation: the script, and what to run. */
 export interface SimulateInput extends RunSpec { source: string; catalog?: Record<string, string[]>; requiredExports?: string[] }
@@ -112,7 +126,8 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
   const world = new SimWorld(init);
   world.shared.declare(program.shared);
   Object.assign(world.shared.values, presets ?? {});
-  const host = hostFromApi(GAME_API_DESCRIPTION, GAME_API_IMPL, world);
+  const description = descriptionWith(spec.signals);
+  const host = hostFromApi(description, GAME_API_IMPL, world);
   const limits = spec.limits ?? { steps: 20000, iterations: 100 };
   try {
     let value: unknown, page: number | undefined, steps: number | undefined;
@@ -120,7 +135,7 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
     else if (spec.event !== undefined) ({ page, steps } = await program.runEvent(spec.event, host, limits, cover));
     else if (spec.fire) await program.fire(spec.fire, host, limits, cover);
     else if (spec.emit) {
-      const registry = new SignalRegistry({ description: GAME_API_DESCRIPTION, impl: GAME_API_IMPL, limits });
+      const registry = new SignalRegistry({ description, impl: GAME_API_IMPL, limits });
       registry.install("script", program);
       world.hook = (spec.emit.payload && typeof spec.emit.payload === "object" ? spec.emit.payload : {}) as Record<string, unknown>;
       const report = await registry.emit(spec.emit.signal, spec.emit.payload ?? {}, () => world);
@@ -149,7 +164,7 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
  * ```
  */
 export async function simulate(input: SimulateInput): Promise<SimulateResult> {
-  const check = checkScript(input.source, input.catalog, { requiredExports: input.requiredExports });
+  const check = checkScript(input.source, input.catalog, { requiredExports: input.requiredExports, signals: input.signals });
   if (!check.ok || !check.program) return { ok: false, diagnostics: check.diagnostics, effects: [] };
   const cover = new Set<number>();
   const r = await execute(check.program, input, cover);
@@ -217,6 +232,7 @@ function judge(t: TestCase, r: SimulateResult): string[] {
  * @param source - The text of the script.
  * @param tests - The tests (see `TestCase`).
  * @param catalog - The ids a reference may take, by kind.
+ * @param signals - The signals of the modules the game uses.
  * @example
  * ```ts
  * const report = await runTests(source, [
@@ -224,13 +240,13 @@ function judge(t: TestCase, r: SimulateResult): string[] {
  * ])
  * ```
  */
-export async function runTests(source: string, tests: TestCase[], catalog?: Record<string, string[]>): Promise<TestsReport> {
-  const check = checkScript(source, catalog);
+export async function runTests(source: string, tests: TestCase[], catalog?: Record<string, string[]>, signals?: ModuleSignals): Promise<TestsReport> {
+  const check = checkScript(source, catalog, { signals });
   if (!check.ok || !check.program) return { ok: false, diagnostics: check.diagnostics, results: [], uncovered: {} };
   const cover = new Set<number>();
   const results: TestResult[] = [];
   for (const t of tests) {
-    const result = await execute(check.program, { ...t, world: { ...(t.world ?? {}), dice: t.dice ?? t.world?.dice, choices: t.choices ?? t.world?.choices } }, cover);
+    const result = await execute(check.program, { ...t, signals: t.signals ?? signals, world: { ...(t.world ?? {}), dice: t.dice ?? t.world?.dice, choices: t.choices ?? t.world?.choices } }, cover);
     const failures = t.expect ? judge(t, result) : [];
     results.push({ name: t.name, pass: t.expect ? failures.length === 0 : null, failures, result });
   }
@@ -240,6 +256,7 @@ export async function runTests(source: string, tests: TestCase[], catalog?: Reco
 /**
  * The API of scripts in a game as TypeScript declarations, with its signals: what an agent reads before writing a script.
  *
+ * @param signals - The signals of the modules the game uses, listed with the ones of the game.
  * @returns Declarations, as text.
  */
-export const describeGameApi = () => describeApi(GAME_API_DESCRIPTION);
+export const describeGameApi = (signals?: ModuleSignals) => describeApi(descriptionWith(signals));

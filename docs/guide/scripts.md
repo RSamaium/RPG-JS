@@ -98,6 +98,13 @@ installed, and a listener that fails does not stop the next one.
 | `player.itemUse` | `onItemUse` of the player | `item`, `quantity` |
 | `player.itemEquip` | `onItemEquip` of the player: equips or takes off an item | `item`, `quantity`, `equipped` |
 | `player.goldChange` | `onGoldChange` of the player | `gold` (the gold after the change), `delta` (negative when the player spends) |
+| `player.skillChange` | `onSkillChange` of the player | `action` (`learn`, `forget`), `skill` |
+| `player.connect` | `onConnected` of the player | |
+| `player.disconnect` | `onDisconnected` of the player | |
+| `battle.start` | `onStart` of the `battle` scope (a turn-based battle) | `troop`, `enemies` (tags) |
+| `battle.command` | `onCommand` of the `battle` scope; a script observes it and never refuses it | `skill`, `hero`, `target` (tags) |
+| `battle.end` | `onEnd` of the `battle` scope | `result`, `troop`, `enemies` |
+| `combat.hit` | `combat.hooks.afterHit` of Action Battle, through `actionBattleHooks(scripts)`: for the attacker when it is a player, otherwise the target; nothing for a hit between two events | `damage`, `defeated`, `attacker`, `target` (`id`, `name`, `kind`) |
 | `player.hotbarChange` | `onHotbarChange` of the player | `action` (`initialize`, `assign`, `clear`, `select`, `refresh`), `slots` |
 | `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y` |
 | `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y` |
@@ -408,3 +415,24 @@ with its own operations, and gets the same behavior.
 | `@rpgjs/script/core` | the interpreter, `SignalRegistry`, the API and `ScriptWorld`: no dependency on the engine |
 | `@rpgjs/script/parse` | `parseScript`: the text of a script to its tree |
 | `@rpgjs/script/testing` | `checkScript`, `simulate`, `runTests`, `SimWorld` |
+
+### Signals of a module and of Action Battle
+
+A module binds its own hooks with a scope of its own (`scope: "tactical"`), and the tools take the signals it adds:
+
+```ts
+checkScript(source, catalog, { signals });                              // a signal of a module is accepted only when given
+simulate({ source, signals, emit: { signal: "tactical.defeat", payload } });
+runTests(source, tests, catalog, signals);
+describeGameApi(signals);
+```
+
+`combat.hit` comes from Action Battle:
+
+```ts
+import { ScriptService, provideScripts, actionBattleHooks } from "@rpgjs/script/server";
+
+const scripts = new ScriptService();
+provideScripts(scripts);
+provideActionBattle({ combat: { hooks: actionBattleHooks(scripts) } });
+```
