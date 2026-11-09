@@ -446,7 +446,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       // Only call onAdd if it exists and is a function
       (this as any)["execMethod"]("onAdd", [this], hookTarget);
       this._emitItemHook("onItemAdd", itemId, nb);
-      this["refreshHotbar"]?.();
+      this["placeHotbarItem"]?.(itemId);
       return instance;
     }
 
