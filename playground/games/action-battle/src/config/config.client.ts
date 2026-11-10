@@ -98,6 +98,15 @@ export default {
           components: {
             wood: WoodProjectileComponent,
           },
+          // The server only names the projectile: its look is decided here.
+          looks: {
+            arrow: {
+              shape: "arrow",
+              color: "#e5e7eb",
+              accentColor: "#f87171",
+              trail: { color: "#fde68a", width: 3, length: 10 },
+            },
+          },
         },
       },
     ]),

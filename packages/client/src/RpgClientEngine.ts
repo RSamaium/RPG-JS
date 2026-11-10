@@ -23,6 +23,7 @@ import ShapeComponent from "./components/dynamics/shape.ce";
 import ImageComponent from "./components/dynamics/image.ce";
 import LootComponent from "./components/loot/loot.ce";
 import ProjectileComponent from "./components/projectile.ce";
+import type { ProjectileLook } from "./components/projectile-visual";
 import {
   PredictionController,
   type PredictionHistoryEntry,
@@ -1945,6 +1946,25 @@ export class RpgClientEngine<T = any> {
 
   getProjectileComponent(type: string) {
     return this.projectiles.get(type);
+  }
+
+  /**
+   * Register the look of a projectile type drawn by the standard projectile
+   * component: shape or spritesheet, trail, shadow, impact.
+   *
+   * @title Register Projectile Look
+   * @method engine.registerProjectileLook(type, look)
+   * @param type - Projectile type emitted by the server
+   * @param look - Look options, see `ProjectileLook`
+   * @returns {void}
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * engine.registerProjectileLook("arrow", { shape: "arrow", trail: true });
+   * ```
+   */
+  registerProjectileLook(type: string, look: ProjectileLook): void {
+    this.projectiles.registerLook(type, look as Record<string, unknown>);
   }
 
   /**

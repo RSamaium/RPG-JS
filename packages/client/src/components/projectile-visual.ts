@@ -1,10 +1,23 @@
 import type { ClientProjectileSurface } from "../Game/ProjectileManager";
 
 /**
- * Look of a projectile drawn by the standard projectile component, sent by the
- * server in `params`. Every field is optional.
+ * Look of a projectile drawn by the standard projectile component. Register it
+ * per projectile type on the client with `projectiles.looks`; the server can
+ * still override single fields of one shot through `params`. Every field is
+ * optional.
+ *
+ * @example
+ * ```ts
+ * defineModule<RpgClient>({
+ *   projectiles: {
+ *     looks: {
+ *       arrow: { shape: "arrow", trail: { color: "#fde68a" } },
+ *     },
+ *   },
+ * });
+ * ```
  */
-export interface ProjectileVisualParams {
+export interface ProjectileLook {
   /** Spritesheet id drawn instead of a shape. Its `default` animation is played. */
   graphic?: string;
   /** Built-in shape used without a `graphic`. Defaults to `orb`. */
@@ -48,7 +61,7 @@ export function projectileColor(value: unknown, fallback: number): number {
 
 /** Trail settings, or `null` when the projectile has no trail. */
 export function projectileTrailOptions(
-  trail: ProjectileVisualParams["trail"],
+  trail: ProjectileLook["trail"],
   color: number,
 ): { color: number; width: number; length: number } | null {
   if (!trail) return null;
@@ -62,7 +75,7 @@ export function projectileTrailOptions(
 
 /** Particle preset to play for an impact on `surface`, or `null` for the drawn impact. */
 export function projectileImpactFx(
-  impactFx: ProjectileVisualParams["impactFx"],
+  impactFx: ProjectileLook["impactFx"],
   surface: ClientProjectileSurface | undefined,
 ): string | null {
   if (typeof impactFx === "string") return impactFx || null;

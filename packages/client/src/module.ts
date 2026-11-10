@@ -1,3 +1,4 @@
+import type { ProjectileLook } from "./components/projectile-visual";
 import { TIME_MANAGER_MODULE_KEY, TIME_MANAGER_SYNC_KEY, findModules, provideModules, registerI18nMessages } from "@rpgjs/common";
 import type { RpgFactoryProvider } from "@rpgjs/common";
 import { type Context, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
@@ -257,6 +258,11 @@ export function provideClientModules(modules: RpgClientModule[]): RpgFactoryProv
             if (projectiles.components) {
               Object.entries(projectiles.components).forEach(([type, component]) => {
                 engine.registerProjectileComponent(type, component);
+              });
+            }
+            if (projectiles.looks) {
+              Object.entries(projectiles.looks).forEach(([type, look]) => {
+                engine.registerProjectileLook(type, look as ProjectileLook);
               });
             }
           },

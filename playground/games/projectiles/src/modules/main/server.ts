@@ -113,12 +113,6 @@ function shootArrow(player: RpgPlayer, target: { x: number; y: number }) {
     trajectory: { type: "arc", range: 420, speed: 420, height: 46 },
     landing: { radius: 10 },
     linger: { ms: 2500 },
-    params: {
-      shape: "arrow",
-      color: "#e5e7eb",
-      accentColor: "#f87171",
-      trail: { color: "#fde68a", width: 3, length: 10 },
-    },
     onHit({ target }) {
       damage(target, 15);
     },
@@ -133,15 +127,6 @@ function throwBomb(player: RpgPlayer, target: { x: number; y: number }) {
     trajectory: { type: "arc", range: 260, duration: 0.7, height: 70 },
     landing: { radius: 44 },
     pierce: true,
-    params: {
-      shape: "bomb",
-      color: "#f97316",
-      accentColor: "#fde68a",
-      rotate: false,
-      scale: 1.2,
-      shake: 6,
-      impactDuration: 450,
-    },
     onHit({ target }) {
       damage(target, 30);
     },

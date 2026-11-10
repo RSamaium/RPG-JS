@@ -309,8 +309,8 @@ range and tile width. When `action.mode` is `projectile`, the projectile is
 drawn by the [standard projectile component](./projectiles.md#standard-look)
 unless a component is registered for its `type`: it displays
 `projectile.graphic`, applies `scale`, optionally rotates the graphic along its
-trajectory, and reads every other look option (shape, trail, shadow, impact)
-from `projectile.params`. Damage and the impact animation/sound occur only when
+trajectory, and takes every other look option (shape, trail, shadow, impact)
+from the client look registered for that `type`. Damage and the impact animation/sound occur only when
 the authoritative projectile collides.
 
 Area masks use `#` for affected tiles and `.` for empty tiles. Studio exposes
@@ -787,12 +787,14 @@ const Bow = {
       type: "arrow",
       trajectory: { type: "arc", range: 320, speed: 460, height: 38 },
       landing: { radius: 12 },
-      linger: { ms: 2500 },
-      params: { shape: "arrow", trail: true }
+      linger: { ms: 2500 }
     }
   }
 };
 ```
+
+The look of the `arrow` type is declared on the client with
+[`projectiles.looks`](./projectiles.md#standard-look).
 
 `action.projectile` accepts the behaviors of the
 [projectile system](./projectiles.md#behaviors): `trajectory`, `landing`,

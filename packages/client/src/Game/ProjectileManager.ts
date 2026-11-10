@@ -154,6 +154,7 @@ const dynamicPropValue = (props: RenderedProjectileProps, key: ProjectileDynamic
 
 export class ProjectileManager {
   private readonly components = new Map<string, any>();
+  private readonly looks = new Map<string, Record<string, unknown>>();
   private readonly projectiles = new Map<string, RuntimeProjectile>();
   private readonly version = signal(0);
   /** Changes only when projectiles appear or disappear, not on every step. */
@@ -222,6 +223,18 @@ export class ProjectileManager {
     return this.components.get(type);
   }
 
+  /**
+   * Register the look of a projectile type. Its fields are the defaults of the
+   * `params` handed to the component; the `params` sent by the server win.
+   */
+  registerLook(type: string, look: Record<string, unknown>): void {
+    this.looks.set(type, look);
+  }
+
+  getLook(type: string): Record<string, unknown> | undefined {
+    return this.looks.get(type);
+  }
+
   /** Component rendering the projectile types that have no registered component. */
   setDefaultComponent(component: any): void {
     this.defaultComponent = component;
@@ -246,9 +259,11 @@ export class ProjectileManager {
       if (!component) {
         continue;
       }
+      const look = this.looks.get(projectile.type);
       const runtime: RuntimeProjectile = {
         spawn: {
           ...projectile,
+          ...(look ? { params: { ...look, ...projectile.params } } : {}),
           delay: projectile.delay ?? 0,
           index: projectile.index ?? 0,
           count: projectile.count ?? 1,

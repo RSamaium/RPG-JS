@@ -465,21 +465,34 @@ player.projectiles.emit({
 ## Standard Look
 
 A projectile type without a registered component is drawn by the standard
-projectile component of `@rpgjs/client`. It needs no client code: describe the
-look in `params`, on the server.
+projectile component of `@rpgjs/client`. The server only names the projectile
+with its `type`; its look is declared once on the client, in `projectiles.looks`:
 
 ```ts
+// server: gameplay only
 player.projectiles.emit({
   type: 'arrow',
   target,
   trajectory: { type: 'arc', range: 420, speed: 420, height: 46 },
   landing: { radius: 10 },
-  linger: { ms: 2500 },
-  params: {
-    shape: 'arrow',
-    color: '#e5e7eb',
-    accentColor: '#f87171',
-    trail: { color: '#fde68a', width: 3, length: 10 }
+  linger: { ms: 2500 }
+})
+```
+
+```ts
+// client: how an `arrow` looks
+import { defineModule, RpgClient } from '@rpgjs/client'
+
+export default defineModule<RpgClient>({
+  projectiles: {
+    looks: {
+      arrow: {
+        shape: 'arrow',
+        color: '#e5e7eb',
+        accentColor: '#f87171',
+        trail: { color: '#fde68a', width: 3, length: 10 }
+      }
+    }
   }
 })
 ```
@@ -489,7 +502,7 @@ climb and fall, leaves it planted when it sticks, and plays an impact that
 depends on what it ended on: sparks on a target, sparks thrown back by a wall,
 dust on the ground.
 
-| `params` field | Default | Description |
+| Look field | Default | Description |
 | --- | --- | --- |
 | `graphic` | none | Spritesheet id drawn instead of a shape (its `default` animation). |
 | `shape` | `orb` | Built-in shape without a `graphic`: `arrow`, `orb` or `bomb`. A `bomb` explodes on impact. |
@@ -505,8 +518,25 @@ dust on the ground.
 | `shake` | none | Shake the map on impact: `true`, or the intensity. |
 | `impactDuration` | `350` | How long the impact stays drawn, in ms. It applies to custom components too. |
 
-These fields are typed by `ProjectileVisualParams`, exported by `@rpgjs/client`.
+These fields are typed by `ProjectileLook`, exported by `@rpgjs/client`. A look
+can also be registered at runtime with `engine.registerProjectileLook(type, look)`.
+
+The same fields sent in the server `params` override the look for one shot. Keep
+that for what really changes per shot, such as the color of an elemental arrow;
+everything else belongs to the client look, so it is not sent with every
+projectile:
+
+```ts
+player.projectiles.emit({
+  type: 'arrow',
+  params: { color: '#60a5fa' }, // an ice arrow, same look otherwise
+  trajectory: { type: 'linear', speed: 320, range: 260 }
+})
+```
+
 Register your own component when a type needs a look these fields cannot give.
+A look registered for that type is then handed to the component, merged into
+its `params`.
 
 ## Client Registration
 

@@ -68,12 +68,6 @@ const Bow = {
       trajectory: { type: "arc", range: 320, speed: 460, height: 38 },
       landing: { radius: 12 },
       linger: { ms: 2500 },
-      params: {
-        shape: "arrow",
-        color: "#e5e7eb",
-        accentColor: "#f87171",
-        trail: { color: "#fde68a", width: 3, length: 10 },
-      },
     },
   },
 };

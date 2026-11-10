@@ -523,6 +523,23 @@ describe("ProjectileManager renderList", () => {
     expect(manager.current()[0].component).toBe(standard);
   });
 
+  test("a registered look gives the params of its type, overridden by the server", () => {
+    const manager = new ProjectileManager(new Hooks([], "client"));
+    manager.setDefaultComponent(() => null);
+    manager.registerLook("arrow", { shape: "arrow", color: "#ffffff", impactDuration: 600 });
+    const base = { origin: { x: 0, y: 0 }, direction: { x: 1, y: 0 }, speed: 100, range: 500, ttl: 5, spawnTick: 1 };
+    manager.spawnBatch([
+      { ...base, id: "plain", type: "arrow" },
+      { ...base, id: "fire", type: "arrow", params: { color: "#ff0000" } },
+      { ...base, id: "other", type: "bolt", params: { color: "#00ff00" } },
+    ]);
+
+    const params = Object.fromEntries(manager.current().map((item) => [item.id, item.props.params]));
+    expect(params.plain).toEqual({ shape: "arrow", color: "#ffffff", impactDuration: 600 });
+    expect(params.fire).toEqual({ shape: "arrow", color: "#ff0000", impactDuration: 600 });
+    expect(params.other).toEqual({ color: "#00ff00" });
+  });
+
   test("an arc tilts while it climbs and plays a ground impact where it lands", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1000);
