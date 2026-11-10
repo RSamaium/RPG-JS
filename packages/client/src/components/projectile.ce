@@ -1,0 +1,275 @@
+<Container x={x} y={y} zIndex={depth}>
+  @if (hasShadow()) {
+    <Graphics draw={drawShadow} />
+  }
+  <Graphics draw={drawTrail} />
+  @if (trailFx()) {
+    <Fx name={trailFx} loop={true} y={lift} maxParticles={80} />
+  }
+  @if (bodyVisible()) {
+    <Container y={lift} rotation={rotation} scale={bodyScale}>
+      @if (sheet()) {
+        <Sprite sheet={sheet} anchor={0.5} />
+      } @else {
+        <Graphics draw={drawBody} />
+      }
+    </Container>
+  }
+  @if (phase() === 'stuck') {
+    <Graphics draw={drawSettle} />
+  }
+  @if (impact()) {
+    @if (impactFx()) {
+      <Fx name={impactFx} />
+    } @else {
+      <Graphics draw={drawImpact} />
+    }
+  }
+</Container>
+
+<script>
+  import { computed, effect, tick } from "canvasengine";
+  import { Fx } from "@canvasengine/presets";
+  import { inject } from "../core/inject";
+  import { RpgClientEngine } from "../RpgClientEngine";
+  import {
+    projectileColor,
+    projectileImpactFx,
+    projectileSparks,
+    projectileTrailOptions,
+  } from "./projectile-visual";
+
+  const {
+    id,
+    x,
+    y,
+    z,
+    phase,
+    flightAngle,
+    elapsed,
+    impact,
+    impactProgress,
+    params,
+  } = defineProps({
+    x: Number,
+    y: Number,
+    z: {
+      type: Number,
+      default: 0,
+    },
+    phase: {
+      type: String,
+      default: "out",
+    },
+    flightAngle: {
+      type: Number,
+      default: 0,
+    },
+    elapsed: {
+      type: Number,
+      default: 0,
+    },
+    impact: {
+      type: Object,
+      default: null,
+    },
+    impactProgress: {
+      type: Number,
+      default: 0,
+    },
+    params: {
+      type: Object,
+      default: () => ({}),
+    },
+  });
+
+  const engine = inject(RpgClientEngine);
+  const visual = computed(() => params() ?? {});
+  const shape = computed(() => visual().shape ?? "orb");
+  const color = computed(() => projectileColor(visual().color, 0x8be9fd));
+  const accent = computed(() => projectileColor(visual().accentColor, 0xffffff));
+  const stuck = computed(() => phase() === "stuck");
+  const height = computed(() => (stuck() ? 0 : z() ?? 0));
+  const lift = computed(() => -height());
+  // Draw above the characters standing behind the point it flies over.
+  const depth = computed(() => y() + 1000);
+
+  const bodyScale = computed(() => {
+    const value = Number(visual().scale ?? 1);
+    return Number.isFinite(value) && value > 0 ? value : 1;
+  });
+  const rotation = computed(() => {
+    if (visual().spin) return (elapsed() ?? 0) * Math.PI * 2 * Number(visual().spin);
+    return visual().rotate === false ? 0 : flightAngle() ?? 0;
+  });
+  const sheet = computed(() => {
+    const graphic = visual().graphic;
+    if (typeof graphic !== "string" || !graphic) return null;
+    const definition = engine.getSpriteSheet(graphic);
+    return definition ? { definition, playing: "default" } : null;
+  });
+
+  const hasShadow = computed(() => visual().shadow !== false && !impact());
+  // A planted projectile stays drawn; any other impact replaces it.
+  const bodyVisible = computed(() => !impact() || stuck());
+  const trailFx = computed(() => {
+    const name = visual().trailFx;
+    return typeof name === "string" && name && !impact() && !stuck() ? name : null;
+  });
+  const impactFx = computed(() => projectileImpactFx(visual().impactFx, impact()?.surface));
+
+  const trailOptions = computed(() => projectileTrailOptions(visual().trail, color()));
+  // Last drawn positions, newest first.
+  const trail = [];
+  const sparks = projectileSparks(String((typeof id === "function" ? id() : id) ?? ""), 7);
+  let settledAt = null;
+  let now = 0;
+
+  tick(({ deltaTime }) => {
+    now += deltaTime ?? 16;
+    if (stuck() && settledAt === null) settledAt = now;
+    const options = trailOptions();
+    if (!options || impact() || stuck()) {
+      // Let the trail catch up with a projectile that stopped.
+      trail.pop();
+      return;
+    }
+    trail.unshift({ x: x(), y: y() - height() });
+    if (trail.length > options.length) trail.pop();
+  });
+
+  let played = false;
+  effect(() => {
+    const hit = impact();
+    if (!hit || played) return;
+    played = true;
+    const sound = visual().impactSound;
+    if (typeof sound === "string" && sound) engine.playSound(sound);
+    const shake = visual().shake;
+    if (shake) {
+      engine.mapShakeTrigger.start({
+        intensity: typeof shake === "number" ? shake : 4,
+        duration: 160,
+        frequency: 18,
+      });
+    }
+  });
+
+  function drawShadow(g) {
+    g.clear();
+    // The shadow shrinks and fades as the projectile climbs.
+    const rise = Math.min(1, height() / 80);
+    g.ellipse(0, 4, 7 * bodyScale() * (1 - rise * 0.4), 3 * bodyScale() * (1 - rise * 0.4));
+    g.fill({ color: 0x000000, alpha: 0.28 * (1 - rise * 0.5) });
+  }
+
+  function drawTrail(g) {
+    g.clear();
+    const options = trailOptions();
+    // Read the clock so the trail is redrawn on every frame, even once stopped.
+    elapsed();
+    const originX = x();
+    const originY = y();
+    if (!options) return;
+    for (let i = 1; i < trail.length; i++) {
+      const from = trail[i - 1];
+      const to = trail[i];
+      const fade = 1 - i / options.length;
+      g.moveTo(from.x - originX, from.y - originY);
+      g.lineTo(to.x - originX, to.y - originY);
+      g.stroke({ color: options.color, width: Math.max(0.5, options.width * fade), alpha: 0.7 * fade, cap: "round" });
+    }
+  }
+
+  function drawBody(g) {
+    g.clear();
+    if (shape() === "arrow") {
+      g.rect(-13, -1, 20, 2);
+      g.fill({ color: 0x8b5a2b });
+      g.poly([-13, 0, -17, -4, -11, -4, -8, 0, -11, 4, -17, 4]);
+      g.fill({ color: accent(), alpha: 0.9 });
+      g.poly([6, -4, 14, 0, 6, 4]);
+      g.fill({ color: color() });
+      return;
+    }
+    if (shape() === "bomb") {
+      g.circle(0, 0, 8);
+      g.fill({ color: 0x1f2937 });
+      g.circle(-3, -3, 2.5);
+      g.fill({ color: 0xffffff, alpha: 0.35 });
+      g.rect(-1.5, -12, 3, 5);
+      g.fill({ color: 0x9ca3af });
+      // The fuse blinks faster and faster.
+      const blink = Math.sin((elapsed() ?? 0) * (10 + (elapsed() ?? 0) * 14)) > 0;
+      g.circle(0, -13, blink ? 3 : 1.5);
+      g.fill({ color: color() });
+      return;
+    }
+    g.circle(0, 0, 9);
+    g.fill({ color: color(), alpha: 0.35 });
+    g.circle(0, 0, 6);
+    g.fill({ color: color() });
+    g.circle(-2, -2, 2.5);
+    g.fill({ color: accent(), alpha: 0.85 });
+  }
+
+  // A short puff where the projectile planted itself.
+  function drawSettle(g) {
+    g.clear();
+    phase();
+    elapsed();
+    if (settledAt === null) return;
+    const t = Math.min(1, (now - settledAt) / 220);
+    if (t >= 1) return;
+    g.ellipse(0, 2, 4 + t * 12, 2 + t * 5);
+    g.stroke({ color: accent(), width: 1.5, alpha: 0.6 * (1 - t) });
+  }
+
+  function drawImpact(g) {
+    g.clear();
+    const hit = impact();
+    if (!hit || stuck()) return;
+    const t = Math.max(0, Math.min(1, impactProgress() ?? 0));
+    const ease = 1 - (1 - t) * (1 - t);
+    const size = bodyScale();
+    if (shape() === "bomb") {
+      // Explosion: a white flash, a fireball that fades and smoke rising from it.
+      g.circle(0, 0, (10 + ease * 30) * size);
+      g.fill({ color: color(), alpha: 0.75 * (1 - t) });
+      g.circle(0, 0, (6 + ease * 16) * size);
+      g.fill({ color: accent(), alpha: (1 - t) * (1 - t) });
+      g.circle(0, 0, (12 + ease * 34) * size);
+      g.stroke({ color: accent(), width: 4 * (1 - t) + 0.5, alpha: 0.8 * (1 - t) });
+      for (const spark of sparks) {
+        const reach = (10 + ease * 26 * spark.speed) * size;
+        g.circle(Math.cos(spark.angle) * reach, Math.sin(spark.angle) * reach - ease * 10, (5 + t * 5) * size);
+        g.fill({ color: 0x4b5563, alpha: 0.5 * (1 - t) });
+      }
+      return;
+    }
+    if (hit.surface === "ground") {
+      // Dust spreading on the ground.
+      g.ellipse(0, 2, (6 + ease * 18) * size, (3 + ease * 7) * size);
+      g.stroke({ color: 0xd6ccb8, width: 2, alpha: 0.7 * (1 - t) });
+      for (const spark of sparks) {
+        g.circle(Math.cos(spark.angle) * ease * 16 * size, 2 - Math.abs(Math.sin(spark.angle)) * ease * 9 * size, 2.5 * (1 - t));
+        g.fill({ color: 0xd6ccb8, alpha: 0.6 * (1 - t) });
+      }
+      return;
+    }
+    // Flash, shockwave and sparks; against a wall the sparks fly back.
+    g.circle(0, 0, (5 + ease * 5) * size);
+    g.fill({ color: accent(), alpha: 0.9 * (1 - t) * (1 - t) });
+    g.circle(0, 0, (6 + ease * 20) * size);
+    g.stroke({ color: color(), width: 3 * (1 - t) + 0.5, alpha: 0.8 * (1 - t) });
+    const back = hit.surface === "wall" ? (flightAngle() ?? 0) + Math.PI : null;
+    for (const spark of sparks) {
+      const angle = back === null ? spark.angle : back + (spark.angle / (Math.PI * 2) - 0.5) * 2.2;
+      const from = (6 + ease * 10 * spark.speed) * size;
+      const to = from + 7 * (1 - t) * size;
+      g.moveTo(Math.cos(angle) * from, Math.sin(angle) * from);
+      g.lineTo(Math.cos(angle) * to, Math.sin(angle) * to);
+      g.stroke({ color: spark.bright ? accent() : color(), width: 2, alpha: 1 - t, cap: "round" });
+    }
+  }
+</script>

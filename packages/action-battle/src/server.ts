@@ -37,6 +37,7 @@ import {
   createActionBattleAttackId,
   getNormalizedActionBattleAttackProfile,
   runActionBattleActiveHitbox,
+  scheduleActionBattleStartup,
 } from "./core/attack-runtime";
 import { setActionBattleInvincibility } from "./core/hit-reaction";
 import {
@@ -51,8 +52,11 @@ import {
   handleActionBattleProjectileDestroy,
   handleActionBattleProjectileImpact,
 } from "./core/action-use";
-import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
-import { getActionBattleControlLockDuration } from "./core/attack-profile";
+import {
+  getActionBattleControlLockDuration,
+  mergeAttackProfileOverrides,
+  normalizeActionBattleAttackProfile,
+} from "./core/attack-profile";
 import {
   acquireActionBattleControl,
   releaseActionBattleControls,
@@ -81,6 +85,7 @@ export const ACTION_BATTLE_SKILL_USE = "action-battle:use-skill";
 export const ACTION_BATTLE_HOTBAR_USE = "action-battle:use-hotbar";
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 export const ACTION_BATTLE_ACTION_BAR_GUI_ID = "action-battle-action-bar";
+export const ACTION_BATTLE_WEAPON_PROFILE = "action-battle:weapon-profile";
 
 /**
  * Default player attack hitboxes offsets for each direction
@@ -496,6 +501,9 @@ const performPlayerAttack = (
     softTargeting && typeof softTargeting === "object"
       ? softTargeting
       : undefined;
+  const weapon = resolveActionBattleWeapon(player);
+  const weaponAction = weapon ? getActionBattleActionConfig(weapon) : undefined;
+  const ranged = weaponAction?.mode === "projectile";
   const softTarget =
     softTargetOptions?.enabled !== false && map
       ? resolveActionBattleSoftTarget(
@@ -504,16 +512,23 @@ const performPlayerAttack = (
             .getEvents()
             .filter(
               (event: RpgEvent) =>
-                isBattleEvent(event) &&
-                canActionBattleTarget(
-                  player,
-                  event,
-                  getActionBattleTargets(player, "events"),
-                  options.combat?.targets
-                )
+                (isBattleEvent(event) &&
+                  canActionBattleTarget(
+                    player,
+                    event,
+                    getActionBattleTargets(player, "events"),
+                    options.combat?.targets
+                  )) ||
+                // A ranged weapon also aims at scenery reacting to projectiles, such as a switch.
+                (ranged &&
+                  !isBattleEvent(event) &&
+                  typeof (event as any).onProjectileHit === "function")
             ),
           inputDirection,
-          softTargetOptions
+          // A ranged weapon looks for its target as far as it shoots.
+          ranged && weaponAction?.range
+            ? { ...softTargetOptions, range: weaponAction.range }
+            : softTargetOptions
         )
       : null;
   const direction = softTarget?.direction ?? inputDirection;
@@ -556,8 +571,22 @@ const performPlayerAttack = (
     });
   });
 
+  if (ranged) {
+    // A ranged weapon releases its projectile at the end of the startup instead of swinging a hitbox.
+    scheduleActionBattleStartup(attackProfile, () => {
+      executeActionBattleUse({
+        attacker: player,
+        target: softTarget?.target ?? null,
+        usable: weapon,
+        weapon,
+        profile: attackProfile,
+        playVisual: false,
+      });
+    });
+    return true;
+  }
+
   const attackId = createActionBattleAttackId(player.id, attackProfile.id);
-  const weapon = resolveActionBattleWeapon(player);
   const hitTracker = new ActionBattleHitTracker(attackProfile.hitPolicy);
   const targetSelector = getActionBattleTargets(player, "events");
   const hitMetadata = {
@@ -614,26 +643,6 @@ const performPlayerAttack = (
   return true;
 };
 
-const mergeAttackProfileOverrides = (
-  base: NormalizedActionBattleAttackProfile,
-  override: ActionBattleAttackProfile
-): ActionBattleAttackProfile => ({
-  ...base,
-  ...override,
-  reaction: {
-    ...base.reaction,
-    ...override.reaction,
-  },
-  control: {
-    ...base.control,
-    ...override.control,
-  },
-  hitboxes: {
-    ...base.hitboxes,
-    ...override.hitboxes,
-  },
-});
-
 const resolvePlayerAttackProfile = (
   player: RpgPlayer,
   options: ActionBattleOptions
@@ -656,6 +665,39 @@ const ACTION_BATTLE_CHARGE_RELEASE = "action-battle:charge-release";
 export const ACTION_BATTLE_DODGE = "action-battle:dodge";
 export const ACTION_BATTLE_GUARD_START = Control.Defense;
 export const ACTION_BATTLE_GUARD_END = "action-battle:guard-end";
+
+const playerWeaponIds = new WeakMap<RpgPlayer, string | null>();
+
+/**
+ * Tell a client how its equipped weapon attacks, so its predicted movement lock
+ * lasts as long as the authoritative one. Sent only when the weapon changes.
+ */
+const syncPlayerWeaponProfile = (player: RpgPlayer) => {
+  const weapon = resolveActionBattleWeapon(player);
+  const weaponId = weapon?.id ?? null;
+  if (playerWeaponIds.get(player) === weaponId) return;
+  playerWeaponIds.set(player, weaponId);
+  (player as any).emit?.(ACTION_BATTLE_WEAPON_PROFILE, {
+    profile: weapon?.attackProfile ?? null,
+    ranged: getActionBattleActionConfig(weapon)?.mode === "projectile",
+  });
+};
+
+const playerWeaponWatchers = new WeakMap<RpgPlayer, { unsubscribe(): void }>();
+
+/** Keep the client told as soon as the player equips another weapon. */
+const watchPlayerWeapon = (player: RpgPlayer) => {
+  playerWeaponWatchers.get(player)?.unsubscribe();
+  playerWeaponIds.delete(player);
+  const equipments = (player as any).equipments?.observable;
+  if (typeof equipments?.subscribe === "function") {
+    playerWeaponWatchers.set(
+      player,
+      equipments.subscribe(() => syncPlayerWeaponProfile(player))
+    );
+  }
+  syncPlayerWeaponProfile(player);
+};
 
 interface PlayerCombatRuntimeState {
   comboIndex: number;
@@ -694,6 +736,11 @@ const resolvePlayerComboProfile = (
   const base = resolvePlayerAttackProfile(player, options);
   const combo = objectOption(options.combat?.player?.combo);
   if (!combo?.enabled || !combo.steps?.length) {
+    return { profile: base, step: 0 };
+  }
+  // Combo steps are melee swings: a ranged weapon keeps the timing of its own shot.
+  const weapon = resolveActionBattleWeapon(player);
+  if (weapon && getActionBattleActionConfig(weapon)?.mode === "projectile") {
     return { profile: base, step: 0 };
   }
   const state = getPlayerCombatState(player);
@@ -1357,6 +1404,7 @@ export const createActionBattleServer = (
        */
       onInput(player: RpgPlayer, input: any) {
         if (!isActionBattleEnabled({ player, map: player.getCurrentMap?.() ?? undefined }, options)) return;
+        syncPlayerWeaponProfile(player);
         const state = getPlayerCombatState(player);
         const charged = objectOption(options.combat?.player?.chargedAttack);
         const dodge = objectOption(options.combat?.player?.dodge);
@@ -1570,6 +1618,7 @@ export const createActionBattleServer = (
       },
       onJoinMap(player: RpgPlayer) {
         if (!isActionBattleEnabled({ player, map: player.getCurrentMap?.() ?? undefined }, options)) return;
+        watchPlayerWeapon(player);
         player.initializeHotbar?.();
         syncActionBattleHotbar(player, options);
         syncActionBattleActionBar(player, options);
@@ -1579,6 +1628,9 @@ export const createActionBattleServer = (
         clearActionBattleDefense(player);
         playerCombatStates.delete(player);
         playerSkillCooldowns.delete(player);
+        playerWeaponWatchers.get(player)?.unsubscribe();
+        playerWeaponWatchers.delete(player);
+        playerWeaponIds.delete(player);
       },
     },
     event: {

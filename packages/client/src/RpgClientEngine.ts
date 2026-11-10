@@ -22,6 +22,7 @@ import BarComponent from "./components/dynamics/bar.ce";
 import ShapeComponent from "./components/dynamics/shape.ce";
 import ImageComponent from "./components/dynamics/image.ce";
 import LootComponent from "./components/loot/loot.ce";
+import ProjectileComponent from "./components/projectile.ce";
 import {
   PredictionController,
   type PredictionHistoryEntry,
@@ -303,6 +304,7 @@ export class RpgClientEngine<T = any> {
         return { x: owner.x() + hitbox.w / 2, y: owner.y() + hitbox.h / 2 };
       },
     );
+    this.projectiles.setDefaultComponent(ProjectileComponent);
     this.globalConfig = inject(GlobalConfigToken)
 
     if (!this.globalConfig) {

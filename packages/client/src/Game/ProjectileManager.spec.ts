@@ -511,4 +511,55 @@ describe("ProjectileManager renderList", () => {
     manager.step();
     expect(manager.renderList()).toHaveLength(0);
   });
+
+  test("renders unregistered types with the default component", () => {
+    const manager = new ProjectileManager(new Hooks([], "client"));
+    const standard = () => null;
+    manager.setDefaultComponent(standard);
+    manager.spawnBatch([
+      { id: "p1", type: "arrow", origin: { x: 0, y: 0 }, direction: { x: 1, y: 0 }, speed: 100, range: 500, ttl: 5, spawnTick: 1 },
+    ]);
+
+    expect(manager.current()[0].component).toBe(standard);
+  });
+
+  test("an arc tilts while it climbs and plays a ground impact where it lands", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1000);
+    const manager = new ProjectileManager(new Hooks([], "client"));
+    manager.register("arrow", () => null);
+    manager.spawnBatch([
+      {
+        id: "arc",
+        type: "arrow",
+        origin: { x: 0, y: 0 },
+        direction: { x: 1, y: 0 },
+        speed: 200,
+        range: 100,
+        ttl: 1,
+        spawnTick: 1,
+        trajectory: { type: "arc", range: 100, duration: 0.5, height: 40 },
+        params: { impactDuration: 600 },
+      },
+    ]);
+
+    vi.setSystemTime(1100);
+    const climbing = manager.current()[0].props;
+    expect(climbing.angle).toBeCloseTo(0, 5);
+    // Drawn at `y - z`, it points up on the screen.
+    expect(climbing.flightAngle).toBeLessThan(0);
+
+    vi.setSystemTime(1500);
+    manager.destroyBatch([{ id: "arc", reason: "land", x: 100, y: 0, surface: "ground" }]);
+    const landed = manager.current()[0].props;
+    expect(landed.impact).toMatchObject({ x: 100, y: 0, surface: "ground" });
+
+    // `params.impactDuration` keeps the impact rendered longer than the default.
+    vi.setSystemTime(1900);
+    manager.step();
+    expect(manager.current()).toHaveLength(1);
+    vi.setSystemTime(2150);
+    manager.step();
+    expect(manager.current()).toHaveLength(0);
+  });
 });

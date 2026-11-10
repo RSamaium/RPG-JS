@@ -435,6 +435,77 @@ describe("executeActionBattleUse", () => {
     expect(canHit({ target: enemy })).toBe(false);
   });
 
+  test("lets projectiles hit walls and scenery reacting to them, without damage", () => {
+    const emit = vi.fn(() => [{ id: "arrow-1" }]);
+    const attacker = {
+      ...createEntity("archer"),
+      getCurrentMap: () => ({ projectiles: { emit } }),
+    };
+    const lever = { ...createEntity("lever"), isEvent: () => true, onProjectileHit: vi.fn() };
+    const villager = { ...createEntity("villager"), isEvent: () => true };
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      usable: {
+        id: "bow",
+        _type: "weapon",
+        action: { mode: "projectile", projectile: { type: "arrow", speed: 300, range: 300 } },
+      },
+    });
+
+    const canHit = emit.mock.calls[0][0].canHit;
+    expect(canHit({ target: lever })).toBe(true);
+    expect(canHit({ target: villager })).toBe(false);
+    expect(canHit({ entity: { isStatic: () => true } })).toBe(true);
+    expect(canHit({ entity: { isStatic: () => false } })).toBe(false);
+
+    handleActionBattleProjectileImpact({
+      attacker: attacker as any,
+      target: lever as any,
+      projectile: { id: "arrow-1" },
+      hit: {},
+      map: {},
+    });
+    expect(lever.applyDamage).not.toHaveBeenCalled();
+  });
+
+  test("lands an arc on the target of the action and forwards projectile behaviors", () => {
+    const emit = vi.fn(() => [{ id: "arrow-1" }]);
+    const attacker = {
+      ...createEntity("archer"),
+      getCurrentMap: () => ({ projectiles: { emit } }),
+    };
+    const target = createEntity("target");
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: {
+        id: "bow",
+        _type: "weapon",
+        action: {
+          mode: "projectile",
+          projectile: {
+            type: "arrow",
+            trajectory: { type: "arc", range: 300, speed: 300 },
+            landing: { radius: 10 },
+            linger: { ms: 2000 },
+            wall: "stick",
+            delay: 120,
+          },
+        },
+      },
+    });
+
+    expect(emit.mock.calls[0][0]).toMatchObject({
+      target,
+      landing: { radius: 10 },
+      linger: { ms: 2000 },
+      wall: "stick",
+      delay: 120,
+    });
+  });
+
   test("passes projectile precision options to the generic projectile system", () => {
     const emit = vi.fn(() => [{ id: "bolt-1" }]);
     const attacker = {
@@ -530,7 +601,7 @@ describe("executeActionBattleUse", () => {
         params: {
           graphic: "fireball-spritesheet",
           scale: 1.4,
-          rotateToDirection: false,
+          rotate: false,
         },
       }),
       attacker,

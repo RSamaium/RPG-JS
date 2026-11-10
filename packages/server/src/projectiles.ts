@@ -1,7 +1,9 @@
 import {
+  AABB,
   Direction,
   ProjectileSystem,
   Vector2,
+  createCollider,
   reflectDirection,
   sampleTrajectory,
   type Entity,
@@ -27,7 +29,10 @@ export type ProjectileTrajectory =
       range: number;
     }
   | {
-      /** Lob landing at `range`, peaking at `height`. Flies over entities by default. */
+      /**
+       * Lob landing at `range`, peaking at `height`. Flies over entities by
+       * default. With a `target`, it lands on it and `range` is its maximum reach.
+       */
       type: "arc";
       range: number;
       /** Flight time in seconds. Derived from `speed` when omitted. */
@@ -115,11 +120,27 @@ export interface ProjectileCollisionOptions {
   predictImpact?: boolean;
 }
 
+/** A point, or an entity (player or event) whose center is aimed at. */
+export type ProjectileTarget =
+  | { x: number; y: number }
+  | { x(): number; y(): number; hitbox?: () => { w?: number; h?: number } | undefined };
+
+/** What a landing `arc` projectile hits. */
+export interface ProjectileLandingOptions {
+  /** Entities within this distance of the landing point are hit, in pixels. */
+  radius: number;
+}
+
 export interface ProjectileEmitOptions {
   id?: string;
   type: string;
   origin?: { x: number; y: number };
   direction?: Direction | { x: number; y: number };
+  /**
+   * Aim at a point or at an entity instead of giving a `direction`. An `arc`
+   * lands on the target, as far as its `range` allows.
+   */
+  target?: ProjectileTarget;
   /**
    * Random direction offset in degrees, applied as +/- half this value.
    * Use it for inaccurate shots, arrows, spells, or bullets.
@@ -143,8 +164,18 @@ export interface ProjectileEmitOptions {
   pierce?: boolean | number;
   /** Behavior against walls. */
   wall?: ProjectileWallBehavior;
+  /**
+   * Time before the projectile leaves, in ms: the wind-up of a bow or of a
+   * cast. Its origin and direction are those of the moment it was emitted.
+   */
+  delay?: number;
   /** Keep the projectile visible where it ended (a fuse, a planted arrow). */
   linger?: { ms: number };
+  /**
+   * Hit what stands where an `arc` lands: the closest entity, or all of them
+   * with `pierce`. Without it, a landing only calls `onLand`.
+   */
+  landing?: ProjectileLandingOptions;
   /** Called on the server when the projectile hits an entity. */
   onHit?: (context: ProjectileImpactHookContext) => void;
   /** Called on the server when the projectile hits a wall. */
@@ -214,6 +245,7 @@ interface PendingProjectile {
 interface ActiveProjectile {
   state: ProjectileServerState;
   options: ProjectileEmitOptions;
+  config: PendingProjectile["config"];
   context: TrajectoryContext;
   /** Age at which the current trajectory started (after a bounce). */
   ageOffset: number;
@@ -225,12 +257,16 @@ interface ActiveProjectile {
 
 export type NetworkProjectile = Omit<ProjectileServerState, "payload"> & ProjectileCollisionOptions;
 
+/** What a projectile ended on, so clients can pick a matching effect. */
+export type ProjectileImpactSurface = "target" | "wall" | "ground";
+
 interface NetworkProjectileImpact {
   id: string;
   targetId?: string;
   x: number;
   y: number;
   distance: number;
+  surface: ProjectileImpactSurface;
 }
 
 interface NetworkProjectileUpdate {
@@ -251,6 +287,7 @@ interface NetworkProjectileDestroy {
   x?: number;
   y?: number;
   distance?: number;
+  surface?: ProjectileImpactSurface;
 }
 
 function toPlainVector(vector: Vector2 | { x: number; y: number }): { x: number; y: number } {
@@ -326,6 +363,13 @@ function resolveOwnerOrigin(owner?: RpgPlayer): { x: number; y: number } {
     x: owner.x() + (hitbox?.w ?? 0) / 2,
     y: owner.y() + (hitbox?.h ?? 0) / 2,
   };
+}
+
+function resolveTargetPoint(target: ProjectileTarget): { x: number; y: number } {
+  if (typeof target.x !== "function") {
+    return target as { x: number; y: number };
+  }
+  return resolveOwnerOrigin(target as unknown as RpgPlayer);
 }
 
 function getOwnerDirection(owner?: RpgPlayer): Direction | undefined {
@@ -405,6 +449,7 @@ function toNetworkImpact(projectileId: string, hit: RaycastHit): NetworkProjecti
     x: hit.point.x,
     y: hit.point.y,
     distance: hit.distance,
+    surface: isWall(hit.entity) ? "wall" : "target",
   };
 }
 
@@ -500,11 +545,21 @@ export class RpgMapProjectiles {
   }
 
   private createStates(options: ProjectileEmitOptions, owner?: RpgPlayer): ProjectileServerState[] {
-    const trajectory = options.trajectory;
     const origin = options.origin ?? resolveOwnerOrigin(owner);
-    const baseDirection = normalizeDirection(directionToVector(options.direction ?? getOwnerDirection(owner)));
+    const aim = options.target ? resolveTargetPoint(options.target) : undefined;
+    const aimDistance = aim ? Math.hypot(aim.x - origin.x, aim.y - origin.y) : 0;
+    // An arc lands on its target instead of flying its whole range.
+    const trajectory = aim && options.trajectory.type === "arc"
+      ? { ...options.trajectory, range: Math.min(Number(options.trajectory.range) || aimDistance, aimDistance) }
+      : options.trajectory;
+    const baseDirection = normalizeDirection(
+      aim && aimDistance > 0
+        ? { x: aim.x - origin.x, y: aim.y - origin.y }
+        : directionToVector(options.direction ?? getOwnerDirection(owner)),
+    );
     const count = options.pattern?.count ?? options.repeat?.count ?? 1;
     const interval = Math.max(0, options.repeat?.interval ?? 0) / 1000;
+    const delay = Math.max(0, Number(options.delay) || 0) / 1000;
     const seed = options.repeat?.seed === true
       ? Math.floor(Math.random() * 0xffffffff)
       : typeof options.repeat?.seed === "number"
@@ -529,7 +584,7 @@ export class RpgMapProjectiles {
         range,
         ttl,
         spawnTick: (this.map as any).getTick(),
-        delay: interval * index,
+        delay: delay + interval * index,
         index,
         count,
         payload: options.payload,
@@ -577,6 +632,7 @@ export class RpgMapProjectiles {
     const active: ActiveProjectile = {
       state: projectile,
       options: pending.options,
+      config: pending.config,
       context: {
         origin: projectile.origin,
         direction: projectile.direction,
@@ -606,7 +662,7 @@ export class RpgMapProjectiles {
       filter: (entity) => {
         if (collide === "none") return false;
         if (collide === "walls" && !isWall(entity)) return false;
-        return this.canHit(entity, projectile, pending);
+        return this.canHit(entity, projectile, pending.config);
       },
       resolveHit: (hit, state) => this.resolveHit(active, hit, state),
     });
@@ -758,7 +814,7 @@ export class RpgMapProjectiles {
       new Vector2(projectile.direction.x, projectile.direction.y),
       projectile.range,
       pending.config.collisionMask,
-      (entity) => this.canHit(entity, projectile, pending),
+      (entity) => this.canHit(entity, projectile, pending.config),
     );
     if (hit) {
       this.handleHitState(projectile, hit);
@@ -766,19 +822,19 @@ export class RpgMapProjectiles {
     this.handleDestroyState(projectile, hit ? "hit" : "range", hit ?? undefined);
   }
 
-  private canHit(entity: Entity, projectile: ProjectileServerState, pending: PendingProjectile): boolean {
-    if (projectile.ownerId && pending.config.ignoreOwner !== false && entity.uuid === projectile.ownerId) {
+  private canHit(entity: Entity, projectile: ProjectileServerState, config: PendingProjectile["config"]): boolean {
+    if (projectile.ownerId && config.ignoreOwner !== false && entity.uuid === projectile.ownerId) {
       return false;
     }
     // Loot pickups lie on the ground: projectiles fly over them.
     if (isLootEvent((this.map as any).getObjectById?.(entity.uuid))) {
       return false;
     }
-    if (!pending.config.canHit) {
+    if (!config.canHit) {
       return true;
     }
     const target = (this.map as any).getObjectById(entity.uuid);
-    return pending.config.canHit({
+    return config.canHit({
       projectile,
       owner: projectile.ownerId ? (this.map as any).getPlayer(projectile.ownerId) : undefined,
       target,
@@ -829,11 +885,15 @@ export class RpgMapProjectiles {
     }
     const finalReason = reason === "end" ? this.naturalEndReason(active, projectile) : reason;
     const point = active.stuckAt ?? { x: projectile.position.x, y: projectile.position.y };
+    let landedOnTarget = false;
     if (finalReason === "land") {
+      landedOnTarget = this.resolveLanding(active, point);
       active.options.onLand?.({ projectile: state, owner: this.ownerOf(state), map: this.map, reason: finalReason, ...point });
     }
     const lingerMs = active.options.linger?.ms ?? 0;
-    const lingers = lingerMs > 0 && (finalReason === "land" || finalReason === "range" || finalReason === "end" || !!active.stuckAt);
+    // A projectile that landed on a target plays its impact instead of lying on the ground.
+    const rests = (finalReason === "land" && !landedOnTarget) || finalReason === "range" || finalReason === "end";
+    const lingers = lingerMs > 0 && (rests || !!active.stuckAt);
     if (lingers) {
       if (finalReason !== "hit" || active.stuckAt) {
         this.updateQueue.push({ id: state.id, stopAt: point });
@@ -842,6 +902,50 @@ export class RpgMapProjectiles {
       return;
     }
     this.finish(active, finalReason, point.x, point.y, hit);
+  }
+
+  /**
+   * Hit what stands where an arc lands. The closest entity takes the hit, or
+   * every entity in the radius with `pierce`; each one can still reply through
+   * its `onProjectileHit` hook.
+   */
+  private resolveLanding(active: ActiveProjectile, point: { x: number; y: number }): boolean {
+    const radius = active.options.landing?.radius;
+    if (radius === undefined || !Number.isFinite(radius) || radius < 0) return false;
+    const bounds = new AABB(point.x - radius, point.y - radius, point.x + radius, point.y + radius);
+    const distance = Math.hypot(point.x - active.state.origin.x, point.y - active.state.origin.y);
+    const candidates = ((this.map as any).physic.queryAABB(bounds) as Entity[])
+      .filter((entity) => !isWall(entity) && this.canHit(entity, active.state, active.config))
+      .map((entity) => {
+        const box = createCollider(entity)?.getBounds();
+        const dx = box ? Math.max(box.minX - point.x, 0, point.x - box.maxX) : entity.position.x - point.x;
+        const dy = box ? Math.max(box.minY - point.y, 0, point.y - box.maxY) : entity.position.y - point.y;
+        return { entity, gap: Math.hypot(dx, dy) };
+      })
+      .filter((candidate) => candidate.gap <= radius)
+      .sort((a, b) => a.gap - b.gap);
+
+    const pierce = active.options.pierce;
+    let landed = false;
+    for (const { entity } of candidates) {
+      const hit: RaycastHit = {
+        entity,
+        point: new Vector2(point.x, point.y),
+        normal: new Vector2(0, 0),
+        distance,
+      };
+      const reaction = this.notifyTarget(active, hit, point);
+      if (reaction === "pass") continue;
+      if (reaction === "stick") {
+        active.stuckAt = point;
+      }
+      this.handleHitState(active.state, hit);
+      active.hits += 1;
+      landed = true;
+      if (reaction === "stick" || reaction === "stop") break;
+      if (!(pierce === true || (typeof pierce === "number" && active.hits < pierce))) break;
+    }
+    return landed;
   }
 
   private naturalEndReason(active: ActiveProjectile, projectile: ProjectileState): string {
@@ -858,11 +962,16 @@ export class RpgMapProjectiles {
 
   private finish(active: ActiveProjectile, reason: string, x: number, y: number, hit?: RaycastHit): void {
     this.active.delete(active.state.id);
-    this.handleDestroyState(active.state, reason, hit);
+    this.handleDestroyState(active.state, reason, hit, { x, y });
     active.options.onEnd?.({ projectile: active.state, owner: this.ownerOf(active.state), map: this.map, reason, x, y });
   }
 
-  private handleDestroyState(projectile: ProjectileServerState, reason: string, hit?: RaycastHit): void {
+  private handleDestroyState(
+    projectile: ProjectileServerState,
+    reason: string,
+    hit?: RaycastHit,
+    point?: { x: number; y: number },
+  ): void {
     this.runtime.delete(projectile.id);
     this.networkRuntime.delete(projectile.id);
     const destroyed: NetworkProjectileDestroy = {
@@ -871,6 +980,8 @@ export class RpgMapProjectiles {
     };
     if (hit) {
       Object.assign(destroyed, toNetworkImpact(projectile.id, hit));
+    } else if (point && reason === "land") {
+      Object.assign(destroyed, { x: point.x, y: point.y, surface: "ground" });
     }
     this.destroyQueue.push(destroyed);
     this.callHook("server-projectiles-onDestroy", {

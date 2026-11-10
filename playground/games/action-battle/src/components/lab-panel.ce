@@ -1,0 +1,251 @@
+<DOMContainer width="100%" height="100%" class="playground-lab-panel-root">
+  <aside class="enemy-panel">
+    <div class="panel-title">Action Battle Lab</div>
+
+    <label>
+      Type
+      <select change={onBehaviorChange}>
+        <option value="aggressive">Aggressive</option>
+        <option value="ranged">Ranged</option>
+        <option value="defensive">Defensive</option>
+        <option value="passive">Passive</option>
+      </select>
+    </label>
+
+    <label>
+      Faction
+      <select change={onFactionChange}>
+        <option value="monsters">Enemy</option>
+        <option value="players">Player ally</option>
+        <option value="guards">Guard</option>
+        <option value="bandits">Bandit</option>
+      </select>
+    </label>
+
+    <label>
+      Targets
+      <select change={onTargetsChange}>
+        <option value="players">Players</option>
+        <option value="events">Events</option>
+        <option value="hostile">Hostile</option>
+        <option value="all">All</option>
+      </select>
+    </label>
+
+    <label>
+      Weapon
+      <select change={onWeaponChange}>
+        <option value="sword">Sword (melee combo)</option>
+        <option value="bow">Bow (arrows)</option>
+      </select>
+    </label>
+
+    <div class="enemy-list">
+      @for (enemy of enemies) {
+        <div
+          class="enemy-card"
+          mousedown={onGrab(enemy.id)}
+        >
+          <div class="enemy-icon">{enemy.icon}</div>
+          <div>
+            <strong>{enemy.name}</strong>
+            <span>{enemy.skill}</span>
+          </div>
+        </div>
+      }
+    </div>
+  </aside>
+  @if (dragging()) {
+    <div class="enemy-ghost" style={ghostStyle}>{ghostLabel}</div>
+  }
+</DOMContainer>
+
+<style>
+  /* Only the panel takes clicks: the rest of the screen stays with the game. */
+  .playground-lab-panel-root {
+    pointer-events: none !important;
+    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  }
+
+  .enemy-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    pointer-events: auto;
+    width: 240px;
+    height: 100vh;
+    padding: 14px;
+    box-sizing: border-box;
+    background: #18212a;
+    color: #edf2f7;
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .panel-title {
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1.15;
+  }
+
+  label {
+    display: grid;
+    gap: 5px;
+    font-size: 12px;
+    color: #b9c3cf;
+  }
+
+  select {
+    width: 100%;
+    min-height: 34px;
+    border: 1px solid #344251;
+    border-radius: 6px;
+    background: #0f151b;
+    color: #f8fafc;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+
+  .enemy-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .enemy-card {
+    min-height: 58px;
+    border: 1px solid #334252;
+    border-radius: 6px;
+    background: #212c36;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 9px;
+    align-items: center;
+    padding: 8px;
+    cursor: grab;
+    user-select: none;
+  }
+
+  .enemy-card:active {
+    cursor: grabbing;
+  }
+
+  .enemy-card strong {
+    display: block;
+    font-size: 13px;
+    line-height: 1.2;
+    color: #ffffff;
+  }
+
+  .enemy-card span {
+    display: block;
+    margin-top: 3px;
+    font-size: 11px;
+    line-height: 1.25;
+    color: #aeb9c5;
+  }
+
+  .enemy-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    background: #111820;
+    font-size: 18px;
+  }
+
+  .enemy-ghost {
+    position: fixed;
+    z-index: 10;
+    padding: 5px 9px;
+    border-radius: 6px;
+    background: #e6c673;
+    color: #111820;
+    font-size: 12px;
+    font-weight: 700;
+    pointer-events: none;
+  }
+</style>
+
+<script>
+  import { computed, signal } from "canvasengine";
+  import { inject, RpgClientEngine } from "@rpgjs/client";
+  import { behavior, dragging, faction, selectedEnemy, targets } from "../lab-state";
+
+  const STAGE_WIDTH = 2048;
+  const STAGE_HEIGHT = 1536;
+  const client = inject(RpgClientEngine);
+
+  const enemies = [
+    { id: "brute", name: "Brute", skill: "Melee patterns", icon: "B" },
+    { id: "wood-thrower", name: "Wood Thrower", skill: "Lancer bois", icon: "W" },
+    { id: "fire-caster", name: "Fire Caster", skill: "Fire / exp.png", icon: "F" },
+    { id: "guardian", name: "Guardian", skill: "Boss / charged combo", icon: "G" },
+  ];
+
+  const pointer = signal({ x: 0, y: 0 });
+  const ghostStyle = computed(() => ({
+    left: `${pointer().x + 12}px`,
+    top: `${pointer().y + 12}px`,
+  }));
+  const ghostLabel = computed(
+    () => enemies.find((enemy) => enemy.id === selectedEnemy())?.name ?? ""
+  );
+
+  // Drag with plain mouse events: the game layer does not let native drag and drop start.
+  const onGrab = (enemyType) => (event) => {
+    event.preventDefault();
+    selectedEnemy.set(enemyType);
+    pointer.set({ x: event.clientX, y: event.clientY });
+    dragging.set(true);
+
+    const follow = (move) => pointer.set({ x: move.clientX, y: move.clientY });
+    const release = (up) => {
+      window.removeEventListener("mousemove", follow);
+      window.removeEventListener("mouseup", release);
+      dragging.set(false);
+      if (up.type === "mouseup") spawnAt(up.clientX, up.clientY);
+    };
+    window.addEventListener("mousemove", follow);
+    window.addEventListener("mouseup", release);
+  };
+
+  function spawnAt(clientX, clientY) {
+    // Released on the panel: nothing to spawn.
+    const panel = document.querySelector(".enemy-panel")?.getBoundingClientRect();
+    if (panel && clientX >= panel.left) return;
+    // The stage element follows the camera: its rectangle maps the screen to the map.
+    const stage = document.querySelector(".stage-drop")?.getBoundingClientRect();
+    if (!stage || stage.width <= 0 || stage.height <= 0) return;
+
+    client.processAction("playground-action-battle:spawn-enemy", {
+      enemyType: selectedEnemy(),
+      behavior: behavior(),
+      faction: faction(),
+      targets: targets(),
+      x: ((clientX - stage.left) / stage.width) * STAGE_WIDTH,
+      y: ((clientY - stage.top) / stage.height) * STAGE_HEIGHT,
+    });
+  }
+
+  function onBehaviorChange(event) {
+    behavior.set(event.target.value);
+  }
+
+  function onFactionChange(event) {
+    faction.set(event.target.value);
+  }
+
+  function onTargetsChange(event) {
+    targets.set(event.target.value);
+  }
+
+  function onWeaponChange(event) {
+    client.processAction("playground-action-battle:weapon", { weapon: event.target.value });
+    // Give the keyboard back to the game.
+    event.target.blur();
+  }
+</script>

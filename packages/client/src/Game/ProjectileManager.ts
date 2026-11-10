@@ -38,12 +38,16 @@ export interface ClientProjectileUpdate {
 /** Resolve the current center of a projectile launcher. */
 export type ProjectileOwnerResolver = (ownerId: string) => { x: number; y: number } | undefined;
 
+/** What a projectile ended on: an entity, a wall, or the ground where it landed. */
+export type ClientProjectileSurface = "target" | "wall" | "ground";
+
 export interface ClientProjectileImpact {
   id: string;
   targetId?: string;
   x: number;
   y: number;
   distance?: number;
+  surface?: ClientProjectileSurface;
 }
 
 export interface ClientProjectileDestroy {
@@ -53,12 +57,15 @@ export interface ClientProjectileDestroy {
   x?: number;
   y?: number;
   distance?: number;
+  surface?: ClientProjectileSurface;
 }
 
 export interface RenderedProjectileProps extends ClientProjectileSpawn {
   x: number;
   y: number;
   angle: number;
+  /** Angle of the projectile as drawn: `angle` tilted by its climb or fall. */
+  flightAngle: number;
   distance: number;
   elapsed: number;
   progress: number;
@@ -103,6 +110,8 @@ interface RuntimeProjectile {
   /** Start of the current trajectory clock, after a restart. */
   restartedAt?: number;
   stopAt?: { x: number; y: number };
+  /** Last drawn angle in flight, kept once the projectile is planted. */
+  stuckAngle?: number;
   /** Reactive props handed to the rendered component, updated every step. */
   renderProps?: ProjectileRenderProps;
 }
@@ -127,7 +136,7 @@ export interface ProjectileRenderItem {
 }
 
 const PROJECTILE_DYNAMIC_PROPS = [
-  "x", "y", "z", "phase", "angle", "distance", "elapsed", "progress",
+  "x", "y", "z", "phase", "angle", "flightAngle", "distance", "elapsed", "progress",
   "impact", "impactElapsed", "impactProgress", "destroyed",
 ] as const;
 
@@ -151,6 +160,7 @@ export class ProjectileManager {
   private readonly structureVersion = signal(0);
   private readonly impactDurationMs = 350;
   private mapId?: string;
+  private defaultComponent?: any;
 
   constructor(
     private readonly hooks: Hooks,
@@ -212,6 +222,11 @@ export class ProjectileManager {
     return this.components.get(type);
   }
 
+  /** Component rendering the projectile types that have no registered component. */
+  setDefaultComponent(component: any): void {
+    this.defaultComponent = component;
+  }
+
   setMapId(mapId: string | undefined): void {
     const normalizedMapId = normalizeRoomMapId(mapId);
     if (this.mapId === normalizedMapId) return;
@@ -227,7 +242,7 @@ export class ProjectileManager {
     if (!this.acceptsMap(clock.mapId)) return;
     const now = clock.now ?? Date.now();
     for (const projectile of projectiles) {
-      const component = this.components.get(projectile.type);
+      const component = this.components.get(projectile.type) ?? this.defaultComponent;
       if (!component) {
         continue;
       }
@@ -278,12 +293,23 @@ export class ProjectileManager {
           x: destroyed.x ?? projectile.impact?.x ?? current?.x ?? projectile.spawn.origin.x,
           y: destroyed.y ?? projectile.impact?.y ?? current?.y ?? projectile.spawn.origin.y,
           distance: destroyed.distance ?? projectile.impact?.distance ?? current?.distance,
+          surface: destroyed.surface ?? projectile.impact?.surface,
+        }, now);
+      } else if (destroyed.reason === "land" && !projectile.impact && !projectile.stopAt) {
+        // A landing that hit nothing still plays an impact, on the ground.
+        const current = this.toProps(projectile, now);
+        this.setImpact(projectile, {
+          id: destroyed.id,
+          x: destroyed.x ?? current?.x ?? projectile.spawn.origin.x,
+          y: destroyed.y ?? current?.y ?? projectile.spawn.origin.y,
+          distance: current?.distance,
+          surface: "ground",
         }, now);
       }
       projectile.destroyReason = destroyed.reason;
       projectile.destroyAt = projectile.destroyAt ?? (
         projectile.impact && projectile.impactStartedAt !== undefined
-          ? projectile.impactStartedAt + this.impactDurationMs
+          ? projectile.impactStartedAt + this.impactDuration(projectile)
           : now
       );
       this.hooks.callHooks("client-projectiles-onDestroy", this.toProps(projectile, now)).subscribe();
@@ -363,7 +389,7 @@ export class ProjectileManager {
       impactElapsed: impactElapsedMs === undefined ? undefined : impactElapsedMs / 1000,
       impactProgress: impactElapsedMs === undefined
         ? undefined
-        : Math.min(1, impactElapsedMs / this.impactDurationMs),
+        : Math.min(1, impactElapsedMs / this.impactDuration(projectile)),
       destroyed: projectile.destroyAt !== undefined,
       ttl,
     };
@@ -387,15 +413,22 @@ export class ProjectileManager {
       z: 0,
       phase: "out",
       angle: Math.atan2(spawn.direction.y, spawn.direction.x),
+      flightAngle: Math.atan2(spawn.direction.y, spawn.direction.x),
       distance,
       progress,
     };
   }
 
+  /** How long an impacted projectile stays rendered: `params.impactDuration` in ms. */
+  private impactDuration(projectile: RuntimeProjectile): number {
+    const duration = Number(projectile.spawn.params?.impactDuration);
+    return Number.isFinite(duration) && duration > 0 ? duration : this.impactDurationMs;
+  }
+
   /** Sample a named trajectory with the same parameters as the server. */
   private toTrajectoryProps(
     projectile: RuntimeProjectile,
-    base: Omit<RenderedProjectileProps, "x" | "y" | "z" | "phase" | "angle" | "distance" | "progress">,
+    base: Omit<RenderedProjectileProps, "x" | "y" | "z" | "phase" | "angle" | "flightAngle" | "distance" | "progress">,
     now: number,
   ): RenderedProjectileProps {
     const spawn = projectile.spawn;
@@ -407,6 +440,7 @@ export class ProjectileManager {
         z: 0,
         phase: "stuck",
         angle: Math.atan2(spawn.direction.y, spawn.direction.x),
+        flightAngle: projectile.stuckAngle ?? Math.atan2(spawn.direction.y, spawn.direction.x),
         distance: Math.hypot(projectile.stopAt.x - spawn.origin.x, projectile.stopAt.y - spawn.origin.y),
         progress: 1,
       };
@@ -426,6 +460,11 @@ export class ProjectileManager {
     const heading = Math.hypot(ahead.x - point.x, ahead.y - point.y) > 0.01
       ? Math.atan2(ahead.y - point.y, ahead.x - point.x)
       : Math.atan2(spawn.direction.y, spawn.direction.x);
+    // Drawn at `y - z`, the projectile points up while it climbs and down while it falls.
+    const drawnHeading = Math.hypot(ahead.x - point.x, ahead.y - ahead.z - (point.y - point.z)) > 0.01
+      ? Math.atan2(ahead.y - ahead.z - (point.y - point.z), ahead.x - point.x)
+      : heading;
+    projectile.stuckAngle = drawnHeading;
     const visualImpact = projectile.visualImpact ?? projectile.impact;
     const distance = Math.hypot(point.x - spawn.origin.x, point.y - spawn.origin.y);
     return {
@@ -435,6 +474,7 @@ export class ProjectileManager {
       z: visualImpact ? 0 : point.z,
       phase: point.phase,
       angle: heading,
+      flightAngle: drawnHeading,
       distance,
       progress: Math.min(1, elapsed / Math.max(0.001, spawn.ttl)),
     };
@@ -490,7 +530,7 @@ export class ProjectileManager {
     projectile.impact = impact;
     projectile.predictedImpact = undefined;
     projectile.impactStartedAt = projectile.impactStartedAt ?? now;
-    const impactDestroyAt = projectile.impactStartedAt + this.impactDurationMs;
+    const impactDestroyAt = projectile.impactStartedAt + this.impactDuration(projectile);
     projectile.destroyAt = Math.max(projectile.destroyAt ?? 0, impactDestroyAt);
   }
 

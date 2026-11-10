@@ -158,7 +158,8 @@ const applyDamageEffect = (
   }
 
   if (!result.cancelled) {
-    (attacker as any).applyStates?.(target, skill);
+    // A weapon hit has no skill, hence no states to apply.
+    if (skill) (attacker as any).applyStates?.(target, skill);
     const targetAi = (target as any).battleAi;
     if (result.defense?.kind === "guard") {
       emitActionBattleClientVisual({
@@ -308,6 +309,17 @@ const buildActionContext = (input: {
           origin: projectile.origin,
           direction:
             projectile.direction ?? directionToTarget(input.attacker, input.target),
+          // An arc lands on the target of the action instead of flying its whole range.
+          target:
+            projectile.trajectory?.type === "arc" && !projectile.direction
+              ? (firstTarget(input.target) as any) ?? undefined
+              : undefined,
+          delay: projectile.delay,
+          landing: projectile.landing,
+          linger: projectile.linger,
+          pierce: projectile.pierce,
+          wall: projectile.wall,
+          collide: projectile.collide,
           spreadDegrees: projectile.spreadDegrees,
           accuracy: projectile.accuracy,
           trajectory: projectile.trajectory ?? {
@@ -336,16 +348,26 @@ const buildActionContext = (input: {
               ? { scale: projectile.scale }
               : {}),
             ...(typeof projectile.rotateToDirection === "boolean"
-              ? { rotateToDirection: projectile.rotateToDirection }
+              ? { rotate: projectile.rotateToDirection }
               : {}),
           },
-          canHit: ({ target }: { target?: ActionBattleEntity }) => {
-            if (!target) return false;
-            return canActionBattleUseTarget(
-              input.attacker,
-              target,
-              input.action?.target ?? "enemy",
-              getActionBattleOptions().combat?.targets
+          canHit: ({ target, entity }: { target?: ActionBattleEntity; entity?: any }) => {
+            // Walls stop projectiles.
+            if (!target) return entity?.isStatic?.() === true;
+            if (
+              canActionBattleUseTarget(
+                input.attacker,
+                target,
+                input.action?.target ?? "enemy",
+                getActionBattleOptions().combat?.targets
+              )
+            ) {
+              return true;
+            }
+            // Scenery reacting to projectiles (a switch, a bush) is hit too, without taking damage.
+            return (
+              !isActionBattleCombatEntity(target) &&
+              typeof (target as any).onProjectileHit === "function"
             );
           },
         },
@@ -500,6 +522,8 @@ export const handleActionBattleProjectileImpact = (
   const handler = projectileHandlers.get(context.projectile.id);
   if (!handler) return;
   const target = context.target;
+  // Walls and scenery take no damage: scenery reacts through its own `onProjectileHit`.
+  if (!isActionBattleCombatEntity(target)) return;
   handler.action.target = target ?? handler.action.target;
   if (handler.onImpact) {
     handler.onImpact(context, handler.action);

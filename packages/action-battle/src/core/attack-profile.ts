@@ -146,6 +146,27 @@ export function normalizeActionBattleAttackProfile(
   return normalized;
 }
 
+/** Layer a partial profile (a weapon, a combo step) over a base profile. */
+export const mergeAttackProfileOverrides = (
+  base: NormalizedActionBattleAttackProfile,
+  override: ActionBattleAttackProfile
+): ActionBattleAttackProfile => ({
+  ...base,
+  ...override,
+  reaction: {
+    ...base.reaction,
+    ...override.reaction,
+  },
+  control: {
+    ...base.control,
+    ...override.control,
+  },
+  hitboxes: {
+    ...base.hitboxes,
+    ...override.hitboxes,
+  },
+});
+
 export const getActionBattleControlLockDuration = (
   profile: NormalizedActionBattleAttackProfile,
   lock: ActionBattleControlLock

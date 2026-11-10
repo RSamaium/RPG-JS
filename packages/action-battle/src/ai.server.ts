@@ -1280,6 +1280,11 @@ export class BattleAi {
 
     const customBehaviorHandled = this.applyCustomBehavior(currentTime);
     if (customBehaviorHandled) {
+      // A custom behavior drives the enemy itself: without this, an enemy that just spotted its
+      // target stays in the alert state, where its attacks are neither shown nor chained.
+      if (this.state === AiState.Alert) {
+        this.changeState(this.target ? AiState.Combat : AiState.Idle);
+      }
       this.checkDamageTaken();
       return;
     }
