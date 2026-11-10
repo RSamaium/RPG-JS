@@ -1,5 +1,34 @@
 # @rpgjs/server
 
+## 5.3.0
+
+### Minor Changes
+
+- 7125c23: Add emotion bubbles: `player.showEmotionBubble("like")` (also on events) shows an icon above the character that follows it, with a bounce pop-in and pop-out. The icon sheet is sent as animation params and defaults to a sheet bundled with the client.
+- f217a6e: Draw the picture of a map in a custom gameplay room. `@RpgRoom({ map: (params) => mapId })` makes the room serve the visual stream of that map (terrain and static decor, without events, players, hitboxes, or physics), which the scene renders with `<MapView />` or `engine.openMapView()`. In MMORPG mode the room asks the map room for its compiled stream through the new `GET /map/view` route; in standalone mode the client loads the map itself. The Studio map renderer gets a `viewOnly` mode that leaves the map scene untouched.
+- e46ac2d: New module hooks, called in addition to the hooks of the items and without changing their behavior: `player.onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip` (`player`, `{ itemId, quantity }`, plus `equipped` for `onItemEquip`) and `player.onGoldChange` (`player`, `{ gold, delta }`, also called by `buyItem()` and `sellItem()`), and `map.onTick` (`map`, `{ deltaMs, tick }`), called after each server tick of a map that has players.
+- 5e1b68c: Add generic projectile trajectories and behaviors. `trajectory.type` now accepts `arc` (a lob with a height) and `return` (out and back to the launcher), and `defineTrajectory()` registers custom paths shared by the server simulation and the client renderer. Projectiles can fly through targets (`pierce`), bounce, return or stick on walls (`wall`), collide only with walls or nothing (`collide`), and stay visible where they end (`linger`), with per-projectile `onHit`, `onWall`, `onLand` and `onEnd` hooks. Components receive `z` and `phase`. Any event can react to a hit with `onProjectileHit` and reply `stop`, `pass` or `stick`; players and modules get the same hook. Projectiles fly over loot pickups.
+
+  Fixes a physics raycast that returned `NaN` points for rays parallel to a box edge.
+
+- 11bb345: Map events can be suspended and restored: `map.suspendEvents(filter?)` hides the events of a map (no sprite, no hitbox, no touch or action, no route) and keeps them, `map.resumeEvents(filter?)` puts them back where they were with their state (position, graphics, variables, self switches). Also `map.suspendEvent(id)`, `map.resumeEvent(id)`, `map.isEventSuspended(id)`, `map.getSuspendedEvents()` and, on an event, `event.suspend()`, `event.resume()` and `event.suspended`. A scenario event is suspended for its owner only, as only its owner sees it.
+- d6040a3: Add world loot. `event.dropLoot()` and `map.dropLoot()` pop gold (split into coins) and items as pickups that arc out, bounce, and are collected by magnet, by touch or with the action key. Options cover owned loot (scenario events), magnet radius per player, lifetime, `canCollect` and `onCollect`. Items can declare a `loot` config (`visual`, `color`, `sound`, `rarity`, `use`), and the `loot` client hook registers custom pickup components, default sounds and a collect text.
+
+  Action Battle enemies pop their rewards as loot with `rewards.drop`, after the impact freeze. `defineActionBattleEnemy()` now accepts `graphic` and declarative `stats`, applied by `createActionEnemy()`.
+
+### Patch Changes
+
+- 2c342f6: Fix `player.changeRoom()` into a custom gameplay room (`RpgGameplayRoom`) in MMORPG mode for a player who has items, equipment, skills, states or a class: the room now loads the module `database` before it restores the player, instead of failing with `The ID=... data is not found in the database`. A `database` function receives the gameplay room as well as maps; the Studio database loader reads the project database from its data provider there.
+- 4dd0a89: `player.useItem()` now applies `hpValue` and `mpValue` of the item: `hpValue` is added to `hp` and `mpValue` to `sp`, limited to the maximum (and `sp` never goes under `0`). The effect runs before `onUse` and is skipped when the `hitRate` roll fails. A class-based item that already adds `hpValue` in `onUse` must drop that line, or it heals twice. Adds `player.applyEffect(item)`.
+- Updated dependencies [10e24d8]
+- Updated dependencies [7125c23]
+- Updated dependencies [f217a6e]
+- Updated dependencies [5e1b68c]
+- Updated dependencies [d6040a3]
+  - @rpgjs/testing@5.0.4
+  - @rpgjs/common@5.2.0
+  - @rpgjs/physic@5.1.0
+
 ## 5.2.0
 
 ### Minor Changes

@@ -1,5 +1,37 @@
 # @rpgjs/client
 
+## 5.4.0
+
+### Minor Changes
+
+- 7125c23: Add emotion bubbles: `player.showEmotionBubble("like")` (also on events) shows an icon above the character that follows it, with a bounce pop-in and pop-out. The icon sheet is sent as animation params and defaults to a sheet bundled with the client.
+- f217a6e: Draw the picture of a map in a custom gameplay room. `@RpgRoom({ map: (params) => mapId })` makes the room serve the visual stream of that map (terrain and static decor, without events, players, hitboxes, or physics), which the scene renders with `<MapView />` or `engine.openMapView()`. In MMORPG mode the room asks the map room for its compiled stream through the new `GET /map/view` route; in standalone mode the client loads the map itself. The Studio map renderer gets a `viewOnly` mode that leaves the map scene untouched.
+- 5e1b68c: Add generic projectile trajectories and behaviors. `trajectory.type` now accepts `arc` (a lob with a height) and `return` (out and back to the launcher), and `defineTrajectory()` registers custom paths shared by the server simulation and the client renderer. Projectiles can fly through targets (`pierce`), bounce, return or stick on walls (`wall`), collide only with walls or nothing (`collide`), and stay visible where they end (`linger`), with per-projectile `onHit`, `onWall`, `onLand` and `onEnd` hooks. Components receive `z` and `phase`. Any event can react to a hit with `onProjectileHit` and reply `stop`, `pass` or `stick`; players and modules get the same hook. Projectiles fly over loot pickups.
+
+  Fixes a physics raycast that returned `NaN` points for rays parallel to a box edge.
+
+- d6040a3: Add world loot. `event.dropLoot()` and `map.dropLoot()` pop gold (split into coins) and items as pickups that arc out, bounce, and are collected by magnet, by touch or with the action key. Options cover owned loot (scenario events), magnet radius per player, lifetime, `canCollect` and `onCollect`. Items can declare a `loot` config (`visual`, `color`, `sound`, `rarity`, `use`), and the `loot` client hook registers custom pickup components, default sounds and a collect text.
+
+  Action Battle enemies pop their rewards as loot with `rewards.drop`, after the impact freeze. `defineActionBattleEnemy()` now accepts `graphic` and declarative `stats`, applied by `createActionEnemy()`.
+
+### Patch Changes
+
+- 10e24d8: Update CanvasEngine: `canvasengine` 2.5.1, `@canvasengine/compiler` and `@canvasengine/presets` 2.5.0. `@canvasengine/tiled` and `@canvasengine/testing` stay on 2.4.1, the latest published versions.
+
+  Action Battle enemy loot pops right on defeat again: CanvasEngine 2.5.1 replays the updates made during the impact freeze (hit-stop), so the loot no longer waits for its end.
+
+- e8391ef: Fix a client race when the server calls `player.changeRoom()` while the client is still loading a streamed map: when that stale map load ends, it no longer replaces the gameplay room scene with the map scene or fills the map scene with the old map and its stream.
+- Updated dependencies [7125c23]
+- Updated dependencies [2c342f6]
+- Updated dependencies [f217a6e]
+- Updated dependencies [e46ac2d]
+- Updated dependencies [5e1b68c]
+- Updated dependencies [11bb345]
+- Updated dependencies [4dd0a89]
+- Updated dependencies [d6040a3]
+  - @rpgjs/common@5.2.0
+  - @rpgjs/server@5.3.0
+
 ## 5.3.0
 
 ### Minor Changes

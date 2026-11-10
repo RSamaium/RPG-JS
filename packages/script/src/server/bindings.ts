@@ -4,20 +4,36 @@
  * are the signals of the game; add your own with the `bindings` option of `provideScripts`, for example to turn a hook of
  * the projectiles or of a plugin into a signal.
  */
-import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
+import type { RpgEvent, RpgGoldChangePayload, RpgItemChangePayload, RpgMap, RpgMapTickPayload, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import type { SignalDesc } from "../core/filter";
 import type { SignalContext } from "./service";
 import { describeRoom } from "./world";
 import type { RpgShape } from "@rpgjs/common";
+import type { HotbarChangePayload, ProjectileDestroyHookContext, ProjectileServerState, ProjectileTargetHitContext } from "@rpgjs/server";
 
 /** Where a hook lives in a server module of RPGJS: `player`, `event`, `map`, `room`, `engine` or `projectiles`. */
-export type HookScope = "player" | "event" | "map" | "room" | "engine" | "projectiles";
+export type HookScope = "player" | "event" | "map" | "room" | "engine" | "projectiles" | (string & {});
 
 /** What a hook gives a signal: its payload, and where it happened (the player the scripts act for, the map, the event). */
 export interface SignalEmission {
   payload: Record<string, unknown>;
   context: SignalContext;
 }
+
+/**
+ * What the `emit` of a binding returns: one emission, one per player, or nothing.
+ *
+ * @example
+ * ```ts
+ * signalBinding<[RpgMap]>({
+ *   signal: "map.dawn", scope: "map", hook: "onDawn",
+ *   describe: { doc: "The sun rises on a map.", payload: {} },
+ *   // once for each player of the map, since a script acts for a player
+ *   emit: (map) => map.getPlayers().map((player) => ({ payload: {}, context: { player, map } })),
+ * })
+ * ```
+ */
+export type SignalEmissions = SignalEmission | SignalEmission[] | undefined;
 
 /**
  * A hook of RPGJS turned into a signal. `TArgs` are the arguments of the hook, in the order RPGJS gives them.
@@ -43,8 +59,16 @@ export interface SignalBinding<TArgs extends unknown[] = unknown[]> {
   hook: string;
   /** What the signal carries. Needed for a signal that the game does not already have. */
   describe?: SignalDesc;
-  /** Gives the payload and the context of the signal, or nothing to emit nothing (a player who is on no map, say). */
-  emit(...args: TArgs): SignalEmission | undefined | Promise<SignalEmission | undefined>;
+  /**
+   * The hook does not wait for the scripts, and a player whose scripts still run for this signal skips it. For a hook that RPGJS
+   * waits for and calls often, such as `onTick` of a map: a script that waits (`wait`, `showText`) would otherwise stop the map.
+   */
+  background?: boolean;
+  /**
+   * Gives the payload and the context of the signal, or nothing to emit nothing (a player who is on no map, say). A list emits the
+   * signal once per entry: a hook of a map, for each of its players. Not called while no script listens to the signal.
+   */
+  emit(...args: TArgs): SignalEmissions | Promise<SignalEmissions>;
 }
 
 /** Types the arguments of the hook of a binding. */
@@ -62,10 +86,40 @@ const shapePayload = (shape: RpgShape) => ({ shape: { name: String(shape.name), 
 const eventPayload = (event: RpgEvent) => ({ event: { id: String(event.id ?? ""), name: String(typeof event.name === "function" ? (event.name as () => unknown)() : event.name ?? "") } });
 /** A signal of an event: events exist in maps only, so the map is the one of the player. */
 const ofEvent = (event: RpgEvent, player: RpgPlayer): SignalEmission => ({ payload: eventPayload(event), context: { player, event } });
+const itemPayload = (change: RpgItemChangePayload) => ({ item: String(change.itemId), quantity: Number(change.quantity) });
+
+const projectilePayload = (projectile: ProjectileServerState) => ({
+  id: String(projectile.id),
+  type: String(projectile.type),
+  ...(typeof projectile.params?.projectileId === "string" ? { projectileId: projectile.params.projectileId } : {}),
+});
+/** A script acts for a player: a projectile launched by an event has no player to act for. */
+const playerOwner = (owner: unknown): RpgPlayer | undefined =>
+  owner && !(typeof (owner as { isEvent?: unknown }).isEvent === "function" && (owner as { isEvent(): boolean }).isEvent())
+    ? (owner as RpgPlayer)
+    : undefined;
 
 /**
- * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp` and `onDead` of the player, and
- * `onAction` and `onPlayerTouch` of the events. The ones of the player fire in every kind of room, a map or not.
+ * What the hooks of a turn-based battle give (scope `battle`, hooks `onStart`, `onCommand`, `onEnd`): the hero the script acts for
+ * and the tags of what is in the battle. A battle module calls them with this context.
+ */
+export interface BattleHookContext {
+  player: RpgPlayer;
+  map?: RpgMap | null;
+  /** How the battle ended, for `onEnd`. */
+  result?: string;
+  troop?: string[];
+  enemies?: string[];
+  skill?: string[];
+  hero?: string[];
+  target?: string[];
+}
+const tags = (value: unknown): string[] => (Array.isArray(value) ? value.map(String) : []);
+
+/**
+ * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp`, `onDead`,
+ * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip`, `onGoldChange`, `onSkillChange`, `onConnected`, `onDisconnected`, `onHotbarChange` and `onProjectileHit` of the player, `onStart`, `onCommand` and `onEnd` of a turn-based battle (scope `battle`), `onProjectileHit` of the events, `onDestroy` of the projectiles, `onAction` and `onPlayerTouch` of the events,
+ * and `onTick` of the maps. The ones of the player fire in every kind of room, a map or not.
  */
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer, RpgPlayerRoom]>({
@@ -107,6 +161,89 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer]>({
     signal: "player.dead", scope: "player", hook: "onDead",
     emit: (player) => ({ payload: {}, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload]>({
+    signal: "player.itemAdd", scope: "player", hook: "onItemAdd",
+    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload]>({
+    signal: "player.itemRemove", scope: "player", hook: "onItemRemove",
+    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload]>({
+    signal: "player.itemUse", scope: "player", hook: "onItemUse",
+    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgItemChangePayload & { equipped: boolean }]>({
+    signal: "player.itemEquip", scope: "player", hook: "onItemEquip",
+    emit: (player, change) => ({ payload: { ...itemPayload(change), equipped: !!change.equipped }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, RpgGoldChangePayload]>({
+    signal: "player.goldChange", scope: "player", hook: "onGoldChange",
+    emit: (player, change) => ({ payload: { gold: Number(change.gold), delta: Number(change.delta) }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, { action: string; skillId: string }]>({
+    signal: "player.skillChange", scope: "player", hook: "onSkillChange",
+    emit: (player, change) => ({ payload: { action: String(change.action), skill: String(change.skillId) }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer]>({
+    signal: "player.connect", scope: "player", hook: "onConnected",
+    emit: (player) => ({ payload: {}, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer]>({
+    signal: "player.disconnect", scope: "player", hook: "onDisconnected",
+    emit: (player) => ({ payload: {}, context: { player } }),
+  }),
+  signalBinding<[BattleHookContext]>({
+    signal: "battle.start", scope: "battle", hook: "onStart",
+    emit: (battle) => ({ payload: { troop: tags(battle.troop), enemies: tags(battle.enemies) }, context: { player: battle.player, map: battle.map } }),
+  }),
+  signalBinding<[BattleHookContext]>({
+    signal: "battle.command", scope: "battle", hook: "onCommand",
+    // a script observes the command: it never refuses it, whatever the script does
+    emit: (battle) => ({ payload: { skill: tags(battle.skill), hero: tags(battle.hero), target: tags(battle.target) }, context: { player: battle.player, map: battle.map } }),
+  }),
+  signalBinding<[BattleHookContext]>({
+    signal: "battle.end", scope: "battle", hook: "onEnd",
+    emit: (battle) => ({ payload: { result: String(battle.result ?? ""), troop: tags(battle.troop), enemies: tags(battle.enemies) }, context: { player: battle.player, map: battle.map } }),
+  }),
+  signalBinding<[RpgPlayer, HotbarChangePayload]>({
+    signal: "player.hotbarChange", scope: "player", hook: "onHotbarChange",
+    emit: (player, change) => ({ payload: { action: String(change.action), slots: change.state.slots.map((slot) => (slot ? { type: slot.type, id: slot.id } : null)) }, context: { player } }),
+  }),
+  signalBinding<[RpgPlayer, ProjectileServerState, ProjectileTargetHitContext]>({
+    signal: "player.projectileHit", scope: "player", hook: "onProjectileHit",
+    emit: (player, projectile, hit) => ({
+      payload: { projectile: projectilePayload(projectile), x: Number(hit.x), y: Number(hit.y) },
+      context: { player, map: hit.map },
+    }),
+  }),
+  signalBinding<[RpgEvent, ProjectileServerState, ProjectileTargetHitContext]>({
+    signal: "event.projectileHit", scope: "event", hook: "onProjectileHit",
+    emit: (event, projectile, hit) => {
+      const owner = playerOwner(hit.owner);
+      return owner ? { payload: { projectile: projectilePayload(projectile), x: Number(hit.x), y: Number(hit.y) }, context: { player: owner, map: hit.map, event } } : undefined;
+    },
+  }),
+  signalBinding<[ProjectileDestroyHookContext]>({
+    signal: "projectile.end", scope: "projectiles", hook: "onDestroy",
+    emit: (end) => {
+      const owner = playerOwner(end.owner);
+      if (!owner) return undefined;
+      const point = end.hit?.point;
+      return {
+        payload: { projectile: projectilePayload(end.projectile), reason: String(end.reason), x: Number(point?.x ?? end.projectile.origin.x), y: Number(point?.y ?? end.projectile.origin.y) },
+        context: { player: owner, map: end.map },
+      };
+    },
+  }),
+  signalBinding<[RpgMap, RpgMapTickPayload]>({
+    signal: "map.tick", scope: "map", hook: "onTick", background: true,
+    // A script acts for a player: the tick runs once for each player of the map
+    emit: (map, tick) => map.getPlayers().map((player) => ({
+      payload: { map: String(map.id), deltaMs: Number(tick.deltaMs), tick: Number(tick.tick) },
+      context: { player, map },
+    })),
   }),
   signalBinding<[RpgEvent, RpgPlayer]>({
     signal: "event.action", scope: "event", hook: "onAction",

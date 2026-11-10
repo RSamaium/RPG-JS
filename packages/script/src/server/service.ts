@@ -57,6 +57,8 @@ export class ScriptService {
   readonly bindings: SignalBinding[];
   private registry: SignalRegistry;
   private states = new Map<string, Map<string, unknown>>();
+  /** The failures already written to the console, so that a listener failing on every tick is reported once. */
+  private reported = new Set<string>();
 
   constructor(options: ScriptServiceOptions = {}) {
     this.bindings = [...DEFAULT_SIGNAL_BINDINGS, ...(options.bindings ?? [])];
@@ -79,6 +81,7 @@ export class ScriptService {
     try {
       this.registry.install(script.id, this.compile(script));
       this.errors = this.errors.filter((e) => e.script !== script.id);
+      this.forgetReported(script.id);
       return true;
     } catch (error) {
       const message =
@@ -95,6 +98,11 @@ export class ScriptService {
   uninstall(id: string): void {
     this.registry.uninstall(id);
     this.states.delete(id);
+    this.forgetReported(id);
+  }
+
+  private forgetReported(script: string) {
+    for (const key of this.reported) if (key.startsWith(`${script}\0`)) this.reported.delete(key);
   }
 
   has(id: string): boolean {
@@ -108,14 +116,20 @@ export class ScriptService {
 
   /**
    * Emits a signal: the listeners whose filter holds run, for the player of the context. Never throws: a listener that fails is
-   * reported (in the result and in the console) and the next one runs.
+   * reported (in the result, and once in the console until the script is installed again) and the next one runs.
    */
   async emit(signal: string, payload: unknown, context: SignalContext): Promise<EmitReport> {
     const hook = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
     const report = await this.registry.emit(signal, payload, (script, program) =>
       createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script) }),
     );
-    for (const l of report.listeners) if (l.error) console.error(`[script] "${l.script}" failed on "${signal}": ${l.error}`);
+    for (const l of report.listeners) {
+      if (!l.error) continue;
+      const key = `${l.script}\0${signal}\0${l.error}`;
+      if (this.reported.has(key)) continue;
+      this.reported.add(key);
+      console.error(`[script] "${l.script}" failed on "${signal}": ${l.error}`);
+    }
     return report;
   }
 

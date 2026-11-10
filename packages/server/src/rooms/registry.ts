@@ -32,6 +32,20 @@ export interface RpgRoomOptions<TState = unknown> {
   persistState?: boolean;
   /** Create the initial synchronized state for a gameplay room instance. */
   initialState?: () => TState;
+  /**
+   * Map whose picture the room shows, resolved from the room path parameters.
+   *
+   * The room then serves the visual stream of that map (terrain and static
+   * decor, without events, players, hitboxes, or physics) to the `<MapView />`
+   * component of its client scene. Return `undefined` for a room instance that
+   * shows no map.
+   *
+   * @example
+   * ```ts
+   * map: (params) => params.id.split("__")[0]
+   * ```
+   */
+  map?: (params: Readonly<Record<string, string>>) => string | undefined;
 }
 
 /** Read-only registration metadata attached by {@link RpgRoom}. */

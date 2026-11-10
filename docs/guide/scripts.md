@@ -93,6 +93,23 @@ installed, and a listener that fails does not stop the next one.
 | `player.outShape` | `onOutShape` of the player: leaves a zone | the same |
 | `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
+| `player.itemAdd` | `onItemAdd` of the player: items enter the inventory | `item` (id of the item), `quantity` |
+| `player.itemRemove` | `onItemRemove` of the player: items leave it (removed, sold, consumed by a use) | `item`, `quantity` |
+| `player.itemUse` | `onItemUse` of the player | `item`, `quantity` |
+| `player.itemEquip` | `onItemEquip` of the player: equips or takes off an item | `item`, `quantity`, `equipped` |
+| `player.goldChange` | `onGoldChange` of the player | `gold` (the gold after the change), `delta` (negative when the player spends) |
+| `player.skillChange` | `onSkillChange` of the player | `action` (`learn`, `forget`), `skill` |
+| `player.connect` | `onConnected` of the player | |
+| `player.disconnect` | `onDisconnected` of the player | |
+| `battle.start` | `onStart` of the `battle` scope (a turn-based battle) | `troop`, `enemies` (tags) |
+| `battle.command` | `onCommand` of the `battle` scope; a script observes it and never refuses it | `skill`, `hero`, `target` (tags) |
+| `battle.end` | `onEnd` of the `battle` scope | `result`, `troop`, `enemies` |
+| `combat.hit` | `combat.hooks.afterHit` of Action Battle, through `actionBattleHooks(scripts)`: for the attacker when it is a player, otherwise the target; nothing for a hit between two events | `damage`, `defeated`, `attacker`, `target` (`id`, `name`, `kind`) |
+| `player.hotbarChange` | `onHotbarChange` of the player | `action` (`initialize`, `assign`, `clear`, `select`, `refresh`), `slots` |
+| `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y` |
+| `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y` |
+| `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` |
+| `map.tick` | `onTick` of a map with players, about 60 times a second, once for each player of the map | `map`, `deltaMs`, `tick` |
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
@@ -100,6 +117,11 @@ installed, and a listener that fails does not stop the next one.
 The script acts for **the player of the signal** (`$player`) and, for the event signals, for **that event** (`$event`). The signals of
 the player fire in every kind of room, a map or not; `event.action` and `event.touch` only exist in a map, since events do. The zones
 of `player.inShape` are the ones of the game and the ones scripts make.
+
+`map.tick` runs on every tick of the server of a map with players (about 60 times a second), once for each player of the map, in
+standalone and in MMORPG alike. The map does not wait for it: while the listeners still run for a player (a `wait`, a `showText`
+or a `showChoices` the player has not answered), that player skips the next ticks. Keep a tick listener short, and use `e.deltaMs`
+to count time instead of `wait`. A listener that fails is written to the console once, not on every tick.
 
 ### The filter
 
@@ -393,3 +415,24 @@ with its own operations, and gets the same behavior.
 | `@rpgjs/script/core` | the interpreter, `SignalRegistry`, the API and `ScriptWorld`: no dependency on the engine |
 | `@rpgjs/script/parse` | `parseScript`: the text of a script to its tree |
 | `@rpgjs/script/testing` | `checkScript`, `simulate`, `runTests`, `SimWorld` |
+
+### Signals of a module and of Action Battle
+
+A module binds its own hooks with a scope of its own (`scope: "tactical"`), and the tools take the signals it adds:
+
+```ts
+checkScript(source, catalog, { signals });                              // a signal of a module is accepted only when given
+simulate({ source, signals, emit: { signal: "tactical.defeat", payload } });
+runTests(source, tests, catalog, signals);
+describeGameApi(signals);
+```
+
+`combat.hit` comes from Action Battle:
+
+```ts
+import { ScriptService, provideScripts, actionBattleHooks } from "@rpgjs/script/server";
+
+const scripts = new ScriptService();
+provideScripts(scripts);
+provideActionBattle({ combat: { hooks: actionBattleHooks(scripts) } });
+```

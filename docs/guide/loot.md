@@ -214,8 +214,7 @@ export const Slime = defineActionBattleEnemy({
 });
 ```
 
-`drop: true` uses the default settings. The loot waits for the end of the impact
-freeze (hit-stop) before popping.
+`drop: true` uses the default settings.
 
 ## Client, server and multiplayer
 

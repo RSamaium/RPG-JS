@@ -2,6 +2,7 @@ import { TIME_MANAGER_MODULE_KEY, findModules, provideModules, registerI18nMessa
 import { type Context, inject as diInject, isProvided, provide as diProvide } from "@signe/di";
 import { RpgServerEngine } from "./RpgServerEngine";
 import { RpgMap } from "./rooms/map";
+import type { RpgGameplayRoom } from "./rooms/gameplay";
 import { RpgPlayer } from "./Player/Player";
 import { RpgServer } from "./RpgServer";
 import { TimeManager } from "./services/time";
@@ -174,7 +175,7 @@ export function provideServerModules(modules: RpgServerModule[]): RpgFactoryProv
         module = {
           ...module,
           databaseHooks: {
-            load: async (engine: RpgMap) => {
+            load: async (engine: RpgMap | RpgGameplayRoom) => {
               const data = typeof database === 'function'
                 ? await database(engine)
                 : database;

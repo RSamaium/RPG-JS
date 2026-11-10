@@ -7,8 +7,9 @@ import dts from "vite-plugin-dts";
 const runtimeDir = resolve(process.cwd(), "runtime");
 const tsconfigPath = resolve(process.cwd(), "tsconfig.json");
 
+// `@rpgjs/map-builder` is private (not on npm): bundle it so the published dist does not import it.
 const external = [
-  /@rpgjs/,
+  /@rpgjs\/(?!map-builder)/,
   /@signestack/,
   "canvasengine",
   "pixi.js",

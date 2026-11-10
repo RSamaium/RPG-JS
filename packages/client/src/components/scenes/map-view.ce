@@ -1,0 +1,34 @@
+<Container>
+  @if (view()) {
+    <view().component data={view().data} params={view().params ?? emptyParams} viewOnly={true} />
+  }
+</Container>
+
+<script>
+  import { mount, signal } from 'canvasengine'
+  import { inject } from "../../core/inject";
+  import { RpgClientEngine } from "../../RpgClientEngine";
+
+  // Picture of a map (terrain and static decor) for a custom gameplay-room
+  // scene: no events, players, hitboxes, or physics. The camera is the scene's.
+  const { mapId, onLoad, onError } = defineProps()
+  const readValue = (value) => typeof value === 'function' ? value() : value
+  const engine = inject(RpgClientEngine)
+  const view = signal(null)
+  const emptyParams = {}
+  let active = true
+
+  engine.openMapView(readValue(mapId)).then((map) => {
+    if (!active) return
+    view.set(map)
+    if (typeof onLoad === 'function') onLoad(map)
+  }).catch((error) => {
+    if (!active) return
+    if (typeof onError === 'function') onError(error)
+    else console.error('[RPGJS] MapView could not load the map:', error)
+  })
+
+  mount(() => () => {
+    active = false
+  })
+</script>

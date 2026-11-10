@@ -6,6 +6,7 @@ import { RpgClient } from "../../client/src";
 import { ItemLog } from "../src/logs";
 import type { ItemObject } from "../src/Player/ItemManager";
 import { syncClass } from "@signe/sync";
+import { MAXHP, MAXSP } from "@rpgjs/common";
 
 // Define test items as objects for database
 const TestPotion = {
@@ -14,6 +15,23 @@ const TestPotion = {
   description: "Restores 100 HP",
   price: 200,
   hpValue: 100,
+  consumable: true,
+  _type: "item" as const,
+};
+
+const TestElixir = {
+  id: "TestElixir",
+  name: "Test Elixir",
+  hpValue: 50,
+  mpValue: 30,
+  consumable: true,
+  _type: "item" as const,
+};
+
+const TestPoison = {
+  id: "TestPoison",
+  name: "Test Poison",
+  mpValue: -100,
   consumable: true,
   _type: "item" as const,
 };
@@ -70,6 +88,8 @@ let fixture: TestingFixture;
     ],
     database: {
       TestPotion: TestPotion,
+      TestElixir: TestElixir,
+      TestPoison: TestPoison,
       TestSword: TestSword,
       TestArmor: TestArmor,
       TestNonConsumable: TestNonConsumable,
@@ -351,7 +371,54 @@ describe("Item Management - Use Item", () => {
     const item = player.useItem("TestPotion");
     expect(item).toBeDefined();
     expect(player.hasItem("TestPotion")).toBe(false);
-    // Note: applyEffect might not be implemented in test environment
+  });
+
+  test("should restore hp and sp from hpValue and mpValue", () => {
+    player.hp = 10;
+    player.sp = 5;
+    player.addItem("TestElixir", 1);
+    player.useItem("TestElixir");
+    expect(player.hp).toBe(60);
+    expect(player.sp).toBe(35);
+    expect(player.hasItem("TestElixir")).toBe(false);
+  });
+
+  test("should not restore above the maximum", () => {
+    player.addParameter(MAXHP, { start: 100, end: 100 });
+    player.addParameter(MAXSP, { start: 40, end: 40 });
+    player.hp = 90;
+    player.sp = 30;
+    player.addItem("TestElixir", 1);
+    player.useItem("TestElixir");
+    expect(player.hp).toBe(100);
+    expect(player.sp).toBe(40);
+  });
+
+  test("should not take sp under 0 with a negative mpValue", () => {
+    player.sp = 20;
+    player.addItem("TestPoison", 1);
+    player.useItem("TestPoison");
+    expect(player.sp).toBe(0);
+  });
+
+  test("should ignore an item without hpValue and mpValue", () => {
+    player.hp = 10;
+    player.sp = 5;
+    player.applyEffect({ hpValue: 0, mpValue: "10" as any });
+    expect(player.hp).toBe(10);
+    expect(player.sp).toBe(5);
+  });
+
+  test("should not apply the effect when the use fails", () => {
+    const originalRandom = Math.random;
+    Math.random = vi.fn(() => 0.9);
+    const failing = { ...TestElixir, id: "TestFailing", hitRate: 0.1 };
+    player.getCurrentMap()?.addInDatabase("TestFailing", failing);
+    player.hp = 10;
+    player.addItem("TestFailing", 1);
+    expect(() => player.useItem("TestFailing")).toThrow();
+    Math.random = originalRandom;
+    expect(player.hp).toBe(10);
   });
 
   test("should throw error when using non-existent item", () => {

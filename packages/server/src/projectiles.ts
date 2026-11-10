@@ -14,7 +14,7 @@ import {
 } from "@rpgjs/common";
 import { lastValueFrom } from "rxjs";
 import { isLootEvent } from "./loot";
-import type { RpgPlayer } from "./Player/Player";
+import type { RpgEvent, RpgPlayer } from "./Player/Player";
 import type { RpgMap } from "./rooms/map";
 
 export type ProjectileTrajectory =
@@ -79,9 +79,12 @@ export type ProjectileWallBehavior = "stop" | "bounce" | "return" | "stick";
  */
 export type ProjectileTargetReaction = "stop" | "pass" | "stick";
 
+/** Who launched a projectile: a player, or an event (enemy, trap, sentinel...). */
+export type ProjectileOwner = RpgPlayer | RpgEvent;
+
 /** Second argument of a target's `onProjectileHit` hook. */
 export interface ProjectileTargetHitContext {
-  owner?: RpgPlayer;
+  owner?: ProjectileOwner;
   map: RpgMap;
   /** Impact point. */
   x: number;
@@ -188,7 +191,7 @@ export interface ProjectileEmitOptions {
 
 export interface ProjectileCanHitContext {
   projectile: ProjectileServerState;
-  owner?: RpgPlayer;
+  owner?: ProjectileOwner;
   target?: RpgPlayer | any;
   entity: Entity;
   map: RpgMap;
@@ -215,7 +218,7 @@ export interface ProjectileServerState {
 
 export interface ProjectileHookContext {
   projectile: ProjectileServerState;
-  owner?: RpgPlayer;
+  owner?: ProjectileOwner;
   map: RpgMap;
 }
 
@@ -354,7 +357,7 @@ function createRandom(seed: number): () => number {
   };
 }
 
-function resolveOwnerOrigin(owner?: RpgPlayer): { x: number; y: number } {
+function resolveOwnerOrigin(owner?: ProjectileOwner): { x: number; y: number } {
   if (!owner) {
     return { x: 0, y: 0 };
   }
@@ -369,10 +372,10 @@ function resolveTargetPoint(target: ProjectileTarget): { x: number; y: number } 
   if (typeof target.x !== "function") {
     return target as { x: number; y: number };
   }
-  return resolveOwnerOrigin(target as unknown as RpgPlayer);
+  return resolveOwnerOrigin(target as unknown as ProjectileOwner);
 }
 
-function getOwnerDirection(owner?: RpgPlayer): Direction | undefined {
+function getOwnerDirection(owner?: ProjectileOwner): Direction | undefined {
   if (!owner) {
     return undefined;
   }
@@ -470,7 +473,7 @@ export class RpgMapProjectiles {
     this.system.onDestroy(({ projectile, reason, hit }) => this.handleDestroy(projectile, reason, hit));
   }
 
-  emit(options: ProjectileEmitOptions, owner?: RpgPlayer): ProjectileServerState[] {
+  emit(options: ProjectileEmitOptions, owner?: ProjectileOwner): ProjectileServerState[] {
     const states = this.createStates(options, owner);
     for (const state of states) {
       const pending: PendingProjectile = {
@@ -544,7 +547,7 @@ export class RpgMapProjectiles {
     return [...this.networkRuntime.values()];
   }
 
-  private createStates(options: ProjectileEmitOptions, owner?: RpgPlayer): ProjectileServerState[] {
+  private createStates(options: ProjectileEmitOptions, owner?: ProjectileOwner): ProjectileServerState[] {
     const origin = options.origin ?? resolveOwnerOrigin(owner);
     const aim = options.target ? resolveTargetPoint(options.target) : undefined;
     const aimDistance = aim ? Math.hypot(aim.x - origin.x, aim.y - origin.y) : 0;
@@ -836,7 +839,7 @@ export class RpgMapProjectiles {
     const target = (this.map as any).getObjectById(entity.uuid);
     return config.canHit({
       projectile,
-      owner: projectile.ownerId ? (this.map as any).getPlayer(projectile.ownerId) : undefined,
+      owner: this.ownerOf(projectile),
       target,
       entity,
       map: this.map,
@@ -856,7 +859,7 @@ export class RpgMapProjectiles {
     const active = this.active.get(projectile.id);
     const context: ProjectileImpactHookContext = {
       projectile,
-      owner: projectile.ownerId ? (this.map as any).getPlayer(projectile.ownerId) : undefined,
+      owner: this.ownerOf(projectile),
       target,
       hit,
       map: this.map,
@@ -956,8 +959,9 @@ export class RpgMapProjectiles {
     return last.phase === "back" ? "return" : "end";
   }
 
-  private ownerOf(state: ProjectileServerState): RpgPlayer | undefined {
-    return state.ownerId ? (this.map as any).getPlayer(state.ownerId) : undefined;
+  private ownerOf(state: ProjectileServerState): ProjectileOwner | undefined {
+    if (!state.ownerId) return undefined;
+    return (this.map as any).getObjectById?.(state.ownerId) ?? (this.map as any).getPlayer?.(state.ownerId);
   }
 
   private finish(active: ActiveProjectile, reason: string, x: number, y: number, hit?: RaycastHit): void {
@@ -986,7 +990,7 @@ export class RpgMapProjectiles {
     this.destroyQueue.push(destroyed);
     this.callHook("server-projectiles-onDestroy", {
       projectile,
-      owner: projectile.ownerId ? (this.map as any).getPlayer(projectile.ownerId) : undefined,
+      owner: this.ownerOf(projectile),
       reason,
       hit,
       map: this.map,

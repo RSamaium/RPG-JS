@@ -1,3 +1,4 @@
+import { normalizeElementVisualEffect, type ElementVisualEffectCandidate } from "./element-visual-effects";
 import { normalizeStudioElementSortMode, resolveStudioElementSortBands } from "./element-slope-sort";
 import { normalizeElementSubmersion, submergeElementPixels } from "./element-submersion";
 import { StudioTerrainChunkRenderer } from "./terrain-renderer/terrain-chunk-renderer";
@@ -1204,6 +1205,36 @@ const normalizeLightSpotDayNight = (value: any): { color?: string; halo?: number
   };
 };
 
+/**
+ * The looping visual effect of an element, placed on the map (its anchor is local to the element, like the one of a light spot),
+ * or null when the element has none. `zIndex` is the depth of the element, so the effect sorts with it.
+ */
+export function resolveStudioElementVisualEffect(
+  element: any,
+  metrics = resolveStudioElementMetrics(element)
+): ElementVisualEffectCandidate | null {
+  const rectValue = readValue(element?.rect) || [0, 0, 0, 0];
+  const rectangle = {
+    x: toFiniteNumber(rectValue[0], 0) ?? 0,
+    y: toFiniteNumber(rectValue[1], 0) ?? 0,
+    width: toFiniteNumber(rectValue[2], 0) ?? 0,
+    height: toFiniteNumber(rectValue[3], 0) ?? 0,
+  };
+  const visualEffect = normalizeElementVisualEffect(readValue(element?.visualEffect), rectangle);
+  if (!visualEffect) return null;
+  const normalizedScale = normalizeScale(readValue(element?.scale));
+  const normalizedRule = normalizeStudioElementDrawRule(readValue(element?.drawRule));
+  const mapped = mapLocalPointToWorld(rectangle, metrics, normalizedRule, visualEffect.x, visualEffect.y, normalizedScale.x, normalizedScale.y);
+  return {
+    key: ["studio-element-effect", readValue(element?.id) ?? "unknown", Math.round(metrics.drawX), Math.round(metrics.drawY)].join(":"),
+    id: visualEffect.id,
+    ...(visualEffect.effect ? { effect: visualEffect.effect } : {}),
+    x: mapped.x,
+    y: mapped.y,
+    zIndex: metrics.resolvedZIndex,
+  };
+}
+
 export function resolveStudioElementLightSpotOverlay(
   element: any,
   metrics = resolveStudioElementMetrics(element)
@@ -1283,6 +1314,7 @@ const createRenderVersion = (
       scale: readValue(element?.scale),
       drawRule: readValue(element?.drawRule),
       lightSpot: readValue(element?.lightSpot),
+      visualEffect: readValue(element?.visualEffect),
     })),
   });
 };

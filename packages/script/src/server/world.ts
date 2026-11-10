@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type LightingTransition, type MapPort, type PlayerPort, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -13,6 +13,10 @@ const number = (value: unknown): number => (typeof value === "number" ? value : 
 
 /** Prefix of the properties of a map that belong to scripts, so that a script cannot reach another property of the map. */
 export const SHARED_PREFIX = "script_";
+
+/** What a projectile launched by a script flies at when it gives no speed or range, in pixels per second and pixels. */
+const DEFAULT_PROJECTILE_SPEED = 300;
+const DEFAULT_PROJECTILE_RANGE = 600;
 
 /** The longest a script can make a player wait. */
 const MAX_WAIT_SECONDS = 60;
@@ -105,6 +109,18 @@ function mapPortOf(map: RpgMap): MapPort {
     showAnimation: (position, graphic, animationName) => m.showAnimation(position, graphic, animationName),
     showComponentAnimation: (id, position, params) => m.showComponentAnimation(id, position, params),
     shakeMap: (options: ShakeOptions = {}) => m.shakeMap(options),
+    launchProjectile(o: ProjectileLaunchOptions) {
+      const dx = o.toward.x - o.from.x, dy = o.toward.y - o.from.y, length = Math.hypot(dx, dy);
+      const [state] = m.projectiles.emit({
+        type: o.projectile,
+        origin: o.from,
+        direction: { x: dx / length, y: dy / length },
+        trajectory: { type: "linear", speed: o.speed ?? DEFAULT_PROJECTILE_SPEED, range: o.range ?? DEFAULT_PROJECTILE_RANGE },
+        ...(o.damage !== undefined ? { payload: { damage: o.damage } } : {}),
+      });
+      if (!state) throw new Error("the map did not launch the projectile");
+      return String(state.id);
+    },
   };
 }
 
@@ -258,6 +274,9 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     },
     async changeMap(mapId, positions) {
       await p.changeMap(mapId, positions);
+    },
+    assignHotbarSlot(slot, entry: HotbarEntryOptions) {
+      p.assignHotbarSlot(slot, entry);
     },
   };
 

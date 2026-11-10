@@ -10,7 +10,6 @@ import {
   type EventDefinition,
 } from "@rpgjs/server";
 import {
-  applyPlayerHitToEvent,
   createActionEnemy,
   defineActionBattleEnemy,
   provideActionBattle,
@@ -174,56 +173,41 @@ const Tree: EventDefinition = {
   },
 };
 
-const centerOf = (entity: RpgPlayer | RpgEvent) => {
-  const hitbox = entity.hitbox();
-  return { x: entity.x() + hitbox.w / 2, y: entity.y() + hitbox.h / 2 };
+// Items with an `action` are thrown from the hotbar through the combat flow.
+const Bomb = {
+  id: "bomb",
+  name: "Bomb",
+  _type: "item" as const,
+  action: {
+    mode: "projectile" as const,
+    projectile: {
+      type: "bomb",
+      // A lob over the slimes, then a fuse where it lands.
+      trajectory: { type: "arc", range: 220, duration: 0.55, height: 56 },
+      linger: { ms: 1100 },
+    },
+    // The explosion hits everything around, less toward the edge.
+    area: { radius: 56, animation: "explosion" },
+  },
 };
 
-const aim = (player: RpgPlayer, target: { x: number; y: number }) => {
-  const from = centerOf(player);
-  const dx = target.x - from.x;
-  const dy = target.y - from.y;
-  const distance = Math.hypot(dx, dy) || 1;
-  return { from, direction: { x: dx / distance, y: dy / distance }, distance };
+const Boomerang = {
+  id: "boomerang",
+  name: "Boomerang",
+  _type: "item" as const,
+  // Kept in the inventory: it comes back.
+  consumable: false,
+  action: {
+    mode: "projectile" as const,
+    cooldownMs: 700,
+    projectile: {
+      type: "boomerang",
+      trajectory: { type: "return", speed: 320, range: 190 },
+      pierce: true,
+      wall: "return" as const,
+    },
+  },
 };
-
-// Bomb: an arc that flies over the slimes, lights a fuse where it lands, then
-// explodes on everything around.
-function throwBomb(player: RpgPlayer, target: { x: number; y: number }) {
-  const { from, direction, distance } = aim(player, target);
-  player.projectiles.emit({
-    type: "bomb",
-    origin: from,
-    direction,
-    trajectory: { type: "arc", range: Math.min(distance, 220), duration: 0.55, height: 56 },
-    linger: { ms: 1100 },
-    onEnd: ({ map, x, y }) => {
-      map.showAnimation({ x, y }, "explosion");
-      for (const event of map.getEvents()) {
-        const center = centerOf(event);
-        if (Math.hypot(center.x - x, center.y - y) <= 56) applyPlayerHitToEvent(player, event);
-      }
-    },
-  });
-}
-
-// Boomerang: out and back to the hero, through every slime on its way, and
-// back on its way when it hits a wall.
-function throwBoomerang(player: RpgPlayer, target: { x: number; y: number }) {
-  const { from, direction } = aim(player, target);
-  player.projectiles.emit({
-    type: "boomerang",
-    origin: from,
-    direction,
-    trajectory: { type: "return", speed: 320, range: 190 },
-    pierce: true,
-    wall: "return",
-    collision: { ignoreOwner: true, predictImpact: false },
-    onHit: ({ target: hit }) => {
-      if (hit && (hit as any).battleAi) applyPlayerHitToEvent(player, hit as RpgEvent);
-    },
-  });
-}
 
 const player = {
   onConnected(player: RpgPlayer) {
@@ -244,14 +228,14 @@ const player = {
     player.changeMap("loot-arena", { x: MAP_WIDTH / 2 - 16, y: MAP_HEIGHT / 2 - 16 });
   },
 
-  onInput(player: RpgPlayer, input: any) {
-    const target = input?.data?.target;
-    if (!target || !Number.isFinite(target.x) || !Number.isFinite(target.y)) return;
-    if (input.action === "loot:bomb") throwBomb(player, target);
-    if (input.action === "loot:boomerang") throwBoomerang(player, target);
-  },
 
   onJoinMap(player: RpgPlayer) {
+    if (!player.hasItem("bomb")) {
+      player.addItem(Bomb, 20);
+      player.addItem(Boomerang);
+      player.assignHotbarSlot(0, { type: "item", id: "bomb" });
+      player.assignHotbarSlot(1, { type: "item", id: "boomerang" });
+    }
     const map = player.getCurrentMap();
     if (!map || map.getEvents().some((event) => event.name === "Slime")) return;
     for (const at of SPAWNS) spawnSlime(map, at);
@@ -260,10 +244,10 @@ const player = {
 
 export default createServer({
   providers: [
-    provideActionBattle(),
+    provideActionBattle({ ui: { hotbar: { enabled: true, autoOpen: true, capacity: 4 } } }),
     provideServerModules([
       {
-        database: async () => ({ wood: Wood, apple: Apple, ruby: Ruby }),
+        database: async () => ({ wood: Wood, apple: Apple, ruby: Ruby, bomb: Bomb, boomerang: Boomerang }),
         player,
         maps: [
           {

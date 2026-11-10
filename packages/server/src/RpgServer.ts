@@ -1,6 +1,7 @@
 import { MapOptions } from "./decorators/map"
 import { RpgPlayer, type RpgPlayerRoom } from "./Player/Player"
 import { type RpgMap, type RpgRoomConnection } from "./rooms/map"
+import type { RpgGameplayRoom } from "./rooms/gameplay"
 import type { RpgServerEngine } from "./RpgServerEngine"
 import { WorldMapConfig, RpgShape, type I18nMessages, type MapPhysicsInitContext, type MapPhysicsEntityContext, type RpgActionInput, type RpgRoomDescriptor,
     type TimeDayTransitionPayload,
@@ -28,6 +29,15 @@ type RpgMatchMaker = unknown
 type IStoreState = unknown
 
 export type ServerDatabase = Record<string, unknown> | unknown[]
+
+/**
+ * Loader of the module `database`. It receives the room that loads it: a map,
+ * or a custom gameplay room (`RpgGameplayRoom`). Declared as a method so a
+ * loader written for maps only, `(map: RpgMap) => ...`, stays assignable.
+ */
+type ServerDatabaseLoader = {
+    load(room: RpgMap | RpgGameplayRoom): MaybePromise<ServerDatabase>
+}["load"]
 
 /**
  * Metrics collected after one queued map tick has been processed.
@@ -110,6 +120,24 @@ export interface WorldMap {
   type?: 'world';
 }
 
+
+/** What changed in the inventory: the id of the item and how many. */
+export interface RpgItemChangePayload {
+    itemId: string
+    quantity: number
+}
+
+/** The new gold of the player and how much it changed. */
+export interface RpgGoldChangePayload {
+    gold: number
+    delta: number
+}
+
+/** A tick of a map: the delta in milliseconds that was processed and the cumulative tick. */
+export interface RpgMapTickPayload {
+    deltaMs: number
+    tick: number
+}
 
 export interface RpgServerEngineHooks<TAuthData = unknown> {
     /**
@@ -383,6 +411,47 @@ export interface RpgPlayerHooks<TAuthData = unknown> {
     * @memberof RpgPlayerHooks
     */
     onSkillChange?: (player: RpgPlayer, payload: SkillChangePayload) => MaybePromise<void>
+
+    /**
+    *  When an item is added to the inventory of the player. Called in addition to the `onAdd` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload) => void | Promise<void> } [onItemAdd]
+    * @memberof RpgPlayerHooks
+    */
+    onItemAdd?: (player: RpgPlayer, payload: RpgItemChangePayload) => MaybePromise<void>
+
+    /**
+    *  When an item is removed from the inventory of the player (also when it is consumed by `useItem()`).
+    *  Called in addition to the `onRemove` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload) => void | Promise<void> } [onItemRemove]
+    * @memberof RpgPlayerHooks
+    */
+    onItemRemove?: (player: RpgPlayer, payload: RpgItemChangePayload) => MaybePromise<void>
+
+    /**
+    *  When the player uses an item with success. Called in addition to the `onUse` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload) => void | Promise<void> } [onItemUse]
+    * @memberof RpgPlayerHooks
+    */
+    onItemUse?: (player: RpgPlayer, payload: RpgItemChangePayload) => MaybePromise<void>
+
+    /**
+    *  When the player equips or unequips an item (`payload.equipped`). Called in addition to the `onEquip` hook of the item.
+    *
+    * @prop { (player: RpgPlayer, payload: RpgItemChangePayload & { equipped: boolean }) => void | Promise<void> } [onItemEquip]
+    * @memberof RpgPlayerHooks
+    */
+    onItemEquip?: (player: RpgPlayer, payload: RpgItemChangePayload & { equipped: boolean }) => MaybePromise<void>
+
+    /**
+    *  When the gold of the player changes (`delta` is negative when the player spends gold).
+    *
+    * @prop { (player: RpgPlayer, payload: RpgGoldChangePayload) => void | Promise<void> } [onGoldChange]
+    * @memberof RpgPlayerHooks
+    */
+    onGoldChange?: (player: RpgPlayer, payload: RpgGoldChangePayload) => MaybePromise<void>
 
     /**
     *  When the player initializes, assigns, clears, selects, or refreshes a hotbar
@@ -913,6 +982,16 @@ export interface RpgMapHooks {
      * @memberof RpgMapHooks
      */
     onPhysicsReset?: (map: RpgMap) => MaybePromise<void>
+
+    /**
+     * Called after each server tick of a map that has at least one player. Observing it does not change the map.
+     *
+     * @param {RpgMap} map - The map instance
+     * @param {RpgMapTickPayload} payload - Time processed by the tick and the cumulative tick
+     * @returns {void | Promise<void>}
+     * @memberof RpgMapHooks
+     */
+    onTick?: (map: RpgMap, payload: RpgMapTickPayload) => MaybePromise<void>
 }
 
 export interface RpgProjectileHooks {
@@ -1057,10 +1136,24 @@ export interface RpgServer {
      * })
      * ``` 
      * 
-     * @prop { { [dataName]: data } | (engine: RpgMap) => { [dataName]: data } | Promise<{ [dataName]: data }> } [database]
+     * The database is loaded in every map, and in every custom gameplay room
+     * (`RpgGameplayRoom`) before a player is restored there, so the items,
+     * skills, states and class of a player transferred with `changeRoom()`
+     * resolve in that room too. A function receives the room that loads it;
+     * check `"descriptor" in room` to tell a gameplay room from a map.
+     *
+     * ```ts
+     * export default defineModule<RpgServer>({
+     *      async database(room) {
+     *          return await fetchGameDatabase()
+     *      }
+     * })
+     * ```
+     *
+     * @prop { { [dataName]: data } | (room: RpgMap | RpgGameplayRoom) => { [dataName]: data } | Promise<{ [dataName]: data }> } [database]
      * @memberof RpgServer
      * */
-    database?: ServerDatabase | ((engine: RpgMap) => MaybePromise<ServerDatabase>),
+    database?: ServerDatabase | ServerDatabaseLoader,
 
     /** 
      * Array of all maps. Each element can be either a class (decorated with `@MapData` or not) or a `MapOptions` object

@@ -61,6 +61,17 @@ export class LoadMapService {
     await this.updateMapService.update(map);
     return map;
   }
+
+  /**
+   * Load the picture of a map for a custom scene, without updating the server
+   * map, its physics, or the map scene.
+   */
+  async openView(mapId?: string): Promise<MapData> {
+    if (!mapId) {
+      throw new Error("A map view needs a map id with this map loader")
+    }
+    return this.options(mapId.replace(/^map-/, ''))
+  }
 }
 
 /**

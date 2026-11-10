@@ -9,6 +9,27 @@ import { resolveSaveStorageStrategy } from "../services/save";
 import { lastValueFrom } from "rxjs";
 import { applyPlayerLocale } from "./locale";
 
+const roomDatabaseLoads = new WeakMap<BaseRoom, Promise<void>>();
+
+/**
+ * Loads the module `database` into a room once per room instance.
+ *
+ * Only the standalone transport calls `onStart()` on a room; the Node and
+ * Cloudflare transports create rooms (and rebuild them after hibernation)
+ * without it. Rooms that restore players outside a map update await this
+ * before resolving item, skill, state and class ids.
+ */
+export function ensureRoomDatabase(room: BaseRoom): Promise<void> {
+  let loading = roomDatabaseLoads.get(room);
+  if (!loading) {
+    loading = lastValueFrom(room.hooks.callHooks("server-databaseHooks-load", room)).then(() => undefined);
+    // A failed load is retried by the next caller instead of being cached.
+    loading.catch(() => roomDatabaseLoads.delete(room));
+    roomDatabaseLoads.set(room, loading);
+  }
+  return loading;
+}
+
 /**
  * Base class for rooms that need database functionality
  * 
@@ -54,7 +75,7 @@ export abstract class BaseRoom {
 
 
   async onStart() {
-    await lastValueFrom(this.hooks.callHooks("server-databaseHooks-load", this))
+    await ensureRoomDatabase(this)
   }
 
   /**

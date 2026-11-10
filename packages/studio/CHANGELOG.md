@@ -1,5 +1,20 @@
 # @rpgjs/studio
 
+## 5.4.0
+
+### Minor Changes
+
+- f217a6e: Draw the picture of a map in a custom gameplay room. `@RpgRoom({ map: (params) => mapId })` makes the room serve the visual stream of that map (terrain and static decor, without events, players, hitboxes, or physics), which the scene renders with `<MapView />` or `engine.openMapView()`. In MMORPG mode the room asks the map room for its compiled stream through the new `GET /map/view` route; in standalone mode the client loads the map itself. The Studio map renderer gets a `viewOnly` mode that leaves the map scene untouched.
+
+### Patch Changes
+
+- fff0283: Fix the client build of a game that installs `@rpgjs/studio` 5.3.0: the package imported `@rpgjs/map-builder`, which is private and not published. It is now bundled in the Studio `dist`, and the typings no longer refer to it.
+- 10e24d8: Update CanvasEngine: `canvasengine` 2.5.1, `@canvasengine/compiler` and `@canvasengine/presets` 2.5.0. `@canvasengine/tiled` and `@canvasengine/testing` stay on 2.4.1, the latest published versions.
+
+  Action Battle enemy loot pops right on defeat again: CanvasEngine 2.5.1 replays the updates made during the impact freeze (hit-stop), so the loot no longer waits for its end.
+
+- 2c342f6: Fix `player.changeRoom()` into a custom gameplay room (`RpgGameplayRoom`) in MMORPG mode for a player who has items, equipment, skills, states or a class: the room now loads the module `database` before it restores the player, instead of failing with `The ID=... data is not found in the database`. A `database` function receives the gameplay room as well as maps; the Studio database loader reads the project database from its data provider there.
+
 ## 5.3.0
 
 ### Minor Changes

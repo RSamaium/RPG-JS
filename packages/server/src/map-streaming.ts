@@ -44,7 +44,7 @@ class ServerMapStreamingRuntime {
 
   constructor(
     private readonly map: RpgMap,
-    private readonly definition: MapStreamDefinition,
+    readonly definition: MapStreamDefinition,
     options: ServerMapStreamingOptions,
   ) {
     this.loadRadius = Math.max(0, Math.floor(options.loadRadius ?? 2));
@@ -260,6 +260,11 @@ export function removeMapStreamingPlayer(map: RpgMap, player: RpgPlayer): void {
 /** Send a fresh manifest and initial chunks after the room attaches a connection. */
 export function sendInitialMapStreaming(map: RpgMap, player: RpgPlayer): void {
   getRuntime(map)?.sendInitial(player);
+}
+
+/** Compiled definition of this room instance, or `undefined` before compilation. */
+export function getMapStreamingDefinition(map: RpgMap): MapStreamDefinition | undefined {
+  return getRuntime(map)?.definition;
 }
 
 /** Whether this concrete room instance has compiled authoritative chunks. */

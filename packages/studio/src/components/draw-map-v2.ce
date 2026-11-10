@@ -6,9 +6,23 @@
     <Container sortableChildren={true} pixiChildren={groundShadowPixiChildren} />
     <Container sortableChildren={true} pixiChildren={elementsAlwaysLowPixiChildren} />
     <Container scale={eventLayerScale}>
-      <StudioEventLayer pixiChildren={eventLayerPixiChildren} hideEvents={eventsHidden} /> 
+      <StudioEventLayer pixiChildren={eventLayerPixiChildren} hideEvents={eventsHidden} hidePlayers={isViewOnly} /> 
     </Container>
     <Container sortableChildren={true} pixiChildren={elementsHighPixiChildren} />
+    <Container sortableChildren={true}>
+      @for (fx of liveVisualEffects) {
+        <Fx
+          name={fx.id}
+          preset={fx.effect}
+          loop={true}
+          autostart={true}
+          x={fx.x}
+          y={fx.y}
+          maxParticles={fx.maxParticles}
+          zIndex={fx.zIndex}
+        />
+      }
+    </Container>
 </Container>
 
 @if (weatherOptions()) {
@@ -47,14 +61,15 @@
 
   <script>
     import { computed, effect, mount, signal, tick, untracked } from 'canvasengine'
-    import { Weather } from "@canvasengine/presets";
+    import { Fx, Weather } from "@canvasengine/presets";
     import { preloadMapCinematics } from '../cinematic';
     import { RpgClientEngine, inject } from "@rpgjs/client";
     import { Container as PixiContainer, Graphics } from "pixi.js";
     import StudioTerrainMap from '../map-renderer/components/studio-terrain-map.ce'
     import StudioEventLayer from './studio-event-layer.ce'
     import { StudioTerrainWallOcclusionRenderer, StudioTerrainWallShadowRenderer } from '../map-renderer/terrain-renderer/terrain-chunk-renderer'
-    import { StudioElementRenderer } from '../map-renderer/studio-element-renderer'
+    import { StudioElementRenderer, resolveStudioElementVisualEffect } from '../map-renderer/studio-element-renderer'
+    import { DEFAULT_MAX_LOOPING_EFFECTS, selectLiveVisualEffects } from '../map-renderer/element-visual-effects'
     import { createMapBuilderElementLayer, partitionStudioElements } from '../map-renderer/map-builder-bridge'
     import { holdStudioMapReady } from '../studio-map-readiness'
     import { toCanvasWeatherOptions } from '@common/weather';
@@ -65,9 +80,15 @@
       composeStudioMapPluginOptions
     } from '../studio-map-plugins'
 
-    const { data } = defineProps()
+    const { data, viewOnly } = defineProps({
+      viewOnly: { default: false }
+    })
 
     const engine = inject(RpgClientEngine);
+    // `<MapView />` of a gameplay room: draw the terrain and static decor only, and leave the
+    // map scene (its lighting, light spots, weather, events, and players) untouched.
+    const isViewOnly = (typeof viewOnly === 'function' ? viewOnly() : viewOnly) === true
+    const sceneMap = isViewOnly ? undefined : engine.sceneMap
     const terrainWallShadowWorld = new PixiContainer()
     const groundShadowWorld = new PixiContainer()
     const elementsAlwaysLowWorld = new PixiContainer()
@@ -221,7 +242,7 @@
 
     const mapLighting = computed(() => {
       const mapData = data()
-      return mapData?.lighting ?? engine.sceneMap.lighting?.() ?? null
+      return mapData?.lighting ?? sceneMap?.lighting?.() ?? null
     })
 
     const renderTerrainWallShadows = async () => {
@@ -271,9 +292,9 @@
         syncPixiWorldChildren(elementsHighWorld, elementsHighChildren)
         terrainWallOcclusionRenderer.destroy()
         terrainWallShadowRenderer.destroy()
-        elementsAlwaysLowRenderer.destroy(engine.sceneMap)
-        elementsLowRenderer.destroy(engine.sceneMap)
-        elementsHighRenderer.destroy(engine.sceneMap)
+        elementsAlwaysLowRenderer.destroy(sceneMap)
+        elementsLowRenderer.destroy(sceneMap)
+        elementsHighRenderer.destroy(sceneMap)
         builderLayers?.then((layers) => Object.values(layers).forEach((layer) => layer.destroy()))
         builderLayers = null
       }
@@ -592,7 +613,7 @@
     }
 
     // `hideEvents` is a key of the scene data a map extension sets while the map is edited: the events the game runs are not drawn.
-    const eventsHidden = computed(() => data().hideEvents === true)
+    const eventsHidden = computed(() => isViewOnly || data().hideEvents === true)
 
     const mapBounds = computed(() => {
       const mapData = map()
@@ -621,12 +642,49 @@
     })
     const elementsHigh = computed(() => data().elementsHigh || [])
 
+    // Looping visual effects of the elements: only the ones near the viewport are alive, up to a cap.
+    const VISUAL_EFFECT_CULL_GRID_SIZE = 64
+    const liveVisualEffects = signal([])
+    let lastVisualEffectCullKey = ""
+    const visualEffectCandidates = computed(() =>
+      [...elementsAlwaysLow(), ...elementsLow(), ...elementsHigh()]
+        .map((element) => resolveStudioElementVisualEffect(element))
+        .filter(Boolean)
+    )
+    const maxLoopingEffects = computed(() => {
+      const value = Number(data().params?.maxLoopingEffects)
+      return Number.isFinite(value) && value >= 0 ? Math.floor(value) : DEFAULT_MAX_LOOPING_EFFECTS
+    })
+
+    function updateVisualEffects() {
+      const candidates = visualEffectCandidates()
+      if (candidates.length === 0) {
+        if (liveVisualEffects().length > 0) liveVisualEffects.set([])
+        lastVisualEffectCullKey = ""
+        return
+      }
+      const bounds = getPixiLocalViewportBounds(engine, terrainWallShadowWorld)
+      const cullKey = bounds
+        ? [createViewportCullKey(bounds, VISUAL_EFFECT_CULL_GRID_SIZE), candidates.length, maxLoopingEffects()].join('|')
+        : ''
+      if (cullKey === lastVisualEffectCullKey) return
+      lastVisualEffectCullKey = cullKey
+      const alive = new Set(liveVisualEffects().map((fx) => fx.key))
+      const { live } = selectLiveVisualEffects(candidates, bounds, alive, { cap: maxLoopingEffects() })
+      const same = live.length === alive.size && live.every((fx) => alive.has(fx.key))
+      if (!same) liveVisualEffects.set(live)
+    }
+
+    tick(() => {
+      updateVisualEffects()
+    })
+
     const renderStudioElements = async () => {
       const currentSerial = ++studioElementRenderSerial
       const shadowBudget = { remaining: STUDIO_ELEMENT_SHADOW_CASTER_LIMIT }
       const renderOptions = {
         terrain: data().terrainRenderData,
-        sceneMap: engine.sceneMap,
+        sceneMap,
         lighting: mapLighting(),
         shadowBudget,
         shadowCasterLimit: STUDIO_ELEMENT_SHADOW_CASTER_LIMIT,
@@ -681,14 +739,15 @@
     const players = computed(() => engine.sceneMap.players)
     const events = computed(() => engine.sceneMap.events)
 
+    const mapWeather = computed(() => data().weather ?? data().params?.weather ?? null)
+
     effect(() => {
-      const weather = data().weather ?? data().params?.weather ?? null;
-      untracked(() => engine.sceneMap.setMapWeatherFallback(weather));
+      const weather = mapWeather();
+      if (sceneMap) untracked(() => sceneMap.setMapWeatherFallback(weather));
     })
 
     const weatherOptions = computed(() => {
-      const sceneMapWeather = (engine.sceneMap as any).weather;
-      const effectiveWeather = sceneMapWeather();
+      const effectiveWeather = sceneMap ? (sceneMap as any).weather() : mapWeather();
       if (!effectiveWeather) {
         return null;
       }

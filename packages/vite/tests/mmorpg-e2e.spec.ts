@@ -2,11 +2,15 @@ import { afterEach, beforeEach, describe, expect, test } from "vitest";
 import { createServer as createHttpServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { WebSocket as NodeWebSocket, WebSocketServer } from "ws";
-import { defineModule, Direction } from "@rpgjs/common";
+import { defineModule, Direction, getMapChunkKey, type MapStreamDefinition } from "@rpgjs/common";
 import {
   clearInject as clearServerInject,
   createServer,
+  provideServerMapStreaming,
   provideServerModules,
+  provideServerRooms,
+  RpgGameplayRoom,
+  RpgRoom,
   type RpgPlayer,
   type RpgServer,
 } from "@rpgjs/server";
@@ -15,7 +19,9 @@ import {
   clearInject as clearClientInject,
   inject,
   provideClientGlobalConfig,
+  provideClientMapStreaming,
   provideClientModules,
+  provideClientScenes,
   provideMmorpg,
   RpgClientEngine,
   startGame,
@@ -38,10 +44,10 @@ interface RunningServer {
 let running: RunningServer | undefined;
 let client: RpgClientEngine | undefined;
 
-async function startMmorpgServer(server: RpgServer): Promise<RunningServer> {
+async function startMmorpgServer(server: RpgServer | RpgServer[], providers: unknown[] = []): Promise<RunningServer> {
   const serverClass = createServer({
-    providers: [provideServerModules([server])],
-  });
+    providers: [provideServerModules(Array.isArray(server) ? server : [server]), ...providers],
+  } as any);
   const transport = createRpgServerTransport(serverClass as any, {
     storage: createMemoryNodeRoomStorage(),
   });
@@ -61,11 +67,15 @@ async function startMmorpgServer(server: RpgServer): Promise<RunningServer> {
   return running;
 }
 
-async function startClient(host: string, clientModule: RpgClient = {}): Promise<RpgClientEngine> {
+async function startClient(
+  host: string,
+  clientModule: RpgClient = {},
+  providers: unknown[] = [provideTestingLoadMap()],
+): Promise<RpgClientEngine> {
   await startGame({
     providers: [
       provideClientGlobalConfig({ bootstrapCanvasOptions: { enableLayout: false } }),
-      provideTestingLoadMap(),
+      ...providers,
       provideClientModules([clientModule]),
       ...provideMmorpg({
         host,
@@ -251,6 +261,86 @@ describe("MMORPG end-to-end", () => {
     expect(joined).toEqual(["map1", "map2"]);
     expect(movedPlayer.x()).toBe(200);
     expect(localPlayer.y()).toBe(150);
+  });
+
+  test("draws the picture of a map in a gameplay room from the map room stream", async () => {
+    class ArenaRoom extends RpgGameplayRoom {}
+    RpgRoom({ kind: "arena", path: "arena-{id}", map: (params) => params.id })(ArenaRoom);
+
+    const compileMap = (mapData: { id: string }): MapStreamDefinition => {
+      const mapId = String(mapData.id).replace(/^map-/, "");
+      const chunks = Object.fromEntries([0, 1].map((x) => {
+        const key = getMapChunkKey(x, 0);
+        return [key, {
+          key,
+          x,
+          y: 0,
+          bounds: { x: x * 160, y: 0, width: 160, height: 160 },
+          renderData: { tile: x },
+          hitboxes: [{ x: x * 160, y: 0, width: 16, height: 16 }],
+        }];
+      }));
+      return {
+        manifest: {
+          protocol: 1, mapId, revision: "one", width: 320, height: 160,
+          chunkWidth: 160, chunkHeight: 160, columns: 2, rows: 1, renderData: { name: mapId },
+        },
+        chunks,
+      };
+    };
+    const server = await startMmorpgServer([
+      defineModule<RpgServer>({
+        maps: [{ id: "map1" }],
+        player: {
+          async onConnected(player) {
+            await player.changeMap("map1", { x: 100, y: 100 });
+          },
+        },
+      }) as RpgServer,
+      provideServerMapStreaming({ compile: compileMap }, { loadRadius: 0, retainRadius: 0 }),
+    ], [provideServerRooms([ArenaRoom])]);
+
+    const applied: unknown[] = [];
+    let earlyView: Promise<any> | undefined;
+    const engine = await startClient(server.host, {}, [
+      ...provideClientMapStreaming({
+        adapter: {
+          component: () => null,
+          createState: (manifest) => ({ name: (manifest.renderData as any).name, tiles: [] as number[] }),
+          applyChunk: (state: any, chunk) => {
+            applied.push(chunk);
+            state.tiles.push((chunk.renderData as any).tile);
+          },
+          removeChunk: () => {},
+          getData: (state: any) => ({ ...state, tiles: [...state.tiles].sort() }),
+        },
+      }),
+      provideClientScenes([{
+        kind: "arena",
+        component: () => null as any,
+        // Like <MapView />, ask before the socket has reached the room.
+        onBeforeEnter() {
+          earlyView = inject<RpgClientEngine>(RpgClientEngine).openMapView();
+        },
+      }]),
+    ]);
+    const player = await waitFor(() => joinedPlayer("map-map1"), "the server player on map1");
+    await waitFor(() => localPlayerOn(engine, "map-map1"), "the local player on map1");
+    // A room change during the streamed map load would be undone when that load ends.
+    await waitFor(() => (engine as any).sceneMap.data()?.id === "map1" && !(engine as any).mapTransitionInProgress, "the map1 load");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    applied.length = 0;
+    await player.changeRoom({ kind: "arena", params: { id: "map1" } });
+    await waitFor(() => earlyView, "the map view request");
+    const view = await earlyView;
+    expect(engine.activeSceneKind()).toBe("arena");
+    expect((engine as any).webSocket.getCurrentRoom()).toBe("arena-map1");
+    expect(view).toMatchObject({ id: "map1", width: 320, height: 160, data: { name: "map1", tiles: [0, 1] } });
+    // The whole map is sent, without the hitboxes the map scene uses for prediction.
+    expect(applied).toHaveLength(2);
+    expect(applied.every((chunk: any) => chunk.hitboxes.length === 0)).toBe(true);
+    expect(view.streamController).toBeUndefined();
   });
 
   test("dispatches onDisconnected when the client closes its socket", async () => {

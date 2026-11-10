@@ -17,6 +17,7 @@ import {
   type RpgActionInput,
   type RpgMovementInput,
   MAP_STREAM_REQUEST_EVENT,
+  createMapViewPacket,
 } from "@rpgjs/common";
 import {
   DEFAULT_DAY_LIGHTING,
@@ -54,6 +55,7 @@ import type { DamageFormulas } from "../Player/BattleManager";
 import { runPlayerAuthenticationHooks } from "../auth";
 import {
   filterMapStreamingProjectilePacket,
+  getMapStreamingDefinition,
   getMapStreamingVisibleEntityIds,
   hasMapStreamingRuntime,
   isMapStreamingPositionVisible,
@@ -290,6 +292,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   private _eventOwnerById: Map<string, string> = new Map();
   /** Runtime registry of spawned scenario event ids by player id */
   private _scenarioEventIdsByPlayer: Map<string, Set<string>> = new Map();
+  /** Events taken off the map by `suspendEvents()`, with their state, until `resumeEvents()` */
+  private _suspendedEvents: Map<string, RpgEvent> = new Map();
   private _syncChangesDepth = 0;
   projectiles = new RpgMapProjectiles(this);
   /** Loot pickups dropped on this map. Prefer `dropLoot()` to spawn them. */
@@ -1393,6 +1397,43 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     sendInitialMapStreaming(this, player);
   }
 
+  /**
+   * Return the visual-only stream of this map for a gameplay room.
+   *
+   * The response holds the manifest and every compiled chunk without static
+   * hitboxes. It is protected by the map update token because it discloses the
+   * whole map at once, while a map client only receives its interest window.
+   * `RpgGameplayRoom` calls it through the room-to-room channel when its
+   * `@RpgRoom({ map })` option names this map.
+   *
+   * @param request - Internal request sent by a gameplay room
+   * @returns A `MapStreamPacket`, or 404 when the map has no compiled stream
+   *
+   * @example
+   * ```ts
+   * // GET /parties/main/map-forest/map/view
+   * // Header: x-rpgjs-map-update-token: <token>
+   * ```
+   */
+  @Request({
+    path: "/map/view",
+    method: "GET",
+  })
+  async mapView(request: Request) {
+    if (!isMapUpdateAuthorized(request.headers, this.getRuntimeMapUpdateToken())) {
+      return unauthorizedUpdateResponse("map", "/map/view");
+    }
+    await this.restoreMapStreamingRuntime();
+    const definition = getMapStreamingDefinition(this);
+    if (!definition) {
+      return new Response(JSON.stringify({ error: "Map has no compiled stream" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    return createMapViewPacket(definition) as any;
+  }
+
   @Action('save.save')
   async saveSlot(player: RpgPlayer, value: { requestId: string; index: number; meta?: any }) {
     BaseRoom.prototype.saveSlot(player, value);
@@ -1650,7 +1691,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.spatialVisibleEventIds.clear();
     this.spatialVisiblePlayerIds.clear();
 
-    for (const eventId of Object.keys(this.events())) {
+    for (const eventId of [...Object.keys(this.events()), ...this._suspendedEvents.keys()]) {
       this.removeEvent(eventId);
     }
 
@@ -1830,6 +1871,9 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
           fixedSteps,
           pendingInputs: this.inputProcessor.getPendingInputCount(),
         });
+        if (this.getPlayers().length > 0) {
+          await lastValueFrom(this.hooks.callHooks("server-map-onTick", this, { deltaMs: nextDelta, tick: this.getTick() }));
+        }
       }
     }
     finally {
@@ -2428,7 +2472,111 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       }
     }
     this.clearEventRuntimeMetadata(eventId);
-    delete this.events()[eventId]
+    this._suspendedEvents.delete(eventId);
+    // A suspended event is no longer in the synchronized events: deleting a missing key throws on the proxy
+    if (this.events()[eventId]) {
+      delete this.events()[eventId]
+    }
+  }
+
+  /**
+   * Hides events of the map and keeps them, to bring them back with {@link resumeEvents}.
+   *
+   * A suspended event is taken out of the synchronized events: it has no sprite, no hitbox, so it does not collide,
+   * is not touched, cannot be acted on, and does not move (its routes are stopped). The instance is kept as it is:
+   * position, graphics, variables, self switches. A scenario event (one per player) is suspended like any other, and as only
+   * its owner sees it, only its owner loses it. Events that are already suspended are ignored.
+   *
+   * @param filter - Which events to suspend. All the events of the map when omitted.
+   * @returns The ids of the events that were suspended
+   *
+   * @example
+   * ```ts
+   * // a tactical battle takes over the map: hide the NPCs, keep the chests
+   * map.suspendEvents((event) => !event.id.startsWith('chest-'))
+   * // ...
+   * map.resumeEvents()
+   * ```
+   */
+  suspendEvents(filter?: (event: RpgEvent) => boolean): string[] {
+    const suspended: string[] = [];
+    for (const event of this.getEvents()) {
+      if (filter && !filter(event)) continue;
+      if (this.suspendEvent(event.id)) suspended.push(event.id);
+    }
+    return suspended;
+  }
+
+  /**
+   * Suspends one event. See {@link suspendEvents}.
+   *
+   * @param eventId - The id of the event
+   * @returns `true` when the event was suspended, `false` when it does not exist or is already suspended
+   */
+  suspendEvent(eventId: string): boolean {
+    const event = this.events()[eventId] as any;
+    if (!event || this._suspendedEvents.has(eventId)) return false;
+    try {
+      event.stopMoveTo?.();
+    }
+    catch {
+      // Ignore teardown race: the physics entity may already be gone.
+    }
+    try {
+      event.breakRoutes?.(true);
+    }
+    catch {
+      // Ignore teardown race in route manager.
+    }
+    this._suspendedEvents.set(eventId, event);
+    // Removing it from the synchronized events removes its sprite on the clients and its hitbox; the runtime metadata stays
+    delete this.events()[eventId];
+    return true;
+  }
+
+  /**
+   * Puts suspended events back where they were, with their state. An event that was moving on an infinite route moves again.
+   *
+   * @param filter - Which suspended events to resume. All of them when omitted.
+   * @returns The ids of the events that were resumed
+   */
+  resumeEvents(filter?: (event: RpgEvent) => boolean): string[] {
+    const resumed: string[] = [];
+    for (const [id, event] of [...this._suspendedEvents]) {
+      if (filter && !filter(event)) continue;
+      if (this.resumeEvent(id)) resumed.push(id);
+    }
+    return resumed;
+  }
+
+  /**
+   * Resumes one suspended event. See {@link resumeEvents}.
+   *
+   * @param eventId - The id of the event
+   * @returns `true` when the event was resumed, `false` when it is not suspended
+   */
+  resumeEvent(eventId: string): boolean {
+    const event = this._suspendedEvents.get(eventId) as any;
+    if (!event) return false;
+    this._suspendedEvents.delete(eventId);
+    this.events()[eventId] = event;
+    try {
+      event.replayRoutes?.();
+    }
+    catch {
+      // The event has no route to replay.
+    }
+    return true;
+  }
+
+  /** Whether the event is suspended (see {@link suspendEvents}). */
+  isEventSuspended(eventId: string): boolean {
+    return this._suspendedEvents.has(eventId);
+  }
+
+  /** The events that are suspended, by id. */
+  getSuspendedEvents(): RpgEvent[] {
+    return [...this._suspendedEvents.values()];
   }
 
   /**

@@ -1,5 +1,23 @@
 # @rpgjs/vite
 
+## 5.0.4
+
+### Patch Changes
+
+- 10e24d8: Update CanvasEngine: `canvasengine` 2.5.1, `@canvasengine/compiler` and `@canvasengine/presets` 2.5.0. `@canvasengine/tiled` and `@canvasengine/testing` stay on 2.4.1, the latest published versions.
+
+  Action Battle enemy loot pops right on defeat again: CanvasEngine 2.5.1 replays the updates made during the impact freeze (hit-stop), so the loot no longer waits for its end.
+
+- Updated dependencies [7125c23]
+- Updated dependencies [2c342f6]
+- Updated dependencies [f217a6e]
+- Updated dependencies [e46ac2d]
+- Updated dependencies [5e1b68c]
+- Updated dependencies [11bb345]
+- Updated dependencies [4dd0a89]
+- Updated dependencies [d6040a3]
+  - @rpgjs/server@5.3.0
+
 ## 5.0.3
 
 ### Patch Changes

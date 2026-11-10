@@ -1,5 +1,5 @@
 import type { Container } from "pixi.js";
-import type { AssetDescriptor, AssetResolver } from "@rpgjs/map-builder/model";
+import type { AssetResolver } from "@rpgjs/map-builder/model";
 import {
   buildStudioElementSpriteParts,
   normalizeStudioElementDrawRule,
@@ -57,6 +57,17 @@ export function partitionStudioElements(elements: readonly any[], options: Studi
 const number = (value: unknown, fallback: number): number => (typeof value === "number" && Number.isFinite(value) ? value : fallback);
 
 /**
+ * Asset descriptor handed to the map builder. Declared here so the published typings do not
+ * refer to `@rpgjs/map-builder` (not on npm); it is structurally an `AssetDescriptor`.
+ */
+export interface StudioAssetDescriptor {
+  readonly src: string;
+  readonly frame: readonly [x: number, y: number, width: number, height: number];
+  readonly size: readonly [width: number, height: number];
+  readonly hitbox?: readonly [x: number, y: number, width: number, height: number];
+}
+
+/**
  * A Studio element as a map element and the asset it refers to. Same conversion as the parity spec.
  * `id` and `kind` are made from the index unless given.
  */
@@ -68,7 +79,7 @@ export function studioElementToMapBuilder(element: any, index: number, names: { 
   const scale = read(element?.scale) as number | { x: number; y: number } | undefined;
   const zIndexOffset = number(read(element?.zIndexOffset), 0);
   const kind = names.kind ?? `studio-${index}`;
-  const descriptor: AssetDescriptor = {
+  const descriptor: StudioAssetDescriptor = {
     src: read(element.image) as string,
     frame: [number(rect[0], 0), number(rect[1], 0), number(rect[2], 0), number(rect[3], 0)],
     size: [number(drawIn[2], number(rect[2], 0)), number(drawIn[3], number(rect[3], 0))],

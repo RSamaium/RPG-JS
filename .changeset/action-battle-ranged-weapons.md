@@ -4,6 +4,8 @@
 "@rpgjs/client": minor
 ---
 
+Projectiles can aim at a point or an entity with `target`; an `arc` lands on it and, with `landing: { radius }`, hits what stands there. Types without a registered component are drawn by a standard projectile component whose look (shape or spritesheet, shadow, trail, impact by surface, sound, shake) is declared per type on the client with `projectiles.looks`, so the server only sends the type; `params` can still override single fields of one shot. Impacts carry a `surface` (`target`, `wall` or `ground`), components receive `flightAngle`, and `params.impactDuration` sets how long an impact stays drawn.
+
 Action Battle weapons whose `action.mode` is `projectile` now turn the basic attack into a shot released at the end of the attack startup, aimed at the soft target found within `action.range`. `action.projectile` accepts `trajectory`, `landing`, `linger`, `pierce`, `wall`, `collide` and `delay`, and an `arc` lands on the target of the action. Action Battle projectiles are stopped by walls and hit non-combat events that declare `onProjectileHit` (a switch, a bush) without damaging them.
 
 Action Battle no longer ships its own projectile component: its projectiles are drawn by the standard projectile component of `@rpgjs/client`, so `projectile.params` takes the standard look options. Register a component for `action-battle-skill` to keep a custom look.
