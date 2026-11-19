@@ -335,12 +335,12 @@
   {
     "name": "custom-carpet",
     "description": "Preset: carpet border.",
-    "hash": "fc62bcdb",
+    "hash": "45e9ff0e",
     "opaque": 24576,
     "mean": [
-      123,
+      122,
       145,
-      32
+      35
     ],
     "samples": [
       [
@@ -350,15 +350,15 @@
         255
       ],
       [
-        226,
-        106,
+        222,
+        104,
         26,
         255
       ],
       [
-        202,
-        116,
-        22,
+        159,
+        89,
+        18,
         255
       ],
       [
