@@ -3380,6 +3380,7 @@
       "resolveTerrainMorphologyLiquidGeometry"
     ],
     "declarations": [
+      "packages/render-map2d/dist/carpet.d.ts",
       "packages/render-map2d/dist/composite.d.ts",
       "packages/render-map2d/dist/error.d.ts",
       "packages/render-map2d/dist/index.d.ts",

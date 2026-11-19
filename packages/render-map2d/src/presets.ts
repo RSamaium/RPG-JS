@@ -1,5 +1,8 @@
 import { resolveTerrainLiquidPalette, type TerrainLiquidPalette } from "./liquid";
-import type { TerrainPresetRenderer } from "./types";
+import { renderCarpetPreset } from "./carpet";
+import type { RasterImage, TerrainPresetRenderer } from "./types";
+
+export { renderCarpetPreset };
 import { createTerrainRoadTownOverlayPixels } from "./road";
 
 export const CARPET_BORDER_SHADER_KEY = "carpet-border";
@@ -69,61 +72,6 @@ function occupied(mask: Uint8ClampedArray, index: number): boolean {
   return mask[index * 4 + 3] >= 32;
 }
 
-function boundaryDistance(mask: Uint8ClampedArray, width: number, height: number): Uint16Array {
-  const count = width * height;
-  const distance = new Uint16Array(count);
-  distance.fill(0xffff);
-  const queue = new Int32Array(count);
-  let read = 0;
-  let write = 0;
-  for (let y = 0; y < height; y += 1) {
-    for (let x = 0; x < width; x += 1) {
-      const index = y * width + x;
-      if (!occupied(mask, index)) continue;
-      if (x === 0 || y === 0 || x === width - 1 || y === height - 1
-        || !occupied(mask, index - 1) || !occupied(mask, index + 1)
-        || !occupied(mask, index - width) || !occupied(mask, index + width)) {
-        distance[index] = 0;
-        queue[write++] = index;
-      }
-    }
-  }
-  while (read < write) {
-    const index = queue[read++];
-    const next = distance[index] + 1;
-    const x = index % width;
-    const y = Math.floor(index / width);
-    const neighbors = [x > 0 ? index - 1 : -1, x + 1 < width ? index + 1 : -1,
-      y > 0 ? index - width : -1, y + 1 < height ? index + width : -1];
-    for (const neighbor of neighbors) {
-      if (neighbor < 0 || !occupied(mask, neighbor) || distance[neighbor] <= next) continue;
-      distance[neighbor] = next;
-      queue[write++] = neighbor;
-    }
-  }
-  return distance;
-}
-
-function setPixel(output: Uint8ClampedArray, index: number, color: readonly number[], alpha = 1): void {
-  const offset = index * 4;
-  output[offset] = color[0];
-  output[offset + 1] = color[1];
-  output[offset + 2] = color[2];
-  output[offset + 3] = Math.round((color[3] ?? 255) * alpha);
-}
-
-export const renderCarpetPreset: TerrainPresetRenderer = ({ width, height, mask, tileSize }) => {
-  const output = new Uint8ClampedArray(width * height * 4);
-  const distance = boundaryDistance(mask, width, height);
-  const outer = Math.max(2, Math.round(tileSize * 0.1));
-  const highlight = Math.max(1, Math.round(tileSize * 0.05));
-  for (let index = 0; index < distance.length; index += 1) {
-    if (distance[index] < outer) setPixel(output, index, [20, 20, 20, 155]);
-    else if (distance[index] < outer + highlight) setPixel(output, index, [250, 250, 250, 72]);
-  }
-  return output;
-};
-
 export const renderRoadTownSidewalkPreset: TerrainPresetRenderer = (input) =>
   createTerrainRoadTownOverlayPixels({ ...input, marked: false });
 export const renderRoadTownMarkedPreset: TerrainPresetRenderer = (input) =>
@@ -131,8 +79,13 @@ export const renderRoadTownMarkedPreset: TerrainPresetRenderer = (input) =>
 
 export function createTerrainCarpetBorderOverlayPixels(input: {
   width: number; height: number; tileSize: number; mask: Uint8ClampedArray;
+  /** The texture of the carpet: the border takes its colours from it. */
+  source?: RasterImage;
+  params?: Readonly<Record<string, unknown>>;
+  originX?: number;
+  originY?: number;
 }): Uint8ClampedArray {
-  return renderCarpetPreset({ ...input, params: {} });
+  return renderCarpetPreset({ ...input, params: input.params ?? {} });
 }
 
 export const builtInTerrainPresets: Readonly<Record<string, TerrainPresetRenderer>> = {

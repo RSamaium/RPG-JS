@@ -2240,6 +2240,9 @@ export class StudioTerrainChunkPainter {
             tileSize: data.tileSize,
             mask: maskPixels,
             params: layer.mode.params ?? {},
+            // A pattern repeated along an edge (the motif of a carpet border) continues from one chunk to the next.
+            originX: bounds.x,
+            originY: bounds.y,
           }));
         }
       } else if (layer.mode.type === "nine-slice") {
