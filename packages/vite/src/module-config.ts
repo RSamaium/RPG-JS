@@ -29,6 +29,29 @@ export interface RpgjsModuleViteConfigOptions {
   declarationIncludes?: Partial<Record<'client' | 'server', string[]>>;
 }
 
+type DtsRuntime = Parameters<NonNullable<Parameters<typeof dts>[0]>["afterBootstrap"] & {}>[0];
+
+/**
+ * Marks every source file reachable from the entries (and matched by `include`)
+ * as a root file of the declaration build.
+ *
+ * Without a `tsconfig.json`, the dts plugin only emits declarations for the
+ * entries and for the modules the bundler transforms. Type-only modules
+ * (`types.ts`, contracts, ...) are erased by the bundler, so their declarations
+ * were never written although emitted `.d.ts` files import them.
+ *
+ * @param runtime - The dts plugin runtime, after the TypeScript program is created
+ */
+function emitReachableDeclarations(runtime: DtsRuntime) {
+  const program = runtime.getProgram();
+  for (const sourceFile of program.getSourceFiles()) {
+    if (sourceFile.isDeclarationFile) continue;
+    if (program.isSourceFileFromExternalLibrary(sourceFile)) continue;
+    if (!runtime.filter(sourceFile.fileName)) continue;
+    runtime.addRootFile(sourceFile.fileName);
+  }
+}
+
 function createBuildConfig({
   side,
   watch,
@@ -67,6 +90,7 @@ function createBuildConfig({
       dts({ 
         include: options.declarationIncludes?.[side] || ['src/**/*.ts'],
         copyDtsFiles: options.copyDtsFiles,
+        afterBootstrap: emitReachableDeclarations,
         afterBuild: fixDeclarationSpecifiers,
         afterDiagnostic(diagnostics) {
           if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`)
