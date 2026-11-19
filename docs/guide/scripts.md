@@ -108,7 +108,7 @@ installed, and a listener that fails does not stop the next one.
 | `player.hotbarChange` | `onHotbarChange` of the player | `action` (`initialize`, `assign`, `clear`, `select`, `refresh`), `slots` |
 | `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y` |
 | `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y` |
-| `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` |
+| `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` (where it ended: the impact, where it landed, or the end of its range), `surface` (`"target"`, `"wall"`, `"ground"`, or `""` when it flew out of range) |
 | `map.tick` | `onTick` of a map with players, about 60 times a second, once for each player of the map | `map`, `deltaMs`, `tick` |
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
@@ -283,6 +283,7 @@ and the lighting). `setWeather` needs an `effect` or a `preset`; `patchWeather` 
 | `showAnimation({ x, y }, graphic, animationName?)` | an animation of a graphic at a position (`"default"` when no name) |
 | `showComponentAnimation(id, { x, y }, params?)` | an animation made by a component of the game, with plain data as `params` |
 | `shakeMap(options?)` | shakes the screen. Options: `intensity` (0 to 100), `duration` (0 to 10 000 ms), `frequency` (1 to 60), `direction` (`"x"`, `"y"`, `"both"`) |
+| `launchProjectile({ projectile, from, toward, ... })` | launches a projectile (its type: a graphic or a Studio projectile record) and gives its id. It flies straight and hits the first player or event on its way. Options: `damage`, `speed` (1 to 2 000), `range` (1 to 5 000), `arc` (`true` or `{ height }`, 0 to 500: lobbed over everything, it lands on `toward` or short of it at `range`), `landingRadius` (0 to 500, with `arc`: hits the players and events that close to where it lands), `delay` (0 to 10 000 ms of wind-up). Listen to `projectile.end` for where it ended |
 
 **Limits.** A script makes **50 events** and **50 zones** on a map at most, an id or a name that is already on the map is refused, a
 number outside its range is refused with the range, and a description with a key RPGJS does not take is refused with the keys that

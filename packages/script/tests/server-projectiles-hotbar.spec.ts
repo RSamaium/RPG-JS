@@ -112,6 +112,49 @@ describe("scripts and the projectiles", () => {
 
     await settled(() => expect(String(player.getVariable(`end_${n}`)).startsWith("bomb:")).toBe(true));
   });
+
+  it("gives projectile.end the point where the projectile ended, not its origin", async () => {
+    const service = new ScriptService();
+    service.install({ id: "end", source: `on("projectile.end", (e) => { $player.setVariable("end_${n}", e.reason + ":" + Math.round(e.x) + ":" + Math.round(e.y) + ":" + e.surface); });` });
+    const { player, map } = await start(service);
+
+    // A lob that lands on nothing, short of a target out of its reach.
+    player.projectiles.emit({ type: "bomb", origin: { x: 100, y: 100 }, target: { x: 100, y: 500 }, trajectory: { type: "arc", range: 60, duration: 0.2 } });
+    for (let i = 0; i < 10; i++) map.projectiles.step(0.1);
+
+    await settled(() => expect(player.getVariable(`end_${n}`)).toBe("land:100:160:ground"));
+  });
+
+  it("lobs a projectile onto the point it is launched toward", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "launch", source: `on("test.go", () => { $map.launchProjectile({ projectile: "bomb", from: { x: 0, y: 0 }, toward: { x: 60, y: 0 }, arc: { height: 30 }, landingRadius: 24, delay: 200 }); });` });
+    const { player, map } = await start(service);
+    const emit = vi.spyOn(map.projectiles, "emit");
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(emit).toHaveBeenCalledTimes(1);
+    expect(emit.mock.calls[0][0]).toMatchObject({
+      type: "bomb",
+      target: { x: 60, y: 0 },
+      trajectory: { type: "arc", height: 30 },
+      landing: { radius: 24 },
+      delay: 200,
+    });
+  });
+
+  it("refuses a landing radius without a lob", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "launch", source: `on("test.go", () => { $map.launchProjectile({ projectile: "arrow", from: { x: 0, y: 0 }, toward: { x: 60, y: 0 }, landingRadius: 24 }); });` });
+    const { player, map } = await start(service);
+    const emit = vi.spyOn(map.projectiles, "emit");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(emit).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
 });
 
 describe("description of the new signals and methods", () => {

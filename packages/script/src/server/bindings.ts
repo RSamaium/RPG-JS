@@ -230,9 +230,8 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
     emit: (end) => {
       const owner = playerOwner(end.owner);
       if (!owner) return undefined;
-      const point = end.hit?.point;
       return {
-        payload: { projectile: projectilePayload(end.projectile), reason: String(end.reason), x: Number(point?.x ?? end.projectile.origin.x), y: Number(point?.y ?? end.projectile.origin.y) },
+        payload: { projectile: projectilePayload(end.projectile), reason: String(end.reason), x: Number(end.x), y: Number(end.y), surface: String(end.surface ?? "") },
         context: { player: owner, map: end.map },
       };
     },

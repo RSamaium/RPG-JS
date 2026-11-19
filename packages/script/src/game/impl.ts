@@ -69,6 +69,15 @@ export interface ProjectileLaunchOptions {
   damage?: number;
   speed?: number;
   range?: number;
+  /**
+   * Lob the projectile over what stands in its way: it lands on `toward`, or short of it when `toward` is
+   * beyond `range`. `true`, or the height of the lob in pixels.
+   */
+  arc?: boolean | { height?: number };
+  /** With `arc`: the players and events within this distance of the landing point are hit, in pixels. */
+  landingRadius?: number;
+  /** Wind-up before the projectile leaves, in ms. */
+  delay?: number;
 }
 
 /** A slot of the hotbar: a skill, an item, or the entry of a plugin. */
@@ -328,6 +337,9 @@ const choices = (v: unknown): Choice[] => {
 
 const MAX_PROJECTILE_RANGE = 5000;
 const MAX_PROJECTILE_SPEED = 2000;
+const MAX_PROJECTILE_ARC_HEIGHT = 500;
+const MAX_PROJECTILE_LANDING_RADIUS = 500;
+const MAX_PROJECTILE_DELAY = 10000;
 const finite = (v: unknown, what: string) => {
   if (typeof v !== "number" || !Number.isFinite(v)) throw new Error(`${what} must be a finite number`);
   return v;
@@ -340,6 +352,18 @@ const launchOptions = (v: unknown): ProjectileLaunchOptions => {
   if (o.damage !== undefined) out.damage = Math.max(0, finite(o.damage, "damage"));
   if (o.speed !== undefined) out.speed = Math.min(MAX_PROJECTILE_SPEED, Math.max(1, finite(o.speed, "speed")));
   if (o.range !== undefined) out.range = Math.min(MAX_PROJECTILE_RANGE, Math.max(1, finite(o.range, "range")));
+  if (o.arc !== undefined && o.arc !== false) {
+    if (o.arc === true) out.arc = true;
+    else {
+      const arc = opts(o.arc);
+      out.arc = arc.height === undefined ? {} : { height: Math.min(MAX_PROJECTILE_ARC_HEIGHT, Math.max(0, finite(arc.height, "arc.height"))) };
+    }
+  }
+  if (o.landingRadius !== undefined) {
+    if (!out.arc) throw new Error("landingRadius needs arc: only a lob lands");
+    out.landingRadius = Math.min(MAX_PROJECTILE_LANDING_RADIUS, Math.max(0, finite(o.landingRadius, "landingRadius")));
+  }
+  if (o.delay !== undefined) out.delay = Math.min(MAX_PROJECTILE_DELAY, Math.max(0, finite(o.delay, "delay")));
   return out;
 };
 const hotbarEntry = (v: unknown): HotbarEntryOptions => {

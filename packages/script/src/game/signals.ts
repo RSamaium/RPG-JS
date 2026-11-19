@@ -160,8 +160,9 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
     payload: {
       projectile: PROJECTILE.projectile,
       reason: { type: "string", doc: 'Why it ended: "hit", "range", "land", "return", "ttl"…' },
-      x: PROJECTILE.x,
-      y: PROJECTILE.y,
+      x: { type: "number", doc: "X where it ended: the impact, where it landed, or the end of its range." },
+      y: { type: "number", doc: "Y where it ended: the impact, where it landed, or the end of its range." },
+      surface: { type: "string", doc: 'What it ended on: "target" (a player or an event), "wall", "ground" (it landed on nothing), or "" (it flew out of range or expired).' },
     },
   },
   "event.action": { doc: "A player acts on an event (the action key, next to it).", payload: EVENT },

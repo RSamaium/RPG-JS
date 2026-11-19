@@ -111,11 +111,21 @@ function mapPortOf(map: RpgMap): MapPort {
     shakeMap: (options: ShakeOptions = {}) => m.shakeMap(options),
     launchProjectile(o: ProjectileLaunchOptions) {
       const dx = o.toward.x - o.from.x, dy = o.toward.y - o.from.y, length = Math.hypot(dx, dy);
+      const speed = o.speed ?? DEFAULT_PROJECTILE_SPEED, range = o.range ?? DEFAULT_PROJECTILE_RANGE;
+      const height = typeof o.arc === "object" ? o.arc.height : undefined;
       const [state] = m.projectiles.emit({
         type: o.projectile,
         origin: o.from,
         direction: { x: dx / length, y: dy / length },
-        trajectory: { type: "linear", speed: o.speed ?? DEFAULT_PROJECTILE_SPEED, range: o.range ?? DEFAULT_PROJECTILE_RANGE },
+        // A lob lands on `toward`, as far as its range allows.
+        ...(o.arc
+          ? {
+              target: o.toward,
+              trajectory: { type: "arc", speed, range, ...(height !== undefined ? { height } : {}) },
+              ...(o.landingRadius !== undefined ? { landing: { radius: o.landingRadius } } : {}),
+            }
+          : { trajectory: { type: "linear", speed, range } }),
+        ...(o.delay !== undefined ? { delay: o.delay } : {}),
         ...(o.damage !== undefined ? { payload: { damage: o.damage } } : {}),
       });
       if (!state) throw new Error("the map did not launch the projectile");

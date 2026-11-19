@@ -416,8 +416,10 @@ export const server: RpgServer = {
       target.hp -= damage
     },
 
-    onDestroy({ projectile, reason }) {
-      console.log(projectile.id, reason)
+    // `x`, `y`: where it ended (the impact, where it landed, or the end of its range).
+    // `surface`: "target", "wall" or "ground" when it ended on something.
+    onDestroy({ projectile, reason, x, y, surface }) {
+      console.log(projectile.id, reason, x, y, surface)
     }
   }
 }

@@ -230,6 +230,11 @@ export interface ProjectileImpactHookContext extends ProjectileHookContext {
 export interface ProjectileDestroyHookContext extends ProjectileHookContext {
   reason: string;
   hit?: RaycastHit;
+  /** Where the projectile ended: the hit point, where it landed, or the end of its range. */
+  x: number;
+  y: number;
+  /** What it ended on, when it ended on something: an entity, a wall, or the ground where it landed. */
+  surface?: ProjectileImpactSurface;
 }
 
 interface PendingProjectile {
@@ -885,7 +890,7 @@ export class RpgMapProjectiles {
     }
     const active = this.active.get(projectile.id);
     if (!active) {
-      this.handleDestroyState(state, reason, hit);
+      this.handleDestroyState(state, reason, hit, { x: projectile.position.x, y: projectile.position.y });
       return;
     }
     const finalReason = reason === "end" ? this.naturalEndReason(active, projectile) : reason;
@@ -989,12 +994,22 @@ export class RpgMapProjectiles {
       Object.assign(destroyed, { x: point.x, y: point.y, surface: "ground" });
     }
     this.destroyQueue.push(destroyed);
+    // Without a hit or a known point (an instant shot that hit nothing), it ended at the end of its range.
+    const end = hit
+      ? { x: hit.point.x, y: hit.point.y }
+      : point ?? {
+          x: projectile.origin.x + projectile.direction.x * projectile.range,
+          y: projectile.origin.y + projectile.direction.y * projectile.range,
+        };
     this.callHook("server-projectiles-onDestroy", {
       projectile,
       owner: this.ownerOf(projectile),
       reason,
       hit,
       map: this.map,
+      x: end.x,
+      y: end.y,
+      surface: destroyed.surface,
     });
   }
 
