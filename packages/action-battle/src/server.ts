@@ -8,7 +8,7 @@ import {
   type HotbarGuiOptions,
   type RpgServer,
 } from "@rpgjs/server";
-import { Control, defineModule } from "@rpgjs/common";
+import { Control, MAXHP, defineModule } from "@rpgjs/common";
 import { BattleAi, HitResult, ApplyHitHooks, DEFAULT_KNOCKBACK } from "./ai.server";
 import {
   ActionBattleActionBarData,
@@ -18,6 +18,7 @@ import {
 } from "./types";
 import { getActionBattleOptions, isActionBattleEnabled, normalizeActionBattleOptions, setActionBattleOptions } from "./config";
 import {
+  directionToActionBattleTarget,
   getActionBattleEntityTile,
   getActionBattleTileSize,
   manhattanDistance,
@@ -576,7 +577,14 @@ const performPlayerAttack = (
 
   if (ranged) {
     // A ranged weapon releases its projectile at the end of the startup instead of swinging a hitbox.
+    const lockId = (player as any).__actionBattleAttackLockId;
     scheduleActionBattleStartup(attackProfile, () => {
+      // Nothing is shot when the player can no longer shoot: defeated, moved to another map (or gone), or the attack was
+      // cancelled (a dodge, another attack) during the startup.
+      if (player.getCurrentMap?.() !== map) return;
+      // Defeated: no HP left out of a maximum (a player without stats has neither).
+      if (Number(player.hp) <= 0 && Number((player as any).param?.[MAXHP]) > 0) return;
+      if ((player as any).__actionBattleAttackLockId !== lockId) return;
       executeActionBattleUse({
         attacker: player,
         target: softTarget?.target ?? null,
@@ -1206,6 +1214,25 @@ const collectActionBattleSkillTargets = (
  * whatever the player faces, within the reach of the action: `action.range`
  * (pixels), otherwise the skill targeting range (tiles). `null` when none.
  */
+/** The reach of a skill action in pixels: `action.range`, otherwise the skill targeting range (tiles). Unlimited without both. */
+const resolveActionBattleSkillReach = (
+  player: RpgPlayer,
+  map: NonNullable<ReturnType<RpgPlayer["getCurrentMap"]>>,
+  skillId: string,
+  actionConfig: { range?: number },
+  options: ActionBattleOptions
+): number => {
+  if (Number(actionConfig.range) > 0) return Number(actionConfig.range);
+  const targeting = resolveSkillTargeting(player, skillId, options);
+  if (targeting && targeting.range > 0) return targeting.range * getActionBattleTileSize(map).width;
+  return Number.POSITIVE_INFINITY;
+};
+
+const entityCenter = (entity: any) => {
+  const hitbox = entity?.hitbox?.() ?? { w: 0, h: 0 };
+  return { x: Number(entity.x()) + (hitbox.w ?? 0) / 2, y: Number(entity.y()) + (hitbox.h ?? 0) / 2 };
+};
+
 const resolveNearestActionBattleSkillTarget = (
   player: RpgPlayer,
   map: NonNullable<ReturnType<RpgPlayer["getCurrentMap"]>>,
@@ -1213,15 +1240,9 @@ const resolveNearestActionBattleSkillTarget = (
   actionConfig: { target?: string; range?: number },
   options: ActionBattleOptions
 ) => {
-  const targeting = resolveSkillTargeting(player, skillId, options);
-  const tileSize = getActionBattleTileSize(map);
-  const range =
-    Number(actionConfig.range) > 0
-      ? Number(actionConfig.range)
-      : targeting && targeting.range > 0
-        ? targeting.range * tileSize.width
-        : // No reach given: anywhere on the map (finite, so the distance still ranks them).
-          1_000_000;
+  const reach = resolveActionBattleSkillReach(player, map, skillId, actionConfig, options);
+  // No reach given: anywhere on the map (finite, so the distance still ranks them).
+  const range = Number.isFinite(reach) ? reach : 1_000_000;
   return resolveActionBattleSoftTarget(
     player,
     collectActionBattleSkillTargets(player, map, actionConfig, options),
@@ -1542,17 +1563,34 @@ const registerActionBattleSkillUse = () => {
     if (!map) return undefined;
     const actionConfig = getActionBattleActionConfig(skillData)!;
     let resolvedTarget = target;
+    let faceDirection: string | undefined;
     if (resolvedTarget === undefined && actionConfig.target !== "self") {
       // Without a target, the nearest one in reach, whatever the player faces.
       const nearest = resolveNearestActionBattleSkillTarget(player, map, skillId, actionConfig, options);
       if (nearest) {
         resolvedTarget = nearest.target as RpgPlayer;
-        player.changeDirection?.(nearest.direction as any);
+        faceDirection = nearest.direction;
       }
+    } else if (isEntityTarget(resolvedTarget) && actionConfig.target !== "self") {
+      // A given target follows the same rules as a picked one: allowed by the action, and within its reach.
+      const reach = resolveActionBattleSkillReach(player, map, skillId, actionConfig, options);
+      const from = entityCenter(player);
+      for (const entity of [resolvedTarget].flat()) {
+        if (!canActionBattleUseTarget(player, entity as any, (actionConfig.target ?? "enemy") as any, options.combat?.targets)) {
+          throw new Error(`The skill "${skillId}" cannot be used on "${(entity as any).id}": the action does not target it`);
+        }
+        const to = entityCenter(entity);
+        if (Math.hypot(to.x - from.x, to.y - from.y) > reach) {
+          throw new Error(`The skill "${skillId}" cannot reach "${(entity as any).id}"`);
+        }
+      }
+      faceDirection = directionToActionBattleTarget(player as any, [resolvedTarget].flat()[0] as any);
     }
     if (!handleActionBattleSkillUse(player, skillId, resolvedTarget, options)) {
       throw new Error(`The skill "${skillId}" cannot be used now (not learned, not enough SP, cooldown or no target)`);
     }
+    // The player turns toward its target once the skill is used, not when it is refused.
+    if (faceDirection) player.changeDirection?.(faceDirection as any);
     return skillData;
   });
 };

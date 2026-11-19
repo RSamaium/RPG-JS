@@ -72,6 +72,21 @@ describe("ranged weapon in a real map", () => {
     expect(handleDamage).toHaveBeenCalledTimes(1);
   });
 
+  test("no arrow leaves when the player is defeated during the startup", async () => {
+    const map = player.getCurrentMap()!;
+    const emit = vi.spyOn(map.projectiles, "emit");
+    player.initializeDefaultStats();
+    player.addItem("bow");
+    player.equip("bow");
+    player.changeDirection("right" as any);
+
+    (battle as any).player.onInput(player, { action: Control.Action, data: { direction: "right" } });
+    player.hp = 0;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+
+    expect(emit).not.toHaveBeenCalled();
+  });
+
   test("an arc shot aims at a switch in front of the player and lands on it", async () => {
     const map = player.getCurrentMap()!;
     const onProjectileHit = vi.fn(() => "stick");

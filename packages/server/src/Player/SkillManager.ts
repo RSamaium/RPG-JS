@@ -614,8 +614,14 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
      * ```
      */
     useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): SkillData {
-      // A battle system registered with `registerSkillUseHandler` may run the skill with its own rules.
-      const skillId = typeof skillInput === "string" ? skillInput : (skillInput as any)?.id;
+      // A skill restriction (silence) refuses the use, whoever runs it.
+      if ((this as any).hasEffect(Effect.CAN_NOT_SKILL)) {
+        throw SkillLog.restriction(this._getSkillSnapshot(this._getLearnedSkillEntry(skillInput)) || skillInput);
+      }
+      // A battle system registered with `registerSkillUseHandler` may run the skill with its own rules. The id comes from the
+      // learned skill, so a skill given as a class or an object is handled like one given by id.
+      const learnedId = this._getSkillSnapshot(this._getLearnedSkillEntry(skillInput))?.id;
+      const skillId = typeof skillInput === "string" ? skillInput : typeof learnedId === "string" ? learnedId : (skillInput as any)?.id;
       if (skillUseHandlers.length > 0 && typeof skillId === "string" && !usingThroughHandler.has(this)) {
         usingThroughHandler.add(this);
         try {

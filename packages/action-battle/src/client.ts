@@ -61,31 +61,45 @@ import { activateActionBattleSkill } from "./ui/skill-activation";
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 const ACTION_BATTLE_WEAPON_PROFILE = "action-battle:weapon-profile";
 
-// How the equipped weapon of the local player attacks, as told by the server.
-let localWeapon: { profile: ActionBattleAttackProfile | null; ranged: boolean } = {
-  profile: null,
-  ranged: false,
+type LocalWeapon = { profile: ActionBattleAttackProfile | null; ranged: boolean };
+const NO_WEAPON: LocalWeapon = { profile: null, ranged: false };
+// How the equipped weapon of the local player attacks, as told by the server, per connection: each client engine (and each
+// reconnection) has its own socket, so one never reads the weapon of another.
+const weaponsBySocket = new WeakMap<object, LocalWeapon>();
+
+const currentSocket = (): object | undefined => {
+  try {
+    return inject<AbstractWebsocket>(WebSocketToken) as unknown as object | undefined;
+  } catch {
+    // No client context (a unit test, a tool): no weapon was told, the base profile applies.
+    return undefined;
+  }
 };
-const boundSockets = new WeakSet<object>();
 
 const bindWeaponProfile = () => {
-  const socket = inject<AbstractWebsocket>(WebSocketToken);
-  if (!socket || boundSockets.has(socket)) return;
-  boundSockets.add(socket);
-  socket.on(ACTION_BATTLE_WEAPON_PROFILE, (payload: any) => {
-    localWeapon = {
+  const socket = currentSocket();
+  if (!socket || weaponsBySocket.has(socket)) return;
+  weaponsBySocket.set(socket, NO_WEAPON);
+  (socket as AbstractWebsocket).on(ACTION_BATTLE_WEAPON_PROFILE, (payload: any) => {
+    weaponsBySocket.set(socket, {
       profile: payload?.profile && typeof payload.profile === "object" ? payload.profile : null,
       ranged: payload?.ranged === true,
-    };
+    });
   });
+};
+
+const localWeapon = (): LocalWeapon => {
+  const socket = currentSocket();
+  return (socket && weaponsBySocket.get(socket)) || NO_WEAPON;
 };
 
 /** Attack profile of the local player, resolved like the server does for its weapon. */
 const resolveLocalAttackProfile = (options: ActionBattleOptions) => {
   const base = getNormalizedActionBattleAttackProfile(options);
-  if (!localWeapon.profile) return base;
+  const weapon = localWeapon();
+  if (!weapon.profile) return base;
   return normalizeActionBattleAttackProfile(
-    mergeAttackProfileOverrides(base, localWeapon.profile),
+    mergeAttackProfileOverrides(base, weapon.profile),
     {
       lockMovement: options.attack?.lockMovement,
       lockDurationMs: options.attack?.lockDurationMs,
@@ -323,7 +337,7 @@ export const createActionBattleClient = (
           engine,
         });
         // The melee swing preview does not describe a shot.
-        if (!localWeapon.ranged) showLocalAttackPreview(player, normalized);
+        if (!localWeapon().ranged) showLocalAttackPreview(player, normalized);
       },
     }
   });

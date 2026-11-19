@@ -1,4 +1,4 @@
-import { computed, signal, type WritableSignal } from "canvasengine";
+import { computed, signal, type ComponentFunction, type WritableSignal } from "canvasengine";
 import { Hooks, sampleTrajectory } from "@rpgjs/common";
 import { normalizeRoomMapId } from "../utils/mapId";
 
@@ -161,7 +161,7 @@ export class ProjectileManager {
   private readonly structureVersion = signal(0);
   private readonly impactDurationMs = 350;
   private mapId?: string;
-  private defaultComponent?: any;
+  private defaultComponent?: ComponentFunction;
 
   constructor(
     private readonly hooks: Hooks,
@@ -236,7 +236,7 @@ export class ProjectileManager {
   }
 
   /** Component rendering the projectile types that have no registered component. */
-  setDefaultComponent(component: any): void {
+  setDefaultComponent(component: ComponentFunction): void {
     this.defaultComponent = component;
   }
 

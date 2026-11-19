@@ -772,7 +772,8 @@ export class RpgMapProjectiles {
     // cannot decide, the projectile does not wait.
     let reaction: ProjectileTargetReaction | undefined;
     const hookId = isEvent ? "server-event-onProjectileHit" : "server-player-onProjectileHit";
-    for (const moduleHook of (this.map as any).hooks?.getHookFunctions?.(hookId) ?? []) {
+    const moduleHooks: Function[] = (this.map as any).hooks?.getHookFunctions?.(hookId) ?? [];
+    for (const moduleHook of moduleHooks) {
       try {
         const answer = moduleHook(target, active.state, context);
         if (answer && typeof answer.then === "function") {
@@ -794,8 +795,8 @@ export class RpgMapProjectiles {
         console.error("[RPGJS] Error during onProjectileHit:", error);
       }
     }
-    // Like `execMethod`, push the changes made by the hooks to the clients.
-    target.syncChanges?.();
+    // Like `execMethod`, push the changes made by the hooks to the clients: only when a hook ran.
+    if (moduleHooks.length > 0 || typeof hook === "function") target.syncChanges?.();
     return reaction;
   }
 

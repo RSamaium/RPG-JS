@@ -121,6 +121,41 @@ describe("player.useSkill with Action Battle", () => {
     expect(emit.mock.calls[0][0].direction ?? { x: 1, y: 0 }).toMatchObject({ x: 1 });
   });
 
+  test("a given target out of the reach of the action is refused", async () => {
+    const map = player.getCurrentMap()!;
+    // 460 px away: beyond the 300 px of the action.
+    const away = await spawnSlime("away", 100, 560);
+    const emit = vi.spyOn(map.projectiles, "emit");
+    player.learnSkill("fireball");
+    player.sp = 50;
+
+    expect(() => player.useSkill("fireball", away)).toThrow(/reach/);
+    expect(emit).not.toHaveBeenCalled();
+    expect(player.sp).toBe(50);
+  });
+
+  test("a given target the action does not aim at is refused", async () => {
+    const map = player.getCurrentMap()!;
+    const emit = vi.spyOn(map.projectiles, "emit");
+    // A plain event, neither an enemy nor an event reacting to projectiles.
+    const id = await map.createDynamicEvent({ id: "villager", x: 200, y: 100, event: { name: "Villager" } });
+    player.learnSkill("fireball");
+    player.sp = 50;
+
+    expect(() => player.useSkill("fireball", map.getEvent(id!) as any)).toThrow(/does not target/);
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  test("a refused use does not turn the player", async () => {
+    await spawnSlime("near", 20, 100);
+    player.learnSkill("fireball");
+    player.sp = 0;
+    player.changeDirection("down" as any);
+
+    expect(() => player.useSkill("fireball")).toThrow();
+    expect(player.getDirection()).toBe("down");
+  });
+
   test("a skill used during its cooldown or without SP is refused", async () => {
     const slime = await spawnSlime();
     player.learnSkill("fireball");
