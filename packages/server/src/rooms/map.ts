@@ -121,6 +121,12 @@ type StoredWorldMaps = {
   maps: WorldMapConfig[];
 };
 
+/** The tags of an event definition as the event keeps them: its own copy, strings only, each once. */
+function eventTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((tag): tag is string => typeof tag === "string" && tag.length > 0))];
+}
+
 function isRpgLog(error: unknown): error is Log {
   return error instanceof Log
     || (typeof error === "object"
@@ -2213,6 +2219,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       if (typeof eventName === "string" && eventName.length > 0) {
         eventInstance.name = eventName;
       }
+      eventInstance.tags = eventTags((event as any).prototype?._tags ?? (event as any)._tags);
     }
     // Handle event as an object with hooks
     else {
@@ -2254,6 +2261,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
       eventInstance = new DynamicEvent();
       if ((event as any).name) eventInstance.name = (event as any).name;
+      eventInstance.tags = eventTags((event as any).tags);
     }
 
     eventInstance.id = id;

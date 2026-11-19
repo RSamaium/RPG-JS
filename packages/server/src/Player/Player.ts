@@ -2034,6 +2034,20 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
 }
 
 export class RpgEvent extends RpgPlayer {
+  /**
+   * Tags of the event: what kind of event it is (`help`, `villager`, `chest`...). They come from the `tags` of the event
+   * definition or of `@EventData`, and are empty when it has none. Scripts and modules use them to react to kinds of
+   * events rather than to names; they stay on the server.
+   *
+   * @title tags
+   * @prop {string[]} tags
+   * @memberof RpgEvent
+   * @example
+   * ```ts
+   * if (event.tags.includes('help')) player.showText('Thank you!')
+   * ```
+   */
+  tags: string[] = [];
 
   constructor() {
     super();

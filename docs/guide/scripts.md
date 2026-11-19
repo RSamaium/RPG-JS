@@ -85,20 +85,20 @@ installed, and a listener that fails does not stop the next one.
 
 | Signal | Emitted by | Payload |
 | --- | --- | --- |
-| `player.joinRoom` | `onJoinRoom` of the player, in every kind of room | `kind` (`"map"`, or the kind of the gameplay room), `id` |
-| `player.leaveRoom` | `onLeaveRoom` of the player | `kind`, `id` |
-| `player.joinMap` | `onJoinMap` of the player, in a map | `map` (id of the map) |
-| `player.leaveMap` | `onLeaveMap` of the player, in a map | `map` |
+| `player.joinRoom` | `onJoinRoom` of the player, in every kind of room | `kind` (`"map"`, or the kind of the gameplay room), `id`, `mapTags` (empty when the room is not a map) |
+| `player.leaveRoom` | `onLeaveRoom` of the player | `kind`, `id`, `mapTags` |
+| `player.joinMap` | `onJoinMap` of the player, in a map | `map` (id of the map), `mapTags` |
+| `player.leaveMap` | `onLeaveMap` of the player, in a map | `map`, `mapTags` |
 | `player.inShape` | `onInShape` of the player: enters a zone of the map | `shape.name`, `shape.x`, `shape.y`, `shape.width`, `shape.height` |
 | `player.outShape` | `onOutShape` of the player: leaves a zone | the same |
 | `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
-| `player.itemAdd` | `onItemAdd` of the player: items enter the inventory | `item` (id of the item), `quantity` |
-| `player.itemRemove` | `onItemRemove` of the player: items leave it (removed, sold, consumed by a use) | `item`, `quantity` |
-| `player.itemUse` | `onItemUse` of the player | `item`, `quantity` |
-| `player.itemEquip` | `onItemEquip` of the player: equips or takes off an item | `item`, `quantity`, `equipped` |
+| `player.itemAdd` | `onItemAdd` of the player: items enter the inventory | `item` (id of the item), `quantity`, `itemTags` |
+| `player.itemRemove` | `onItemRemove` of the player: items leave it (removed, sold, consumed by a use) | `item`, `quantity`, `itemTags` |
+| `player.itemUse` | `onItemUse` of the player | `item`, `quantity`, `itemTags` |
+| `player.itemEquip` | `onItemEquip` of the player: equips or takes off an item | `item`, `quantity`, `itemTags`, `equipped` |
 | `player.goldChange` | `onGoldChange` of the player | `gold` (the gold after the change), `delta` (negative when the player spends) |
-| `player.skillChange` | `onSkillChange` of the player | `action` (`learn`, `forget`), `skill` |
+| `player.skillChange` | `onSkillChange` of the player | `action` (`learn`, `forget`), `skill`, `skillTags` |
 | `player.connect` | `onConnected` of the player | |
 | `player.disconnect` | `onDisconnected` of the player | |
 | `battle.start` | `onStart` of the `battle` scope (a turn-based battle) | `troop`, `enemies` (tags) |
@@ -111,8 +111,29 @@ installed, and a listener that fails does not stop the next one.
 | `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` (where it ended: the impact, where it landed, or the end of its range), `surface` (`"target"`, `"wall"`, `"ground"`, or `""` when it flew out of range) |
 | `map.tick` | `onTick` of a map with players, about 60 times a second, once for each player of the map | `map`, `deltaMs`, `tick` |
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
-| `event.action` | `onAction` of any event | `event.id`, `event.name` |
-| `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
+| `event.action` | `onAction` of any event | `event.id`, `event.name`, `event.tags` |
+| `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name`, `event.tags` |
+
+### Tags
+
+Listen to a **kind** of thing rather than to a name: events, maps and records of the database (items, skills...) can have
+tags, and the signals about them give them as a list, empty when there is none. A plugin that rewards helping any villager
+does not depend on the name of each event, and keeps working when one is renamed:
+
+```js
+on("event.action", { where: { "event.tags": { has: "help" } } }, () => {
+  $player.setVariable("reputation", ($player.getVariable("reputation") ?? 0) + 1);
+});
+on("player.itemAdd", { where: { itemTags: { has: "relic" } } }, (e) => { $player.showNotification("A relic: " + e.item); });
+on("player.joinMap", { where: { mapTags: { has: "town" } } }, () => { /* entering a town */ });
+```
+
+Where the tags come from, on the server:
+
+- an event: the `tags` of its definition (`createDynamicEvent({ event: { name, tags, ... } })`) or of `@EventData({ tags })`,
+  kept in `event.tags`;
+- a map: the `tags` of its data (`map.data().tags`); a Studio game sets them from the tags of the map;
+- a record: its `tags` field in the database (`$data.get(type, id).tags` gives them too).
 
 ### Reply to a projectile
 

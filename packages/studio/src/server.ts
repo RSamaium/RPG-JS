@@ -1340,6 +1340,8 @@ export default (_config?: unknown) => {
         const hydratedMapData = await normalizeStudioMapPayload(mapData?.id ?? mapData?.data?._id ?? mapData?.data?.id, mapData, config);
         Object.assign(mapData, hydratedMapData);
         mapData.positions = resolveStudioMapPositions(mapData.positions, mapData.data);
+        // The tags of the Studio map, where RPGJS reads the tags of a map (`map.data().tags`): scripts filter on them
+        mapData.tags = Array.isArray(mapData?.data?.tags) ? mapData.data.tags : [];
         if (streamingOptions && !isDirectLoad && !mapData?.data?.__studioPrepared) {
           const preparedMapData = prepareStudioMapPayload(mapData, {
             id: mapData?.id,
@@ -1462,6 +1464,10 @@ export default (_config?: unknown) => {
         // RPGJS names the instance after `name`; scripts filter on `event.name`
         if (typeof object.name === "string" && object.name) {
           eventObj.name = object.name;
+        }
+        // RPGJS keeps them in `event.tags`; scripts filter on `event.tags` to react to a kind of event, whatever its name
+        if (Array.isArray(object.tags)) {
+          eventObj.tags = object.tags;
         }
 
         // If the event has triggers defined, add execution methods

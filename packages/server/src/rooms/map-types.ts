@@ -118,6 +118,11 @@ export type EventConstructor = new () => RpgEvent;
 export type EventDefinition = EventHooks & {
   /** Optional display name copied to the runtime event instance */
   name?: string;
+  /**
+   * Tags of the event, copied to the runtime event instance (`event.tags`). Scripts and modules recognize a kind of
+   * event by its tags rather than by its name, e.g. a plugin that rewards helping any event tagged `help`.
+   */
+  tags?: readonly string[];
   /** Shared or scenario event mode */
   mode?: EventMode | "shared" | "scenario";
   /** Whether players can physically push this event. `false` by default. */

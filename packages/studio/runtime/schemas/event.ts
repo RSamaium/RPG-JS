@@ -233,6 +233,12 @@ export const eventSchema = {
       title: "Name",
       description: "The name of the event",
     },
+    tags: {
+      type: "array",
+      title: "Tags",
+      description: "What kind of event it is (help, villager, chest...). Plugin scripts react to tags rather than to names",
+      items: { type: "string" },
+    },
     description: {
       type: "string",
       title: "Description",
