@@ -38,6 +38,9 @@ import {
   schemaCallGameover,
   schemaShowSave,
   schemaCallShop,
+  schemaStartBattle,
+  schemaStartTurnBattle,
+  schemaStartTacticalBattle,
   schemaEraseEvent,
   schemaPlayBgm,
   schemaPlaySe,
@@ -197,6 +200,10 @@ export const defaultBlocks = [
     schemaShowSave,
 
     schemaCallShop,
+
+    schemaStartBattle,
+    schemaStartTurnBattle,
+    schemaStartTacticalBattle,
 
     schemaEraseEvent,
   
