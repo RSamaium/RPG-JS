@@ -768,6 +768,33 @@ resolution uses the attacker's action-battle faction and `targets` selector.
 Projectile direction uses the same generic projectile options as
 `map.projectiles.emit()`, including `spreadDegrees` and `accuracy`.
 
+### `player.useSkill()` follows the action
+
+On a map where action-battle is enabled, `player.useSkill(id, target?)` runs a
+skill that has an `action` with the action-battle rules: SP cost, cooldown,
+projectile, damage formula, factions, states and hit reactions. Without a
+target, the soft targeting picks the nearest enemy in front of the player.
+A skill without `action` keeps the native RPGJS rule. This is what a hotbar
+skill, your own server code and the scripts (`$player.useSkill`) call, so they
+all hit the same way:
+
+```ts
+// Server code: launches the fireball projectile toward the slime
+player.useSkill("fireball", slime);
+```
+
+```js
+// A script: same rules, the target is the id of an event or a player
+on("event.action", () => {
+  $player.useSkill("fireball", { target: $event.id });
+});
+```
+
+The use is refused (it throws, a script gets `false`) when the skill is not
+learned, too expensive or cooling down. Another battle system can plug into
+`player.useSkill` the same way with `registerSkillUseHandler` from
+`@rpgjs/server`.
+
 ### Ranged weapons and projectile behaviors
 
 A weapon whose `action.mode` is `projectile` turns the basic attack into a

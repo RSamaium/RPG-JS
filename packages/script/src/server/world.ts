@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -126,7 +126,15 @@ function mapPortOf(map: RpgMap, player: RpgPlayer): MapPort {
             }
           : { trajectory: { type: "linear", speed, range } }),
         ...(o.delay !== undefined ? { delay: o.delay } : {}),
-        ...(o.damage !== undefined ? { payload: { damage: o.damage } } : {}),
+        ...(o.damage !== undefined
+          ? {
+              payload: { damage: o.damage },
+              // Fixed damage, as is: a hit that follows the battle rules is a skill ($player.useSkill).
+              onHit: ({ target }: { target?: any }) => {
+                if (typeof target?.hp === "number") target.hp = Math.max(0, target.hp - o.damage!);
+              },
+            }
+          : {}),
         // Launched by the player of the script: it flies through them and its signals fire for them.
       }, o.owner === "player" ? player : undefined);
       if (!state) throw new Error("the map did not launch the projectile");
@@ -295,6 +303,18 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     },
     assignHotbarSlot(slot, entry: HotbarEntryOptions) {
       p.assignHotbarSlot(slot, entry);
+    },
+    useSkill(skillId, options: SkillUseOptions = {}) {
+      const room = (p.getCurrentMap?.() ?? null) as any;
+      const target = options.target === undefined ? undefined : room?.getEvent?.(options.target) ?? room?.getPlayer?.(options.target);
+      if (options.target !== undefined && !target) throw new Error(`there is no event or player "${options.target}" on the map`);
+      try {
+        p.useSkill(skillId, target);
+        return true;
+      } catch {
+        // Not learned, not enough SP, cooldown, failed hit roll: the script hears it as false.
+        return false;
+      }
     },
   };
 

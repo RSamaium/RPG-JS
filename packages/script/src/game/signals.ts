@@ -40,8 +40,8 @@ const PROJECTILE: SignalDesc["payload"] = {
     type: "object",
     fields: {
       id: { type: "string", doc: "Id of this projectile in flight." },
-      type: { type: "string", doc: "The type of the projectile (its graphic, or the Studio projectile record)." },
-      projectileId: { type: "string", doc: "Id of the Studio projectile record, when it has one." },
+      type: { type: "string", doc: "The type of the projectile (what the clients draw it with)." },
+      projectileId: { type: "string", doc: "The `params.projectileId` of the projectile, when it was launched with one." },
     },
   },
   x: { type: "number", doc: "X of the impact." },

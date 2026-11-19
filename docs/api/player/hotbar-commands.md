@@ -12,6 +12,7 @@ Assign and use persistent server-authoritative skill and item slots.
 - [action](#action)
 - [allowedEntryTypes](#allowedentrytypes)
 - [Assign Hotbar Slot](#assign-hotbar-slot)
+- [autoAssignItems](#autoassignitems)
 - [capacity](#capacity)
 - [Clear Hotbar Slot](#clear-hotbar-slot)
 - [Configure Hotbar](#configure-hotbar)
@@ -23,6 +24,7 @@ Assign and use persistent server-authoritative skill and item slots.
 - [Initialize Hotbar](#initialize-hotbar)
 - [Is Hotbar Entry Type Allowed](#is-hotbar-entry-type-allowed)
 - [lockedSlotHint](#lockedslothint)
+- [Place Hotbar Item](#place-hotbar-item)
 - [Refresh Hotbar](#refresh-hotbar)
 - [registerHotbarEntryType](#registerhotbarentrytype)
 - [resolve](#resolve)
@@ -91,6 +93,22 @@ player.assignHotbarSlot(slot,entry)
 ### Returns
 
 The updated detached state.
+
+## autoAssignItems
+
+Put an item the player receives in the first free accessible slot.
+
+Applies only when the hotbar allows items. Defaults to `true`.
+
+- Source: `packages/server/src/Player/HotbarManager.ts`
+- Kind: `property`
+- Defined in: `HotbarConfiguration`
+
+### Signature
+
+```ts
+autoAssignItems: boolean
+```
 
 ## capacity
 
@@ -338,6 +356,31 @@ Player-visible unlock hint or a per-slot resolver.
 ```ts
 lockedSlotHint: HotbarLockedSlotHintResolver
 ```
+
+## Place Hotbar Item
+
+Place a received item in the first free accessible slot, unless it is
+already in the hotbar. Does nothing before the hotbar is seeded: the
+item then comes with the loadout seed. Called by `addItem()`; falls back to a refresh when nothing applies.
+
+- Source: `packages/server/src/Player/HotbarManager.ts`
+- Kind: `method`
+- Member of: `RpgPlayer`
+- Defined in: `HotbarManagerMixin`
+
+### Signature
+
+```ts
+player.placeHotbarItem(id)
+```
+
+### Parameters
+
+- `id`: `string`
+
+### Returns
+
+The detached hotbar state.
 
 ## Refresh Hotbar
 

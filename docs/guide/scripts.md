@@ -196,6 +196,7 @@ The player of the signal, with the names of `RpgPlayer`.
 | `showChoices(text, choices)` | 2 to 8 choices `{ text, value }`; gives the choice picked, or `null` when the player closes it |
 | `showNotification(message, options?)` | a notification. Options: `type` (`info`, `warn`, `error`), `time` |
 | `changeMap(map, { x, y }?)` | moves the player to a map |
+| `useSkill(skillId, { target }?)` | uses a skill the player knows, as `player.useSkill` does; gives `false` when it cannot be used now. With Action Battle on the map, a skill with an `action` follows the battle rules: its projectile, damage formula, factions, states, SP cost and cooldown. `target` is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy in front of the player |
 | `openGui(id, data?, options?)`, `updateGui(id, data)`, `closeGui(id, data?)` | a GUI of the client, as `player.gui(id).open(data, options)`, `.update(data)` and `player.removeGui(id, data)` do. See [GUIs](#guis-of-the-client) |
 
 RPGJS has variables, not switches: a flag is a variable (`$player.setVariable("tournament", true)`). A private switch of an event is
@@ -283,7 +284,7 @@ and the lighting). `setWeather` needs an `effect` or a `preset`; `patchWeather` 
 | `showAnimation({ x, y }, graphic, animationName?)` | an animation of a graphic at a position (`"default"` when no name) |
 | `showComponentAnimation(id, { x, y }, params?)` | an animation made by a component of the game, with plain data as `params` |
 | `shakeMap(options?)` | shakes the screen. Options: `intensity` (0 to 100), `duration` (0 to 10 000 ms), `frequency` (1 to 60), `direction` (`"x"`, `"y"`, `"both"`) |
-| `launchProjectile({ projectile, from, toward, ... })` | launches a projectile (its type: a graphic or a Studio projectile record) and gives its id. It flies straight and hits the first player or event on its way. Options: `damage`, `speed` (1 to 2 000), `range` (1 to 5 000), `arc` (`true` or `{ height }`, 0 to 500: lobbed over everything, it lands on `toward` or short of it at `range`), `landingRadius` (0 to 500, with `arc`: hits the players and events that close to where it lands), `delay` (0 to 10 000 ms of wind-up), `owner: "player"` (the player of the script launches it: it flies through them, and `projectile.end` and `event.projectileHit` fire for them; without it the projectile has no owner, can hit any player, and those signals do not fire). Listen to `projectile.end` for where it ended |
+| `launchProjectile({ projectile, from, toward, ... })` | launches a projectile (its type: what the clients draw it with, see `projectiles.looks`) and gives its id. `damage` is HP removed from each player or event it hits, as is (no defense, no faction): for a hit that follows the battle rules, use `$player.useSkill`. It flies straight and hits the first player or event on its way. Options: `damage`, `speed` (1 to 2 000), `range` (1 to 5 000), `arc` (`true` or `{ height }`, 0 to 500: lobbed over everything, it lands on `toward` or short of it at `range`), `landingRadius` (0 to 500, with `arc`: hits the players and events that close to where it lands), `delay` (0 to 10 000 ms of wind-up), `owner: "player"` (the player of the script launches it: it flies through them, and `projectile.end` and `event.projectileHit` fire for them; without it the projectile has no owner, can hit any player, and those signals do not fire). Listen to `projectile.end` for where it ended |
 | `playVisualEffect({ effect, at, ... })` | a one-shot particle effect at a point. `effect` names a built-in preset, or the effect of `preset` (a particle preset `{ emitters: [...] }`, such as the resolved preset of a Studio Visual Effect). Options: `duration` (0 to 10 000 ms), `scale` (0.1 to 10) |
 
 **Limits.** A script makes **50 events** and **50 zones** on a map at most, an id or a name that is already on the map is refused, a
@@ -399,7 +400,7 @@ that is not a map, `events` and `shapes` put the events and the zones of the gam
 `expect` keys are `returns`, `error`, `effects`, `effectsInclude`, `effectsExclude`, `texts`, `notifications`, and paths
 `player.gold`, `player.items.<id>`, `shared.<name>`, `state.<key>`, `vars.<name>`; a value is exact or `{ min, max }`.
 The effects are named after the call that made them: `showText`, `showNotification`, `showChoices`, `changeMap`, `openGui`, `addItem`,
-`removeItem`, `setVariable`, `removeVariable`, `gold` (with the new `value`), `wait`, `sync` (a shared property), `state`, and the
+`removeItem`, `setVariable`, `removeVariable`, `useSkill`, `gold` (with the new `value`), `wait`, `sync` (a shared property), `state`, and the
 ones of the map: `createDynamicEvent`, `removeEvent`, `createShape`, `removeShape`, `setMapVariable`, `removeMapVariable`,
 `setWeather`, `patchWeather`, `clearWeather`, `setLighting`, `patchLighting`, `clearLighting`, `setDay`, `setNight`,
 `transitionLighting`, `playSound`, `stopSound`, `showAnimation`, `showComponentAnimation`, `shakeMap`, `launchProjectile`, `playVisualEffect`.

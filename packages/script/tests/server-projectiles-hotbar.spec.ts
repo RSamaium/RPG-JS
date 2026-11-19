@@ -6,6 +6,7 @@ import { testing, type TestingFixture } from "@rpgjs/testing";
 import { ScriptService, provideScripts } from "../src/server";
 import { GAME_API_DESCRIPTION } from "../src/game/description";
 
+const Focus = { id: "Focus", name: "Focus", spCost: 4, hitRate: 1, _type: "skill" as const };
 const Potion = { id: "Potion", name: "Potion", description: "Restores HP", price: 10, hpValue: 50, consumable: true, _type: "item" as const };
 
 let fixture: TestingFixture | undefined;
@@ -15,7 +16,7 @@ beforeEach(() => { n++; });
 
 const serverModule = defineModule<RpgServer>({
   maps: [{ id: "test-map", file: "" }],
-  database: { Potion },
+  database: { Potion, Focus },
   player: {
     async onConnected(p) {
       await p.changeMap("test-map", { x: 100, y: 100 });
@@ -168,6 +169,19 @@ describe("scripts and the projectiles", () => {
     expect(emit.mock.calls[0][1]).toBeUndefined();
   });
 
+  it("removes the damage of a launched projectile from what it hits", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "launch", source: `on("test.go", () => { $map.launchProjectile({ projectile: "arrow", from: { x: 0, y: 0 }, toward: { x: 10, y: 0 }, damage: 7 }); });` });
+    const { player, map } = await start(service);
+    const emit = vi.spyOn(map.projectiles, "emit");
+    const target = { hp: 30 };
+
+    await service.emit("test.go", {}, { player, map });
+    emit.mock.calls[0][0].onHit!({ target } as any);
+
+    expect(target.hp).toBe(23);
+  });
+
   it("refuses a landing radius without a lob", async () => {
     const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
     service.install({ id: "launch", source: `on("test.go", () => { $map.launchProjectile({ projectile: "arrow", from: { x: 0, y: 0 }, toward: { x: 60, y: 0 }, landingRadius: 24 }); });` });
@@ -178,6 +192,45 @@ describe("scripts and the projectiles", () => {
     await service.emit("test.go", {}, { player, map });
 
     expect(emit).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
+describe("scripts and the skills", () => {
+  it("uses a skill the player knows, as player.useSkill does", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "skill", source: `on("test.go", () => { $player.setVariable("used_${n}", $player.useSkill("Focus")); });` });
+    const { player, map } = await start(service);
+    player.learnSkill("Focus");
+    player.sp = 10;
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(player.getVariable(`used_${n}`)).toBe(true);
+    expect(player.sp).toBe(6);
+  });
+
+  it("gives false for a skill the player cannot use", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "skill", source: `on("test.go", () => { $player.setVariable("used_${n}", $player.useSkill("Focus")); });` });
+    const { player, map } = await start(service);
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(player.getVariable(`used_${n}`)).toBe(false);
+  });
+
+  it("refuses a target that is not on the map", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "skill", source: `on("test.go", () => { $player.useSkill("Focus", { target: "nobody" }); });` });
+    const { player, map } = await start(service);
+    player.learnSkill("Focus");
+    player.sp = 10;
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(player.sp).toBe(10);
     error.mockRestore();
   });
 });

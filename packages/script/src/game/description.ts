@@ -52,6 +52,10 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
           sig: '(slot: number, entry: { type: "skill" | "item" | string; id: string }): void',
           doc: "Puts a skill the player knows, a usable item or the entry of a plugin in a slot of the hotbar (0 to 9), as player.assignHotbarSlot does. The entry that was elsewhere in the hotbar moves. Listen to player.hotbarChange for the changes.",
         },
+        useSkill: {
+          sig: "(skillId: string, options?: { target?: string }): boolean",
+          doc: "Uses a skill the player knows, as player.useSkill does. With Action Battle on the map, a skill with an action follows its rules: its projectile, damage formula, factions, states, SP cost and cooldown. target is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy in front of the player. Gives false when the skill cannot be used now (not learned, not enough SP, cooldown, no target).",
+        },
       },
     },
     $map: {
@@ -94,7 +98,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         showComponentAnimation: { sig: "(id: string, position: { x: number; y: number }, params?: object): void", doc: "Shows an animation made by a component of the game, with plain data as params." },
         launchProjectile: {
           sig: "(options: { projectile: string; from: { x: number; y: number }; toward: { x: number; y: number }; damage?: number; speed?: number; range?: number; arc?: boolean | { height?: number }; landingRadius?: number; delay?: number; owner?: \"player\" }): string",
-          doc: "Launches a projectile of the map from a point toward another one and gives its id. `projectile` is the type of the projectile (its graphic, or a Studio projectile record). By default it flies straight and hits the first player or event on its way. With arc, it is lobbed over them and lands on `toward` (or short of it, at range); with landingRadius it then hits the players and events within that distance of where it lands, otherwise it hits nothing. delay is a wind-up in ms before it leaves. With owner: \"player\" the player of the script launches it: it flies through them, and projectile.end and event.projectileHit fire for them; without it the projectile has no owner, can hit any player, and those two signals do not fire. Listen to event.projectileHit, player.projectileHit and projectile.end for what it does. speed is at most 2 000, range at most 5 000, arc.height and landingRadius at most 500, delay at most 10 000.",
+          doc: "Launches a projectile of the map from a point toward another one and gives its id. `projectile` is the type of the projectile: the clients draw it with the look registered for this type. damage is HP removed from each player or event it hits, as is (no defense, no faction): for a hit that follows the battle rules, use $player.useSkill. By default it flies straight and hits the first player or event on its way. With arc, it is lobbed over them and lands on `toward` (or short of it, at range); with landingRadius it then hits the players and events within that distance of where it lands, otherwise it hits nothing. delay is a wind-up in ms before it leaves. With owner: \"player\" the player of the script launches it: it flies through them, and projectile.end and event.projectileHit fire for them; without it the projectile has no owner, can hit any player, and those two signals do not fire. Listen to event.projectileHit, player.projectileHit and projectile.end for what it does. speed is at most 2 000, range at most 5 000, arc.height and landingRadius at most 500, delay at most 10 000.",
         },
         playVisualEffect: {
           sig: "(options: { effect: string; at: { x: number; y: number }; preset?: object; duration?: number; scale?: number }): void",

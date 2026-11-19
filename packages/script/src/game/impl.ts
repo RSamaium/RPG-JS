@@ -61,11 +61,15 @@ export interface DataPort {
 
 /** What a script gives to launch a projectile from the map. */
 export interface ProjectileLaunchOptions {
-  /** The type of the projectile: its graphic, or the id of a Studio projectile record. */
+  /** The type of the projectile: the clients draw it with the look (`projectiles.looks`) or the component registered for this type. */
   projectile: string;
   from: { x: number; y: number };
   /** The point the projectile flies toward. */
   toward: { x: number; y: number };
+  /**
+   * HP removed from each player or event it hits, as is: no defense, no faction, no hit reaction. For a hit that follows the
+   * rules of the battle system, use a skill instead (`$player.useSkill`).
+   */
   damage?: number;
   speed?: number;
   range?: number;
@@ -95,6 +99,12 @@ export interface VisualEffectPlayOptions {
   /** How long it stays drawn, in ms. */
   duration?: number;
   scale?: number;
+}
+
+/** What a skill is used on. */
+export interface SkillUseOptions {
+  /** Id of an event or a player of the map. Without it, the battle system picks a target (or the skill has none). */
+  target?: string;
 }
 
 /** A slot of the hotbar: a skill, an item, or the entry of a plugin. */
@@ -172,6 +182,12 @@ export interface PlayerPort {
   closeGui(id: string, data?: VariableValue): void | Promise<void>;
   /** Puts a skill, an item or a plugin entry in a slot of the hotbar, as `player.assignHotbarSlot(slot, entry)` does. */
   assignHotbarSlot(slot: number, entry: HotbarEntryOptions): void | Promise<void>;
+  /**
+   * Uses a skill the player knows, as `player.useSkill(id, target)` does: with Action Battle on the map, a skill with an action
+   * follows its rules (projectile, damage formula, factions, SP, cooldown). `target` is the id of an event or a player of the map.
+   * Gives false when the skill cannot be used now.
+   */
+  useSkill(skillId: string, options?: SkillUseOptions): boolean | Promise<boolean>;
 }
 
 /** What a script run needs from its environment. */
@@ -404,6 +420,11 @@ const visualEffectOptions = (v: unknown): VisualEffectPlayOptions => {
   if (o.scale !== undefined) out.scale = Math.min(MAX_VISUAL_EFFECT_SCALE, Math.max(0.1, finite(o.scale, "scale")));
   return out;
 };
+const skillUseOptions = (v: unknown): SkillUseOptions => {
+  if (v === undefined) return {};
+  const o = opts(v);
+  return o.target === undefined ? {} : { target: text(o.target, "the id of the target") };
+};
 const hotbarEntry = (v: unknown): HotbarEntryOptions => {
   const o = opts(v);
   return { type: text(o.type, "the type of a hotbar entry"), id: text(o.id, "the id of a hotbar entry") };
@@ -455,6 +476,7 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         updateGui: (w, [id, d]) => w.player.updateGui(guiId(id), guiData(d)),
         closeGui: (w, [id, d]) => w.player.closeGui(guiId(id), d === undefined ? undefined : guiData(d)),
         assignHotbarSlot: (w, [slot, entry]) => w.player.assignHotbarSlot(hotbarSlot(slot), hotbarEntry(entry)),
+        useSkill: (w, [id, o]) => w.player.useSkill(text(id, "a skill id"), skillUseOptions(o)),
         changeMap: (w, [m, p]) => {
           const map = text(m, "a map id");
           if (p === undefined) return w.player.changeMap(map);

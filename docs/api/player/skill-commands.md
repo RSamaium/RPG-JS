@@ -27,6 +27,7 @@ Learn, forget, and use skills from the server-side player API.
 - [onUse](#onuse)
 - [onUseFailed](#onusefailed)
 - [power](#power)
+- [Register Skill Use Handler](#register-skill-use-handler)
 - [resolveSkillsSnapshot](#resolveskillssnapshot)
 - [spCost](#spcost)
 - [useSkill](#useskill)
@@ -411,6 +412,42 @@ Base power of the skill for damage calculation
 power: number
 ```
 
+## Register Skill Use Handler
+
+Let a battle system run `player.useSkill`, for every player.
+
+Handlers run in the order they were registered; the first one that returns
+the skill data wins. A `useSkill` called by a handler itself (to fall back)
+runs the native rule. Server only: the use is authoritative, its effects are
+synchronized as usual. Works in standalone RPG and MMORPG modes.
+
+- Source: `packages/server/src/Player/SkillManager.ts`
+- Kind: `function`
+- Member of: `SkillManager`
+
+### Signature
+
+```ts
+registerSkillUseHandler(handler)
+```
+
+### Parameters
+
+- `handler`: `SkillUseHandler`
+
+### Returns
+
+A function that removes the handler
+
+### Examples
+
+```ts
+const unregister = registerSkillUseHandler((player, skillId, target) => {
+  if (!isMyBattleSkill(skillId)) return undefined;
+  return myBattle.use(player, skillId, target);
+});
+```
+
 ## resolveSkillsSnapshot
 
 Resolve skill snapshot entries into Skill instances without side effects.
@@ -455,6 +492,8 @@ Use a learned skill
 
 Executes a skill, consuming SP and applying effects to targets.
 The skill must be learned and the player must have enough SP.
+A battle system registered with `registerSkillUseHandler` (such as
+Action Battle) may run it with its own rules instead.
 
 - Source: `packages/server/src/Player/SkillManager.ts`
 - Kind: `method`

@@ -4,6 +4,7 @@ import {
   getHotbarEntryType,
   isLootEvent,
   registerHotbarEntryType,
+  registerSkillUseHandler,
   type HotbarGuiOptions,
   type RpgServer,
 } from "@rpgjs/server";
@@ -1167,10 +1168,22 @@ const syncActionBattleActionBar = (
   }
 };
 
+const isEntityTarget = (
+  value: unknown
+): value is RpgPlayer | RpgEvent | Array<RpgPlayer | RpgEvent> =>
+  Array.isArray(value) ||
+  (!!value && typeof (value as { x?: unknown }).x === "function");
+
 const handleActionBattleSkillUse = (
   player: RpgPlayer,
   skillId: string,
-  target: { x: number; y: number } | undefined,
+  // A tile picked by the player, or the entity (or entities) the skill is used on.
+  target:
+    | { x: number; y: number }
+    | RpgPlayer
+    | RpgEvent
+    | Array<RpgPlayer | RpgEvent>
+    | undefined,
   options: ActionBattleOptions
 ) => {
   if (!isPlayerSkillLearned(player, skillId)) return false;
@@ -1215,6 +1228,11 @@ const handleActionBattleSkillUse = (
 
   if (actionConfig?.target === "self") {
     return finishUse(player);
+  }
+
+  // Used on a given entity (by `player.useSkill(id, target)`): no tile targeting to resolve.
+  if (isEntityTarget(target)) {
+    return finishUse(target);
   }
 
   const map = player.getCurrentMap();
@@ -1469,6 +1487,34 @@ let actionItemsRegistered = false;
  * boomerang) can be assigned even when it is not consumable, and its use goes
  * through the combat flow. Other items keep the core behavior.
  */
+let skillUseRegistered = false;
+
+/**
+ * Make `player.useSkill(id, target?)` follow the rules of Action Battle for a
+ * skill with an `action` (projectile, melee, area...), on a map where Action
+ * Battle is enabled: SP cost, cooldown, soft targeting without a target, damage
+ * formula, factions and hit reactions. Other skills keep the native rule.
+ */
+const registerActionBattleSkillUse = () => {
+  if (skillUseRegistered) return;
+  skillUseRegistered = true;
+  registerSkillUseHandler((player, skillId, target) => {
+    // Events fight through their AI; scripts and hotbars use skills for players.
+    if (typeof (player as any).isEvent === "function" && (player as any).isEvent()) return undefined;
+    const options = getActionBattleOptions();
+    const map = player.getCurrentMap?.() ?? undefined;
+    if (!isActionBattleEnabled({ player, map }, options)) return undefined;
+    const skillData = resolvePlayerSkillUsable(player, skillId);
+    if (!skillData || !getActionBattleActionConfig(skillData)) return undefined;
+    // Without a map there is nothing to aim at: the native rule applies.
+    if (!map) return undefined;
+    if (!handleActionBattleSkillUse(player, skillId, target, options)) {
+      throw new Error(`The skill "${skillId}" cannot be used now (not learned, not enough SP, cooldown or no target)`);
+    }
+    return skillData;
+  });
+};
+
 const registerActionBattleHotbarItems = () => {
   if (actionItemsRegistered) return;
   const native = getHotbarEntryType("item");
@@ -1502,6 +1548,7 @@ export const createActionBattleServer = (
   setActionBattleOptions(options);
   setActionBattleSystems(options);
   registerActionBattleHotbarItems();
+  registerActionBattleSkillUse();
   return defineModule<RpgServer>({
     player: {
       /**

@@ -53,6 +53,7 @@ Core server-side player commands defined on the main Player class.
 - [shapes](#shapes)
 - [showAnimation](#showanimation)
 - [showComponentAnimation](#showcomponentanimation)
+- [showEmotionBubble](#showemotionbubble)
 - [stopAllSounds](#stopallsounds)
 - [stopSound](#stopsound)
 - [tiles](#tiles)
@@ -1280,6 +1281,34 @@ player.showComponentAnimation("heal", {
 });
 ```
 
+## showEmotionBubble
+
+Show an emotion bubble above this player or event.
+
+The bubble pops in, follows the character while it moves, then pops out.
+It is visible to every client on the map.
+
+- Source: `packages/server/src/Player/Player.ts`
+- Kind: `method`
+- Defined in: `RpgPlayer`
+
+### Signature
+
+```ts
+showEmotionBubble(emotion: EmotionBubble | (string & {}), options?: EmotionBubbleOptions)
+```
+
+### Parameters
+
+- `emotion`: `EmotionBubble | (string & {})`
+- `options?`: `EmotionBubbleOptions`
+
+### Examples
+
+```ts
+player.showEmotionBubble("like");
+event.showEmotionBubble("surprise", { size: 3, hold: 2500 });
+```
 
 ## stopAllSounds
 
