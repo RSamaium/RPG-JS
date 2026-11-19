@@ -118,6 +118,22 @@ player.actionBattleFaction = "red-team";
 player.actionBattleTargets = ["blue-team"];
 ```
 
+Use `"hostile"` as the selector to target every entity of another faction. For a
+free-for-all, give each player its own faction:
+
+```ts
+player.actionBattleFaction = player.id;
+player.actionBattleTargets = "hostile";
+```
+
+::: warning MMORPG mode
+Set the faction and targets in `onJoinMap`, not in `onConnected`. In MMORPG mode,
+`changeMap()` transfers the player to the map room, which only keeps synchronized
+properties (name, hp, ...). `actionBattleFaction`, `actionBattleTargets` and
+`player.param[...]` values such as `ATK` set before the transfer are lost: no hit
+lands, or damage is `0`. Set them again in `onJoinMap`.
+:::
+
 ## Enable the module
 
 Register the module on the server:

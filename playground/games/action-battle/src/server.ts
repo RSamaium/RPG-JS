@@ -320,6 +320,13 @@ const player = {
     player.changeMap("action-battle-lab", { x: 260, y: 360 });
   },
 
+  // PvP: every player is its own faction. Set it here, not in onConnected:
+  // in MMORPG mode changeMap() moves the player to the map room and drops it.
+  onJoinMap(player: RpgPlayer) {
+    (player as any).actionBattleFaction = player.id;
+    (player as any).actionBattleTargets = "hostile";
+  },
+
   async onInput(player: RpgPlayer, input: any) {
     const data = input.data ?? {};
 
@@ -379,7 +386,6 @@ export default createServer({
       visual: createActionBattleVisual("impact"),
       animations: { attack: attackAnimation },
       combat: {
-        pvp: true,
       },
       ai: {
         presets: {
