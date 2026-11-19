@@ -12,6 +12,11 @@ import {
   type RpgAudioChannel,
   type RpgMusicManager,
   type RpgPlaySoundOptions,
+  type RpgClientEngine,
+  type RpgClientEvent,
+  type RpgClientPlayer,
+  type HideMapObjectsOptions,
+  type RestoreMapObjects,
 } from "./index";
 
 describe("client public API types", () => {
@@ -69,5 +74,26 @@ describe("client public API types", () => {
       position?: { x: number; y: number };
       listener?: { x: number; y: number };
     }>();
+  });
+
+  test("hideMapObjects takes typed selectors and returns a restore function", () => {
+    expectTypeOf<RpgClientEngine["hideMapObjects"]>().parameter(0).toEqualTypeOf<HideMapObjectsOptions>();
+    expectTypeOf<RpgClientEngine["hideMapObjects"]>().returns.toEqualTypeOf<RestoreMapObjects>();
+    expectTypeOf<RestoreMapObjects>().toEqualTypeOf<() => void>();
+    expectTypeOf<RpgClientEngine["isMapObjectHidden"]>().toEqualTypeOf<(id: string) => boolean>();
+
+    const options: HideMapObjectsOptions = {
+      events: (event, id) => {
+        expectTypeOf(event).toEqualTypeOf<RpgClientEvent>();
+        expectTypeOf(id).toEqualTypeOf<string>();
+        return true;
+      },
+      players: "others",
+    };
+    expectTypeOf(options).toMatchTypeOf<HideMapObjectsOptions>();
+    expectTypeOf<{ players: (player: RpgClientPlayer, id: string) => boolean }>().toMatchTypeOf<HideMapObjectsOptions>();
+    expectTypeOf<{ events: ["guard"] }>().toMatchTypeOf<HideMapObjectsOptions>();
+    // `'others'` only makes sense for players
+    expectTypeOf<{ events: "others" }>().not.toMatchTypeOf<HideMapObjectsOptions>();
   });
 });

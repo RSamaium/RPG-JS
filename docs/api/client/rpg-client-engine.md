@@ -38,10 +38,12 @@ Reference for the `RpgClientEngine` class.
 - [getSoundVolume](#getsoundvolume)
 - [getSpriteComponent](#getspritecomponent)
 - [getSpriteSheet](#getspritesheet)
+- [hideMapObjects](#hidemapobjects)
 - [interactions](#interactions)
 - [interruptCurrentPlayerMovement](#interruptcurrentplayermovement)
 - [isConnected](#isconnected)
 - [isConnectionDeferred](#isconnectiondeferred)
+- [isMapObjectHidden](#ismapobjecthidden)
 - [lootConfig](#lootconfig)
 - [mapShakeTrigger](#mapshaketrigger)
 - [music](#music)
@@ -862,6 +864,56 @@ const spritesheet = engine.getSpriteSheet('my-sprite');
 const spritesheet = await engine.getSpriteSheet('dynamic-sprite');
 ```
 
+## hideMapObjects
+
+Hide map objects (events, other players) for this client only, while a module draws its own scene in the map
+world: a battle board, a cutscene, a minigame.
+
+Only the drawing of the objects is hidden: their sprite, name, components, attached GUIs and lighting shadow.
+They stay on the map and keep being synchronized (position, state, collisions), the server and the other players
+see no change, and the camera follow and the `onAction` of the events are not affected. A hidden object no longer
+receives the pointer.
+
+Objects that enter the map after the call (a new event, a player who joins) follow the same filter. Calls
+compose: an object is shown again when no remaining call hides it. The filters are dropped when the client
+changes map.
+
+Client-only: it works the same in standalone RPG and MMORPG modes. To hide an object for everyone, change it on
+the server instead (for example with `player.setGraphic()`).
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+hideMapObjects
+```
+
+### Parameters
+
+- `options`: `HideMapObjectsOptions`
+
+### Returns
+
+A function that shows the objects again. Calling it more than once does nothing.
+
+### Examples
+
+```ts
+// Enter a battle drawn on the map: hide the events and the other players
+const restore = engine.hideMapObjects({ events: true, players: 'others' })
+
+// Hide only some events, by id or by a test on the event
+const hideGuards = engine.hideMapObjects({ events: ['guard-1', 'guard-2'] })
+const hideNpcs = engine.hideMapObjects({ events: (event, id) => id.startsWith('npc-') })
+
+// Leave the battle
+restore()
+```
+
 ## interactions
 
 Register client-only pointer behaviors for map sprites. Interactions remain
@@ -951,6 +1003,36 @@ for example behind a sign-in screen.
 
 ```ts
 isConnectionDeferred(): boolean
+```
+
+## isMapObjectHidden
+
+Whether `hideMapObjects` currently hides a map object for this client. Reactive inside CanvasEngine
+computations, so a module can draw its own marker for a hidden object.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+isMapObjectHidden
+```
+
+### Parameters
+
+- `id`: `string`
+
+### Returns
+
+`true` when a filter hides it, `false` otherwise or when no object of the map has this id.
+
+### Examples
+
+```ts
+const showMarker = computed(() => engine.isMapObjectHidden(eventId))
 ```
 
 ## lootConfig

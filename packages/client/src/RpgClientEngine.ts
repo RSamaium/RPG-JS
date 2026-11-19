@@ -49,6 +49,7 @@ import { RpgClientBuiltinI18n } from "./i18n";
 import { dismissStartupSplash, setStartupSplashLabel } from "./services/splash";
 import { createLocalePreferences } from "./services/localePreferences";
 import { clearCameraFollowPlugins, type CameraFollowSmoothMove } from "./services/cameraFollow";
+import { MapObjectVisibility, type HideMapObjectsOptions, type RestoreMapObjects } from "./services/mapObjectVisibility";
 import { RpgMusicManager } from "./Game/MusicManager";
 import {
   RpgClientRoom,
@@ -224,6 +225,8 @@ export class RpgClientEngine<T = any> {
   cameraPixelSnap = true;
   /** Incremented for each camera follow command so repeated commands on the same target are applied */
   cameraFollowRevision = signal(0);
+  /** @internal Filters of `hideMapObjects`, read by the character components. */
+  private readonly mapObjectVisibility = new MapObjectVisibility();
   /** Trigger for map shake animation */
   mapShakeTrigger: ConfigurableTrigger<MapShakeOptions> = trigger<MapShakeOptions>();
 
@@ -988,6 +991,7 @@ export class RpgClientEngine<T = any> {
     this.clearComponentAnimations();
     this.projectiles.setMapId(nextMapId);
     this.resetCameraFollow(false);
+    this.mapObjectVisibility.clear();
     // Destroying every character and the whole map tree in one frame caused a
     // visible hitch on map transfers: spread the teardown over several frames.
     this.sceneMap.reset();
@@ -1810,6 +1814,69 @@ export class RpgClientEngine<T = any> {
     this.cameraFollowSmoothMove = smoothMove;
     this.cameraFollowTargetId.set(null);
     this.cameraFollowRevision.set(this.cameraFollowRevision() + 1);
+  }
+
+  /**
+   * Hide map objects (events, other players) for this client only, while a module draws its own scene in the map
+   * world: a battle board, a cutscene, a minigame.
+   *
+   * Only the drawing of the objects is hidden: their sprite, name, components, attached GUIs and lighting shadow.
+   * They stay on the map and keep being synchronized (position, state, collisions), the server and the other players
+   * see no change, and the camera follow and the `onAction` of the events are not affected. A hidden object no longer
+   * receives the pointer.
+   *
+   * Objects that enter the map after the call (a new event, a player who joins) follow the same filter. Calls
+   * compose: an object is shown again when no remaining call hides it. The filters are dropped when the client
+   * changes map.
+   *
+   * Client-only: it works the same in standalone RPG and MMORPG modes. To hide an object for everyone, change it on
+   * the server instead (for example with `player.setGraphic()`).
+   *
+   * @title hideMapObjects
+   * @method hideMapObjects
+   * @param options - The objects to hide.
+   * @param options.events - `true` for all the events, a list of ids, or a function `(event, id) => boolean`.
+   * @param options.players - `true` for all the players, `'others'` for every player but the local one, a list of
+   *   ids, or a function `(player, id) => boolean`.
+   * @returns A function that shows the objects again. Calling it more than once does nothing.
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * // Enter a battle drawn on the map: hide the events and the other players
+   * const restore = engine.hideMapObjects({ events: true, players: 'others' })
+   *
+   * // Hide only some events, by id or by a test on the event
+   * const hideGuards = engine.hideMapObjects({ events: ['guard-1', 'guard-2'] })
+   * const hideNpcs = engine.hideMapObjects({ events: (event, id) => id.startsWith('npc-') })
+   *
+   * // Leave the battle
+   * restore()
+   * ```
+   */
+  hideMapObjects(options: HideMapObjectsOptions): RestoreMapObjects {
+    return this.mapObjectVisibility.hide(options);
+  }
+
+  /**
+   * Whether `hideMapObjects` currently hides a map object for this client. Reactive inside CanvasEngine
+   * computations, so a module can draw its own marker for a hidden object.
+   *
+   * @title isMapObjectHidden
+   * @method isMapObjectHidden
+   * @param id - The id of an event or a player of the current map.
+   * @returns `true` when a filter hides it, `false` otherwise or when no object of the map has this id.
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * const showMarker = computed(() => engine.isMapObjectHidden(eventId))
+   * ```
+   */
+  isMapObjectHidden(id: string): boolean {
+    const event = this.sceneMap?.events?.()?.[id];
+    if (event) return this.mapObjectVisibility.isHidden("events", id, event, this.playerIdSignal());
+    const player = this.sceneMap?.players?.()?.[id];
+    if (player) return this.mapObjectVisibility.isHidden("players", id, player, this.playerIdSignal());
+    return false;
   }
 
   addParticle(particle: any) {
