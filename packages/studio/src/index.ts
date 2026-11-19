@@ -27,6 +27,7 @@ export { registerStudioMapExtension, runStudioMapExtensions } from "./map-extens
 export { resolveStudioEventDisplay } from "./event-display";
 export type { StudioEventDisplay, StudioEventDisplayInput } from "./event-display";
 export { setStudioTerrainChunkSize } from "./map-renderer";
+export { studioMapHitboxes } from "./map-streaming";
 export type { StudioElementLayerName, StudioMapExtension, StudioMapExtensionContext } from "./map-extensions";
 export { createStudioActionBattleAnimations } from "./action-battle-animations";
 export type { StudioCombatAnimationIds, StudioCombatAnimationOptions } from "./action-battle-animations";

@@ -336,6 +336,35 @@ deployments: never expose database adapters, private storage handles, or
 credentials to browser code. When `dataProvider` is omitted, the existing
 online, offline, and auto runtime modes keep selecting the built-in provider.
 
+### Read the collisions of a map
+
+A tool that works on a map it already holds (placing events on free cells,
+checking a path, a test) can read its collisions with `studioMapHitboxes()`,
+without loading or publishing anything:
+
+```ts
+import { studioMapHitboxes } from "@rpgjs/studio/server";
+
+const hitboxes = studioMapHitboxes(map);
+```
+
+It returns the collisions the game gives the map, computed by the same code as
+`createStudioMapUpdatePayload()`: the hitboxes and polygons drawn on the map,
+the hitboxes of its placed elements, and the collisions of its terrain relief,
+walls and holes. Each one is a rectangle (`x`, `y`, `width`, `height`) or a
+polygon (`points`), with an `id`.
+
+- **Pure and synchronous:** no data provider, no global state, no network. It
+  runs in a server request, a Cloudflare Worker, a test or a script, and does
+  not change the map it is given.
+- **Coordinates:** pixels of the map (48 per cell), not multiplied by the
+  map's `params.scale`, the space of a map streamed to an MMORPG room.
+- **Input:** a Studio v2 map, or a payload that holds it in `data`. A map in
+  another format throws. A payload already prepared gives back its hitboxes.
+- **Not included:** the events, which are placed and moved at run time.
+
+It is also exported from `@rpgjs/studio` for client code.
+
 For a runnable local Worker, deterministic fixture, seed script, and real Studio
 API seed command, see the
 [Studio playground](https://github.com/RSamaium/RPG-JS/tree/master/playground/games/studio).
