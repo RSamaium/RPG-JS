@@ -34,6 +34,7 @@
   import { RpgClientEngine } from "../RpgClientEngine";
   import {
     projectileColor,
+    projectileImpactFeedback,
     projectileImpactFx,
     projectileSparks,
     projectileTrailFx,
@@ -139,17 +140,31 @@
     if (trail.length > options.length) trail.pop();
   });
 
+  // The local player hears and feels an impact only near it: a fight elsewhere on the map stays silent.
+  const localListener = () => {
+    const player = engine.getCurrentPlayer?.();
+    if (!player || typeof player.x !== "function") return null;
+    const hitbox = typeof player.hitbox === "function" ? player.hitbox() : undefined;
+    return { x: player.x() + (hitbox?.w ?? 0) / 2, y: player.y() + (hitbox?.h ?? 0) / 2 };
+  };
+
   let played = false;
   effect(() => {
     const hit = impact();
     if (!hit || played) return;
     played = true;
+    const listener = localListener();
+    const feedback = projectileImpactFeedback(hit, listener, visual());
+    if (!feedback) return;
     const sound = visual().impactSound;
-    if (typeof sound === "string" && sound) engine.playSound(sound);
-    const shake = visual().shake;
-    if (shake) {
+    if (typeof sound === "string" && sound) {
+      engine.playSound(sound, listener
+        ? { position: { x: hit.x, y: hit.y }, listener, maxDistance: feedback.maxDistance }
+        : undefined);
+    }
+    if (feedback.shake > 0) {
       engine.mapShakeTrigger.start({
-        intensity: typeof shake === "number" ? shake : 4,
+        intensity: feedback.shake,
         duration: 160,
         frequency: 18,
       });

@@ -42,12 +42,43 @@ export interface ProjectileLook {
    * or one per surface.
    */
   impactFx?: string | Partial<Record<ClientProjectileSurface, string>>;
-  /** Sound id played on impact. */
+  /** Sound id played on impact. It fades with the distance to the local player and pans to the side of the impact. */
   impactSound?: string;
-  /** Shake the map on impact: `true`, or the intensity. */
+  /** Shake the map on impact: `true`, or the intensity. It fades with the distance to the local player. */
   shake?: boolean | number;
+  /**
+   * Beyond this distance from the local player, in pixels, the impact plays no sound and does not shake the map.
+   * Defaults to 480: in an MMORPG, the impacts of a fight elsewhere on the map stay silent.
+   */
+  feedbackDistance?: number;
   /** How long the impact stays drawn, in ms. Defaults to 350. */
   impactDuration?: number;
+}
+
+/** Distance under which an impact is felt at full strength, in pixels. */
+const FULL_FEEDBACK_DISTANCE = 64;
+const DEFAULT_FEEDBACK_DISTANCE = 480;
+const DEFAULT_SHAKE = 4;
+
+/**
+ * How an impact is felt by the local player: the shake intensity and the distance at which its sound becomes silent, or
+ * `null` when the impact is too far to be felt. Both fade from 64 px to `feedbackDistance`. Without a local player (no
+ * player on this client), the impact is felt at full strength.
+ */
+export function projectileImpactFeedback(
+  impact: { x: number; y: number },
+  listener: { x: number; y: number } | null | undefined,
+  look: Pick<ProjectileLook, "shake" | "feedbackDistance">,
+): { shake: number; maxDistance: number } | null {
+  const maxDistance = Math.max(FULL_FEEDBACK_DISTANCE + 1, Number(look.feedbackDistance) || DEFAULT_FEEDBACK_DISTANCE);
+  const baseShake = look.shake === true ? DEFAULT_SHAKE : typeof look.shake === "number" && look.shake > 0 ? look.shake : 0;
+  if (!listener) return { shake: baseShake, maxDistance };
+  const distance = Math.hypot(impact.x - listener.x, impact.y - listener.y);
+  if (distance >= maxDistance) return null;
+  const strength = distance <= FULL_FEEDBACK_DISTANCE
+    ? 1
+    : 1 - (distance - FULL_FEEDBACK_DISTANCE) / (maxDistance - FULL_FEEDBACK_DISTANCE);
+  return { shake: baseShake * strength, maxDistance };
 }
 
 /** Parse a `#rrggbb` string or a number into a color number. */

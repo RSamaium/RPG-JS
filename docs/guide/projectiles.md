@@ -530,8 +530,9 @@ dust on the ground.
 | `trail` | none | `true`, or `{ color, width, length }` (length in frames): a ribbon following the projectile. |
 | `trailFx` | none | Particle preset of `@canvasengine/presets` attached to the flying projectile. |
 | `impactFx` | none | Particle preset replacing the drawn impact: one name, or `{ target, wall, ground }`. |
-| `impactSound` | none | Sound id played on impact. |
-| `shake` | none | Shake the map on impact: `true`, or the intensity. |
+| `impactSound` | none | Sound id played on impact. It fades with the distance to the local player and pans to the side of the impact. |
+| `shake` | none | Shake the map on impact: `true`, or the intensity. It fades with the distance to the local player. |
+| `feedbackDistance` | `480` | Beyond this distance from the local player (pixels), the impact plays no sound and does not shake the map, so a fight elsewhere on an MMORPG map stays silent. |
 | `impactDuration` | `350` | How long the impact stays drawn, in ms. It applies to custom components too. |
 
 These fields are typed by `ProjectileLook`, exported by `@rpgjs/client`. A look
