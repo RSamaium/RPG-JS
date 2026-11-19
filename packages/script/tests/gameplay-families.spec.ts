@@ -119,7 +119,8 @@ describe("3. movement", () => {
     expect(await fails(`$map.moveEvent("guard", { x: 1, y: 1 }, { speed: 99 });`, world)).toMatch(/speed is a number from 0.1 to 20/);
     expect(await fails(`$map.followPlayer("guard", { distance: -1 });`, world)).toMatch(/distance/);
     expect(await fails(`$map.turnEvent("guard", "north");`, world)).toMatch(/"up", "down", "left", "right"/);
-    expect(await fails(`$map.setEventVisible("guard", 1);`, world)).toMatch(/true or false/);
+    // a value the check cannot know (a literal of the wrong kind is refused when the script is checked)
+    expect(await fails(`const visible = 1; $map.setEventVisible("guard", visible);`, world)).toMatch(/true or false/);
     expect(await fails(`$map.stopEvent("nobody");`, world)).toMatch(/no event "nobody"/);
   });
 
