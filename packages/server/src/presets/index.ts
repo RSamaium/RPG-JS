@@ -50,13 +50,16 @@ export const COEFFICIENT_ELEMENTS = function(a, b, bDef) {
 }
 
 export const DAMAGE_SKILL = function(a, b, skill) {
-    let power = skill.power + (a[ATK] * (skill.coefficient[ATK] || 0))
+    // A skill without power or coefficients, or a parameter that is not set, counts as 0.
+    const coefficient = skill.coefficient ?? {}
+    const value = (params, key) => Number(params[key]) || 0
+    let power = (Number(skill.power) || 0) + (value(a, ATK) * (coefficient[ATK] || 0))
     if (power > 0) {
-        power -= b[PDEF] * (skill.coefficient[PDEF] || 0) / 2
-        power -= b[SDEF] * (skill.coefficient[SDEF] || 0) / 2
+        power -= value(b, PDEF) * (coefficient[PDEF] || 0) / 2
+        power -= value(b, SDEF) * (coefficient[SDEF] || 0) / 2
         power = Math.max(power, 0)
     }
     let rate = 20;
-    [STR, DEX, AGI, INT].forEach(val => rate += a[val] * (skill.coefficient[val] || 0))
+    [STR, DEX, AGI, INT].forEach(val => rate += value(a, val) * (coefficient[val] || 0))
     return Math.round(power * rate / 20)
 }

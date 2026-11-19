@@ -311,18 +311,19 @@ const player = {
   onConnected(player: RpgPlayer) {
     player.name = "Target Hero";
     player.setGraphic("hero");
-    player.initializeDefaultStats();
-    player.hp = 240;
-    player.sp = 100;
-    player.param[MAXHP] = 240;
-    player.param[MAXSP] = 100;
-    player.param[ATK] = 14;
     player.changeMap("action-battle-lab", { x: 260, y: 360 });
   },
 
-  // PvP: every player is its own faction. Set it here, not in onConnected:
-  // in MMORPG mode changeMap() moves the player to the map room and drops it.
+  // Stats and PvP faction are set here, not in onConnected: changeMap() moves the
+  // player to the map room and drops what was set before (ATK was lost, so every
+  // skill dealt NaN damage).
   onJoinMap(player: RpgPlayer) {
+    player.initializeDefaultStats();
+    player.param[MAXHP] = 240;
+    player.param[MAXSP] = 100;
+    player.param[ATK] = 14;
+    player.hp = 240;
+    player.sp = 100;
     (player as any).actionBattleFaction = player.id;
     (player as any).actionBattleTargets = "hostile";
   },

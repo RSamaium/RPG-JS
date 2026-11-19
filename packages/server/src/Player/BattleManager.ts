@@ -77,15 +77,20 @@ export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase): new (.
       skill?: SkillData
     ): DamageResult {
       const self = this as unknown as PlayerWithMixins;
+      // A parameter that is not set (or not a number) counts as 0: a formula never gets NaN from it.
+      const finite = (value: unknown) => {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : 0;
+      };
       const getParam = (player: RpgPlayer) => {
         const params = {};
         Object.keys(self.parameters).forEach((key) => {
-          params[key] = (player as any).param[key];
+          params[key] = finite((player as any).param[key]);
         });
         return {
-          [ATK]: (player as any).atk,
-          [PDEF]: (player as any).pdef,
-          [SDEF]: (player as any).sdef,
+          [ATK]: finite((player as any).atk),
+          [PDEF]: finite((player as any).pdef),
+          [SDEF]: finite((player as any).sdef),
           ...params,
         };
       };
@@ -136,6 +141,11 @@ export function WithBattleManager<TBase extends PlayerCtor>(Base: TBase): new (.
       if (self.hasEffect(Effect.SUPER_GUARD)) {
         damage /= 4;
         superGuard = true;
+      }
+      // A custom formula that gives no number would turn the HP into NaN: it deals nothing instead.
+      if (!Number.isFinite(damage)) {
+        console.warn(`[RPGJS] The damage formula gave ${damage}${skill ? ` for the skill "${(skill as any).id}"` : ""}: no damage is dealt.`);
+        damage = 0;
       }
       self.hp -= damage;
       return {
