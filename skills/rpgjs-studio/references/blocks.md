@@ -1199,6 +1199,51 @@ Use to open a shop with item IDs from the database.
 }
 ```
 
+### `start_battle`, `start_turn_battle`, `start_tactical_battle`
+
+Use to fight a troop of the database. The event waits for the end of the battle
+before running the next blocks. `start_battle` lets the battle system of the
+project play the troop; `start_turn_battle` and `start_tactical_battle` ask for
+one system.
+
+`outcomeVariableId` is optional. It receives how the battle ended: `1` victory,
+`2` defeat, `3` escape (a tactical battle the player left before its end counts
+as an escape). Put a `conditional_branch` on that variable after the battle to
+run blocks only on a victory. The rewards of a victory are given by the battle
+system, not by the block.
+
+```json
+{
+  "type": "start_turn_battle",
+  "data": {
+    "troopId": "TROOP_ID",
+    "outcomeVariableId": "VARIABLE_ID"
+  }
+}
+```
+
+Then, to run blocks only when the troop is beaten:
+
+```json
+{
+  "type": "conditional_branch",
+  "data": {
+    "conditionType": "variable",
+    "variableId": "VARIABLE_ID",
+    "comparison": "equal",
+    "valueType": "constant",
+    "constantValue": 1
+  },
+  "children": []
+}
+```
+
+The variable is left as it is when no battle system plays the troop, or when
+the system does not tell how the battle ended. The blocks call the
+`studioBattle` hooks of the game modules (`start`, `startTurnBased`,
+`startTactical`); a battle system tells the outcome by returning
+`{ outcome: "victory" | "defeat" | "escape" }` from its hook.
+
 ### `erase_event`
 
 Use to remove an event from the current map.

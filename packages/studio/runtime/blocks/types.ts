@@ -177,6 +177,26 @@ export interface SetHotbarParams {
   slotCount?: number;
 }
 
+/** How a battle ended, as the battle system that played it tells. */
+export type BattleOutcome = 'victory' | 'defeat' | 'escape';
+
+/**
+ * Parameters for the battle blocks (start_battle, start_turn_battle, start_tactical_battle)
+ *
+ * The troop to fight, and the variable that receives how the battle ended.
+ */
+export interface StartBattleParams {
+  /** Troop of the database */
+  troopId: string;
+  /**
+   * Variable that receives the outcome of the battle: 1 victory, 2 defeat, 3 escape. Left as it is when no battle
+   * system played the troop or told how it ended.
+   */
+  outcomeVariableId?: string;
+}
+export type StartTurnBattleParams = StartBattleParams;
+export type StartTacticalBattleParams = StartBattleParams;
+
 /**
  * Parameters for the call_gameover block
  * 
@@ -1143,6 +1163,9 @@ export interface BlockParamsMap {
   call_gameover: CallGameoverParams;
   show_save: ShowSaveParams;
   call_shop: CallShopParams;
+  start_battle: StartBattleParams;
+  start_turn_battle: StartTurnBattleParams;
+  start_tactical_battle: StartTacticalBattleParams;
   erase_event: EraseEventParams;
   
   // Audio
