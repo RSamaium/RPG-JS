@@ -68,7 +68,7 @@ export function checkScript(source: string, catalog?: Record<string, string[]>, 
   }
   try {
     const description = descriptionWith(options.signals);
-    const program = compileProgram(ast, globalNames(description), apiInfo(description, catalog));
+    const program = compileProgram(ast, globalNames(description), apiInfo(description, catalog, { checkArguments: true }));
     const missing = (options.requiredExports ?? []).filter((n) => !program.exported.has(n));
     if (missing.length) return { ok: false, diagnostics: missing.map((n) => ({ line: 0, message: `missing exported function "${n}": the request requires it, write export function ${n}(...) { ... }` })), ...empty };
     return {

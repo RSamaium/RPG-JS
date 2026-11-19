@@ -54,8 +54,10 @@ describe("$data: the records of the database of the game, read only", () => {
   });
 
   it("asks for a collection and an id that are texts", async () => {
-    await expect(run(`return $data.get(1, "wolves");`)).rejects.toThrow(/collection/);
-    await expect(run(`return $data.get("quests_quest", 2);`)).rejects.toThrow(/record id/);
+    // A literal of the wrong kind is refused when the script is checked; a value the check cannot know is refused when it runs
+    await expect(run(`const c = 1; return $data.get(c, "wolves");`)).rejects.toThrow(/collection/);
+    await expect(run(`const id = 2; return $data.get("quests_quest", id);`)).rejects.toThrow(/record id/);
+    await expect(run(`return $data.get(1, "wolves");`)).rejects.toThrow(/the argument 1 \(type\) must be a string/);
     await expect(run(`return $data.list("");`)).rejects.toThrow(/collection/);
   });
 

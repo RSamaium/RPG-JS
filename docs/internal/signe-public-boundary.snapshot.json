@@ -3483,6 +3483,7 @@
       "ApiDescription",
       "ApiImpl",
       "ApiInfo",
+      "ApiParam",
       "AstNode",
       "BudgetExceeded",
       "Choice",
@@ -3545,6 +3546,7 @@
       "matchesWhere",
       "missingImplementations",
       "readPath",
+      "signatureParams",
       "validateFilter",
       "whereFailure"
     ],
