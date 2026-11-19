@@ -143,6 +143,31 @@ describe("scripts and the projectiles", () => {
     });
   });
 
+  it("fires projectile.end for the player of the script when it launches the projectile", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "launch", source: `on("test.go", () => { $map.launchProjectile({ projectile: "arrow", from: { x: 0, y: 0 }, toward: { x: 10, y: 0 }, range: 20, owner: "player" }); });` });
+    service.install({ id: "end", source: `on("projectile.end", (e) => { $player.setVariable("end_${n}", e.projectile.type + ":" + e.reason); });` });
+    const { player, map } = await start(service);
+    const emit = vi.spyOn(map.projectiles, "emit");
+
+    await service.emit("test.go", {}, { player, map });
+    expect(emit.mock.calls[0][1]).toBe(player);
+    for (let i = 0; i < 10; i++) map.projectiles.step(0.1);
+
+    await settled(() => expect(String(player.getVariable(`end_${n}`)).startsWith("arrow:")).toBe(true));
+  });
+
+  it("launches a projectile without owner by default", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "launch", source: `on("test.go", () => { $map.launchProjectile({ projectile: "arrow", from: { x: 0, y: 0 }, toward: { x: 10, y: 0 } }); });` });
+    const { player, map } = await start(service);
+    const emit = vi.spyOn(map.projectiles, "emit");
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(emit.mock.calls[0][1]).toBeUndefined();
+  });
+
   it("refuses a landing radius without a lob", async () => {
     const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
     service.install({ id: "launch", source: `on("test.go", () => { $map.launchProjectile({ projectile: "arrow", from: { x: 0, y: 0 }, toward: { x: 60, y: 0 }, landingRadius: 24 }); });` });
@@ -157,12 +182,57 @@ describe("scripts and the projectiles", () => {
   });
 });
 
+describe("scripts and the visual effects", () => {
+  it("plays a visual effect at a point of the map", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "fx", source: `on("test.go", () => { $map.playVisualEffect({ effect: "holy-burst", at: { x: 40, y: 60 }, preset: { emitters: [] }, duration: 800, scale: 2 }); });` });
+    const { player, map } = await start(service);
+    const show = vi.spyOn(map, "showComponentAnimation");
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(show).toHaveBeenCalledWith("rpg:visual-effect", { x: 40, y: 60 }, {
+      name: "holy-burst",
+      preset: { emitters: [] },
+      displayDuration: 800,
+      scale: 2,
+    });
+  });
+
+  it("refuses a preset that is not a particle preset", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "fx", source: `on("test.go", () => { $map.playVisualEffect({ effect: "burst", at: { x: 40, y: 60 }, preset: { color: "#ffffff" } }); });` });
+    const { player, map } = await start(service);
+    const show = vi.spyOn(map, "showComponentAnimation");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(show).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it("refuses a visual effect without a name", async () => {
+    const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });
+    service.install({ id: "fx", source: `on("test.go", () => { $map.playVisualEffect({ at: { x: 40, y: 60 } }); });` });
+    const { player, map } = await start(service);
+    const show = vi.spyOn(map, "showComponentAnimation");
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await service.emit("test.go", {}, { player, map });
+
+    expect(show).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
 describe("description of the new signals and methods", () => {
   it("describes the signals and the methods", () => {
     for (const signal of ["player.hotbarChange", "player.projectileHit", "event.projectileHit", "projectile.end"]) {
       expect(GAME_API_DESCRIPTION.signals?.[signal], signal).toBeDefined();
     }
     expect(GAME_API_DESCRIPTION.handles.$map.methods?.launchProjectile).toBeDefined();
+    expect(GAME_API_DESCRIPTION.handles.$map.methods?.playVisualEffect).toBeDefined();
     expect(GAME_API_DESCRIPTION.handles.$player.methods?.assignHotbarSlot).toBeDefined();
   });
 });

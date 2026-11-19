@@ -20,6 +20,7 @@ Hooks for events created as plain objects, as shown in the create-event guide.
 - [onOutShape](#onoutshape)
 - [onPhaseChange](#onphasechange)
 - [onPlayerTouch](#onplayertouch)
+- [onProjectileHit](#onprojectilehit)
 - [onTimeChange](#ontimechange)
 - [onTouch](#ontouch)
 - [onTouchEnd](#ontouchend)
@@ -184,6 +185,28 @@ Called when a player touches this event
 
 ```ts
 onPlayerTouch: (this: RpgEvent, player: RpgPlayer) => void
+```
+
+## onProjectileHit
+
+Called when a projectile hits this event, before the projectile `onHit`.
+
+Return `"pass"` to let the projectile fly through, `"stick"` to keep it
+planted in the event, `"stop"` to stop it, or nothing to keep the
+projectile behavior.
+
+- Source: `packages/server/src/rooms/map-types.ts`
+- Kind: `property`
+- Defined in: `EventHooks`
+
+### Signature
+
+```ts
+onProjectileHit: (
+    this: RpgEvent,
+    projectile: ProjectileServerState,
+    context: ProjectileTargetHitContext
+  ) => ProjectileTargetReaction | void
 ```
 
 ## onTimeChange

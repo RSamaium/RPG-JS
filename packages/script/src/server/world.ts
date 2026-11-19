@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -33,7 +33,7 @@ let eventCounter = 0;
 const plainCopy = (state: unknown): object | null => (state == null ? null : JSON.parse(JSON.stringify(state)));
 
 /** The map of a script, over the map of RPGJS: the events a script makes are real events that listen to the same signals. */
-function mapPortOf(map: RpgMap): MapPort {
+function mapPortOf(map: RpgMap, player: RpgPlayer): MapPort {
   const m = map as any;
   const made = madeByScripts.get(map) ?? madeByScripts.set(map, new Set()).get(map)!;
   const madeShapes = shapesMadeByScripts.get(map) ?? shapesMadeByScripts.set(map, new Set()).get(map)!;
@@ -127,9 +127,17 @@ function mapPortOf(map: RpgMap): MapPort {
           : { trajectory: { type: "linear", speed, range } }),
         ...(o.delay !== undefined ? { delay: o.delay } : {}),
         ...(o.damage !== undefined ? { payload: { damage: o.damage } } : {}),
-      });
+        // Launched by the player of the script: it flies through them and its signals fire for them.
+      }, o.owner === "player" ? player : undefined);
       if (!state) throw new Error("the map did not launch the projectile");
       return String(state.id);
+    },
+    playVisualEffect(o: VisualEffectPlayOptions) {
+      m.playVisualEffect(o.at, o.effect, {
+        ...(o.preset ? { preset: o.preset } : {}),
+        ...(o.duration !== undefined ? { duration: o.duration } : {}),
+        ...(o.scale !== undefined ? { scale: o.scale } : {}),
+      });
     },
   };
 }
@@ -293,7 +301,7 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
   return {
     player: playerPort,
     room: where,
-    ...(map ? { map: mapPortOf(map) } : {}),
+    ...(map ? { map: mapPortOf(map, player) } : {}),
     event: {
       get id() { return event?.id ?? ""; },
       get name() { return String(read((event as any)?.name) ?? ""); },

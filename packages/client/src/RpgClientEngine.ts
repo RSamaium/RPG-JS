@@ -6,7 +6,7 @@ import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken, type MapData } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
-import { EMOTION_BUBBLE_ANIMATION_ID, LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
+import { EMOTION_BUBBLE_ANIMATION_ID, LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, VISUAL_EFFECT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
 import type { EventComponentConfig, RpgLootHooks } from "./RpgClient";
 import type { RpgClientEvent } from "./Game/Event";
 import { load } from "@signe/sync";
@@ -352,6 +352,11 @@ export class RpgClientEngine<T = any> {
     this.addComponentAnimation({
       id: LOOT_TEXT_ANIMATION_ID,
       component: PrebuiltComponentAnimations.LootText
+    })
+    // One-shot particle effects played by `map.playVisualEffect()` on the server.
+    this.addComponentAnimation({
+      id: VISUAL_EFFECT_ANIMATION_ID,
+      component: PrebuiltComponentAnimations.Fx
     })
 
     this.registerSpriteComponent("rpg:text", TextComponent);

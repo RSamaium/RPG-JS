@@ -78,6 +78,23 @@ export interface ProjectileLaunchOptions {
   landingRadius?: number;
   /** Wind-up before the projectile leaves, in ms. */
   delay?: number;
+  /**
+   * `"player"`: the player of the script launches it. It flies through them, and `projectile.end` and
+   * `event.projectileHit` fire for them. Without it, the projectile has no owner and can hit any player.
+   */
+  owner?: "player";
+}
+
+/** A one-shot visual effect played at a point of the map. */
+export interface VisualEffectPlayOptions {
+  /** Name of a built-in particle preset, or of the effect described by `preset`. */
+  effect: string;
+  at: { x: number; y: number };
+  /** The resolved particle preset, as plain data (the payload of a Studio Visual Effect). */
+  preset?: Record<string, unknown>;
+  /** How long it stays drawn, in ms. */
+  duration?: number;
+  scale?: number;
 }
 
 /** A slot of the hotbar: a skill, an item, or the entry of a plugin. */
@@ -122,6 +139,8 @@ export interface MapPort {
   shakeMap(options?: ShakeOptions): void | Promise<void>;
   /** Launches a projectile from a point toward another one. Gives the id of the projectile. */
   launchProjectile(options: ProjectileLaunchOptions): string | Promise<string>;
+  /** Plays a one-shot visual effect, as `map.playVisualEffect(position, effect, options)` does. */
+  playVisualEffect(options: VisualEffectPlayOptions): void | Promise<void>;
 }
 
 /** The player of the script, with the names of `RpgPlayer`. Every change is the engine's to apply. */
@@ -364,6 +383,25 @@ const launchOptions = (v: unknown): ProjectileLaunchOptions => {
     out.landingRadius = Math.min(MAX_PROJECTILE_LANDING_RADIUS, Math.max(0, finite(o.landingRadius, "landingRadius")));
   }
   if (o.delay !== undefined) out.delay = Math.min(MAX_PROJECTILE_DELAY, Math.max(0, finite(o.delay, "delay")));
+  if (o.owner !== undefined) {
+    if (o.owner !== "player") throw new Error('owner is "player" (the player of the script), or not given');
+    out.owner = "player";
+  }
+  return out;
+};
+const MAX_VISUAL_EFFECT_DURATION = 10000;
+const MAX_VISUAL_EFFECT_SCALE = 10;
+const visualEffectOptions = (v: unknown): VisualEffectPlayOptions => {
+  const o = opts(v);
+  const out: VisualEffectPlayOptions = { effect: text(o.effect, "an effect name"), at: position(o.at) };
+  if (o.preset !== undefined) {
+    const preset = stateData(o.preset, "the preset") as Record<string, unknown>;
+    // The clients draw it with the Fx preset of CanvasEngine, which needs its emitters.
+    if (!Array.isArray(preset.emitters)) throw new Error("a preset is a particle preset { emitters: [...] }");
+    out.preset = preset;
+  }
+  if (o.duration !== undefined) out.duration = Math.min(MAX_VISUAL_EFFECT_DURATION, Math.max(0, finite(o.duration, "duration")));
+  if (o.scale !== undefined) out.scale = Math.min(MAX_VISUAL_EFFECT_SCALE, Math.max(0.1, finite(o.scale, "scale")));
   return out;
 };
 const hotbarEntry = (v: unknown): HotbarEntryOptions => {
@@ -463,6 +501,7 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         showComponentAnimation: (w, [id, p, params]) => mapOf(w).showComponentAnimation(text(id, "an animation id"), position(p), params === undefined ? {} : (stateData(params, "params") as object)),
         shakeMap: (w, [o]) => mapOf(w).shakeMap(shakeOptions(o)),
         launchProjectile: (w, [o]) => mapOf(w).launchProjectile(launchOptions(o)),
+        playVisualEffect: (w, [o]) => mapOf(w).playVisualEffect(visualEffectOptions(o)),
       },
     },
     $data: {

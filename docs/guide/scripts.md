@@ -283,7 +283,8 @@ and the lighting). `setWeather` needs an `effect` or a `preset`; `patchWeather` 
 | `showAnimation({ x, y }, graphic, animationName?)` | an animation of a graphic at a position (`"default"` when no name) |
 | `showComponentAnimation(id, { x, y }, params?)` | an animation made by a component of the game, with plain data as `params` |
 | `shakeMap(options?)` | shakes the screen. Options: `intensity` (0 to 100), `duration` (0 to 10 000 ms), `frequency` (1 to 60), `direction` (`"x"`, `"y"`, `"both"`) |
-| `launchProjectile({ projectile, from, toward, ... })` | launches a projectile (its type: a graphic or a Studio projectile record) and gives its id. It flies straight and hits the first player or event on its way. Options: `damage`, `speed` (1 to 2 000), `range` (1 to 5 000), `arc` (`true` or `{ height }`, 0 to 500: lobbed over everything, it lands on `toward` or short of it at `range`), `landingRadius` (0 to 500, with `arc`: hits the players and events that close to where it lands), `delay` (0 to 10 000 ms of wind-up). Listen to `projectile.end` for where it ended |
+| `launchProjectile({ projectile, from, toward, ... })` | launches a projectile (its type: a graphic or a Studio projectile record) and gives its id. It flies straight and hits the first player or event on its way. Options: `damage`, `speed` (1 to 2 000), `range` (1 to 5 000), `arc` (`true` or `{ height }`, 0 to 500: lobbed over everything, it lands on `toward` or short of it at `range`), `landingRadius` (0 to 500, with `arc`: hits the players and events that close to where it lands), `delay` (0 to 10 000 ms of wind-up), `owner: "player"` (the player of the script launches it: it flies through them, and `projectile.end` and `event.projectileHit` fire for them; without it the projectile has no owner, can hit any player, and those signals do not fire). Listen to `projectile.end` for where it ended |
+| `playVisualEffect({ effect, at, ... })` | a one-shot particle effect at a point. `effect` names a built-in preset, or the effect of `preset` (a particle preset `{ emitters: [...] }`, such as the resolved preset of a Studio Visual Effect). Options: `duration` (0 to 10 000 ms), `scale` (0.1 to 10) |
 
 **Limits.** A script makes **50 events** and **50 zones** on a map at most, an id or a name that is already on the map is refused, a
 number outside its range is refused with the range, and a description with a key RPGJS does not take is refused with the keys that
@@ -401,7 +402,7 @@ The effects are named after the call that made them: `showText`, `showNotificati
 `removeItem`, `setVariable`, `removeVariable`, `gold` (with the new `value`), `wait`, `sync` (a shared property), `state`, and the
 ones of the map: `createDynamicEvent`, `removeEvent`, `createShape`, `removeShape`, `setMapVariable`, `removeMapVariable`,
 `setWeather`, `patchWeather`, `clearWeather`, `setLighting`, `patchLighting`, `clearLighting`, `setDay`, `setNight`,
-`transitionLighting`, `playSound`, `stopSound`, `showAnimation`, `showComponentAnimation`, `shakeMap`.
+`transitionLighting`, `playSound`, `stopSound`, `showAnimation`, `showComponentAnimation`, `shakeMap`, `launchProjectile`, `playVisualEffect`.
 
 ## Run your own world
 
