@@ -388,6 +388,39 @@ describe("executeActionBattleUse", () => {
     expect(target.applyDamage).toHaveBeenCalledOnce();
   });
 
+  test("does not forward the Studio trailFx placeholders as preset names", () => {
+    const emit = vi.fn(() => [{ id: "bolt-1" }]);
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({ projectiles: { emit } }),
+    };
+
+    for (const trailFx of ["auto", "none"]) {
+      executeActionBattleUse({
+        attacker: attacker as any,
+        target: createEntity("target") as any,
+        usable: {
+          id: "bolt",
+          _type: "skill",
+          spCost: 0,
+          hitRate: 1,
+          action: {
+            mode: "projectile",
+            range: 200,
+            visual: { trailFx },
+            projectile: { type: "bolt", speed: 200, range: 200 },
+          },
+        },
+        skill: { id: "bolt", _type: "skill", spCost: 0, hitRate: 1 },
+      });
+    }
+
+    expect(emit).toHaveBeenCalledTimes(2);
+    for (const [options] of emit.mock.calls as any[]) {
+      expect(options.params).not.toHaveProperty("trailFx");
+    }
+  });
+
   test("uses the action target policy for projectile collisions", () => {
     const enemy = createEntity("enemy");
     (enemy as any).actionBattleFaction = "enemy";

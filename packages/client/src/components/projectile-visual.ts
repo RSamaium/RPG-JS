@@ -73,6 +73,15 @@ export function projectileTrailOptions(
   };
 }
 
+/**
+ * Particle preset of the flying projectile, or `null`. `"auto"` and `"none"`
+ * (Studio defaults) are not preset names and draw no particles.
+ */
+export function projectileTrailFx(value: unknown): string | null {
+  if (typeof value !== "string" || !value || value === "auto" || value === "none") return null;
+  return value;
+}
+
 /** Particle preset to play for an impact on `surface`, or `null` for the drawn impact. */
 export function projectileImpactFx(
   impactFx: ProjectileLook["impactFx"],

@@ -91,8 +91,13 @@ describe("projectile trajectories", () => {
       targetId: "slime",
       surface: "target",
     });
-    // It hit: it does not stay on the ground.
+    // It hit: it does not stay on the ground, and its destruction says so.
     expect(messages("projectile:destroyBatch")).toHaveLength(1);
+    expect(messages("projectile:destroyBatch")[0].value.projectiles[0]).toMatchObject({
+      reason: "land",
+      targetId: "slime",
+      surface: "target",
+    });
   });
 
   test("an arc out of reach lands short, on the ground", () => {

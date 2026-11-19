@@ -254,6 +254,8 @@ interface ActiveProjectile {
   ageOffset: number;
   hits: number;
   stuckAt?: { x: number; y: number };
+  /** First entity hit where an arc landed, reported when the projectile is destroyed. */
+  landingHit?: RaycastHit;
   /** Remaining linger time in seconds, and the reason to report at the end. */
   linger?: { remaining: number; reason: string; x: number; y: number };
 }
@@ -888,14 +890,13 @@ export class RpgMapProjectiles {
     }
     const finalReason = reason === "end" ? this.naturalEndReason(active, projectile) : reason;
     const point = active.stuckAt ?? { x: projectile.position.x, y: projectile.position.y };
-    let landedOnTarget = false;
     if (finalReason === "land") {
-      landedOnTarget = this.resolveLanding(active, point);
+      active.landingHit = this.resolveLanding(active, point);
       active.options.onLand?.({ projectile: state, owner: this.ownerOf(state), map: this.map, reason: finalReason, ...point });
     }
     const lingerMs = active.options.linger?.ms ?? 0;
     // A projectile that landed on a target plays its impact instead of lying on the ground.
-    const rests = (finalReason === "land" && !landedOnTarget) || finalReason === "range" || finalReason === "end";
+    const rests = (finalReason === "land" && !active.landingHit) || finalReason === "range" || finalReason === "end";
     const lingers = lingerMs > 0 && (rests || !!active.stuckAt);
     if (lingers) {
       if (finalReason !== "hit" || active.stuckAt) {
@@ -910,11 +911,11 @@ export class RpgMapProjectiles {
   /**
    * Hit what stands where an arc lands. The closest entity takes the hit, or
    * every entity in the radius with `pierce`; each one can still reply through
-   * its `onProjectileHit` hook.
+   * its `onProjectileHit` hook. Returns the first hit, if any.
    */
-  private resolveLanding(active: ActiveProjectile, point: { x: number; y: number }): boolean {
+  private resolveLanding(active: ActiveProjectile, point: { x: number; y: number }): RaycastHit | undefined {
     const radius = active.options.landing?.radius;
-    if (radius === undefined || !Number.isFinite(radius) || radius < 0) return false;
+    if (radius === undefined || !Number.isFinite(radius) || radius < 0) return undefined;
     const bounds = new AABB(point.x - radius, point.y - radius, point.x + radius, point.y + radius);
     const distance = Math.hypot(point.x - active.state.origin.x, point.y - active.state.origin.y);
     const candidates = ((this.map as any).physic.queryAABB(bounds) as Entity[])
@@ -929,7 +930,7 @@ export class RpgMapProjectiles {
       .sort((a, b) => a.gap - b.gap);
 
     const pierce = active.options.pierce;
-    let landed = false;
+    let landed: RaycastHit | undefined;
     for (const { entity } of candidates) {
       const hit: RaycastHit = {
         entity,
@@ -944,7 +945,7 @@ export class RpgMapProjectiles {
       }
       this.handleHitState(active.state, hit);
       active.hits += 1;
-      landed = true;
+      landed = landed ?? hit;
       if (reaction === "stick" || reaction === "stop") break;
       if (!(pierce === true || (typeof pierce === "number" && active.hits < pierce))) break;
     }
@@ -966,7 +967,7 @@ export class RpgMapProjectiles {
 
   private finish(active: ActiveProjectile, reason: string, x: number, y: number, hit?: RaycastHit): void {
     this.active.delete(active.state.id);
-    this.handleDestroyState(active.state, reason, hit, { x, y });
+    this.handleDestroyState(active.state, reason, hit ?? active.landingHit, { x, y });
     active.options.onEnd?.({ projectile: active.state, owner: this.ownerOf(active.state), map: this.map, reason, x, y });
   }
 

@@ -36,6 +36,7 @@
     projectileColor,
     projectileImpactFx,
     projectileSparks,
+    projectileTrailFx,
     projectileTrailOptions,
   } from "./projectile-visual";
 
@@ -113,8 +114,8 @@
   // A planted projectile stays drawn; any other impact replaces it.
   const bodyVisible = computed(() => !impact() || stuck());
   const trailFx = computed(() => {
-    const name = visual().trailFx;
-    return typeof name === "string" && name && !impact() && !stuck() ? name : null;
+    const name = projectileTrailFx(visual().trailFx);
+    return name && !impact() && !stuck() ? name : null;
   });
   const impactFx = computed(() => projectileImpactFx(visual().impactFx, impact()?.surface));
 

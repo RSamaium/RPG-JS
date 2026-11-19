@@ -379,7 +379,9 @@ const buildActionContext = (input: {
           },
           params: {
             ...projectile.params,
-            ...(typeof input.action?.visual?.trailFx === "string"
+            // `auto` and `none` (Studio defaults) are not preset names: the look of the type decides.
+            ...(typeof input.action?.visual?.trailFx === "string" &&
+            !["", "auto", "none"].includes(input.action.visual.trailFx)
               ? { trailFx: input.action.visual.trailFx }
               : {}),
             ...(typeof projectile.graphic === "string"
