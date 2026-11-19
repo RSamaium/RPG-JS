@@ -20,6 +20,7 @@ export default rpgjsModuleViteConfig({
       "src/server-index.ts",
       "src/server.ts",
       "src/server-config.ts",
+      "src/channels.ts",
       "src/config.ts",
       "src/server-types.d.ts",
       "src/shared-types.d.ts",

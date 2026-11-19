@@ -354,6 +354,7 @@
       "wait"
     ],
     "declarations": [
+      "packages/action-battle/dist/client/ai.server.d.ts",
       "packages/action-battle/dist/client/attack-input.d.ts",
       "packages/action-battle/dist/client/audio.d.ts",
       "packages/action-battle/dist/client/config.d.ts",
@@ -363,6 +364,7 @@
       "packages/action-battle/dist/client/core/attack-runtime.d.ts",
       "packages/action-battle/dist/client/core/combat-director.d.ts",
       "packages/action-battle/dist/client/core/context.d.ts",
+      "packages/action-battle/dist/client/core/contracts.d.ts",
       "packages/action-battle/dist/client/core/defaults.d.ts",
       "packages/action-battle/dist/client/core/defense.d.ts",
       "packages/action-battle/dist/client/core/enemy-attack-profiles.d.ts",
@@ -373,7 +375,9 @@
       "packages/action-battle/dist/client/core/targets.d.ts",
       "packages/action-battle/dist/client/enemies/factory.d.ts",
       "packages/action-battle/dist/client/index.d.ts",
+      "packages/action-battle/dist/client/server.d.ts",
       "packages/action-battle/dist/client/targeting.d.ts",
+      "packages/action-battle/dist/client/types.d.ts",
       "packages/action-battle/dist/client/ui.d.ts",
       "packages/action-battle/dist/client/visual.d.ts"
     ]
@@ -657,6 +661,7 @@
       "wait"
     ],
     "declarations": [
+      "packages/action-battle/dist/client/ai.server.d.ts",
       "packages/action-battle/dist/client/attack-input.d.ts",
       "packages/action-battle/dist/client/audio.d.ts",
       "packages/action-battle/dist/client/config.d.ts",
@@ -666,6 +671,7 @@
       "packages/action-battle/dist/client/core/attack-runtime.d.ts",
       "packages/action-battle/dist/client/core/combat-director.d.ts",
       "packages/action-battle/dist/client/core/context.d.ts",
+      "packages/action-battle/dist/client/core/contracts.d.ts",
       "packages/action-battle/dist/client/core/defaults.d.ts",
       "packages/action-battle/dist/client/core/defense.d.ts",
       "packages/action-battle/dist/client/core/enemy-attack-profiles.d.ts",
@@ -676,7 +682,9 @@
       "packages/action-battle/dist/client/core/targets.d.ts",
       "packages/action-battle/dist/client/enemies/factory.d.ts",
       "packages/action-battle/dist/client/index.d.ts",
+      "packages/action-battle/dist/client/server.d.ts",
       "packages/action-battle/dist/client/targeting.d.ts",
+      "packages/action-battle/dist/client/types.d.ts",
       "packages/action-battle/dist/client/ui.d.ts",
       "packages/action-battle/dist/client/visual.d.ts"
     ]
@@ -970,6 +978,7 @@
       "packages/action-battle/dist/server/core/attack-runtime.d.ts",
       "packages/action-battle/dist/server/core/combat-director.d.ts",
       "packages/action-battle/dist/server/core/context.d.ts",
+      "packages/action-battle/dist/server/core/contracts.d.ts",
       "packages/action-battle/dist/server/core/defaults.d.ts",
       "packages/action-battle/dist/server/core/defense.d.ts",
       "packages/action-battle/dist/server/core/enemy-attack-profiles.d.ts",
@@ -982,6 +991,7 @@
       "packages/action-battle/dist/server/index.d.ts",
       "packages/action-battle/dist/server/server.d.ts",
       "packages/action-battle/dist/server/targeting.d.ts",
+      "packages/action-battle/dist/server/types.d.ts",
       "packages/action-battle/dist/server/ui.d.ts",
       "packages/action-battle/dist/server/visual.d.ts"
     ]
@@ -992,8 +1002,21 @@
       "CALENDAR_CLIENT_I18N",
       "CALENDAR_GUI_ID",
       "CALENDAR_VIEW_INTERACTION",
+      "CalendarCategory",
       "CalendarClientOptions",
+      "CalendarConfig",
+      "CalendarDate",
+      "CalendarDateInfo",
+      "CalendarEntry",
+      "CalendarEventDefinition",
+      "CalendarEventEvery",
+      "CalendarEventOn",
+      "CalendarRange",
+      "CalendarSource",
+      "CalendarSourceContext",
+      "CalendarSourceEvent",
       "CalendarView",
+      "ResolvedCalendarConfig",
       "closeCalendar",
       "createCalendarClient",
       "default",
@@ -1001,8 +1024,11 @@
     ],
     "declarations": [
       "packages/calendar/dist/client/client-index.d.ts",
+      "packages/calendar/dist/client/client-types.d.ts",
       "packages/calendar/dist/client/client.d.ts",
-      "packages/calendar/dist/client/config.d.ts"
+      "packages/calendar/dist/client/config.d.ts",
+      "packages/calendar/dist/client/server-types.d.ts",
+      "packages/calendar/dist/client/shared-types.d.ts"
     ]
   },
   "@rpgjs/calendar/client": {
@@ -1011,8 +1037,21 @@
       "CALENDAR_CLIENT_I18N",
       "CALENDAR_GUI_ID",
       "CALENDAR_VIEW_INTERACTION",
+      "CalendarCategory",
       "CalendarClientOptions",
+      "CalendarConfig",
+      "CalendarDate",
+      "CalendarDateInfo",
+      "CalendarEntry",
+      "CalendarEventDefinition",
+      "CalendarEventEvery",
+      "CalendarEventOn",
+      "CalendarRange",
+      "CalendarSource",
+      "CalendarSourceContext",
+      "CalendarSourceEvent",
       "CalendarView",
+      "ResolvedCalendarConfig",
       "closeCalendar",
       "createCalendarClient",
       "default",
@@ -1020,8 +1059,11 @@
     ],
     "declarations": [
       "packages/calendar/dist/client/client-index.d.ts",
+      "packages/calendar/dist/client/client-types.d.ts",
       "packages/calendar/dist/client/client.d.ts",
-      "packages/calendar/dist/client/config.d.ts"
+      "packages/calendar/dist/client/config.d.ts",
+      "packages/calendar/dist/client/server-types.d.ts",
+      "packages/calendar/dist/client/shared-types.d.ts"
     ]
   },
   "@rpgjs/calendar/server": {
@@ -1029,7 +1071,27 @@
     "exports": [
       "CALENDAR_GUI_ID",
       "CALENDAR_VIEW_INTERACTION",
+      "CalendarCategory",
+      "CalendarConfig",
+      "CalendarDate",
+      "CalendarDateInfo",
+      "CalendarDayChangePayload",
+      "CalendarEntry",
+      "CalendarEventDefinition",
+      "CalendarEventEvery",
+      "CalendarEventOn",
+      "CalendarEventPayload",
+      "CalendarHooks",
+      "CalendarOpenOptions",
+      "CalendarPlayerLike",
+      "CalendarRange",
+      "CalendarServerOptions",
       "CalendarService",
+      "CalendarSource",
+      "CalendarSourceContext",
+      "CalendarSourceEvent",
+      "CalendarView",
+      "ResolvedCalendarConfig",
       "default",
       "openCalendar",
       "provideCalendar"
@@ -1037,8 +1099,10 @@
     "declarations": [
       "packages/calendar/dist/server/config.d.ts",
       "packages/calendar/dist/server/server-index.d.ts",
+      "packages/calendar/dist/server/server-types.d.ts",
       "packages/calendar/dist/server/server.d.ts",
-      "packages/calendar/dist/server/service.d.ts"
+      "packages/calendar/dist/server/service.d.ts",
+      "packages/calendar/dist/server/shared-types.d.ts"
     ]
   },
   "@rpgjs/chat": {
@@ -1183,6 +1247,7 @@
       "provideChat"
     ],
     "declarations": [
+      "packages/chat/dist/server/channels.d.ts",
       "packages/chat/dist/server/config.d.ts",
       "packages/chat/dist/server/server-config.d.ts",
       "packages/chat/dist/server/server-index.d.ts",
