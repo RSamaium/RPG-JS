@@ -1,6 +1,7 @@
 import { defineConfig, build, type PluginOption } from "vite";
 import canvasengine from "@canvasengine/compiler";
 import dts from "vite-plugin-dts";
+import { fixDeclarationSpecifiers } from "./esm-declarations";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { directivePlugin, removeImportsPlugin } from "./index";
@@ -66,6 +67,7 @@ function createBuildConfig({
       dts({ 
         include: options.declarationIncludes?.[side] || ['src/**/*.ts'],
         copyDtsFiles: options.copyDtsFiles,
+        afterBuild: fixDeclarationSpecifiers,
         afterDiagnostic(diagnostics) {
           if (diagnostics.length > 0) throw new Error(`Declaration generation failed with ${diagnostics.length} TypeScript diagnostic(s)`)
         }

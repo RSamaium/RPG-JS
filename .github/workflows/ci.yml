@@ -51,6 +51,8 @@ jobs:
         run: pnpm build
       - name: Public API boundary
         run: pnpm api:boundary
+      - name: ES module declarations (nodenext)
+        run: pnpm api:esm-types
       - name: Public API type contracts
         run: pnpm test:types
       - name: Unit tests

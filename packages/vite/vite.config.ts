@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import { fixDeclarationSpecifiers } from "./src/esm-declarations";
 import packageJson from './package.json' with { type: 'json' }
 
 // List of Node.js built-in modules to mark as external
@@ -19,6 +20,7 @@ export default defineConfig({
   },
   plugins: [
     dts({ 
+      afterBuild: fixDeclarationSpecifiers,
       include: ['src/**/*.ts'],
       outDirs: 'dist',
       afterDiagnostic(diagnostics) {
@@ -44,6 +46,8 @@ export default defineConfig({
         // Mark vite as external since it's a peer dependency
         'vite',
         'vite-plugin-dts',
+        // Used by the declaration hook, loaded from the package that builds
+        'typescript',
         '@canvasengine/compiler',
         '@iarna/toml',
         'image-size',

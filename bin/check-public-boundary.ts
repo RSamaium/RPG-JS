@@ -28,6 +28,8 @@ function normalizePath(path: string): string {
 function resolveDeclaration(fromFile: string, specifier: string): string | undefined {
   const base = resolve(dirname(fromFile), specifier);
   const candidates = [
+    // An ES module declaration names the runtime file (`./x.js`): its declaration is `./x.d.ts`.
+    ...(/\.js$/.test(base) ? [base.replace(/\.js$/, ".d.ts")] : []),
     `${base}.d.ts`,
     join(base, "index.d.ts"),
     base,
