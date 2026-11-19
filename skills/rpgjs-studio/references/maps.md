@@ -98,6 +98,7 @@ Fields supported by `mapParamsSchema`:
 - `scale?: number`
 - `backgroundMusic?: string`
 - `backgroundAmbientSound?: string`
+- `pvp?: boolean` lets the players attack each other on this map (default `false`). On a pvp map a defeated player comes back with full health at the start position of the map, protected for 2 seconds; elsewhere only enemies can be attacked. Published to the MMORPG game server in `data.params.pvp`.
 
 Music and ambience fields must use media `_id` values resolved through `/api/media?query=<search>`. Combat audio is configured at project, enemy, and skill level rather than on maps.
 
