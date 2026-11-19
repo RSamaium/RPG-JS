@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
+import { fixDeclarationSpecifiers } from "../vite/src/esm-declarations";
 import path from 'path'
 
 const nodeBuiltins = [
@@ -13,6 +14,7 @@ const nodeBuiltins = [
 export default defineConfig({
   plugins: [
     dts({ 
+      afterBuild: fixDeclarationSpecifiers,
       include: ['src/**/*.ts'],
       outDirs: 'dist',
       aliasesExclude: [/^@rpgjs\//],

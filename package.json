@@ -14,6 +14,7 @@
     "docs:player-api": "tsx bin/extract-jsdoc.ts extract --package @rpgjs/server --entry packages/server/src --output docs/.generated/server-api.json && tsx bin/extract-jsdoc.ts render --input docs/.generated/server-api.json --config docs/api/player.config.json --output docs/api/player",
     "api:boundary": "tsx bin/check-public-boundary.ts",
     "api:boundary:update": "tsx bin/check-public-boundary.ts --update",
+    "api:esm-types": "tsx bin/check-esm-declarations.ts",
     "changeset": "changeset",
     "version-packages": "changeset version && pnpm install --lockfile-only",
     "publish-packages": "pnpm run rpgjs:version && tsx bin/publish.ts",

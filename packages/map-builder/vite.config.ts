@@ -1,9 +1,11 @@
 import { defineConfig } from "vite";
 import dts from "vite-plugin-dts";
+import { fixDeclarationSpecifiers } from "../vite/src/esm-declarations";
 
 export default defineConfig({
   plugins: [
     dts({
+      afterBuild: fixDeclarationSpecifiers,
       include: ["src/**/*.ts"],
       exclude: ["src/**/*.spec.ts", "src/**/__fixtures__/**"],
       outDirs: "dist",

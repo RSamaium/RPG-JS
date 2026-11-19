@@ -3,6 +3,7 @@ import { directivePlugin, removeImportsPlugin } from "@rpgjs/vite";
 import { resolve } from "node:path";
 import { build, defineConfig } from "vite";
 import dts from "vite-plugin-dts";
+import { fixDeclarationSpecifiers } from "../vite/src/esm-declarations";
 
 const runtimeDir = resolve(process.cwd(), "runtime");
 const tsconfigPath = resolve(process.cwd(), "tsconfig.json");
@@ -33,6 +34,7 @@ function createBuildConfig(target: BuildTarget, watch: boolean) {
       resolve: resolveOptions,
       plugins: [
         dts({
+          afterBuild: fixDeclarationSpecifiers,
           include: ["runtime/**/*.ts"],
           outDirs: "dist/runtime",
           entryRoot: "runtime",
@@ -81,6 +83,7 @@ function createBuildConfig(target: BuildTarget, watch: boolean) {
             directivePlugin({ side: "server" as const }),
           ]),
       dts({
+        afterBuild: fixDeclarationSpecifiers,
         include: ["src/**/*.ts"],
         exclude: ["src/**/*.spec.ts"],
         outDirs: `dist/${target}`,

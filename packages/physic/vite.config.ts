@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import { resolve } from 'path';
 import dts from 'vite-plugin-dts';
+import { fixDeclarationSpecifiers } from "../vite/src/esm-declarations";
 
 export default defineConfig(({ command, mode }) => {
   // Example mode - serve examples
@@ -83,6 +84,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     plugins: [
       dts({
+        afterBuild: fixDeclarationSpecifiers,
         insertTypesEntry: true,
         exclude: ['**/*.test.ts', '**/*.spec.ts'],
         afterDiagnostic(diagnostics) {

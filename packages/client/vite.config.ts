@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import canvasengine from '@canvasengine/compiler'
 import dts from 'vite-plugin-dts'
+import { fixDeclarationSpecifiers } from "../vite/src/esm-declarations";
 import path from 'path'
 import { fileURLToPath } from 'url'
 
@@ -10,6 +11,7 @@ export default defineConfig({
   plugins: [
     canvasengine(),
     dts({ 
+      afterBuild: fixDeclarationSpecifiers,
       include: ['src/**/*.ts'],
       exclude: ['src/**/*.spec.ts'],
       outDirs: 'dist',
