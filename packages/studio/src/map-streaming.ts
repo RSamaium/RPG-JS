@@ -243,6 +243,87 @@ export function prepareElements(map: Record<string, any>): {
   return { elements: layers, hitboxes };
 }
 
+/** The Studio v2 map held by a source (a map, or a payload that holds it in `data`), cloned. Throws for another format. */
+function studioV2Map(source: Record<string, any>, id: unknown): Record<string, any> {
+  const map = clone(source?.data?.params ? source.data : source);
+  if (map?.creationDetails?.version !== "v2") {
+    throw new Error(
+      `Studio map '${
+        id ?? map?._id ?? map?.id ?? "unknown"
+      }' must use format v2 for MMORPG streaming`
+    );
+  }
+  return map;
+}
+
+/** Every collision of a Studio v2 map, in the order the game adds them, from its elements already prepared. */
+function collectStudioMapHitboxes(
+  map: Record<string, any>,
+  elementHitboxes: MapChunkHitbox[],
+  terrainByTileset: any[]
+): MapChunkHitbox[] {
+  const baseHitboxes: MapChunkHitbox[] = Array.isArray(map.hitboxes)
+    ? map.hitboxes
+    : [];
+  const polygonHitboxes: MapChunkHitbox[] = (
+    Array.isArray(map.polygons) ? map.polygons : []
+  )
+    .filter((points: unknown) => Array.isArray(points) && points.length >= 3)
+    .map((points: number[][], index: number) => ({
+      id: `studio-polygon:${index}`,
+      points,
+    }));
+  const terrainHitboxes = buildStudioTerrainCollisionPolygons({
+    ...map,
+    terrainByTileset,
+  });
+  return [
+    ...baseHitboxes,
+    ...polygonHitboxes,
+    ...elementHitboxes,
+    ...terrainHitboxes,
+  ];
+}
+
+/**
+ * Every collision of a Studio v2 map, as the game has them: the hitboxes and polygons drawn on the map, the hitboxes of
+ * its placed elements, and the collisions of its terrain relief, walls and holes. They are the `hitboxes` that
+ * `prepareStudioMapPayload` gives the map, computed by the same code, without building the render data of the terrain.
+ *
+ * Pure and synchronous: it loads nothing, sets no global state and makes no network call, so it can run in a server
+ * request, a Cloudflare Worker, a test or a script. The map given is not changed. The hitboxes of the events are not
+ * part of it: events are placed and moved at run time.
+ *
+ * The coordinates are in pixels of the map (48 per cell), not multiplied by its `params.scale`: the space of a map
+ * streamed to an MMORPG room.
+ *
+ * @param map - A Studio v2 map, or a payload that holds it in `data`. A payload already prepared by
+ *   `prepareStudioMapPayload` gives back its hitboxes.
+ * @returns The hitboxes: rectangles (`x`, `y`, `width`, `height`) or polygons (`points`), each with an `id`.
+ * @throws When the map is not in format v2.
+ *
+ * @example
+ * ```ts
+ * import { studioMapHitboxes } from "@rpgjs/studio/server";
+ *
+ * // Mark the cells of the map that a collision covers, to place events on free cells
+ * for (const hitbox of studioMapHitboxes(map)) {
+ *   markBlockedCells(grid, hitbox); // a rectangle (x, y, width, height) or a polygon (points)
+ * }
+ * ```
+ */
+export function studioMapHitboxes(map: Record<string, any>): MapChunkHitbox[] {
+  if (map?.data?.__studioPrepared) {
+    return clone(Array.isArray(map.hitboxes) ? map.hitboxes : []);
+  }
+  const studioMap = studioV2Map(map, undefined);
+  return collectStudioMapHitboxes(
+    studioMap,
+    prepareElements(studioMap).hitboxes,
+    parseArray(studioMap.terrainByTileset)
+  );
+}
+
 /** Prepare a complete Studio v2 map for authoritative physics and streaming. */
 export function prepareStudioMapPayload(
   source: Record<string, any>,
@@ -261,14 +342,7 @@ export function prepareStudioMapPayload(
       database: options.database ?? prepared.database,
     };
   }
-  const map = clone(source?.data?.params ? source.data : source);
-  if (map?.creationDetails?.version !== "v2") {
-    throw new Error(
-      `Studio map '${
-        options.id ?? map?._id ?? map?.id ?? "unknown"
-      }' must use format v2 for MMORPG streaming`
-    );
-  }
+  const map = studioV2Map(source, options.id);
   const id = String(options.id ?? map._id ?? map.id);
   const width = Math.max(1, finite(map.params?.width, 1) * 48);
   const height = Math.max(1, finite(map.params?.height, 1) * 48);
@@ -278,21 +352,11 @@ export function prepareStudioMapPayload(
     ...map,
     terrainByTileset,
   });
-  const baseHitboxes: MapChunkHitbox[] = Array.isArray(map.hitboxes)
-    ? map.hitboxes
-    : [];
-  const polygonHitboxes: MapChunkHitbox[] = (
-    Array.isArray(map.polygons) ? map.polygons : []
-  )
-    .filter((points: unknown) => Array.isArray(points) && points.length >= 3)
-    .map((points: number[][], index: number) => ({
-      id: `studio-polygon:${index}`,
-      points,
-    }));
-  const terrainHitboxes = buildStudioTerrainCollisionPolygons({
-    ...map,
-    terrainByTileset,
-  });
+  const hitboxes = collectStudioMapHitboxes(
+    map,
+    preparedElements.hitboxes,
+    terrainByTileset
+  );
   const events = Array.isArray(source.events)
     ? source.events
     : Array.isArray(map.events)
@@ -317,12 +381,7 @@ export function prepareStudioMapPayload(
     },
     positions: source.positions,
     events,
-    hitboxes: [
-      ...baseHitboxes,
-      ...polygonHitboxes,
-      ...preparedElements.hitboxes,
-      ...terrainHitboxes,
-    ],
+    hitboxes,
     config: options.config ?? source.config,
     database: options.database ?? source.database,
     revision: String(
