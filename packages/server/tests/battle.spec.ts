@@ -2,6 +2,7 @@ import { beforeEach, test, expect, afterEach, describe, vi } from "vitest";
 import { testing, TestingFixture } from "@rpgjs/testing";
 import { defineModule, createModule } from "@rpgjs/common";
 import { RpgPlayer, MAXHP, MAXSP, ATK, PDEF, SDEF } from "../src";
+import { DAMAGE_SKILL } from "../src/presets";
 import { Effect } from "../src/Player/EffectManager";
 
 /**
@@ -373,3 +374,54 @@ describe("Battle Manager - Edge Cases", () => {
   });
 });
 
+
+describe("Battle Manager - parameters that are not set", () => {
+  test("a parameter that is not a number counts as 0 instead of making the HP NaN", () => {
+    const map = player.getCurrentMap()!;
+    const oldFormulas = (map as any).damageFormulas;
+    const seen: any[] = [];
+    (map as any).damageFormulas = {
+      ...oldFormulas,
+      damageSkill: (a: any, b: any, skill: any) => {
+        seen.push(a[ATK]);
+        return DAMAGE_SKILL(a, b, skill);
+      },
+    };
+    try {
+      attackerPlayer.param[ATK] = NaN as any;
+      const initialHp = player.hp;
+
+      const result = player.applyDamage(attackerPlayer, { id: "bolt", power: 20, coefficient: { [ATK]: 1 } } as any);
+
+      expect(seen[0]).toBe(0);
+      expect(Number.isFinite(result.damage)).toBe(true);
+      expect(player.hp).toBe(initialHp - result.damage);
+    } finally {
+      (map as any).damageFormulas = oldFormulas;
+    }
+  });
+
+  test("a formula that gives no number deals no damage", () => {
+    const map = player.getCurrentMap()!;
+    const oldFormulas = (map as any).damageFormulas;
+    (map as any).damageFormulas = { ...oldFormulas, damageSkill: () => NaN };
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const initialHp = player.hp;
+
+      const result = player.applyDamage(attackerPlayer, { id: "broken", power: 10 } as any);
+
+      expect(result.damage).toBe(0);
+      expect(player.hp).toBe(initialHp);
+      expect(warn).toHaveBeenCalled();
+    } finally {
+      (map as any).damageFormulas = oldFormulas;
+      warn.mockRestore();
+    }
+  });
+
+  test("the default skill formula takes a skill without coefficients", () => {
+    const damage = DAMAGE_SKILL({ [ATK]: 10 }, { [PDEF]: 5 }, { power: 30 });
+    expect(damage).toBe(30);
+  });
+});

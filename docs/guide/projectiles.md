@@ -173,6 +173,28 @@ example `map:click` with a world position or `event:click` with an event id. The
 client sends intent and context; the server still owns validation, collisions,
 damage, and impacts.
 
+## Aim At A Target
+
+Give `target` instead of `direction` to aim at a point or at an entity (a
+player or an event, aimed at its center). The server computes the direction.
+
+```ts
+player.projectiles.emit({
+  type: 'arrow',
+  target: enemy, // or { x: 320, y: 180 }
+  trajectory: { type: 'arc', range: 420, speed: 420, height: 46 },
+  landing: { radius: 10 },
+  onHit({ target }) {
+    target.hp -= 15
+  }
+})
+```
+
+An `arc` lands on its target; `range` is then its maximum reach, so a target
+that is too far makes it land short. `landing` makes the arc hit what stands
+where it lands (see [Behaviors](#behaviors)). Other trajectories only take their
+direction from the target and keep flying their `range`.
+
 ## Repeats And Patterns
 
 Use `repeat` for a compact burst. The server broadcasts one spawn batch with
@@ -307,7 +329,14 @@ These options work with every trajectory:
 | `collide` | `always` (`none` for `arc`) | What the projectile collides with in flight: `always`, `walls` (static obstacles only) or `none`. |
 | `pierce` | `false` | Fly through targets: `true`, or the maximum number of targets. Each target is hit once. |
 | `wall` | `stop` | Against a wall: `stop`, `bounce`, `return` (back to the launcher) or `stick` (stays planted). |
+| `delay` | `0` | Time before the projectile leaves, in ms: the wind-up of a bow or of a cast. Origin and direction are those of the moment it was emitted. |
 | `linger` | none | `{ ms }`: keep the projectile visible where it ended, for a fuse or a planted arrow. |
+| `landing` | none | `{ radius }`: an `arc` hits what stands within `radius` pixels of its landing point. The closest entity is hit, or all of them with `pierce`. |
+
+An arc flies over everything, so `landing` is how it hits: one target for an
+arrow, an area with `pierce` for a bomb. Each entity it hits triggers `onHit`
+and can still answer through `onProjectileHit`. A landing that hit something
+does not `linger` on the ground, unless the target replied `stick`.
 
 Hooks of one projectile, on the server:
 
@@ -365,8 +394,22 @@ export const Target: EventDefinition = {
 ```
 
 The hook receives the projectile (`type`, `ownerId`, `params`, `trajectory`) and
-`{ owner, map, x, y, hit }`. Module hooks are notified too, without a reply:
-`event.onProjectileHit` and `player.onProjectileHit` in `defineModule()`.
+`{ owner, map, x, y, hit }`. Module hooks can reply too: `event.onProjectileHit`
+and `player.onProjectileHit` in `defineModule()` may return `"pass"`, `"stick"`
+or `"stop"` **at once** (a promise cannot decide: the projectile does not
+wait). The first module that replies decides, and the event's own
+`onProjectileHit` has the last word. Scripts reply the same way with
+`event.projectileHit` (see the scripts guide).
+
+```ts
+defineModule<RpgServer>({
+  event: {
+    onProjectileHit(event, projectile) {
+      if (event.name() === "Ghost") return "pass"
+    },
+  },
+})
+```
 
 Loot pickups never stop projectiles: they fly over them.
 
@@ -387,8 +430,10 @@ export const server: RpgServer = {
       target.hp -= damage
     },
 
-    onDestroy({ projectile, reason }) {
-      console.log(projectile.id, reason)
+    // `x`, `y`: where it ended (the impact, where it landed, or the end of its range).
+    // `surface`: "target", "wall" or "ground" when it ended on something.
+    onDestroy({ projectile, reason, x, y, surface }) {
+      console.log(projectile.id, reason, x, y, surface)
     }
   }
 }
@@ -433,9 +478,86 @@ player.projectiles.emit({
 })
 ```
 
+## Standard Look
+
+A projectile type without a registered component is drawn by the standard
+projectile component of `@rpgjs/client`. The server only names the projectile
+with its `type`; its look is declared once on the client, in `projectiles.looks`:
+
+```ts
+// server: gameplay only
+player.projectiles.emit({
+  type: 'arrow',
+  target,
+  trajectory: { type: 'arc', range: 420, speed: 420, height: 46 },
+  landing: { radius: 10 },
+  linger: { ms: 2500 }
+})
+```
+
+```ts
+// client: how an `arrow` looks
+import { defineModule, RpgClient } from '@rpgjs/client'
+
+export default defineModule<RpgClient>({
+  projectiles: {
+    looks: {
+      arrow: {
+        shape: 'arrow',
+        color: '#e5e7eb',
+        accentColor: '#f87171',
+        trail: { color: '#fde68a', width: 3, length: 10 }
+      }
+    }
+  }
+})
+```
+
+It draws the projectile above a shadow at its height `z`, tilts it along its
+climb and fall, leaves it planted when it sticks, and plays an impact that
+depends on what it ended on: sparks on a target, sparks thrown back by a wall,
+dust on the ground.
+
+| Look field | Default | Description |
+| --- | --- | --- |
+| `graphic` | none | Spritesheet id drawn instead of a shape (its `default` animation). |
+| `shape` | `orb` | Built-in shape without a `graphic`: `arrow`, `orb` or `bomb`. A `bomb` explodes on impact. |
+| `color`, `accentColor` | light blue, white | Main and highlight colors, as `#rrggbb` or a number. |
+| `scale` | `1` | Size of the projectile and of its impact. |
+| `rotate` | `true` | Point the projectile along its flight. |
+| `spin` | none | Turns per second, for a boomerang or a thrown axe. |
+| `shadow` | `true` | Shadow on the ground. |
+| `trail` | none | `true`, or `{ color, width, length }` (length in frames): a ribbon following the projectile. |
+| `trailFx` | none | Particle preset of `@canvasengine/presets` attached to the flying projectile. |
+| `impactFx` | none | Particle preset replacing the drawn impact: one name, or `{ target, wall, ground }`. |
+| `impactSound` | none | Sound id played on impact. It fades with the distance to the local player and pans to the side of the impact. |
+| `shake` | none | Shake the map on impact: `true`, or the intensity. It fades with the distance to the local player. |
+| `feedbackDistance` | `480` | Beyond this distance from the local player (pixels), the impact plays no sound and does not shake the map, so a fight elsewhere on an MMORPG map stays silent. |
+| `impactDuration` | `350` | How long the impact stays drawn, in ms. It applies to custom components too. |
+
+These fields are typed by `ProjectileLook`, exported by `@rpgjs/client`. A look
+can also be registered at runtime with `engine.registerProjectileLook(type, look)`.
+
+The same fields sent in the server `params` override the look for one shot. Keep
+that for what really changes per shot, such as the color of an elemental arrow;
+everything else belongs to the client look, so it is not sent with every
+projectile:
+
+```ts
+player.projectiles.emit({
+  type: 'arrow',
+  params: { color: '#60a5fa' }, // an ice arrow, same look otherwise
+  trajectory: { type: 'linear', speed: 320, range: 260 }
+})
+```
+
+Register your own component when a type needs a look these fields cannot give.
+A look registered for that type is then handed to the component, merged into
+its `params`.
+
 ## Client Registration
 
-Register a CanvasEngine component for each projectile type:
+Register a CanvasEngine component to draw a projectile type yourself:
 
 ```ts
 import { RpgClient } from '@rpgjs/client'
@@ -494,6 +616,8 @@ Common props:
 
 - `id`, `type`, `ownerId`
 - `x`, `y`, `origin`, `direction`, `angle`
+- `flightAngle`, the angle to draw the sprite with: `angle` tilted up while the
+  projectile climbs and down while it falls
 - `speed`, `range`, `ttl`, `distance`, `elapsed`, `progress`
 - `z`, the height above the ground: draw the sprite at `y - z` and a shadow at
   `y`
@@ -504,13 +628,15 @@ Common props:
   projectile visible for its impact animation
 - `index`, `count` for repeated or patterned projectiles
 - `params` for visual customization
-- `impact` when the server confirms a collision. While `impact` is present,
+- `impact` when the server confirms a collision. `impact.surface` tells what
+  the projectile ended on: `target`, `wall`, or `ground` for an arc that landed
+  without hitting anything. While `impact` is present,
   `x`, `y`, and `distance` are pinned to the authoritative impact point.
   Before the server confirmation arrives, the client may also pin `x`, `y`, and
   `distance` to a locally predicted impact point; `impact` remains undefined
   until the server confirms the collision.
 
-Position and progress props (`x`, `y`, `z`, `phase`, `angle`, `distance`, `elapsed`,
+Position and progress props (`x`, `y`, `z`, `phase`, `angle`, `flightAngle`, `distance`, `elapsed`,
 `progress`, `impact`, `impactElapsed`, `impactProgress`, `destroyed`) are
 updated on every frame without rebuilding the component. Before an impact,
 `impact` is `null` and `impactElapsed` / `impactProgress` are `0`.

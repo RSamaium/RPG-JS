@@ -78,6 +78,16 @@ export const LPCSpritesheetPreset = (options: {
           framesHeight: 4,
           animations: ({ direction }) => [anim(direction, 7, 3)],
         },
+        // Bow shot of the LPC layout: the arrow leaves around the ninth frame.
+        shoot: {
+          offset: {
+            x: 0,
+            y: 1024 * ratio,
+          },
+          framesWidth: 13,
+          framesHeight: 4,
+          animations: ({ direction }) => [anim(direction, 13, 3)],
+        },
         attack2: {
           offset: {
             x: 0,

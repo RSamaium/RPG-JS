@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -78,6 +78,10 @@ export class SimPlayer implements PlayerPort {
   }
   assignHotbarSlot(slot: number, entry: HotbarEntryOptions) {
     this.record("assignHotbarSlot", { slot, ...entry });
+  }
+  useSkill(skillId: string, options: SkillUseOptions = {}) {
+    this.record("useSkill", { skillId, ...options });
+    return true;
   }
 }
 
@@ -171,6 +175,10 @@ export class SimMap implements MapPort {
   showComponentAnimation(id: string, position: { x: number; y: number }, params: object) { this.record("showComponentAnimation", { id, position, params }); }
   shakeMap(options: ShakeOptions = {}) { this.record("shakeMap", options); }
   private projectileCount = 0;
+  playVisualEffect(options: VisualEffectPlayOptions) {
+    this.record("playVisualEffect", options);
+  }
+
   launchProjectile(options: ProjectileLaunchOptions) {
     this.record("launchProjectile", options);
     return `projectile-${++this.projectileCount}`;

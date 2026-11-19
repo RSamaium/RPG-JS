@@ -4,7 +4,7 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -33,7 +33,7 @@ let eventCounter = 0;
 const plainCopy = (state: unknown): object | null => (state == null ? null : JSON.parse(JSON.stringify(state)));
 
 /** The map of a script, over the map of RPGJS: the events a script makes are real events that listen to the same signals. */
-function mapPortOf(map: RpgMap): MapPort {
+function mapPortOf(map: RpgMap, player: RpgPlayer): MapPort {
   const m = map as any;
   const made = madeByScripts.get(map) ?? madeByScripts.set(map, new Set()).get(map)!;
   const madeShapes = shapesMadeByScripts.get(map) ?? shapesMadeByScripts.set(map, new Set()).get(map)!;
@@ -111,15 +111,41 @@ function mapPortOf(map: RpgMap): MapPort {
     shakeMap: (options: ShakeOptions = {}) => m.shakeMap(options),
     launchProjectile(o: ProjectileLaunchOptions) {
       const dx = o.toward.x - o.from.x, dy = o.toward.y - o.from.y, length = Math.hypot(dx, dy);
+      const speed = o.speed ?? DEFAULT_PROJECTILE_SPEED, range = o.range ?? DEFAULT_PROJECTILE_RANGE;
+      const height = typeof o.arc === "object" ? o.arc.height : undefined;
       const [state] = m.projectiles.emit({
         type: o.projectile,
         origin: o.from,
         direction: { x: dx / length, y: dy / length },
-        trajectory: { type: "linear", speed: o.speed ?? DEFAULT_PROJECTILE_SPEED, range: o.range ?? DEFAULT_PROJECTILE_RANGE },
-        ...(o.damage !== undefined ? { payload: { damage: o.damage } } : {}),
-      });
+        // A lob lands on `toward`, as far as its range allows.
+        ...(o.arc
+          ? {
+              target: o.toward,
+              trajectory: { type: "arc", speed, range, ...(height !== undefined ? { height } : {}) },
+              ...(o.landingRadius !== undefined ? { landing: { radius: o.landingRadius } } : {}),
+            }
+          : { trajectory: { type: "linear", speed, range } }),
+        ...(o.delay !== undefined ? { delay: o.delay } : {}),
+        ...(o.damage !== undefined
+          ? {
+              payload: { damage: o.damage },
+              // Fixed damage, as is: a hit that follows the battle rules is a skill ($player.useSkill).
+              onHit: ({ target }: { target?: any }) => {
+                if (typeof target?.hp === "number") target.hp = Math.max(0, target.hp - o.damage!);
+              },
+            }
+          : {}),
+        // Launched by the player of the script: it flies through them and its signals fire for them.
+      }, o.owner === "player" ? player : undefined);
       if (!state) throw new Error("the map did not launch the projectile");
       return String(state.id);
+    },
+    playVisualEffect(o: VisualEffectPlayOptions) {
+      m.playVisualEffect(o.at, o.effect, {
+        ...(o.preset ? { preset: o.preset } : {}),
+        ...(o.duration !== undefined ? { duration: o.duration } : {}),
+        ...(o.scale !== undefined ? { scale: o.scale } : {}),
+      });
     },
   };
 }
@@ -278,12 +304,24 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     assignHotbarSlot(slot, entry: HotbarEntryOptions) {
       p.assignHotbarSlot(slot, entry);
     },
+    useSkill(skillId, options: SkillUseOptions = {}) {
+      const room = (p.getCurrentMap?.() ?? null) as any;
+      const target = options.target === undefined ? undefined : room?.getEvent?.(options.target) ?? room?.getPlayer?.(options.target);
+      if (options.target !== undefined && !target) throw new Error(`there is no event or player "${options.target}" on the map`);
+      try {
+        p.useSkill(skillId, target);
+        return true;
+      } catch {
+        // Not learned, not enough SP, cooldown, failed hit roll: the script hears it as false.
+        return false;
+      }
+    },
   };
 
   return {
     player: playerPort,
     room: where,
-    ...(map ? { map: mapPortOf(map) } : {}),
+    ...(map ? { map: mapPortOf(map, player) } : {}),
     event: {
       get id() { return event?.id ?? ""; },
       get name() { return String(read((event as any)?.name) ?? ""); },

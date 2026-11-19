@@ -132,8 +132,10 @@ test("withTimeManager syncs map time snapshots and lets the client infer current
   serverTime.resume();
   serverTime.setScale(30);
   await fixture.applySyncToClient();
-  const projectedState = clientTime.state(Date.now() + 60_000)!;
-  expect(Math.floor(projectedState.elapsedMinutes - clientTime.state()!.elapsedMinutes)).toBe(30);
+  // One instant for both states: reading the clock twice could give 29.99 minutes.
+  const now = Date.now();
+  const projectedState = clientTime.state(now + 60_000)!;
+  expect(Math.round(projectedState.elapsedMinutes - clientTime.state(now)!.elapsedMinutes)).toBe(30);
 
   await player.changeMap("map2", { x: 10, y: 10 });
   player = await client.waitForMapChange("map2");

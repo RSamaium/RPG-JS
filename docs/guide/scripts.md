@@ -106,13 +106,33 @@ installed, and a listener that fails does not stop the next one.
 | `battle.end` | `onEnd` of the `battle` scope | `result`, `troop`, `enemies` |
 | `combat.hit` | `combat.hooks.afterHit` of Action Battle, through `actionBattleHooks(scripts)`: for the attacker when it is a player, otherwise the target; nothing for a hit between two events | `damage`, `defeated`, `attacker`, `target` (`id`, `name`, `kind`) |
 | `player.hotbarChange` | `onHotbarChange` of the player | `action` (`initialize`, `assign`, `clear`, `select`, `refresh`), `slots` |
-| `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y` |
-| `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y` |
-| `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` |
+| `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y`; may reply `"pass"`, `"stick"` or `"stop"` (see [Reply to a projectile](#reply-to-a-projectile)) |
+| `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y`; may reply `"pass"`, `"stick"` or `"stop"` (see [Reply to a projectile](#reply-to-a-projectile)) |
+| `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` (where it ended: the impact, where it landed, or the end of its range), `surface` (`"target"`, `"wall"`, `"ground"`, or `""` when it flew out of range) |
 | `map.tick` | `onTick` of a map with players, about 60 times a second, once for each player of the map | `map`, `deltaMs`, `tick` |
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
+
+### Reply to a projectile
+
+`event.projectileHit` and `player.projectileHit` are asked **before** the projectile decides what to do. A listener can return
+`"pass"` (it flies through, as through a bush), `"stick"` (it stays planted in the target) or `"stop"` (it stops, even a piercing
+one); return nothing to keep what the projectile does. The first listener that replies decides, and an event's own
+`onProjectileHit` has the last word.
+
+```js
+on("event.projectileHit", { where: { "projectile.type": "arrow" } }, (e) => {
+  if ($event.name === "Ghost") return "pass";
+  if ($player.getVariable("sticky_arrows") === true) return "stick";
+});
+```
+
+The projectile does not wait, so only a listener that **answers at once** can reply: it reads the payload, `$event`, `$player`
+and `$map`, and calls only the methods that read (`getVariable`, `hasVariable`, `getItem`, `hasItem`, `getEvent`, `getEvents`,
+`getPlayers`, `getShape`, `getShapes`, `getWeather`, `getLighting`). A listener that does anything else (`setVariable`,
+`showText`, `wait`, a function of the script) still runs, after the hit, but its reply is ignored. Put the reply and the effects
+in two listeners when you need both.
 
 The script acts for **the player of the signal** (`$player`) and, for the event signals, for **that event** (`$event`). The signals of
 the player fire in every kind of room, a map or not; `event.action` and `event.touch` only exist in a map, since events do. The zones
@@ -196,6 +216,7 @@ The player of the signal, with the names of `RpgPlayer`.
 | `showChoices(text, choices)` | 2 to 8 choices `{ text, value }`; gives the choice picked, or `null` when the player closes it |
 | `showNotification(message, options?)` | a notification. Options: `type` (`info`, `warn`, `error`), `time` |
 | `changeMap(map, { x, y }?)` | moves the player to a map |
+| `useSkill(skillId, { target }?)` | uses a skill the player knows, as `player.useSkill` does; gives `false` when it cannot be used now. With Action Battle on the map, a skill with an `action` follows the battle rules: its projectile, damage formula, factions, states, SP cost and cooldown. `target` is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy within the reach of the action, whatever the player faces |
 | `openGui(id, data?, options?)`, `updateGui(id, data)`, `closeGui(id, data?)` | a GUI of the client, as `player.gui(id).open(data, options)`, `.update(data)` and `player.removeGui(id, data)` do. See [GUIs](#guis-of-the-client) |
 
 RPGJS has variables, not switches: a flag is a variable (`$player.setVariable("tournament", true)`). A private switch of an event is
@@ -283,6 +304,8 @@ and the lighting). `setWeather` needs an `effect` or a `preset`; `patchWeather` 
 | `showAnimation({ x, y }, graphic, animationName?)` | an animation of a graphic at a position (`"default"` when no name) |
 | `showComponentAnimation(id, { x, y }, params?)` | an animation made by a component of the game, with plain data as `params` |
 | `shakeMap(options?)` | shakes the screen. Options: `intensity` (0 to 100), `duration` (0 to 10 000 ms), `frequency` (1 to 60), `direction` (`"x"`, `"y"`, `"both"`) |
+| `launchProjectile({ projectile, from, toward, ... })` | launches a projectile (its type: what the clients draw it with, see `projectiles.looks`) and gives its id. `damage` is HP removed from each player or event it hits, as is (no defense, no faction): for a hit that follows the battle rules, use `$player.useSkill`. It flies straight and hits the first player or event on its way. Options: `damage`, `speed` (1 to 2 000), `range` (1 to 5 000), `arc` (`true` or `{ height }`, 0 to 500: lobbed over everything, it lands on `toward` or short of it at `range`), `landingRadius` (0 to 500, with `arc`: hits the players and events that close to where it lands), `delay` (0 to 10 000 ms of wind-up), `owner: "player"` (the player of the script launches it: it flies through them, and `projectile.end` and `event.projectileHit` fire for them; without it the projectile has no owner, can hit any player, and those signals do not fire). Listen to `projectile.end` for where it ended |
+| `playVisualEffect({ effect, at, ... })` | a one-shot particle effect at a point. `effect` names a built-in preset, or the effect of `preset` (a particle preset `{ emitters: [...] }`, such as the resolved preset of a Studio Visual Effect). Options: `duration` (0 to 10 000 ms), `scale` (0.1 to 10) |
 
 **Limits.** A script makes **50 events** and **50 zones** on a map at most, an id or a name that is already on the map is refused, a
 number outside its range is refused with the range, and a description with a key RPGJS does not take is refused with the keys that
@@ -397,10 +420,10 @@ that is not a map, `events` and `shapes` put the events and the zones of the gam
 `expect` keys are `returns`, `error`, `effects`, `effectsInclude`, `effectsExclude`, `texts`, `notifications`, and paths
 `player.gold`, `player.items.<id>`, `shared.<name>`, `state.<key>`, `vars.<name>`; a value is exact or `{ min, max }`.
 The effects are named after the call that made them: `showText`, `showNotification`, `showChoices`, `changeMap`, `openGui`, `addItem`,
-`removeItem`, `setVariable`, `removeVariable`, `gold` (with the new `value`), `wait`, `sync` (a shared property), `state`, and the
+`removeItem`, `setVariable`, `removeVariable`, `useSkill`, `gold` (with the new `value`), `wait`, `sync` (a shared property), `state`, and the
 ones of the map: `createDynamicEvent`, `removeEvent`, `createShape`, `removeShape`, `setMapVariable`, `removeMapVariable`,
 `setWeather`, `patchWeather`, `clearWeather`, `setLighting`, `patchLighting`, `clearLighting`, `setDay`, `setNight`,
-`transitionLighting`, `playSound`, `stopSound`, `showAnimation`, `showComponentAnimation`, `shakeMap`.
+`transitionLighting`, `playSound`, `stopSound`, `showAnimation`, `showComponentAnimation`, `shakeMap`, `launchProjectile`, `playVisualEffect`.
 
 ## Run your own world
 

@@ -55,6 +55,24 @@ export default {
           components: {
             bolt: ProjectileComponent,
           },
+          // The server only names the projectile: its look is decided here.
+          looks: {
+            arrow: {
+              shape: "arrow",
+              color: "#e5e7eb",
+              accentColor: "#f87171",
+              trail: { color: "#fde68a", width: 3, length: 10 },
+            },
+            bomb: {
+              shape: "bomb",
+              color: "#f97316",
+              accentColor: "#fde68a",
+              rotate: false,
+              scale: 1.2,
+              shake: 6,
+              impactDuration: 450,
+            },
+          },
         },
       },
     ]),

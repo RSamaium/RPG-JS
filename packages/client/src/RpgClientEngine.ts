@@ -6,7 +6,7 @@ import { AbstractWebsocket, WebSocketToken } from "./services/AbstractSocket";
 import { LoadMapService, LoadMapToken, type MapData } from "./services/loadMap";
 import { RpgSound } from "./Sound";
 import { RpgResource } from "./Resource";
-import { EMOTION_BUBBLE_ANIMATION_ID, LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
+import { EMOTION_BUBBLE_ANIMATION_ID, LOOT_COMPONENT_ID, LOOT_TEXT_ANIMATION_ID, VISUAL_EFFECT_ANIMATION_ID, getOrCreateI18nService, Hooks, ModulesToken, Direction, normalizeLightingState, type I18nParams, type I18nService, type RpgRoomDescriptor } from "@rpgjs/common";
 import type { EventComponentConfig, RpgLootHooks } from "./RpgClient";
 import type { RpgClientEvent } from "./Game/Event";
 import { load } from "@signe/sync";
@@ -22,6 +22,8 @@ import BarComponent from "./components/dynamics/bar.ce";
 import ShapeComponent from "./components/dynamics/shape.ce";
 import ImageComponent from "./components/dynamics/image.ce";
 import LootComponent from "./components/loot/loot.ce";
+import ProjectileComponent from "./components/projectile.ce";
+import type { ProjectileLook } from "./components/projectile-visual";
 import {
   PredictionController,
   type PredictionHistoryEntry,
@@ -311,6 +313,7 @@ export class RpgClientEngine<T = any> {
         return { x: owner.x() + hitbox.w / 2, y: owner.y() + hitbox.h / 2 };
       },
     );
+    this.projectiles.setDefaultComponent(ProjectileComponent);
     this.globalConfig = inject(GlobalConfigToken)
 
     if (!this.globalConfig) {
@@ -349,6 +352,11 @@ export class RpgClientEngine<T = any> {
     this.addComponentAnimation({
       id: LOOT_TEXT_ANIMATION_ID,
       component: PrebuiltComponentAnimations.LootText
+    })
+    // One-shot particle effects played by `map.playVisualEffect()` on the server.
+    this.addComponentAnimation({
+      id: VISUAL_EFFECT_ANIMATION_ID,
+      component: PrebuiltComponentAnimations.Fx
     })
 
     this.registerSpriteComponent("rpg:text", TextComponent);
@@ -1970,6 +1978,25 @@ export class RpgClientEngine<T = any> {
 
   getProjectileComponent(type: string) {
     return this.projectiles.get(type);
+  }
+
+  /**
+   * Register the look of a projectile type drawn by the standard projectile
+   * component: shape or spritesheet, trail, shadow, impact.
+   *
+   * @title Register Projectile Look
+   * @method engine.registerProjectileLook(type, look)
+   * @param type - Projectile type emitted by the server
+   * @param look - Look options, see `ProjectileLook`
+   * @returns {void}
+   * @memberof RpgClientEngine
+   * @example
+   * ```ts
+   * engine.registerProjectileLook("arrow", { shape: "arrow", trail: true });
+   * ```
+   */
+  registerProjectileLook(type: string, look: ProjectileLook): void {
+    this.projectiles.registerLook(type, look as Record<string, unknown>);
   }
 
   /**

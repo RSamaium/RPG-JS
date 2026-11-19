@@ -1,10 +1,8 @@
 import {
-  inject,
   Presets,
   provideClientGlobalConfig,
   provideClientModules,
   provideLoadMap,
-  RpgClientEngine,
 } from "@rpgjs/client";
 import {
   createActionBattleUi,
@@ -13,40 +11,13 @@ import {
 } from "@rpgjs/action-battle/client";
 import MapComponent from "../components/map.ce";
 import EnemyDragLayerComponent from "../components/enemy-drag-layer.ce";
+import LabPanelComponent from "../components/lab-panel.ce";
 import WoodProjectileComponent from "../components/wood-projectile.ce";
 import { provideMain } from "../modules/main";
+import { attackAnimation } from "../animations";
 
 const MAP_WIDTH = 2048;
 const MAP_HEIGHT = 1536;
-const PANEL_WIDTH = 240;
-const CAMERA_LOCK_ID = "__sample_action_battle_overview__";
-
-let resizeListenerBound = false;
-
-function fitMapToBrowser(engine: RpgClientEngine) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const applyFit = () => {
-    const viewport = (engine as any).findViewportInstance?.();
-    if (!viewport) {
-      return;
-    }
-
-    const availableWidth = Math.max(320, window.innerWidth - PANEL_WIDTH);
-    const availableHeight = Math.max(240, window.innerHeight);
-    const zoom = Math.min(availableWidth / MAP_WIDTH, availableHeight / MAP_HEIGHT);
-
-    viewport.setZoom(zoom, false);
-    viewport.x = Math.max(0, (availableWidth - MAP_WIDTH * zoom) / 2);
-    viewport.y = Math.max(0, (availableHeight - MAP_HEIGHT * zoom) / 2);
-  };
-
-  applyFit();
-  window.requestAnimationFrame(applyFit);
-}
-
 export default {
   providers: [
     provideLoadMap((id: string) => ({
@@ -66,6 +37,7 @@ export default {
     provideMain(),
     provideActionBattle({
       visual: createActionBattleVisual("impact"),
+      animations: { attack: attackAnimation },
       ui: createActionBattleUi({
         hotbar: false,
         targeting: true,
@@ -77,18 +49,13 @@ export default {
         sprite: {
           componentsInFront: [EnemyDragLayerComponent],
         },
-        sceneMap: {
-          onAfterLoading() {
-            const engine = inject(RpgClientEngine);
-            engine.cameraFollowTargetId.set(CAMERA_LOCK_ID);
-            fitMapToBrowser(engine);
-
-            if (typeof window !== "undefined" && !resizeListenerBound) {
-              resizeListenerBound = true;
-              window.addEventListener("resize", () => fitMapToBrowser(engine));
-            }
+        gui: [
+          {
+            id: "playground-lab-panel",
+            component: LabPanelComponent,
+            autoDisplay: true,
           },
-        },
+        ],
         spritesheetResolver: async (id: string) => {
           if (id === "hero") {
             return Presets.LPCSpritesheetPreset({
@@ -130,6 +97,15 @@ export default {
         projectiles: {
           components: {
             wood: WoodProjectileComponent,
+          },
+          // The server only names the projectile: its look is decided here.
+          looks: {
+            arrow: {
+              shape: "arrow",
+              color: "#e5e7eb",
+              accentColor: "#f87171",
+              trail: { color: "#fde68a", width: 3, length: 10 },
+            },
           },
         },
       },

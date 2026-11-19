@@ -1,7 +1,7 @@
 import { beforeEach, test, expect, afterEach, describe, vi } from "vitest";
 import { testing, TestingFixture } from "@rpgjs/testing";
 import { defineModule, createModule } from "@rpgjs/common";
-import { RpgPlayer, MAXSP, ATK, PDEF } from "../src";
+import { RpgPlayer, MAXSP, ATK, PDEF, registerSkillUseHandler } from "../src";
 import { Effect } from "../src/Player/EffectManager";
 import type { SkillObject } from "../src/Player/SkillManager";
 
@@ -702,5 +702,72 @@ describe("Skill Management - Edge Cases", () => {
     const skill = player.learnSkill(modifiedFire);
     expect(skill.name).toBe("Modified Fire");
     expect(skill.spCost).toBe(5);
+  });
+});
+
+describe("Skill Management - Skill use handlers", () => {
+  test("a handler runs the skill instead of the native rule", () => {
+    player.learnSkill("fire");
+    const handler = vi.fn(() => ({ id: "fire", handled: true }) as any);
+    const unregister = registerSkillUseHandler(handler);
+    try {
+      const used = player.useSkill("fire");
+      expect(handler).toHaveBeenCalledWith(player, "fire", undefined);
+      expect((used as any).handled).toBe(true);
+      // The native rule did not run: no SP spent.
+      expect(player.sp).toBe(100);
+    } finally {
+      unregister();
+    }
+  });
+
+  test("a handler that returns undefined leaves the skill to the native rule", () => {
+    player.learnSkill("fire");
+    const unregister = registerSkillUseHandler(() => undefined);
+    try {
+      player.useSkill("fire");
+      expect(player.sp).toBe(90);
+    } finally {
+      unregister();
+    }
+  });
+
+  test("a silenced player is refused before any handler runs", () => {
+    player.learnSkill("fire");
+    player.effects = [Effect.CAN_NOT_SKILL];
+    const handler = vi.fn(() => ({ id: "fire" }) as any);
+    const unregister = registerSkillUseHandler(handler);
+    try {
+      expect(() => player.useSkill("fire")).toThrow();
+      expect(handler).not.toHaveBeenCalled();
+    } finally {
+      unregister();
+      player.effects = [];
+    }
+  });
+
+  test("a skill given as an object reaches the handlers with its id", () => {
+    player.learnSkill("fire");
+    const handler = vi.fn(() => ({ id: "fire" }) as any);
+    const unregister = registerSkillUseHandler(handler);
+    try {
+      player.useSkill(FireSkill as any);
+      expect(handler).toHaveBeenCalledWith(player, "fire", undefined);
+    } finally {
+      unregister();
+    }
+  });
+
+  test("a useSkill called by a handler runs the native rule", () => {
+    player.learnSkill("fire");
+    const handler = vi.fn((p: RpgPlayer, id: string) => p.useSkill(id));
+    const unregister = registerSkillUseHandler(handler);
+    try {
+      player.useSkill("fire");
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(player.sp).toBe(90);
+    } finally {
+      unregister();
+    }
   });
 });

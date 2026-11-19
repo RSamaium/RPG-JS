@@ -19,6 +19,7 @@
     color="#4d5f7a"
     size={12}
   />
+
   <Container>
     <EventLayerComponent />
   </Container>
@@ -40,6 +41,17 @@
     pointermove={trackPointer}
     pointerdown={shootAtPointer}
   />
+  @for (choice of weaponChoices) {
+    <Text
+      x={choice.x}
+      y={72}
+      text={choice.label}
+      color={choice.color}
+      size={12}
+      cursor="pointer"
+      pointerdown={choice.select}
+    />
+  }
 </Container>
 
 <script>
@@ -50,6 +62,17 @@
   const pointerTarget = signal(null);
   const hasPointerTarget = computed(() => pointerTarget() !== null);
   let mapContainer = null;
+
+  const weapon = signal("arrow");
+  const weaponChoices = ["bolt", "arrow", "bomb"].map((name, index) => ({
+    x: 32 + index * 70,
+    label: computed(() => (weapon() === name ? `[${name}]` : name)),
+    color: computed(() => (weapon() === name ? "#2563eb" : "#4d5f7a")),
+    select() {
+      weapon.set(name);
+      client.processAction("projectile:weapon", { weapon: name });
+    },
+  }));
 
   mount((element) => {
     mapContainer = element.componentInstance;

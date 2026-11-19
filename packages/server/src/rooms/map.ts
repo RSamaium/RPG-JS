@@ -18,6 +18,8 @@ import {
   type RpgMovementInput,
   MAP_STREAM_REQUEST_EVENT,
   createMapViewPacket,
+  VISUAL_EFFECT_ANIMATION_ID,
+  type VisualEffectOptions,
 } from "@rpgjs/common";
 import {
   DEFAULT_DAY_LIGHTING,
@@ -2656,6 +2658,43 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     this.showComponentAnimation('animation', position, {
       graphic,
       animationName,
+    })
+  }
+
+  /**
+   * Play a one-shot visual effect (particles) at a position of the map, for
+   * every player of the map.
+   *
+   * The server only sends plain data; each client draws the effect with the
+   * `Fx` component of `@canvasengine/presets`, registered by default by
+   * `@rpgjs/client`. It works in standalone RPG and MMORPG modes; nothing of
+   * the gameplay depends on it.
+   *
+   * @title Play Visual Effect
+   * @method map.playVisualEffect(position, effect, options?)
+   * @param position - Where the effect plays, in map pixels
+   * @param effect - Name of a built-in particle preset, or of the effect described by `options.preset`
+   * @param options - `preset` (the resolved particle preset, such as the payload of a Studio Visual Effect), `duration` (ms it stays drawn), `scale`
+   * @returns {void}
+   * @memberof RpgMap
+   * @example
+   * ```ts
+   * // A built-in preset
+   * map.playVisualEffect({ x: 200, y: 150 }, "explosion");
+   *
+   * // A preset resolved from a Studio Visual Effect, drawn for one second
+   * map.playVisualEffect({ x: player.x(), y: player.y() }, "holy-burst", {
+   *   preset: holyBurst,
+   *   duration: 1000,
+   * });
+   * ```
+   */
+  playVisualEffect(position: { x: number, y: number }, effect: string, options: VisualEffectOptions = {}) {
+    this.showComponentAnimation(VISUAL_EFFECT_ANIMATION_ID, position, {
+      name: effect,
+      ...(options.preset ? { preset: options.preset } : {}),
+      ...(options.duration !== undefined ? { displayDuration: options.duration } : {}),
+      ...(options.scale !== undefined ? { scale: options.scale } : {}),
     })
   }
 

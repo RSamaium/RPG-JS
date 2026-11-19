@@ -63,6 +63,107 @@ describe("projectile trajectories", () => {
     expect(messages("projectile:destroyBatch")).toHaveLength(1);
   });
 
+  test("an arc aimed at a target lands on it and hits it", () => {
+    const { physic, projectiles, messages } = createMap();
+    enemy(physic, "near", 30);
+    enemy(physic, "slime", 60);
+    const onHit = vi.fn();
+    const onLand = vi.fn();
+
+    projectiles.emit({
+      type: "arrow",
+      origin: { x: 0, y: 0 },
+      target: { x: 60, y: 0 },
+      trajectory: { type: "arc", range: 200, speed: 200, height: 30 },
+      landing: { radius: 8 },
+      linger: { ms: 500 },
+      onHit,
+      onLand,
+    });
+
+    // The arc stops on its target instead of flying its whole range.
+    expect(messages("projectile:spawnBatch")[0].value.projectiles[0].trajectory.range).toBe(60);
+    run(projectiles, 0.4);
+    expect(onHit).toHaveBeenCalledTimes(1);
+    expect(onHit.mock.calls[0][0].hit.entity.uuid).toBe("slime");
+    expect(onLand.mock.calls[0][0].x).toBeCloseTo(60, 0);
+    expect(messages("projectile:impactBatch")[0].value.impacts[0]).toMatchObject({
+      targetId: "slime",
+      surface: "target",
+    });
+    // It hit: it does not stay on the ground, and its destruction says so.
+    expect(messages("projectile:destroyBatch")).toHaveLength(1);
+    expect(messages("projectile:destroyBatch")[0].value.projectiles[0]).toMatchObject({
+      reason: "land",
+      targetId: "slime",
+      surface: "target",
+    });
+  });
+
+  test("an arc out of reach lands short, on the ground", () => {
+    const { projectiles, messages } = createMap();
+    const onHit = vi.fn();
+
+    projectiles.emit({
+      type: "arrow",
+      origin: { x: 0, y: 0 },
+      target: { x: 0, y: 500 },
+      trajectory: { type: "arc", range: 100, duration: 0.3 },
+      landing: { radius: 8 },
+      onHit,
+    });
+
+    run(projectiles, 0.4);
+    expect(onHit).not.toHaveBeenCalled();
+    expect(messages("projectile:destroyBatch")[0].value.projectiles[0]).toMatchObject({
+      reason: "land",
+      surface: "ground",
+    });
+    expect(messages("projectile:destroyBatch")[0].value.projectiles[0].y).toBeCloseTo(100, 0);
+  });
+
+  test("a landing with pierce hits everything in its radius", () => {
+    const { physic, projectiles } = createMap();
+    enemy(physic, "a", 90);
+    enemy(physic, "b", 110);
+    enemy(physic, "far", 200);
+    const onHit = vi.fn();
+
+    projectiles.emit({
+      type: "bomb",
+      origin: { x: 0, y: 0 },
+      target: { x: 100, y: 0 },
+      trajectory: { type: "arc", range: 300, duration: 0.3 },
+      landing: { radius: 24 },
+      pierce: true,
+      onHit,
+    });
+
+    run(projectiles, 0.4);
+    expect(onHit.mock.calls.map(([context]) => context.hit.entity.uuid).sort()).toEqual(["a", "b"]);
+  });
+
+  test("a delayed projectile leaves after its wind-up", () => {
+    const { physic, projectiles, messages } = createMap();
+    enemy(physic, "slime", 30);
+    const onHit = vi.fn();
+
+    projectiles.emit({
+      type: "arrow",
+      origin: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      delay: 200,
+      trajectory: { type: "linear", speed: 300, range: 200 },
+      onHit,
+    });
+
+    expect(messages("projectile:spawnBatch")[0].value.projectiles[0].delay).toBeCloseTo(0.2);
+    run(projectiles, 0.15);
+    expect(onHit).not.toHaveBeenCalled();
+    run(projectiles, 0.3);
+    expect(onHit).toHaveBeenCalledTimes(1);
+  });
+
   test("a return trajectory flies through targets and comes back to the launcher", () => {
     const { physic, projectiles } = createMap();
     enemy(physic, "a", 40);

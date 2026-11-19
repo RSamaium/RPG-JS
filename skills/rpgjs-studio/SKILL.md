@@ -159,6 +159,10 @@ curl -sS -X POST "$BASE_URL/..." \
   see `references/mmorpg.md` for the response contract.
   `GET /api/mmorpg/publication` reports whether this project's MMORPG has been
   published successfully and supplies its playable URL.
+  The players of a project are its SigneStack project users under `/api/users`
+  (list `GET /api/users/list`, invitation only); see `references/mmorpg.md`.
+  `GET /api/mmorpg/publications` lists the latest 50 publication attempts
+  (status, mode, author, maps, error diagnostics); see `references/mmorpg.md`.
   Preparation caches source reads only for that publication. Versioned R2
   publication and active-room-only propagation are implemented for RPG-JS #374
   in the framework working tree and integrated in Studio's local configuration

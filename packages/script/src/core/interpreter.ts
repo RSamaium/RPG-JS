@@ -51,7 +51,7 @@ export interface Host {
 
 /** What the compiler knows about the API, to refuse unknown names and collect permissions and references. */
 export interface ApiInfo {
-  handles: Record<string, { dynamic?: boolean; declared?: boolean; members: string[]; methods: string[]; voidMethods?: string[] }>;
+  handles: Record<string, { dynamic?: boolean; declared?: boolean; members: string[]; methods: string[]; voidMethods?: string[]; /** Methods that answer at once: a listener that calls only these can reply to its signal. */ syncMethods?: string[] }>;
   functions: Record<string, { ref?: string; void?: boolean }>;
   catalog?: Record<string, string[]>; // ref type -> known ids
   /** The signals the game emits. When given, `on("signal", ...)` only accepts these, and checks the paths of its filter. */
@@ -258,6 +258,18 @@ export class Program {
   async run(handler: Handler, args: unknown[], host: Host, limits: Limits, cover?: Set<number>) {
     await callScript(handler.fn, args, { steps: 0, depth: 0, limits, host, program: this, covered: cover });
   }
+  /** Whether a handler runs without waiting: it calls no function and only the methods that answer at once. */
+  isSync(handler: Handler): boolean {
+    return !handler.fn.body.a;
+  }
+  /**
+   * Runs a handler at once and gives what it returns, for a signal that takes a reply. `undefined` when the handler waits
+   * (`isSync` is false): it cannot reply, run it with `run` instead.
+   */
+  runSync(handler: Handler, args: unknown[], host: Host, limits: Limits, cover?: Set<number>): { value: unknown } | undefined {
+    if (!this.isSync(handler)) return undefined;
+    return { value: callScriptSync(handler.fn, args, { steps: 0, depth: 0, limits, host, program: this, covered: cover }) };
+  }
   /** The page shown: the last whose condition holds (a page without condition always holds). */
   async pageIndex(eventIndex: number, host: Host, limits: Limits, cover?: Set<number>): Promise<number> {
     const ev = this.events[eventIndex];
@@ -275,6 +287,20 @@ export class Program {
     const run: Run = { steps: 0, depth: 0, limits, host, program: this, covered: cover };
     await callScript(this.events[eventIndex].pages[page].run, [], run);
     return { page, steps: run.steps };
+  }
+}
+
+function callScriptSync(fn: ScriptFn, args: unknown[], run: Run): unknown {
+  const max = run.limits.depth ?? DEF.depth;
+  if (run.depth >= max) throw new BudgetExceeded(`call depth of ${max} exceeded`);
+  run.depth++;
+  try {
+    const env: Env = { scope: new Scope(fn.closure), run };
+    fn.binders.forEach((b, i) => b(env.scope, args[i]));
+    const r = fn.body.f(env);
+    return r === RET ? env.ret : undefined;
+  } finally {
+    run.depth--;
   }
 }
 
@@ -541,6 +567,26 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       isDenied(key, n);
       memberCheck(callee.object, key, n, true);
       if (callee.object.type === "Identifier" && !declared(callee.object.name) && api?.handles[callee.object.name]?.voidMethods?.includes(key) && !statementCalls.has(n)) noValue(`"${callee.object.name}.${key}"`, n);
+      // A method of a handle that answers at once (`$player.getVariable`) runs synchronously, so a listener that only reads can
+      // reply to its signal (see `Program.runSync`).
+      const syncMethod = callee.object.type === "Identifier" && !declared(callee.object.name)
+        && !!api?.handles[callee.object.name]?.syncMethods?.includes(key);
+      if (syncMethod && !obj.a && !chain && args.every((a) => !a.c.a)) {
+        return { a: false, f: (env) => {
+          tick(env);
+          const o = obj.f(env);
+          const vals: unknown[] = [];
+          for (const a of args) {
+            const x = a.c.f(env);
+            if (a.spread) { if (!Array.isArray(x)) throw new RuntimeError("only a list can be spread in a call"); vals.push(...x); } else vals.push(x);
+            if (vals.length > maxList(env)) throw new BudgetExceeded(`a call with more than ${maxList(env)} arguments`);
+          }
+          if (!env.run.host.isHandle(o)) throw new RuntimeError(`line ${n.loc?.start.line}: "${key}" is not a function`);
+          const value = env.run.host.callMethod(o, key, vals);
+          if (value && typeof (value as { then?: unknown }).then === "function") throw new RuntimeError(`line ${n.loc?.start.line}: "${key}" did not answer at once`);
+          return value;
+        } };
+      }
       return { a: true, f: async (env) => {
         tick(env);
         const o = obj.a ? await obj.f(env) : obj.f(env);

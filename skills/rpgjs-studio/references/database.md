@@ -259,6 +259,30 @@ Supported fields from `variableSchema`:
 - `name: string`
 - `description?: string`
 
+## Hero bundle
+
+A hero is an actor with everything it needs: its class, the skills of the class, its starting
+equipment (weapon, armor), its graphic (with the walk animation and the other media of its group)
+and its faceset. A hero bundle is the ZIP format of a map bundle whose root is the actor
+(`manifest.root.kind` is `database`).
+
+### `GET /api/assets/actors/:actorId/export`
+
+Returns the hero bundle of an actor of the current project (`application/zip`). `404` when the id is
+not an actor of the project.
+
+### `POST /api/assets/install-hero`
+
+Body: the ZIP (`Content-Type: application/zip`). Copies the actor and everything it references into
+the current project, with new ids, and makes the actor the main actor of the project. Returns
+`{ actor, imported }`. `400` when the ZIP is not a hero bundle (a map bundle is refused, as a hero
+bundle is refused by `POST /api/maps/import`).
+
+### `POST /api/assets/install-default-assets`
+
+Optional field `hero: false` leaves the hero of the default assets config alone, so that the hero of a
+bundle is the only one of the project.
+
 ## Notes
 
 - The server derives the internal `type` from the URL segment.

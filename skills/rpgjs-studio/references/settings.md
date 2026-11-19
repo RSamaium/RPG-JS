@@ -23,6 +23,7 @@ Useful fields from `projectSchema`:
 - `startMapId?: string`
 - `menus.titleScreen?: { enabled, guiId?, settings: { backgroundMusic?, backgroundImage? } }`
 - `menus.characterSelect?: { enabled, guiId?, settings: { allActors, actorIds } }`
+- `menus.chat?: { enabled }`: the MMORPG chat (on by default; `false` removes it from the client and makes the server refuse messages)
 - `audio.ui?: { navigate?, confirm?, cancel?, open?, close?, error? }`
 - `combatAudio?: { battleMusic?, attack?, skill?, hit?, hurt?, die? }`
 

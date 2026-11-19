@@ -159,6 +159,7 @@ const applyDamageEffect = (
   }
 
   if (!result.cancelled) {
+    // A weapon hit has no skill, hence no states to apply.
     if (skill) (attacker as any).applyStates?.(target, skill);
     const targetAi = (target as any).battleAi;
     if (result.defense?.kind === "guard") {
@@ -342,6 +343,13 @@ const buildActionContext = (input: {
           origin: projectile.origin,
           direction:
             projectile.direction ?? directionToTarget(input.attacker, input.target),
+          // An arc lands on the target of the action instead of flying its whole range.
+          target:
+            projectile.trajectory?.type === "arc" && !projectile.direction
+              ? (firstTarget(input.target) as any) ?? undefined
+              : undefined,
+          delay: projectile.delay,
+          landing: projectile.landing,
           spreadDegrees: projectile.spreadDegrees,
           accuracy: projectile.accuracy,
           trajectory: projectile.trajectory ?? {
@@ -371,7 +379,9 @@ const buildActionContext = (input: {
           },
           params: {
             ...projectile.params,
-            ...(typeof input.action?.visual?.trailFx === "string"
+            // `auto` and `none` (Studio defaults) are not preset names: the look of the type decides.
+            ...(typeof input.action?.visual?.trailFx === "string" &&
+            !["", "auto", "none"].includes(input.action.visual.trailFx)
               ? { trailFx: input.action.visual.trailFx }
               : {}),
             ...(typeof projectile.graphic === "string"
@@ -381,11 +391,12 @@ const buildActionContext = (input: {
               ? { scale: projectile.scale }
               : {}),
             ...(typeof projectile.rotateToDirection === "boolean"
-              ? { rotateToDirection: projectile.rotateToDirection }
+              ? { rotate: projectile.rotateToDirection }
               : {}),
           },
-          canHit: ({ target }: { target?: ActionBattleEntity }) => {
-            if (!target) return false;
+          canHit: ({ target, entity }: { target?: ActionBattleEntity; entity?: any }) => {
+            // Walls stop projectiles.
+            if (!target) return entity?.isStatic?.() === true;
             // Events reacting to projectiles (a switch, a bush) are hit too,
             // without damage: they decide what happens with `onProjectileHit`.
             if (typeof (target as any).onProjectileHit === "function") return true;
@@ -572,6 +583,8 @@ export const handleActionBattleProjectileImpact = (
   const handler = projectileHandlers.get(context.projectile.id);
   if (!handler) return;
   const target = context.target;
+  // A wall takes no effect.
+  if (!target) return;
   handler.action.target = target ?? handler.action.target;
   if (handler.onImpact) {
     handler.onImpact(context, handler.action);

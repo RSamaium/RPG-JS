@@ -4,10 +4,11 @@ import {
   getHotbarEntryType,
   isLootEvent,
   registerHotbarEntryType,
+  registerSkillUseHandler,
   type HotbarGuiOptions,
   type RpgServer,
 } from "@rpgjs/server";
-import { Control, defineModule } from "@rpgjs/common";
+import { Control, MAXHP, defineModule } from "@rpgjs/common";
 import { BattleAi, HitResult, ApplyHitHooks, DEFAULT_KNOCKBACK } from "./ai.server";
 import {
   ActionBattleActionBarData,
@@ -17,6 +18,7 @@ import {
 } from "./types";
 import { getActionBattleOptions, isActionBattleEnabled, normalizeActionBattleOptions, setActionBattleOptions } from "./config";
 import {
+  directionToActionBattleTarget,
   getActionBattleEntityTile,
   getActionBattleTileSize,
   manhattanDistance,
@@ -39,6 +41,7 @@ import {
   createActionBattleAttackId,
   getNormalizedActionBattleAttackProfile,
   runActionBattleActiveHitbox,
+  scheduleActionBattleStartup,
 } from "./core/attack-runtime";
 import { setActionBattleInvincibility } from "./core/hit-reaction";
 import {
@@ -53,8 +56,11 @@ import {
   handleActionBattleProjectileDestroy,
   handleActionBattleProjectileImpact,
 } from "./core/action-use";
-import { normalizeActionBattleAttackProfile } from "./core/attack-profile";
-import { getActionBattleControlLockDuration } from "./core/attack-profile";
+import {
+  getActionBattleControlLockDuration,
+  mergeAttackProfileOverrides,
+  normalizeActionBattleAttackProfile,
+} from "./core/attack-profile";
 import {
   acquireActionBattleControl,
   releaseActionBattleControls,
@@ -83,6 +89,7 @@ export const ACTION_BATTLE_SKILL_USE = "action-battle:use-skill";
 export const ACTION_BATTLE_HOTBAR_USE = "action-battle:use-hotbar";
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
 export const ACTION_BATTLE_ACTION_BAR_GUI_ID = "action-battle-action-bar";
+export const ACTION_BATTLE_WEAPON_PROFILE = "action-battle:weapon-profile";
 
 /**
  * Default player attack hitboxes offsets for each direction
@@ -498,6 +505,9 @@ const performPlayerAttack = (
     softTargeting && typeof softTargeting === "object"
       ? softTargeting
       : undefined;
+  const weapon = resolveActionBattleWeapon(player);
+  const weaponAction = weapon ? getActionBattleActionConfig(weapon) : undefined;
+  const ranged = weaponAction?.mode === "projectile";
   const softTarget =
     softTargetOptions?.enabled !== false && map
       ? resolveActionBattleSoftTarget(
@@ -506,16 +516,23 @@ const performPlayerAttack = (
             .getEvents()
             .filter(
               (event: RpgEvent) =>
-                isBattleEvent(event) &&
-                canActionBattleTarget(
-                  player,
-                  event,
-                  getActionBattleTargets(player, "events"),
-                  options.combat?.targets
-                )
+                (isBattleEvent(event) &&
+                  canActionBattleTarget(
+                    player,
+                    event,
+                    getActionBattleTargets(player, "events"),
+                    options.combat?.targets
+                  )) ||
+                // A ranged weapon also aims at scenery reacting to projectiles, such as a switch.
+                (ranged &&
+                  !isBattleEvent(event) &&
+                  typeof (event as any).onProjectileHit === "function")
             ),
           inputDirection,
-          softTargetOptions
+          // A ranged weapon looks for its target as far as it shoots.
+          ranged && weaponAction?.range
+            ? { ...softTargetOptions, range: weaponAction.range }
+            : softTargetOptions
         )
       : null;
   const direction = softTarget?.direction ?? inputDirection;
@@ -558,8 +575,29 @@ const performPlayerAttack = (
     });
   });
 
+  if (ranged) {
+    // A ranged weapon releases its projectile at the end of the startup instead of swinging a hitbox.
+    const lockId = (player as any).__actionBattleAttackLockId;
+    scheduleActionBattleStartup(attackProfile, () => {
+      // Nothing is shot when the player can no longer shoot: defeated, moved to another map (or gone), or the attack was
+      // cancelled (a dodge, another attack) during the startup.
+      if (player.getCurrentMap?.() !== map) return;
+      // Defeated: no HP left out of a maximum (a player without stats has neither).
+      if (Number(player.hp) <= 0 && Number((player as any).param?.[MAXHP]) > 0) return;
+      if ((player as any).__actionBattleAttackLockId !== lockId) return;
+      executeActionBattleUse({
+        attacker: player,
+        target: softTarget?.target ?? null,
+        usable: weapon,
+        weapon,
+        profile: attackProfile,
+        playVisual: false,
+      });
+    });
+    return true;
+  }
+
   const attackId = createActionBattleAttackId(player.id, attackProfile.id);
-  const weapon = resolveActionBattleWeapon(player);
   const hitTracker = new ActionBattleHitTracker(attackProfile.hitPolicy);
   const targetSelector = getActionBattleTargets(player, "events");
   const hitMetadata = {
@@ -616,26 +654,6 @@ const performPlayerAttack = (
   return true;
 };
 
-const mergeAttackProfileOverrides = (
-  base: NormalizedActionBattleAttackProfile,
-  override: ActionBattleAttackProfile
-): ActionBattleAttackProfile => ({
-  ...base,
-  ...override,
-  reaction: {
-    ...base.reaction,
-    ...override.reaction,
-  },
-  control: {
-    ...base.control,
-    ...override.control,
-  },
-  hitboxes: {
-    ...base.hitboxes,
-    ...override.hitboxes,
-  },
-});
-
 const resolvePlayerAttackProfile = (
   player: RpgPlayer,
   options: ActionBattleOptions
@@ -658,6 +676,39 @@ const ACTION_BATTLE_CHARGE_RELEASE = "action-battle:charge-release";
 export const ACTION_BATTLE_DODGE = "action-battle:dodge";
 export const ACTION_BATTLE_GUARD_START = Control.Defense;
 export const ACTION_BATTLE_GUARD_END = "action-battle:guard-end";
+
+const playerWeaponIds = new WeakMap<RpgPlayer, string | null>();
+
+/**
+ * Tell a client how its equipped weapon attacks, so its predicted movement lock
+ * lasts as long as the authoritative one. Sent only when the weapon changes.
+ */
+const syncPlayerWeaponProfile = (player: RpgPlayer) => {
+  const weapon = resolveActionBattleWeapon(player);
+  const weaponId = weapon?.id ?? null;
+  if (playerWeaponIds.get(player) === weaponId) return;
+  playerWeaponIds.set(player, weaponId);
+  (player as any).emit?.(ACTION_BATTLE_WEAPON_PROFILE, {
+    profile: weapon?.attackProfile ?? null,
+    ranged: getActionBattleActionConfig(weapon)?.mode === "projectile",
+  });
+};
+
+const playerWeaponWatchers = new WeakMap<RpgPlayer, { unsubscribe(): void }>();
+
+/** Keep the client told as soon as the player equips another weapon. */
+const watchPlayerWeapon = (player: RpgPlayer) => {
+  playerWeaponWatchers.get(player)?.unsubscribe();
+  playerWeaponIds.delete(player);
+  const equipments = (player as any).equipments?.observable;
+  if (typeof equipments?.subscribe === "function") {
+    playerWeaponWatchers.set(
+      player,
+      equipments.subscribe(() => syncPlayerWeaponProfile(player))
+    );
+  }
+  syncPlayerWeaponProfile(player);
+};
 
 interface PlayerCombatRuntimeState {
   comboIndex: number;
@@ -696,6 +747,11 @@ const resolvePlayerComboProfile = (
   const base = resolvePlayerAttackProfile(player, options);
   const combo = objectOption(options.combat?.player?.combo);
   if (!combo?.enabled || !combo.steps?.length) {
+    return { profile: base, step: 0 };
+  }
+  // Combo steps are melee swings: a ranged weapon keeps the timing of its own shot.
+  const weapon = resolveActionBattleWeapon(player);
+  if (weapon && getActionBattleActionConfig(weapon)?.mode === "projectile") {
     return { profile: base, step: 0 };
   }
   const state = getPlayerCombatState(player);
@@ -1120,10 +1176,98 @@ const syncActionBattleActionBar = (
   }
 };
 
+/** The events and players of the map a skill action can be used on, by its `target` and the `targeting.affects` option. */
+const collectActionBattleSkillTargets = (
+  player: RpgPlayer,
+  map: NonNullable<ReturnType<RpgPlayer["getCurrentMap"]>>,
+  actionConfig: { target?: string },
+  options: ActionBattleOptions
+): Array<RpgPlayer | RpgEvent> => {
+  const affects = options.targeting?.affects || "events";
+  const targetKind = (actionConfig.target ?? "enemy") as any;
+  const candidates: Array<RpgPlayer | RpgEvent> = [];
+  if (affects === "events" || affects === "both") {
+    candidates.push(
+      ...map
+        .getEvents()
+        .filter((event: RpgEvent) =>
+          canActionBattleUseTarget(player, event, targetKind, options.combat?.targets)
+        )
+    );
+  }
+  if (affects === "players" || affects === "both") {
+    candidates.push(
+      ...map
+        .getPlayers()
+        .filter(
+          (other: RpgPlayer) =>
+            other.id !== player.id &&
+            canActionBattleUseTarget(player, other, targetKind, options.combat?.targets)
+        )
+    );
+  }
+  return candidates;
+};
+
+/**
+ * The nearest target of a skill used without one (by `player.useSkill(id)`),
+ * whatever the player faces, within the reach of the action: `action.range`
+ * (pixels), otherwise the skill targeting range (tiles). `null` when none.
+ */
+/** The reach of a skill action in pixels: `action.range`, otherwise the skill targeting range (tiles). Unlimited without both. */
+const resolveActionBattleSkillReach = (
+  player: RpgPlayer,
+  map: NonNullable<ReturnType<RpgPlayer["getCurrentMap"]>>,
+  skillId: string,
+  actionConfig: { range?: number },
+  options: ActionBattleOptions
+): number => {
+  if (Number(actionConfig.range) > 0) return Number(actionConfig.range);
+  const targeting = resolveSkillTargeting(player, skillId, options);
+  if (targeting && targeting.range > 0) return targeting.range * getActionBattleTileSize(map).width;
+  return Number.POSITIVE_INFINITY;
+};
+
+const entityCenter = (entity: any) => {
+  const hitbox = entity?.hitbox?.() ?? { w: 0, h: 0 };
+  return { x: Number(entity.x()) + (hitbox.w ?? 0) / 2, y: Number(entity.y()) + (hitbox.h ?? 0) / 2 };
+};
+
+const resolveNearestActionBattleSkillTarget = (
+  player: RpgPlayer,
+  map: NonNullable<ReturnType<RpgPlayer["getCurrentMap"]>>,
+  skillId: string,
+  actionConfig: { target?: string; range?: number },
+  options: ActionBattleOptions
+) => {
+  const reach = resolveActionBattleSkillReach(player, map, skillId, actionConfig, options);
+  // No reach given: anywhere on the map (finite, so the distance still ranks them).
+  const range = Number.isFinite(reach) ? reach : 1_000_000;
+  return resolveActionBattleSoftTarget(
+    player,
+    collectActionBattleSkillTargets(player, map, actionConfig, options),
+    "down",
+    // Every direction counts the same: the nearest one wins.
+    { range, coneDegrees: 360, directionWeight: 0, distanceWeight: 1, threatWeight: 0 }
+  );
+};
+
+const isEntityTarget = (
+  value: unknown
+): value is RpgPlayer | RpgEvent | Array<RpgPlayer | RpgEvent> =>
+  Array.isArray(value) ||
+  (!!value && typeof (value as { x?: unknown }).x === "function");
+
 const handleActionBattleSkillUse = (
   player: RpgPlayer,
   skillId: string,
-  target: { x: number; y: number } | undefined,
+  // A tile picked by the player, or the entity (or entities) the skill is used on.
+  target:
+    | { x: number; y: number }
+    | RpgPlayer
+    | RpgEvent
+    | Array<RpgPlayer | RpgEvent>
+    | undefined,
   options: ActionBattleOptions
 ) => {
   if (!isPlayerSkillLearned(player, skillId)) return false;
@@ -1170,6 +1314,11 @@ const handleActionBattleSkillUse = (
     return finishUse(player);
   }
 
+  // Used on a given entity (by `player.useSkill(id, target)`): no tile targeting to resolve.
+  if (isEntityTarget(target)) {
+    return finishUse(target);
+  }
+
   const map = player.getCurrentMap();
   if (!map) {
     try {
@@ -1183,38 +1332,7 @@ const handleActionBattleSkillUse = (
   let automaticTargetValidated = false;
   if (!targeting || !target) {
     if (actionConfig) {
-      const affects = options.targeting?.affects || "events";
-      const candidates: Array<RpgPlayer | RpgEvent> = [];
-      if (affects === "events" || affects === "both") {
-        candidates.push(
-          ...map
-            .getEvents()
-            .filter((event: RpgEvent) =>
-              canActionBattleUseTarget(
-                player,
-                event,
-                actionConfig.target ?? "enemy",
-                options.combat?.targets
-              )
-            )
-        );
-      }
-      if (affects === "players" || affects === "both") {
-        candidates.push(
-          ...map
-            .getPlayers()
-            .filter(
-              (other: RpgPlayer) =>
-                other.id !== player.id &&
-                canActionBattleUseTarget(
-                  player,
-                  other,
-                  actionConfig.target ?? "enemy",
-                  options.combat?.targets
-                )
-            )
-        );
-      }
+      const candidates = collectActionBattleSkillTargets(player, map, actionConfig, options);
       const direction =
         typeof player.getDirection === "function"
           ? player.getDirection()
@@ -1422,6 +1540,61 @@ let actionItemsRegistered = false;
  * boomerang) can be assigned even when it is not consumable, and its use goes
  * through the combat flow. Other items keep the core behavior.
  */
+let skillUseRegistered = false;
+
+/**
+ * Make `player.useSkill(id, target?)` follow the rules of Action Battle for a
+ * skill with an `action` (projectile, melee, area...), on a map where Action
+ * Battle is enabled: SP cost, cooldown, soft targeting without a target, damage
+ * formula, factions and hit reactions. Other skills keep the native rule.
+ */
+const registerActionBattleSkillUse = () => {
+  if (skillUseRegistered) return;
+  skillUseRegistered = true;
+  registerSkillUseHandler((player, skillId, target) => {
+    // Events fight through their AI; scripts and hotbars use skills for players.
+    if (typeof (player as any).isEvent === "function" && (player as any).isEvent()) return undefined;
+    const options = getActionBattleOptions();
+    const map = player.getCurrentMap?.() ?? undefined;
+    if (!isActionBattleEnabled({ player, map }, options)) return undefined;
+    const skillData = resolvePlayerSkillUsable(player, skillId);
+    if (!skillData || !getActionBattleActionConfig(skillData)) return undefined;
+    // Without a map there is nothing to aim at: the native rule applies.
+    if (!map) return undefined;
+    const actionConfig = getActionBattleActionConfig(skillData)!;
+    let resolvedTarget = target;
+    let faceDirection: string | undefined;
+    if (resolvedTarget === undefined && actionConfig.target !== "self") {
+      // Without a target, the nearest one in reach, whatever the player faces.
+      const nearest = resolveNearestActionBattleSkillTarget(player, map, skillId, actionConfig, options);
+      if (nearest) {
+        resolvedTarget = nearest.target as RpgPlayer;
+        faceDirection = nearest.direction;
+      }
+    } else if (isEntityTarget(resolvedTarget) && actionConfig.target !== "self") {
+      // A given target follows the same rules as a picked one: allowed by the action, and within its reach.
+      const reach = resolveActionBattleSkillReach(player, map, skillId, actionConfig, options);
+      const from = entityCenter(player);
+      for (const entity of [resolvedTarget].flat()) {
+        if (!canActionBattleUseTarget(player, entity as any, (actionConfig.target ?? "enemy") as any, options.combat?.targets)) {
+          throw new Error(`The skill "${skillId}" cannot be used on "${(entity as any).id}": the action does not target it`);
+        }
+        const to = entityCenter(entity);
+        if (Math.hypot(to.x - from.x, to.y - from.y) > reach) {
+          throw new Error(`The skill "${skillId}" cannot reach "${(entity as any).id}"`);
+        }
+      }
+      faceDirection = directionToActionBattleTarget(player as any, [resolvedTarget].flat()[0] as any);
+    }
+    if (!handleActionBattleSkillUse(player, skillId, resolvedTarget, options)) {
+      throw new Error(`The skill "${skillId}" cannot be used now (not learned, not enough SP, cooldown or no target)`);
+    }
+    // The player turns toward its target once the skill is used, not when it is refused.
+    if (faceDirection) player.changeDirection?.(faceDirection as any);
+    return skillData;
+  });
+};
+
 const registerActionBattleHotbarItems = () => {
   if (actionItemsRegistered) return;
   const native = getHotbarEntryType("item");
@@ -1455,6 +1628,7 @@ export const createActionBattleServer = (
   setActionBattleOptions(options);
   setActionBattleSystems(options);
   registerActionBattleHotbarItems();
+  registerActionBattleSkillUse();
   return defineModule<RpgServer>({
     player: {
       /**
@@ -1470,6 +1644,7 @@ export const createActionBattleServer = (
        */
       onInput(player: RpgPlayer, input: any) {
         if (!isActionBattleEnabled({ player, map: player.getCurrentMap?.() ?? undefined }, options)) return;
+        syncPlayerWeaponProfile(player);
         const state = getPlayerCombatState(player);
         const charged = objectOption(options.combat?.player?.chargedAttack);
         const dodge = objectOption(options.combat?.player?.dodge);
@@ -1683,6 +1858,7 @@ export const createActionBattleServer = (
       },
       onJoinMap(player: RpgPlayer) {
         if (!isActionBattleEnabled({ player, map: player.getCurrentMap?.() ?? undefined }, options)) return;
+        watchPlayerWeapon(player);
         player.initializeHotbar?.();
         syncActionBattleHotbar(player, options);
         syncActionBattleActionBar(player, options);
@@ -1692,6 +1868,9 @@ export const createActionBattleServer = (
         clearActionBattleDefense(player);
         playerCombatStates.delete(player);
         playerSkillCooldowns.delete(player);
+        playerWeaponWatchers.get(player)?.unsubscribe();
+        playerWeaponWatchers.delete(player);
+        playerWeaponIds.delete(player);
       },
     },
     event: {

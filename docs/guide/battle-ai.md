@@ -118,6 +118,22 @@ player.actionBattleFaction = "red-team";
 player.actionBattleTargets = ["blue-team"];
 ```
 
+Use `"hostile"` as the selector to target every entity of another faction. For a
+free-for-all, give each player its own faction:
+
+```ts
+player.actionBattleFaction = player.id;
+player.actionBattleTargets = "hostile";
+```
+
+::: warning MMORPG mode
+Set the faction and targets in `onJoinMap`, not in `onConnected`. In MMORPG mode,
+`changeMap()` transfers the player to the map room, which only keeps synchronized
+properties (name, hp, ...). `actionBattleFaction`, `actionBattleTargets` and
+`player.param[...]` values such as `ATK` set before the transfer are lost: no hit
+lands, or damage is `0`. Set them again in `onJoinMap`.
+:::
+
 ## Enable the module
 
 Register the module on the server:
@@ -305,11 +321,13 @@ play on enemies actually affected by the skill.
 
 `targeting.range` is expressed in map tiles. A projectile can override its
 travel range in pixels; otherwise Action Battle derives it from the targeting
-range and tile width. When `action.mode` is `projectile` and no custom
-projectile `type` is supplied, the built-in `action-battle-skill` CanvasEngine
-renderer displays `projectile.graphic`, applies `scale`, and optionally rotates
-the graphic along its trajectory. Damage and the impact animation/sound occur
-only when the authoritative projectile collides.
+range and tile width. When `action.mode` is `projectile`, the projectile is
+drawn by the [standard projectile component](./projectiles.md#standard-look)
+unless a component is registered for its `type`: it displays
+`projectile.graphic`, applies `scale`, optionally rotates the graphic along its
+trajectory, and takes every other look option (shape, trail, shadow, impact)
+from the client look registered for that `type`. Damage and the impact animation/sound occur only when
+the authoritative projectile collides.
 
 Area masks use `#` for affected tiles and `.` for empty tiles. Studio exposes
 this as a visual grid and canonicalizes legacy binary masks by treating `1` as
@@ -749,6 +767,96 @@ is a physical hit using the equipped weapon stats and action-battle hit hooks.
 resolution uses the attacker's action-battle faction and `targets` selector.
 Projectile direction uses the same generic projectile options as
 `map.projectiles.emit()`, including `spreadDegrees` and `accuracy`.
+
+### `player.useSkill()` follows the action
+
+On a map where action-battle is enabled, `player.useSkill(id, target?)` runs a
+skill that has an `action` with the action-battle rules: SP cost, cooldown,
+projectile, damage formula, factions, states and hit reactions. Without a
+target, it aims at the nearest enemy within the reach of the action
+(`action.range`, otherwise the skill targeting range), whatever the player
+faces, and turns the player toward it; with none in reach, it is used straight
+ahead. (A skill key pressed by the player keeps the soft targeting in front of
+the player.)
+A skill without `action` keeps the native RPGJS rule. This is what a hotbar
+skill, your own server code and the scripts (`$player.useSkill`) call, so they
+all hit the same way:
+
+```ts
+// Server code: launches the fireball projectile toward the slime
+player.useSkill("fireball", slime);
+```
+
+```js
+// A script: same rules, the target is the id of an event or a player
+on("event.action", () => {
+  $player.useSkill("fireball", { target: $event.id });
+});
+```
+
+The use is refused (it throws, a script gets `false`) when the skill is not
+learned, too expensive or cooling down. Another battle system can plug into
+`player.useSkill` the same way with `registerSkillUseHandler` from
+`@rpgjs/server`.
+
+### Ranged weapons and projectile behaviors
+
+A weapon whose `action.mode` is `projectile` turns the basic attack into a
+shot: instead of swinging a hitbox, the attacker releases the projectile at the
+end of the attack `startupMs`, so the release matches the draw of the bow.
+Soft targeting then looks for a target up to `action.range`, and the shot aims
+straight at it; besides enemies, it also picks scenery that declares
+`onProjectileHit`, such as a switch. A ranged weapon keeps the timing of its own
+`attackProfile`: the melee combo steps do not apply to it. This runs on the
+server for players and enemies alike.
+
+To play a bow animation, resolve the `attack` animation from the equipment,
+with the same function on the server and on the client. `LPCSpritesheetPreset`
+provides a `shoot` animation:
+
+```ts
+const attack = (entity) =>
+  entity.equipments().some((item) => item.id() === "bow") ? "shoot" : "attack";
+
+provideActionBattle({ animations: { attack } });
+```
+
+```ts
+const Bow = {
+  id: "bow",
+  _type: "weapon" as const,
+  attackProfile: { startupMs: 180, activeMs: 60, recoveryMs: 220 },
+  action: {
+    target: "enemy",
+    range: 320,
+    mode: "projectile",
+    projectile: {
+      type: "arrow",
+      trajectory: { type: "arc", range: 320, speed: 460, height: 38 },
+      landing: { radius: 12 },
+      linger: { ms: 2500 }
+    }
+  }
+};
+```
+
+The look of the `arrow` type is declared on the client with
+[`projectiles.looks`](./projectiles.md#standard-look).
+
+`action.projectile` accepts the behaviors of the
+[projectile system](./projectiles.md#behaviors): `trajectory`, `landing`,
+`linger`, `pierce`, `wall`, `collide` and `delay` (a wind-up in ms, for skills
+that are not tied to an attack profile). An `arc` lands on the target of the
+action.
+
+Action Battle projectiles collide with:
+
+- the targets allowed by `action.target`, which take the action effect;
+- walls, which stop them (or follow `projectile.wall`);
+- events that declare `onProjectileHit` without being combatants, such as a
+  switch or a bush: they react through their own hook and take no damage.
+
+Other events and allies are flown through.
 
 Use `onUse(user, target, ctx)` only when the action needs custom logic:
 

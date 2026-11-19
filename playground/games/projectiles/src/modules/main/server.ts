@@ -95,6 +95,61 @@ function shootBolt(player: RpgPlayer, direction: Direction | { x: number; y: num
   });
 }
 
+type Weapon = "bolt" | "arrow" | "bomb";
+const WEAPONS: Weapon[] = ["bolt", "arrow", "bomb"];
+const weapons = new WeakMap<RpgPlayer, Weapon>();
+
+function damage(target: any, amount: number) {
+  if (typeof target?.hp === "number") {
+    target.hp = Math.max(0, target.hp - amount);
+  }
+}
+
+// An arrow lobbed onto the pointed spot: it hits what stands there, or plants itself in the ground.
+function shootArrow(player: RpgPlayer, target: { x: number; y: number }) {
+  player.projectiles.emit({
+    type: "arrow",
+    target,
+    trajectory: { type: "arc", range: 420, speed: 420, height: 46 },
+    landing: { radius: 10 },
+    linger: { ms: 2500 },
+    onHit({ target }) {
+      damage(target, 15);
+    },
+  });
+}
+
+// A bomb thrown over the obstacles, exploding on everything around its landing point.
+function throwBomb(player: RpgPlayer, target: { x: number; y: number }) {
+  player.projectiles.emit({
+    type: "bomb",
+    target,
+    trajectory: { type: "arc", range: 260, duration: 0.7, height: 70 },
+    landing: { radius: 44 },
+    pierce: true,
+    onHit({ target }) {
+      damage(target, 30);
+    },
+  });
+}
+
+// A switch toggled by any projectile, whatever weapon fired it.
+function Switch(): EventDefinition {
+  let on = false;
+  return {
+    onInit() {
+      this.name = "Switch";
+      this.teleport({ x: 320, y: 90 });
+      this.setComponentsTop([Components.text("Switch: OFF")]);
+    },
+    onProjectileHit() {
+      on = !on;
+      this.setComponentsTop([Components.text(on ? "Switch: ON" : "Switch: OFF")]);
+      return "stick";
+    },
+  };
+}
+
 function Target(): EventDefinition {
   return {
     onInit() {
@@ -123,16 +178,26 @@ const player: RpgPlayerHooks = {
       Components.text("{name}"),
       Components.text("Action = shoot"),
     ]);
+    weapons.set(player, "arrow");
   },
 
   onInput(player: RpgPlayer, input) {
     const action = input?.action ?? input?.input ?? input;
+
+    if (action === "projectile:weapon") {
+      const weapon = input?.data?.weapon;
+      if (WEAPONS.includes(weapon)) weapons.set(player, weapon);
+      return;
+    }
 
     if (action === "projectile:shoot") {
       const target = resolveMouseTarget(input);
       if (!target) {
         return;
       }
+      const weapon = weapons.get(player) ?? "arrow";
+      if (weapon === "arrow") return shootArrow(player, target);
+      if (weapon === "bomb") return throwBomb(player, target);
       const center = playerCenter(player);
       const direction = normalizeVector({
         x: target.x - center.x,
@@ -166,6 +231,10 @@ export default defineModule<RpgServer>({
         {
           id: "target",
           event: Target(),
+        },
+        {
+          id: "switch",
+          event: Switch(),
         },
       ],
     },

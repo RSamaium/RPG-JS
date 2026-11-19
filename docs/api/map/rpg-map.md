@@ -42,6 +42,7 @@ Reference for the `RpgMap` class.
 - [getPlayers](#getplayers)
 - [getShape](#getshape)
 - [getShapes](#getshapes)
+- [getSuspendedEvents](#getsuspendedevents)
 - [getTick](#gettick)
 - [getWeather](#getweather)
 - [getWorldMaps](#getworldmaps)
@@ -54,9 +55,11 @@ Reference for the `RpgMap` class.
 - [id](#id)
 - [interceptorPacket](#interceptorpacket)
 - [isAutoTickEnabled](#isautotickenabled)
+- [isEventSuspended](#iseventsuspended)
 - [isMoving](#ismoving)
 - [loot](#loot)
 - [maps](#maps)
+- [mapView](#mapview)
 - [nextTick](#nexttick)
 - [off](#off)
 - [on](#on)
@@ -67,6 +70,7 @@ Reference for the `RpgMap` class.
 - [onRestore](#onrestore)
 - [patchLighting](#patchlighting)
 - [patchWeather](#patchweather)
+- [Play Visual Effect](#play-visual-effect)
 - [players](#players)
 - [playSound](#playsound)
 - [processInput](#processinput)
@@ -79,6 +83,8 @@ Reference for the `RpgMap` class.
 - [removeShape](#removeshape)
 - [Replace static hitboxes](#replace-static-hitboxes)
 - [Replace streamed static hitboxes](#replace-streamed-static-hitboxes)
+- [resumeEvent](#resumeevent)
+- [resumeEvents](#resumeevents)
 - [setAutoTick](#setautotick)
 - [setBodyPosition](#setbodyposition)
 - [setDay](#setday)
@@ -92,6 +98,8 @@ Reference for the `RpgMap` class.
 - [showComponentAnimation](#showcomponentanimation)
 - [sounds](#sounds)
 - [stopSound](#stopsound)
+- [suspendEvent](#suspendevent)
+- [suspendEvents](#suspendevents)
 - [tick$](#tick)
 - [transitionLighting](#transitionlighting)
 - [updateHitbox](#updatehitbox)
@@ -1222,6 +1230,20 @@ const allShapes = map.getShapes();
 console.log(allShapes.length); // 2
 ```
 
+## getSuspendedEvents
+
+The events that are suspended, by id.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+getSuspendedEvents(): RpgEvent[]
+```
+
 ## getTick
 
 Get the current physics tick
@@ -1525,6 +1547,24 @@ read it to stand still while the map is paused.
 isAutoTickEnabled(): boolean
 ```
 
+## isEventSuspended
+
+Whether the event is suspended (see {@link suspendEvents}).
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+isEventSuspended(eventId: string): boolean
+```
+
+### Parameters
+
+- `eventId`: `string`
+
 ## isMoving
 
 Check if an entity is currently moving
@@ -1585,6 +1625,41 @@ It's populated when the map is loaded via `updateMap()`.
 
 ```ts
 maps: (MapOptions | any)[]
+```
+
+## mapView
+
+Return the visual-only stream of this map for a gameplay room.
+
+The response holds the manifest and every compiled chunk without static
+hitboxes. It is protected by the map update token because it discloses the
+whole map at once, while a map client only receives its interest window.
+`RpgGameplayRoom` calls it through the room-to-room channel when its
+`@RpgRoom({ map })` option names this map.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+mapView(request: Request)
+```
+
+### Parameters
+
+- `request`: `Request`
+
+### Returns
+
+A `MapStreamPacket`, or 404 when the map has no compiled stream
+
+### Examples
+
+```ts
+// GET /parties/main/map-forest/map/view
+// Header: x-rpgjs-map-update-token: <token>
 ```
 
 ## nextTick
@@ -1897,6 +1972,46 @@ patchWeather(patch: Partial<WeatherState>, options?: WeatherSetOptions): Weather
 
 - `patch`: `Partial<WeatherState>`
 - `options?`: `WeatherSetOptions`
+
+## Play Visual Effect
+
+Play a one-shot visual effect (particles) at a position of the map, for
+every player of the map.
+
+The server only sends plain data; each client draws the effect with the
+`Fx` component of `@canvasengine/presets`, registered by default by
+`@rpgjs/client`. It works in standalone RPG and MMORPG modes; nothing of
+the gameplay depends on it.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Member of: `RpgMap`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+map.playVisualEffect(position, effect, options?)
+```
+
+### Parameters
+
+- `position`: `{ x: number, y: number }`
+- `effect`: `string`
+- `options?`: `VisualEffectOptions`
+
+### Examples
+
+```ts
+// A built-in preset
+map.playVisualEffect({ x: 200, y: 150 }, "explosion");
+
+// A preset resolved from a Studio Visual Effect, drawn for one second
+map.playVisualEffect({ x: player.x(), y: player.y() }, "holy-burst", {
+  preset: holyBurst,
+  duration: 1000,
+});
+```
 
 ## players
 
@@ -2374,6 +2489,50 @@ map.replaceStreamedStaticHitboxes
 - `namespace`: `string`
 - `hitboxes`: `MapChunkHitbox[]`
 
+## resumeEvent
+
+Resumes one suspended event. See {@link resumeEvents}.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+resumeEvent(eventId: string): boolean
+```
+
+### Parameters
+
+- `eventId`: `string`
+
+### Returns
+
+`true` when the event was resumed, `false` when it is not suspended
+
+## resumeEvents
+
+Puts suspended events back where they were, with their state. An event that was moving on an infinite route moves again.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+resumeEvents(filter?: (event: RpgEvent) => boolean): string[]
+```
+
+### Parameters
+
+- `filter?`: `(event: RpgEvent) => boolean`
+
+### Returns
+
+The ids of the events that were resumed
+
 ## setAutoTick
 
 Enable or disable automatic server tick processing
@@ -2798,6 +2957,64 @@ map.playSound("battle-theme", { loop: true });
 
 // Later, stop it for everyone
 map.stopSound("battle-theme");
+```
+
+## suspendEvent
+
+Suspends one event. See {@link suspendEvents}.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+suspendEvent(eventId: string): boolean
+```
+
+### Parameters
+
+- `eventId`: `string`
+
+### Returns
+
+`true` when the event was suspended, `false` when it does not exist or is already suspended
+
+## suspendEvents
+
+Hides events of the map and keeps them, to bring them back with {@link resumeEvents}.
+
+A suspended event is taken out of the synchronized events: it has no sprite, no hitbox, so it does not collide,
+is not touched, cannot be acted on, and does not move (its routes are stopped). The instance is kept as it is:
+position, graphics, variables, self switches. A scenario event (one per player) is suspended like any other, and as only
+its owner sees it, only its owner loses it. Events that are already suspended are ignored.
+
+- Source: `packages/server/src/rooms/map.ts`
+- Kind: `method`
+- Defined in: `RpgMap`
+
+### Signature
+
+```ts
+suspendEvents(filter?: (event: RpgEvent) => boolean): string[]
+```
+
+### Parameters
+
+- `filter?`: `(event: RpgEvent) => boolean`
+
+### Returns
+
+The ids of the events that were suspended
+
+### Examples
+
+```ts
+// a tactical battle takes over the map: hide the NPCs, keep the chests
+map.suspendEvents((event) => !event.id.startsWith('chest-'))
+// ...
+map.resumeEvents()
 ```
 
 ## tick$

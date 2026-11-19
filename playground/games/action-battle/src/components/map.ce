@@ -8,69 +8,15 @@
   <EventLayerComponent />
   <DOMContainer width="2048px" height="1536px" class="playground-action-battle-root">
     <div class="playground-action-battle">
-      <div
-        class="stage-drop"
-        data-active={dragging() ? "true" : "false"}
-        dragover={allowDrop}
-        drop={dropEnemy}
-      ></div>
-      <aside class="enemy-panel">
-        <div class="panel-title">Action Battle Lab</div>
-
-        <label>
-          Type
-          <select change={onBehaviorChange}>
-            <option value="aggressive">Aggressive</option>
-            <option value="ranged">Ranged</option>
-            <option value="defensive">Defensive</option>
-            <option value="passive">Passive</option>
-          </select>
-        </label>
-
-        <label>
-          Faction
-          <select change={onFactionChange}>
-            <option value="monsters">Enemy</option>
-            <option value="players">Player ally</option>
-            <option value="guards">Guard</option>
-            <option value="bandits">Bandit</option>
-          </select>
-        </label>
-
-        <label>
-          Targets
-          <select change={onTargetsChange}>
-            <option value="players">Players</option>
-            <option value="events">Events</option>
-            <option value="hostile">Hostile</option>
-            <option value="all">All</option>
-          </select>
-        </label>
-
-        <div class="enemy-list">
-          @for (enemy of enemies) {
-            <div
-              class="enemy-card"
-              draggable="true"
-              dragstart={onDragStart(enemy.id)}
-              dragend={onDragEnd}
-            >
-              <div class="enemy-icon">{enemy.icon}</div>
-              <div>
-                <strong>{enemy.name}</strong>
-                <span>{enemy.skill}</span>
-              </div>
-            </div>
-          }
-        </div>
-      </aside>
+      <div class="stage-drop" data-active={dragging() ? "true" : "false"}></div>
     </div>
   </DOMContainer>
 </Container>
 
 <style>
+  /* The DOM layer sets its own inline pointer-events: let clicks reach the panel and the canvas. */
   .playground-action-battle-root {
-    pointer-events: none;
+    pointer-events: none !important;
   }
 
   .playground-action-battle {
@@ -91,169 +37,10 @@
     outline: 2px solid rgba(230, 198, 115, 0.85);
     outline-offset: -10px;
     background: rgba(255, 255, 255, 0.06);
-    pointer-events: auto;
-  }
-
-  .enemy-panel {
-    position: fixed;
-    top: 0;
-    right: 0;
-    pointer-events: auto;
-    width: 240px;
-    height: 100vh;
-    padding: 14px;
-    box-sizing: border-box;
-    background: #18212a;
-    color: #edf2f7;
-    border-left: 1px solid rgba(255, 255, 255, 0.12);
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .panel-title {
-    font-size: 18px;
-    font-weight: 700;
-    line-height: 1.15;
-  }
-
-  label {
-    display: grid;
-    gap: 5px;
-    font-size: 12px;
-    color: #b9c3cf;
-  }
-
-  select {
-    width: 100%;
-    min-height: 34px;
-    border: 1px solid #344251;
-    border-radius: 6px;
-    background: #0f151b;
-    color: #f8fafc;
-    padding: 0 9px;
-    font-size: 13px;
-  }
-
-  .enemy-list {
-    display: grid;
-    gap: 8px;
-    margin-top: 4px;
-  }
-
-  .enemy-card {
-    min-height: 58px;
-    border: 1px solid #334252;
-    border-radius: 6px;
-    background: #212c36;
-    display: grid;
-    grid-template-columns: 40px 1fr;
-    gap: 9px;
-    align-items: center;
-    padding: 8px;
-    cursor: grab;
-    user-select: none;
-  }
-
-  .enemy-card:active {
-    cursor: grabbing;
-  }
-
-  .enemy-card strong {
-    display: block;
-    font-size: 13px;
-    line-height: 1.2;
-    color: #ffffff;
-  }
-
-  .enemy-card span {
-    display: block;
-    margin-top: 3px;
-    font-size: 11px;
-    line-height: 1.25;
-    color: #aeb9c5;
-  }
-
-  .enemy-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 6px;
-    display: grid;
-    place-items: center;
-    background: #111820;
-    font-size: 18px;
   }
 </style>
 
 <script>
-  import { signal } from "canvasengine";
-  import { EventLayerComponent, inject, RpgClientEngine } from "@rpgjs/client";
-
-  const STAGE_WIDTH = 2048;
-  const STAGE_HEIGHT = 1536;
-  const client = inject(RpgClientEngine);
-
-  const enemies = [
-    { id: "brute", name: "Brute", skill: "Melee patterns", icon: "B" },
-    { id: "wood-thrower", name: "Wood Thrower", skill: "Lancer bois", icon: "W" },
-    { id: "fire-caster", name: "Fire Caster", skill: "Fire / exp.png", icon: "F" },
-    { id: "guardian", name: "Guardian", skill: "Boss / charged combo", icon: "G" },
-  ];
-
-  const dragging = signal(false);
-  const selectedEnemy = signal("brute");
-  const behavior = signal("aggressive");
-  const faction = signal("monsters");
-  const targets = signal("players");
-
-  const onDragStart = (enemyType) => (event) => {
-    selectedEnemy.set(enemyType);
-    dragging.set(true);
-    event.dataTransfer?.setData("text/plain", enemyType);
-    if (event.dataTransfer) {
-      event.dataTransfer.effectAllowed = "copy";
-    }
-  };
-
-  function onDragEnd() {
-    dragging.set(false);
-  }
-
-  function onBehaviorChange(event) {
-    behavior.set(event.target.value);
-  }
-
-  function onFactionChange(event) {
-    faction.set(event.target.value);
-  }
-
-  function onTargetsChange(event) {
-    targets.set(event.target.value);
-  }
-
-  function allowDrop(event) {
-    event.preventDefault();
-    if (event.dataTransfer) {
-      event.dataTransfer.dropEffect = "copy";
-    }
-  }
-
-  function dropEnemy(event) {
-    event.preventDefault();
-    dragging.set(false);
-
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width) * STAGE_WIDTH;
-    const y = ((event.clientY - rect.top) / rect.height) * STAGE_HEIGHT;
-    const enemyType = event.dataTransfer?.getData("text/plain") || selectedEnemy();
-
-    client.processAction("playground-action-battle:spawn-enemy", {
-      enemyType,
-      behavior: behavior(),
-      faction: faction(),
-      targets: targets(),
-      x,
-      y,
-    });
-  }
+  import { EventLayerComponent } from "@rpgjs/client";
+  import { dragging } from "../lab-state";
 </script>

@@ -2,8 +2,10 @@ import {
   PrebuiltComponentAnimations,
   RpgClient,
   RpgClientEngine,
+  WebSocketToken,
   inject,
   registerHotbarActivationHandler,
+  type AbstractWebsocket,
 } from "@rpgjs/client";
 import { defineModule } from "@rpgjs/common";
 import {
@@ -20,12 +22,19 @@ import {
   resolveActionBattleAttackDirection,
 } from "./attack-input";
 import { withActionBattleAnimationUnlocked } from "./locomotion";
-import { getActionBattleControlLockDuration } from "./core/attack-profile";
+import {
+  getActionBattleControlLockDuration,
+  mergeAttackProfileOverrides,
+  normalizeActionBattleAttackProfile,
+} from "./core/attack-profile";
 import {
   acquireActionBattleControl,
   releaseActionBattleControls,
 } from "./core/control-state";
-import type { NormalizedActionBattleAttackProfile } from "./types";
+import type {
+  ActionBattleAttackProfile,
+  NormalizedActionBattleAttackProfile,
+} from "./types";
 import { resolveActionBattleUi } from "./ui";
 import {
   ACTION_BATTLE_HIT_FX_COMPONENT_ID,
@@ -47,11 +56,57 @@ import AttackTelegraphComponent from "./components/attack-telegraph.ce";
 import DamagePopupComponent from "./components/damage-popup.ce";
 // @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
 import SoftTargetComponent from "./components/soft-target.ce";
-// @ts-ignore CanvasEngine components are compiled by @canvasengine/compiler.
-import SkillProjectileComponent from "./components/skill-projectile.ce";
 import { activateActionBattleSkill } from "./ui/skill-activation";
 
 export const ACTION_BATTLE_SKILL_PROJECTILE_TYPE = "action-battle-skill";
+const ACTION_BATTLE_WEAPON_PROFILE = "action-battle:weapon-profile";
+
+type LocalWeapon = { profile: ActionBattleAttackProfile | null; ranged: boolean };
+const NO_WEAPON: LocalWeapon = { profile: null, ranged: false };
+// How the equipped weapon of the local player attacks, as told by the server, per connection: each client engine (and each
+// reconnection) has its own socket, so one never reads the weapon of another.
+const weaponsBySocket = new WeakMap<object, LocalWeapon>();
+
+const currentSocket = (): object | undefined => {
+  try {
+    return inject<AbstractWebsocket>(WebSocketToken) as unknown as object | undefined;
+  } catch {
+    // No client context (a unit test, a tool): no weapon was told, the base profile applies.
+    return undefined;
+  }
+};
+
+const bindWeaponProfile = () => {
+  const socket = currentSocket();
+  if (!socket || weaponsBySocket.has(socket)) return;
+  weaponsBySocket.set(socket, NO_WEAPON);
+  (socket as AbstractWebsocket).on(ACTION_BATTLE_WEAPON_PROFILE, (payload: any) => {
+    weaponsBySocket.set(socket, {
+      profile: payload?.profile && typeof payload.profile === "object" ? payload.profile : null,
+      ranged: payload?.ranged === true,
+    });
+  });
+};
+
+const localWeapon = (): LocalWeapon => {
+  const socket = currentSocket();
+  return (socket && weaponsBySocket.get(socket)) || NO_WEAPON;
+};
+
+/** Attack profile of the local player, resolved like the server does for its weapon. */
+const resolveLocalAttackProfile = (options: ActionBattleOptions) => {
+  const base = getNormalizedActionBattleAttackProfile(options);
+  const weapon = localWeapon();
+  if (!weapon.profile) return base;
+  return normalizeActionBattleAttackProfile(
+    mergeAttackProfileOverrides(base, weapon.profile),
+    {
+      lockMovement: options.attack?.lockMovement,
+      lockDurationMs: options.attack?.lockDurationMs,
+      hitboxes: options.attack?.hitboxes,
+    }
+  );
+};
 
 const beginLocalPlayerAttackLock = (
   engine: RpgClientEngine,
@@ -226,11 +281,6 @@ export const createActionBattleClient = (
       [ACTION_BATTLE_COMBAT_AUDIO_ID]:
         createActionBattleCombatAudioVisual(normalized.audio),
     },
-    projectiles: {
-      components: {
-        [ACTION_BATTLE_SKILL_PROJECTILE_TYPE]: SkillProjectileComponent,
-      },
-    },
     gui: resolvedUi.gui,
     sprite: {
       componentsBehind: resolvedUi.sprite.componentsBehind,
@@ -253,6 +303,12 @@ export const createActionBattleClient = (
       }
     },
     engine: {
+      onStart() {
+        bindWeaponProfile();
+      },
+      onConnected() {
+        bindWeaponProfile();
+      },
       onInput(engine: RpgClientEngine, { input, data }: any) {
         if (input?.type === "dash") {
           const dodge = normalized.combat?.player?.dodge;
@@ -269,7 +325,7 @@ export const createActionBattleClient = (
         if (isFacingInteractiveEvent(engine, player)) return;
         const direction = resolveActionBattleAttackDirection(player, { data });
         applyActionBattleAttackDirection(player, direction);
-        const attackProfile = getNormalizedActionBattleAttackProfile(normalized);
+        const attackProfile = resolveLocalAttackProfile(normalized);
         if (attackProfile.totalDurationMs > 0) {
           const locked = beginLocalPlayerAttackLock(engine, attackProfile);
           if (!locked) return;
@@ -280,7 +336,8 @@ export const createActionBattleClient = (
           entity: player,
           engine,
         });
-        showLocalAttackPreview(player, normalized);
+        // The melee swing preview does not describe a shot.
+        if (!localWeapon().ranged) showLocalAttackPreview(player, normalized);
       },
     }
   });

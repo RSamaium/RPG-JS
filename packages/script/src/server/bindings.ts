@@ -65,6 +65,11 @@ export interface SignalBinding<TArgs extends unknown[] = unknown[]> {
    */
   background?: boolean;
   /**
+   * The hook asks the scripts before the game acts, and waits for no promise: the signal is emitted with `ScriptService.emitSync`
+   * and the hook returns the reply (its `reply` in the catalog), or nothing. `emit` must then answer at once (no promise).
+   */
+  reply?: boolean;
+  /**
    * Gives the payload and the context of the signal, or nothing to emit nothing (a player who is on no map, say). A list emits the
    * signal once per entry: a hook of a map, for each of its players. Not called while no script listens to the signal.
    */
@@ -212,14 +217,14 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
     emit: (player, change) => ({ payload: { action: String(change.action), slots: change.state.slots.map((slot) => (slot ? { type: slot.type, id: slot.id } : null)) }, context: { player } }),
   }),
   signalBinding<[RpgPlayer, ProjectileServerState, ProjectileTargetHitContext]>({
-    signal: "player.projectileHit", scope: "player", hook: "onProjectileHit",
+    signal: "player.projectileHit", scope: "player", hook: "onProjectileHit", reply: true,
     emit: (player, projectile, hit) => ({
       payload: { projectile: projectilePayload(projectile), x: Number(hit.x), y: Number(hit.y) },
       context: { player, map: hit.map },
     }),
   }),
   signalBinding<[RpgEvent, ProjectileServerState, ProjectileTargetHitContext]>({
-    signal: "event.projectileHit", scope: "event", hook: "onProjectileHit",
+    signal: "event.projectileHit", scope: "event", hook: "onProjectileHit", reply: true,
     emit: (event, projectile, hit) => {
       const owner = playerOwner(hit.owner);
       return owner ? { payload: { projectile: projectilePayload(projectile), x: Number(hit.x), y: Number(hit.y) }, context: { player: owner, map: hit.map, event } } : undefined;
@@ -230,9 +235,8 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
     emit: (end) => {
       const owner = playerOwner(end.owner);
       if (!owner) return undefined;
-      const point = end.hit?.point;
       return {
-        payload: { projectile: projectilePayload(end.projectile), reason: String(end.reason), x: Number(point?.x ?? end.projectile.origin.x), y: Number(point?.y ?? end.projectile.origin.y) },
+        payload: { projectile: projectilePayload(end.projectile), reason: String(end.reason), x: Number(end.x), y: Number(end.y), surface: String(end.surface ?? "") },
         context: { player: owner, map: end.map },
       };
     },

@@ -8,6 +8,7 @@ import type {
     ClientProjectileSpawn,
     RenderedProjectileProps,
 } from './Game/ProjectileManager'
+import type { ProjectileLook } from './components/projectile-visual'
 import type { ClientVisualMap } from './Game/ClientVisuals'
 import type { ConnectionClosedInfo } from './services/AbstractSocket'
 import type {
@@ -386,6 +387,21 @@ export interface RpgProjectileHooks {
      * CanvasEngine components used to render server-authoritative projectiles.
      */
     components?: Record<string, ComponentFunction>
+
+    /**
+     * Look of the projectile types drawn by the standard projectile component:
+     * the server only sends the type, the client decides how it looks.
+     *
+     * @example
+     * ```ts
+     * projectiles: {
+     *   looks: {
+     *     arrow: { shape: "arrow", trail: { color: "#fde68a" }, shake: 2 },
+     *   },
+     * }
+     * ```
+     */
+    looks?: Record<string, ProjectileLook>
 
     /**
      * Called when a projectile spawn batch is received from the server.

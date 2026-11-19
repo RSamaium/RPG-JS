@@ -45,11 +45,13 @@ Reference for the `RpgClientEngine` class.
 - [lootConfig](#lootconfig)
 - [mapShakeTrigger](#mapshaketrigger)
 - [music](#music)
+- [openMapView](#openmapview)
 - [playClientVisual](#playclientvisual)
 - [playSound](#playsound)
 - [pointer](#pointer)
 - [processAction](#processaction)
 - [processDash](#processdash)
+- [Register Projectile Look](#register-projectile-look)
 - [registerClientVisual](#registerclientvisual)
 - [registerClientVisuals](#registerclientvisuals)
 - [registerSpriteComponent](#registerspritecomponent)
@@ -993,6 +995,40 @@ Client-only controller for temporary looping music and map BGM crossfades.
 music
 ```
 
+## openMapView
+
+Load the picture of a map (terrain and static decor) for a custom
+gameplay-room scene, without its events, players, hitboxes, or physics.
+
+With a streamed map provider, the map comes from the room declared with
+`@RpgRoom({ map })`, and `mapId` may be omitted. A plain `provideLoadMap()`
+loader needs `mapId`. Prefer the `<MapView />` component, which calls it.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+openMapView(mapId?: string): Promise<MapData>
+```
+
+### Parameters
+
+- `mapId?`: `string`
+
+### Returns
+
+The component, render data, and params of the map
+
+### Examples
+
+```ts
+const view = await engine.openMapView("forest")
+// <view.component data={view.data} params={view.params} viewOnly={true} />
+```
+
 ## playClientVisual
 
 Play a registered client visual locally.
@@ -1156,6 +1192,33 @@ await engine.processDash({
   duration: 220,
   cooldown: 600,
 })
+```
+
+## Register Projectile Look
+
+Register the look of a projectile type drawn by the standard projectile
+component: shape or spritesheet, trail, shadow, impact.
+
+- Source: `packages/client/src/RpgClientEngine.ts`
+- Kind: `method`
+- Member of: `RpgClientEngine`
+- Defined in: `RpgClientEngine`
+
+### Signature
+
+```ts
+engine.registerProjectileLook(type, look)
+```
+
+### Parameters
+
+- `type`: `string`
+- `look`: `ProjectileLook`
+
+### Examples
+
+```ts
+engine.registerProjectileLook("arrow", { shape: "arrow", trail: true });
 ```
 
 ## registerClientVisual

@@ -34,6 +34,8 @@ Workflow:
 
 The RPGJS runtime reads the 2×2 idle directions from `metadata.idleDirections`, then uses the linked media named `walk` for movement and its saved proportional `metadata.scale`. Other linked names can be played as actions. The game endpoint above is the runtime counterpart of the project-scoped editor group endpoint.
 
+Each linked animation sheet is read one row per direction, in the order of `metadata.lanes` (`{ id, direction }`, the direction can also end the `id`: `walk-down`). Sheets generated with Fal store `lanes` for the order they are asked for (row 0 up, 1 left, 2 down, 3 right); a sheet without `lanes` is read in that same order, **not** in the idle order (`down`, `left`, `right`, `up`). A walk sheet drawn in the idle order must declare `lanes` in that order.
+
 ## Write and generation endpoints
 
 - Update media metadata only: `PUT /api/media/:id`
@@ -50,6 +52,8 @@ Common payload confirmed in server code:
 
 - `POST /api/media/generate`: `{ "action": "estimate" | "execute", "type": string, "userPrompt": string, "metadata"?: { "source"?: string, "referenceImage"?: string, "referenceImages"?: string[], "duration"?: number, ... } }`
 - `GET /api/media/generate/:instanceId`: returns `{ instanceId, requestId, type, status: "queued" | "running" | "complete" | "errored", progress: 0-100, creditsRestored, output?: { media }, error? }`: only where the generation stands (`progress` is the share of completed workflow steps) and, once complete, the generated `media` record. Nothing about the workflow itself (steps, outputs) is exposed. For a known run it falls back to the persisted application status when Cloudflare temporarily reports `instance.not_found`; unknown or cross-project ids return `404`.
+
+For a character animation (`type: "spritesheet"` with `metadata.groupId` set to an idle character, and `animationIntent.actions` naming the action), pass `metadata.startImages`: `{ "down"?: string, "left"?: string, "right"?: string, "up"?: string }` (data URIs, at least one) — the poses of the character facing each direction, cut from its idle sheet. spritesheet.ai then animates those images as they are instead of drawing the character again, which keeps its proportions and one common scale across the directions. `startImages` replace `referenceImage`/`referenceImages` (the provider refuses both in one request). `startImageFiles` is reserved to the server and rejected with `400` if sent. Without `startImages`, a character animation keeps using `referenceImage`.
 
 Studio terrain generation defaults to a `4x4` `sourceTexture` atlas in the UI and persists the generated atlas directly. It no longer creates Wang/autotile output through the image-processing container. Requests can set `metadata.sourceTextureColumns` and `metadata.sourceTextureRows` to choose the atlas layout, and can pass `terrainStyleId` plus `terrainStylePrompt` to guide the technical terrain prompt. Consumers should read `metadata.rows` and `metadata.columns` or the mirrored `metadata.textureGrid`.
 

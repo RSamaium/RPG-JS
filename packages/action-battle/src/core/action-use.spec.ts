@@ -388,6 +388,39 @@ describe("executeActionBattleUse", () => {
     expect(target.applyDamage).toHaveBeenCalledOnce();
   });
 
+  test("does not forward the Studio trailFx placeholders as preset names", () => {
+    const emit = vi.fn(() => [{ id: "bolt-1" }]);
+    const attacker = {
+      ...createEntity("caster"),
+      getCurrentMap: () => ({ projectiles: { emit } }),
+    };
+
+    for (const trailFx of ["auto", "none"]) {
+      executeActionBattleUse({
+        attacker: attacker as any,
+        target: createEntity("target") as any,
+        usable: {
+          id: "bolt",
+          _type: "skill",
+          spCost: 0,
+          hitRate: 1,
+          action: {
+            mode: "projectile",
+            range: 200,
+            visual: { trailFx },
+            projectile: { type: "bolt", speed: 200, range: 200 },
+          },
+        },
+        skill: { id: "bolt", _type: "skill", spCost: 0, hitRate: 1 },
+      });
+    }
+
+    expect(emit).toHaveBeenCalledTimes(2);
+    for (const [options] of emit.mock.calls as any[]) {
+      expect(options.params).not.toHaveProperty("trailFx");
+    }
+  });
+
   test("uses the action target policy for projectile collisions", () => {
     const enemy = createEntity("enemy");
     (enemy as any).actionBattleFaction = "enemy";
@@ -433,6 +466,77 @@ describe("executeActionBattleUse", () => {
     const canHit = emit.mock.calls[0][0].canHit;
     expect(canHit({ target: ally })).toBe(true);
     expect(canHit({ target: enemy })).toBe(false);
+  });
+
+  test("lets projectiles hit walls and scenery reacting to them, without damage", () => {
+    const emit = vi.fn(() => [{ id: "arrow-1" }]);
+    const attacker = {
+      ...createEntity("archer"),
+      getCurrentMap: () => ({ projectiles: { emit } }),
+    };
+    const lever = { ...createEntity("lever"), isEvent: () => true, onProjectileHit: vi.fn() };
+    const villager = { ...createEntity("villager"), isEvent: () => true };
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      usable: {
+        id: "bow",
+        _type: "weapon",
+        action: { mode: "projectile", projectile: { type: "arrow", speed: 300, range: 300 } },
+      },
+    });
+
+    const canHit = emit.mock.calls[0][0].canHit;
+    expect(canHit({ target: lever })).toBe(true);
+    expect(canHit({ target: villager })).toBe(false);
+    expect(canHit({ entity: { isStatic: () => true } })).toBe(true);
+    expect(canHit({ entity: { isStatic: () => false } })).toBe(false);
+
+    handleActionBattleProjectileImpact({
+      attacker: attacker as any,
+      target: lever as any,
+      projectile: { id: "arrow-1" },
+      hit: {},
+      map: {},
+    });
+    expect(lever.applyDamage).not.toHaveBeenCalled();
+  });
+
+  test("lands an arc on the target of the action and forwards projectile behaviors", () => {
+    const emit = vi.fn(() => [{ id: "arrow-1" }]);
+    const attacker = {
+      ...createEntity("archer"),
+      getCurrentMap: () => ({ projectiles: { emit } }),
+    };
+    const target = createEntity("target");
+
+    executeActionBattleUse({
+      attacker: attacker as any,
+      target: target as any,
+      usable: {
+        id: "bow",
+        _type: "weapon",
+        action: {
+          mode: "projectile",
+          projectile: {
+            type: "arrow",
+            trajectory: { type: "arc", range: 300, speed: 300 },
+            landing: { radius: 10 },
+            linger: { ms: 2000 },
+            wall: "stick",
+            delay: 120,
+          },
+        },
+      },
+    });
+
+    expect(emit.mock.calls[0][0]).toMatchObject({
+      target,
+      landing: { radius: 10 },
+      linger: { ms: 2000 },
+      wall: "stick",
+      delay: 120,
+    });
   });
 
   test("passes projectile precision options to the generic projectile system", () => {
@@ -530,7 +634,7 @@ describe("executeActionBattleUse", () => {
         params: {
           graphic: "fireball-spritesheet",
           scale: 1.4,
-          rotateToDirection: false,
+          rotate: false,
         },
       }),
       attacker,

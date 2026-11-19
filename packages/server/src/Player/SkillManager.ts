@@ -28,6 +28,52 @@ export interface SkillChangePayload extends SkillChangeOptions {
 }
 
 /**
+ * Runs `player.useSkill` in place of the native rule: a battle system (such as
+ * Action Battle) uses the skill with its own rules (projectiles, damage
+ * formula, factions, cooldowns). Return the used skill data, or `undefined`
+ * to leave the skill to the next handler and then to the native rule. Throw to
+ * refuse the use, as the native rule does.
+ */
+export type SkillUseHandler = (
+  player: RpgPlayer,
+  skillId: string,
+  target: RpgPlayer | RpgPlayer[] | undefined,
+) => SkillData | undefined;
+
+const skillUseHandlers: SkillUseHandler[] = [];
+/** Players running a handler: their own `useSkill` calls fall back to the native rule. */
+const usingThroughHandler = new WeakSet<object>();
+
+/**
+ * Let a battle system run `player.useSkill`, for every player.
+ *
+ * Handlers run in the order they were registered; the first one that returns
+ * the skill data wins. A `useSkill` called by a handler itself (to fall back)
+ * runs the native rule. Server only: the use is authoritative, its effects are
+ * synchronized as usual. Works in standalone RPG and MMORPG modes.
+ *
+ * @title Register Skill Use Handler
+ * @method registerSkillUseHandler(handler)
+ * @param handler - Runs the skill, or returns `undefined` to leave it
+ * @returns A function that removes the handler
+ * @memberof SkillManager
+ * @example
+ * ```ts
+ * const unregister = registerSkillUseHandler((player, skillId, target) => {
+ *   if (!isMyBattleSkill(skillId)) return undefined;
+ *   return myBattle.use(player, skillId, target);
+ * });
+ * ```
+ */
+export function registerSkillUseHandler(handler: SkillUseHandler): () => void {
+  skillUseHandlers.push(handler);
+  return () => {
+    const index = skillUseHandlers.indexOf(handler);
+    if (index >= 0) skillUseHandlers.splice(index, 1);
+  };
+}
+
+/**
  * Interface defining the hooks that can be implemented on skill classes or objects
  * 
  * These hooks are called at specific moments during the skill lifecycle:
@@ -544,6 +590,8 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
      * 
      * Executes a skill, consuming SP and applying effects to targets.
      * The skill must be learned and the player must have enough SP.
+     * A battle system registered with `registerSkillUseHandler` (such as
+     * Action Battle) may run it with its own rules instead.
      * 
      * @param skillInput - Skill ID, class, or object to use
      * @param otherPlayer - Optional target player(s) to apply skill effects to
@@ -566,6 +614,25 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
      * ```
      */
     useSkill(skillInput: SkillClass | SkillObject | string, otherPlayer?: RpgPlayer | RpgPlayer[]): SkillData {
+      // A skill restriction (silence) refuses the use, whoever runs it.
+      if ((this as any).hasEffect(Effect.CAN_NOT_SKILL)) {
+        throw SkillLog.restriction(this._getSkillSnapshot(this._getLearnedSkillEntry(skillInput)) || skillInput);
+      }
+      // A battle system registered with `registerSkillUseHandler` may run the skill with its own rules. The id comes from the
+      // learned skill, so a skill given as a class or an object is handled like one given by id.
+      const learnedId = this._getSkillSnapshot(this._getLearnedSkillEntry(skillInput))?.id;
+      const skillId = typeof skillInput === "string" ? skillInput : typeof learnedId === "string" ? learnedId : (skillInput as any)?.id;
+      if (skillUseHandlers.length > 0 && typeof skillId === "string" && !usingThroughHandler.has(this)) {
+        usingThroughHandler.add(this);
+        try {
+          for (const handler of [...skillUseHandlers]) {
+            const used = handler(this as unknown as RpgPlayer, skillId, otherPlayer);
+            if (used !== undefined) return used;
+          }
+        } finally {
+          usingThroughHandler.delete(this);
+        }
+      }
       const skillEntry = this._getLearnedSkillEntry(skillInput);
       const skill = this._getSkillSnapshot(skillEntry);
       

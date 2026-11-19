@@ -1,4 +1,4 @@
-import type { RpgEvent, RpgPlayer } from "@rpgjs/server";
+import type { ProjectileEmitOptions, RpgEvent, RpgPlayer } from "@rpgjs/server";
 import type { AttackPattern, EnemyType, AiState } from "../ai.server";
 import type { NormalizedActionBattleHitReactionProfile } from "../types";
 import type {
@@ -36,17 +36,21 @@ export type ActionBattleActionMode = "instant" | "melee" | "projectile";
 
 export type ActionBattleActionTarget = "enemy" | "ally" | "self" | "any";
 
-export interface ActionBattleProjectileOptions {
+export interface ActionBattleProjectileOptions
+  extends Pick<
+    ProjectileEmitOptions,
+    "delay" | "landing"
+  > {
   /**
-   * Client renderer identifier. Action Battle provides
-   * `action-battle-skill` when no custom renderer is requested.
+   * Client renderer identifier. Without a component registered for it, the
+   * standard RPGJS projectile component draws it from `params`.
    */
   type?: string;
-  /** Serializable Studio media/spritesheet identifier rendered by the default component. */
+  /** Serializable Studio media/spritesheet identifier rendered by the standard component. */
   graphic?: string;
-  /** Visual scale used by the default Action Battle projectile component. */
+  /** Visual scale used by the standard projectile component. */
   scale?: number;
-  /** Rotate the default projectile graphic toward its travel direction. */
+  /** Rotate the projectile graphic toward its travel direction. */
   rotateToDirection?: boolean;
   speed?: number;
   range?: number;

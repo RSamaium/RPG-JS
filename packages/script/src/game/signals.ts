@@ -40,8 +40,8 @@ const PROJECTILE: SignalDesc["payload"] = {
     type: "object",
     fields: {
       id: { type: "string", doc: "Id of this projectile in flight." },
-      type: { type: "string", doc: "The type of the projectile (its graphic, or the Studio projectile record)." },
-      projectileId: { type: "string", doc: "Id of the Studio projectile record, when it has one." },
+      type: { type: "string", doc: "The type of the projectile (what the clients draw it with)." },
+      projectileId: { type: "string", doc: "The `params.projectileId` of the projectile, when it was launched with one." },
     },
   },
   x: { type: "number", doc: "X of the impact." },
@@ -148,20 +148,23 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
     },
   },
   "player.projectileHit": {
-    doc: "A projectile hits a player. The player the script acts for is the one hit. It does not change what the projectile does.",
+    doc: 'A projectile hits a player. The player the script acts for is the one hit. Return "pass" to let it fly through, "stick" to keep it planted, "stop" to stop it; return nothing to keep what it does. Only a listener that does not wait (no wait, showText…) can reply.',
     payload: PROJECTILE,
+    reply: ["stop", "pass", "stick"],
   },
   "event.projectileHit": {
-    doc: "A projectile hits an event. The player the script acts for is the owner of the projectile, so nothing fires when an event launched it. It does not change what the projectile does.",
+    doc: 'A projectile hits an event. The player the script acts for is the owner of the projectile, so nothing fires when an event launched it. Return "pass" to let it fly through, "stick" to keep it planted in the event, "stop" to stop it; return nothing to keep what it does. Only a listener that does not wait (no wait, showText…) can reply. The onProjectileHit of the event itself has the last word.',
     payload: PROJECTILE,
+    reply: ["stop", "pass", "stick"],
   },
   "projectile.end": {
     doc: "A projectile is gone: it hit something, reached its range, expired or landed (a bomb). The player the script acts for is the owner; nothing fires when an event launched it.",
     payload: {
       projectile: PROJECTILE.projectile,
       reason: { type: "string", doc: 'Why it ended: "hit", "range", "land", "return", "ttl"…' },
-      x: PROJECTILE.x,
-      y: PROJECTILE.y,
+      x: { type: "number", doc: "X where it ended: the impact, where it landed, or the end of its range." },
+      y: { type: "number", doc: "Y where it ended: the impact, where it landed, or the end of its range." },
+      surface: { type: "string", doc: 'What it ended on: "target" (a player or an event), "wall", "ground" (it landed on nothing), or "" (it flew out of range or expired).' },
     },
   },
   "event.action": { doc: "A player acts on an event (the action key, next to it).", payload: EVENT },

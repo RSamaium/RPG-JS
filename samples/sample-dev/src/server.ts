@@ -244,6 +244,8 @@ export function Event(): EventDefinition {
      console.log("touch");
     },
     async onAction(player: RpgPlayer) {
+      this.showEmotionBubble("surprise");
+      player.showEmotionBubble("like");
       this.moveTo(player)
      // this.setAnimation('attack')
 
@@ -478,7 +480,6 @@ export default createServer({
   //  provideTiledMap(),
     provideActionBattle({
       combat: {
-        pvp: true,
         attack: {
           lockMovement: true,
           lockDurationMs: 320,
@@ -627,6 +628,10 @@ export default createServer({
             console.log(data);
           },
           onJoinMap: (player: RpgPlayer, map: RpgMap) => {
+            // PvP: every player is its own faction. Set it here, not in onConnected:
+            // in MMORPG mode changeMap() moves the player to the map room and drops it.
+            (player as any).actionBattleFaction = player.id;
+            (player as any).actionBattleTargets = "hostile";
             player.setGraphic("hero");
             console.log("join map", player.expCurve, player.param);
             console.log('---', player.hitbox().w, player.hitbox().h)

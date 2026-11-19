@@ -12,6 +12,8 @@ Inventory, equipment, and item usage commands for players.
 - [_type](#type)
 - [addItem](#additem)
 - [addStates](#addstates)
+- [applyEffect](#applyeffect)
+- [applyEffect](#applyeffect)
 - [atk](#atk)
 - [buyItem](#buyitem)
 - [consumable](#consumable)
@@ -122,6 +124,44 @@ States to add when used
 ```ts
 addStates: StateApplication[]
 ```
+
+## applyEffect
+
+Applies the HP / SP effect of an item (`hpValue`, `mpValue`).
+A missing, `0` or non-number value is ignored. The `hp` setter limits the result to
+`maxHp` (and calls `onDead` at `0`), `sp` is limited between `0` and `maxSp`.
+
+- Source: `packages/server/src/Player/ItemManager.ts`
+- Kind: `method`
+
+### Signature
+
+```ts
+applyEffect(item: { hpValue?: unknown; mpValue?: unknown } | null | undefined): void
+```
+
+### Parameters
+
+- `item`: `{ hpValue?: unknown; mpValue?: unknown } | null | undefined`
+
+## applyEffect
+
+Applies the HP / SP effect of an item (`hpValue` adds to `hp`, `mpValue` adds to `sp`).
+Called by `useItem()` before `onUse`. Values are limited to the maximum, `sp` never goes under `0`.
+
+- Source: `packages/server/src/Player/ItemManager.ts`
+- Kind: `method`
+- Defined in: `IItemManager`
+
+### Signature
+
+```ts
+player.applyEffect(item)
+```
+
+### Parameters
+
+- `item`: `{ hpValue?: unknown; mpValue?: unknown } | null | undefined`
 
 ## atk
 
@@ -371,7 +411,7 @@ hitRate: number
 
 ## hpValue
 
-HP value restored when used
+HP value restored when used (limited to `maxHp`); can be negative
 
 - Source: `packages/server/src/Player/ItemManager.ts`
 - Kind: `property`
@@ -398,7 +438,7 @@ id: string
 
 ## mpValue
 
-MP/SP value restored when used
+SP value restored when used (named MP for historical reasons); can be negative
 
 - Source: `packages/server/src/Player/ItemManager.ts`
 - Kind: `property`

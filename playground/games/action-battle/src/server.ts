@@ -33,6 +33,7 @@ import {
   useSkill,
 } from "@rpgjs/action-battle/server";
 import { provideMain } from "./modules/main";
+import { BOW_ID, attackAnimation } from "./animations";
 
 const STAGE_WIDTH = 2048;
 const STAGE_HEIGHT = 1536;
@@ -44,6 +45,48 @@ const EnemyClaw = {
   knockbackForce: 24,
   _type: "weapon" as const,
 };
+
+// A ranged weapon: the basic attack releases an arrow lobbed onto the soft target.
+const Bow = {
+  id: BOW_ID,
+  name: "Bow",
+  atk: 12,
+  _type: "weapon" as const,
+  // Timed on the 13 frames of the `shoot` animation: the arrow leaves when the string is released.
+  attackProfile: {
+    id: "bow-shot",
+    startupMs: 400,
+    activeMs: 60,
+    recoveryMs: 190,
+  },
+  action: {
+    target: "enemy" as const,
+    range: 320,
+    mode: "projectile" as const,
+    projectile: {
+      type: "arrow",
+      trajectory: { type: "arc", range: 320, speed: 460, height: 38 },
+      landing: { radius: 12 },
+      linger: { ms: 2500 },
+    },
+  },
+};
+
+// A switch toggled by any projectile, whatever weapon or skill fired it.
+function Switch(): EventDefinition {
+  let on = false;
+  return {
+    onInit() {
+      this.name = "Switch";
+      this.setComponentsTop([Components.text("Switch: OFF")]);
+    },
+    onProjectileHit() {
+      on = !on;
+      this.setComponentsTop([Components.text(on ? "Switch: ON" : "Switch: OFF")]);
+      return "stick";
+    },
+  };
+}
 
 const WoodThrowSkill = {
   id: "wood-throw",
@@ -268,17 +311,32 @@ const player = {
   onConnected(player: RpgPlayer) {
     player.name = "Target Hero";
     player.setGraphic("hero");
+    player.changeMap("action-battle-lab", { x: 260, y: 360 });
+  },
+
+  // Stats and PvP faction are set here, not in onConnected: changeMap() moves the
+  // player to the map room and drops what was set before (ATK was lost, so every
+  // skill dealt NaN damage).
+  onJoinMap(player: RpgPlayer) {
     player.initializeDefaultStats();
-    player.hp = 240;
-    player.sp = 100;
     player.param[MAXHP] = 240;
     player.param[MAXSP] = 100;
     player.param[ATK] = 14;
-    player.changeMap("action-battle-lab", { x: 260, y: 360 });
+    player.hp = 240;
+    player.sp = 100;
+    (player as any).actionBattleFaction = player.id;
+    (player as any).actionBattleTargets = "hostile";
   },
 
   async onInput(player: RpgPlayer, input: any) {
     const data = input.data ?? {};
+
+    if (input?.action === "playground-action-battle:weapon") {
+      const bow = data.weapon === BOW_ID;
+      if (bow && !player.hasItem(BOW_ID)) player.addItem(BOW_ID);
+      if (player.hasItem(BOW_ID)) player.equip(BOW_ID, bow);
+      return;
+    }
 
     if (input?.action === "playground-action-battle:move-enemy") {
       const map = player.getCurrentMap();
@@ -327,8 +385,8 @@ export default createServer({
     provideMain(),
     provideActionBattle({
       visual: createActionBattleVisual("impact"),
+      animations: { attack: attackAnimation },
       combat: {
-        pvp: true,
       },
       ai: {
         presets: {
@@ -363,6 +421,7 @@ export default createServer({
       {
         database: async () => ({
           "enemy-claw": EnemyClaw,
+          bow: Bow,
           "wood-throw": WoodThrowSkill,
           fire: FireSkill,
         }),
@@ -378,7 +437,9 @@ export default createServer({
               { id: "left-wall", x: 0, y: 0, width: 4, height: STAGE_HEIGHT },
               { id: "right-wall", x: STAGE_WIDTH - 4, y: 0, width: 4, height: STAGE_HEIGHT },
             ],
-            events: [],
+            events: [
+              { id: "switch", x: 420, y: 300, event: Switch() },
+            ],
           } as any,
         ],
       },
