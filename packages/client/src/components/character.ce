@@ -131,7 +131,16 @@
       || sprite === client.sceneMap?.getCurrentPlayer?.();
   };
   const isMe = computed(isCurrentPlayer);
+  // Hidden for this client only by `engine.hideMapObjects()`: the object stays on the map and keeps syncing.
+  const hiddenForLocalClient = computed(() => client.mapObjectVisibility.isHidden(
+    (typeof sprite?.isEvent === 'function' ? sprite.isEvent() : sprite?._type === 'event') ? 'events' : 'players',
+    readProp(id),
+    sprite,
+    client.playerIdSignal(),
+  ));
   const shadowsEnabled = computed(() => {
+    // The lighting shadows are drawn apart from the character: they do not follow its visibility.
+    if (hiddenForLocalClient()) return false;
     const lighting = client.sceneMap?.lighting?.();
     return shouldRenderLightingShadows(lighting);
   });
@@ -578,6 +587,7 @@
   };
 
   const visible = computed(() => {
+    if (hiddenForLocalClient()) return false;
     if (sprite.isEvent()) {
       return true
     }
