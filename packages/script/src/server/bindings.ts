@@ -88,10 +88,35 @@ export function signalBinding<TArgs extends unknown[]>(binding: SignalBinding<TA
 const zoneOf = (args: unknown[]): RpgShape | undefined =>
   args.find((a): a is RpgShape => !!a && typeof (a as { playerIsIn?: unknown }).playerIsIn === "function");
 const shapePayload = (shape: RpgShape) => ({ shape: { name: String(shape.name), x: Number(shape.x), y: Number(shape.y), width: Number(shape.width), height: Number(shape.height) } });
-const eventPayload = (event: RpgEvent) => ({ event: { id: String(event.id ?? ""), name: String(typeof event.name === "function" ? (event.name as () => unknown)() : event.name ?? "") } });
+/** The tags of a thing of the game as a signal gives them: a list of strings, each once, empty when it has none. */
+const tagList = (value: unknown): string[] =>
+  Array.isArray(value) ? [...new Set(value.filter((tag): tag is string => typeof tag === "string" && tag.length > 0))] : [];
+/** The tags of a map: the `tags` of its data (a Studio game puts the tags of the map there). */
+const mapTagsOf = (map: RpgMap | RpgPlayerRoom | null | undefined): string[] => {
+  const data = (map as { data?: unknown } | null | undefined)?.data;
+  return tagList(((typeof data === "function" ? (data as () => unknown).call(map) : data) as { tags?: unknown } | undefined)?.tags);
+};
+/** The tags of a record of the database (an item, a skill...) the player can reach: plain data or a class of the game with `tags`. */
+const recordTagsOf = (player: RpgPlayer, id: string): string[] => {
+  const map = player.getCurrentMap?.() as { database?: unknown } | null | undefined;
+  const database = map?.database;
+  const records = (typeof database === "function" ? (database as () => unknown).call(map) : database) as Record<string, unknown> | undefined;
+  return tagList((records?.[id] as { tags?: unknown } | undefined)?.tags);
+};
+const eventPayload = (event: RpgEvent) => ({
+  event: {
+    id: String(event.id ?? ""),
+    name: String(typeof event.name === "function" ? (event.name as () => unknown)() : event.name ?? ""),
+    tags: tagList((event as { tags?: unknown }).tags),
+  },
+});
 /** A signal of an event: events exist in maps only, so the map is the one of the player. */
 const ofEvent = (event: RpgEvent, player: RpgPlayer): SignalEmission => ({ payload: eventPayload(event), context: { player, event } });
-const itemPayload = (change: RpgItemChangePayload) => ({ item: String(change.itemId), quantity: Number(change.quantity) });
+const itemPayload = (player: RpgPlayer, change: RpgItemChangePayload) => ({
+  item: String(change.itemId),
+  quantity: Number(change.quantity),
+  itemTags: recordTagsOf(player, String(change.itemId)),
+});
 
 const projectilePayload = (projectile: ProjectileServerState) => ({
   id: String(projectile.id),
@@ -129,19 +154,19 @@ const tags = (value: unknown): string[] => (Array.isArray(value) ? value.map(Str
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer, RpgPlayerRoom]>({
     signal: "player.joinRoom", scope: "player", hook: "onJoinRoom",
-    emit: (player, room) => ({ payload: { ...describeRoom(room) }, context: { player, room } }),
+    emit: (player, room) => ({ payload: { ...describeRoom(room), mapTags: mapTagsOf(room) }, context: { player, room } }),
   }),
   signalBinding<[RpgPlayer, RpgPlayerRoom]>({
     signal: "player.leaveRoom", scope: "player", hook: "onLeaveRoom",
-    emit: (player, room) => ({ payload: { ...describeRoom(room) }, context: { player, room } }),
+    emit: (player, room) => ({ payload: { ...describeRoom(room), mapTags: mapTagsOf(room) }, context: { player, room } }),
   }),
   signalBinding<[RpgPlayer, RpgMap]>({
     signal: "player.joinMap", scope: "player", hook: "onJoinMap",
-    emit: (player, map) => ({ payload: { map: String(map.id) }, context: { player, map } }),
+    emit: (player, map) => ({ payload: { map: String(map.id), mapTags: mapTagsOf(map) }, context: { player, map } }),
   }),
   signalBinding<[RpgPlayer, RpgMap]>({
     signal: "player.leaveMap", scope: "player", hook: "onLeaveMap",
-    emit: (player, map) => ({ payload: { map: String(map.id) }, context: { player, map } }),
+    emit: (player, map) => ({ payload: { map: String(map.id), mapTags: mapTagsOf(map) }, context: { player, map } }),
   }),
   signalBinding<[RpgPlayer, { guiId: string; name: string; data?: unknown }]>({
     signal: "gui.action", scope: "player", hook: "onGuiInteraction",
@@ -169,19 +194,19 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   }),
   signalBinding<[RpgPlayer, RpgItemChangePayload]>({
     signal: "player.itemAdd", scope: "player", hook: "onItemAdd",
-    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+    emit: (player, change) => ({ payload: itemPayload(player, change), context: { player } }),
   }),
   signalBinding<[RpgPlayer, RpgItemChangePayload]>({
     signal: "player.itemRemove", scope: "player", hook: "onItemRemove",
-    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+    emit: (player, change) => ({ payload: itemPayload(player, change), context: { player } }),
   }),
   signalBinding<[RpgPlayer, RpgItemChangePayload]>({
     signal: "player.itemUse", scope: "player", hook: "onItemUse",
-    emit: (player, change) => ({ payload: itemPayload(change), context: { player } }),
+    emit: (player, change) => ({ payload: itemPayload(player, change), context: { player } }),
   }),
   signalBinding<[RpgPlayer, RpgItemChangePayload & { equipped: boolean }]>({
     signal: "player.itemEquip", scope: "player", hook: "onItemEquip",
-    emit: (player, change) => ({ payload: { ...itemPayload(change), equipped: !!change.equipped }, context: { player } }),
+    emit: (player, change) => ({ payload: { ...itemPayload(player, change), equipped: !!change.equipped }, context: { player } }),
   }),
   signalBinding<[RpgPlayer, RpgGoldChangePayload]>({
     signal: "player.goldChange", scope: "player", hook: "onGoldChange",
@@ -189,7 +214,10 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   }),
   signalBinding<[RpgPlayer, { action: string; skillId: string }]>({
     signal: "player.skillChange", scope: "player", hook: "onSkillChange",
-    emit: (player, change) => ({ payload: { action: String(change.action), skill: String(change.skillId) }, context: { player } }),
+    emit: (player, change) => ({
+      payload: { action: String(change.action), skill: String(change.skillId), skillTags: recordTagsOf(player, String(change.skillId)) },
+      context: { player },
+    }),
   }),
   signalBinding<[RpgPlayer]>({
     signal: "player.connect", scope: "player", hook: "onConnected",

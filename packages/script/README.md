@@ -82,15 +82,15 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 
 | Signal | Emitted by | Payload |
 | --- | --- | --- |
-| `player.joinRoom` / `player.leaveRoom` | `onJoinRoom` / `onLeaveRoom` of the player, in every kind of room | `kind` (`"map"` or the kind of the gameplay room), `id` |
-| `player.joinMap` / `player.leaveMap` | `onJoinMap` / `onLeaveMap` of the player, in a map | `map` |
+| `player.joinRoom` / `player.leaveRoom` | `onJoinRoom` / `onLeaveRoom` of the player, in every kind of room | `kind` (`"map"` or the kind of the gameplay room), `id`, `mapTags` |
+| `player.joinMap` / `player.leaveMap` | `onJoinMap` / `onLeaveMap` of the player, in a map | `map`, `mapTags` |
 | `player.inShape` / `player.outShape` | `onInShape` / `onOutShape` of the player | `shape` (`name`, `x`, `y`, `width`, `height`) |
 | `player.levelUp` | `onLevelUp` | `gained`. While it runs, `$player.level` is still the level before the gain |
 | `player.dead` | `onDead` | |
-| `player.itemAdd` / `player.itemRemove` / `player.itemUse` | `onItemAdd` / `onItemRemove` / `onItemUse` | `item`, `quantity` |
-| `player.itemEquip` | `onItemEquip` | `item`, `quantity`, `equipped` |
+| `player.itemAdd` / `player.itemRemove` / `player.itemUse` | `onItemAdd` / `onItemRemove` / `onItemUse` | `item`, `quantity`, `itemTags` |
+| `player.itemEquip` | `onItemEquip` | `item`, `quantity`, `itemTags`, `equipped` |
 | `player.goldChange` | `onGoldChange` | `gold`, `delta` |
-| `player.skillChange` | `onSkillChange` of the player | `action` (`learn`, `forget`), `skill` |
+| `player.skillChange` | `onSkillChange` of the player | `action` (`learn`, `forget`), `skill`, `skillTags` |
 | `player.connect` | `onConnected` of the player | |
 | `player.disconnect` | `onDisconnected` of the player | |
 | `battle.start` | `onStart` of the `battle` scope (a turn-based battle) | `troop`, `enemies` (tags) |
@@ -102,7 +102,10 @@ scripts while the game runs, and give `signals` to add the signals of a plugin: 
 | `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y`; may reply `"pass"`, `"stick"` or `"stop"` |
 | `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` (where it ended: the impact, where it landed, or the end of its range), `surface` (`"target"`, `"wall"`, `"ground"`, or `""` when it flew out of range) |
 | `map.tick` | `onTick` of a map with players, once for each of its players. The map does not wait for it: a player whose listeners still run (`wait`, `showText`) skips the next ticks | `map`, `deltaMs`, `tick` |
-| `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name` |
+| `event.action` / `event.touch` | `onAction` / `onPlayerTouch` of every event | `event.id`, `event.name`, `event.tags` |
+
+The fields named `tags`, `mapTags`, `itemTags` and `skillTags` list the tags of the event, the map or the record, empty when
+it has none: filter on a kind of thing rather than on a name with `where: { "event.tags": { has: "help" } }`.
 
 ### Signals of a module and of Action Battle
 

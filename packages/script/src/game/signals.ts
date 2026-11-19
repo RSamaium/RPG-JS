@@ -5,11 +5,20 @@
  */
 import type { SignalDesc } from "../core/filter";
 
+/** A list of tags at the top of a payload: `where: { <field>: { has: "<example>" } }`. */
+const TAG_LIST = (what: string, field: string, example: string): SignalDesc["payload"][string] => ({
+  type: "string[]",
+  doc: `The tags of ${what}, empty when it has none. Filter with where: { ${field}: { has: "${example}" } }.`,
+});
 const ROOM: SignalDesc["payload"] = {
   kind: { type: "string", doc: 'The kind of the room: "map" for a map, otherwise the kind the room was registered with.' },
   id: { type: "string", doc: "Id of the room." },
+  mapTags: TAG_LIST("the map, when the room is one (empty otherwise)", "mapTags", "town"),
 };
-const MAP: SignalDesc["payload"] = { map: { type: "string", doc: "Id of the map." } };
+const MAP: SignalDesc["payload"] = {
+  map: { type: "string", doc: "Id of the map." },
+  mapTags: TAG_LIST("the map", "mapTags", "town"),
+};
 const SHAPE: SignalDesc["payload"] = {
   shape: {
     type: "object",
@@ -19,9 +28,17 @@ const SHAPE: SignalDesc["payload"] = {
 const ITEM: SignalDesc["payload"] = {
   item: { type: "string", doc: "Id of the item." },
   quantity: { type: "number", doc: "How many." },
+  itemTags: TAG_LIST("the item in the database", "itemTags", "relic"),
 };
 const EVENT: SignalDesc["payload"] = {
-  event: { type: "object", fields: { id: { type: "string" }, name: { type: "string", doc: "Name of the event, empty when it has none." } } },
+  event: {
+    type: "object",
+    fields: {
+      id: { type: "string" },
+      name: { type: "string", doc: "Name of the event, empty when it has none." },
+      tags: { type: "string[]", doc: 'Tags of the event, empty when it has none. React to a kind of event rather than to a name: where: { "event.tags": { has: "help" } }.' },
+    },
+  },
 };
 
 const TAGS = (what: string): SignalDesc["payload"][string] => ({ type: "string[]", doc: `The tags of ${what}, to filter with where: { "x.tags": { has: "fire" } }.` });
@@ -104,6 +121,7 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
     payload: {
       action: { type: "string", doc: '"learn" or "forget".' },
       skill: { type: "string", doc: "Id of the skill." },
+      skillTags: TAG_LIST("the skill in the database", "skillTags", "fire"),
     },
   },
   "player.connect": { doc: "A player connects to the game.", payload: {} },

@@ -78,4 +78,28 @@ describe("Studio server map streaming configuration", () => {
     });
     expect(map.setWeather).toHaveBeenCalledWith(payload.data.weather);
   });
+
+  it("puts the tags of the Studio map where RPGJS reads the tags of a map", async () => {
+    const module = createStudioServer({ streaming: false });
+    const tagged = { ...createLegacyMapPayload(), data: { ...createLegacyMapPayload().data, tags: ["town", "safe"] } } as LegacyMapPayload & { tags?: unknown };
+    const untagged = createLegacyMapPayload() as LegacyMapPayload & { tags?: unknown };
+
+    await module.map?.onBeforeUpdate?.(tagged, {} as any);
+    await module.map?.onBeforeUpdate?.(untagged, {} as any);
+
+    expect(tagged.tags).toEqual(["town", "safe"]);
+    expect(untagged.tags).toEqual([]);
+  });
+
+  it("gives the runtime event the tags of the Studio event, next to its name", () => {
+    const module = createStudioServer({ streaming: false });
+    const map = { scale: 1 } as any;
+
+    const tagged = module.event?.onBeforeCreated?.({ id: "npc", x: 0, y: 0, event: { name: "Aider un PNJ", tags: ["help"], triggers: [] } } as any, map) as any;
+    const untagged = module.event?.onBeforeCreated?.({ id: "rock", x: 0, y: 0, event: { name: "rock", triggers: [] } } as any, map) as any;
+
+    expect(tagged.event.name).toBe("Aider un PNJ");
+    expect(tagged.event.tags).toEqual(["help"]);
+    expect(untagged.event.tags).toBeUndefined();
+  });
 });

@@ -100,7 +100,7 @@ describe("the signals of the battles and of the player", () => {
   });
 
   it("emits player.skillChange, player.connect and player.disconnect", async () => {
-    expect((await emitted(listening("player.skillChange"), "player", "onSkillChange", player, { action: "learn", skillId: "fire", skill: "fire" }))[0][1]).toEqual({ action: "learn", skill: "fire" });
+    expect((await emitted(listening("player.skillChange"), "player", "onSkillChange", player, { action: "learn", skillId: "fire", skill: "fire" }))[0][1]).toEqual({ action: "learn", skill: "fire", skillTags: [] });
     expect((await emitted(listening("player.connect"), "player", "onConnected", player))[0][0]).toBe("player.connect");
     expect((await emitted(listening("player.disconnect"), "player", "onDisconnected", player))[0][0]).toBe("player.disconnect");
   });

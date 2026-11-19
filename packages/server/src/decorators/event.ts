@@ -53,7 +53,21 @@ export interface EventOptions {
      * @prop {string} name
      * @memberof EventData
      * */
-    name: string
+    name: string,
+
+    /**
+     * Tags of the event: what kind of event it is, for the scripts and modules that react to kinds of events rather
+     * than to names. The event gives them in `event.tags`.
+     *
+     * ```ts
+     * @EventData({ name: 'EV-1', tags: ['help', 'villager'] })
+     * export class VillagerEvent extends RpgEvent { }
+     * ```
+     *
+     * @prop {string[]} [tags]
+     * @memberof EventData
+     * */
+    tags?: string[]
 }
 
 export function EventData(options: EventOptions) {
@@ -68,6 +82,8 @@ export function EventData(options: EventOptions) {
         target.prototype._eventDataMass = options.mass
         target._name = options.name
         target.prototype._name = options.name
+        target._tags = options.tags
+        target.prototype._tags = options.tags
         target.prototype.mode = target.mode
     }
 }
