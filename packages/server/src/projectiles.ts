@@ -766,20 +766,37 @@ export class RpgMapProjectiles {
       hit,
     };
     const isEvent = typeof target.isEvent === "function" && target.isEvent();
-    void lastValueFrom(
-      this.map.hooks.callHooks(isEvent ? "server-event-onProjectileHit" : "server-player-onProjectileHit", target, active.state, context),
-    ).catch((error) => console.error("[RPGJS] Error during onProjectileHit:", error));
-    const hook = target.onProjectileHit;
-    if (typeof hook !== "function") return undefined;
-    try {
-      const reaction = hook.call(target, active.state, context);
-      // Like `execMethod`, push the changes made by the hook to the clients.
-      target.syncChanges?.();
-      return reaction === "stop" || reaction === "pass" || reaction === "stick" ? reaction : undefined;
-    } catch (error) {
-      console.error("[RPGJS] Error during onProjectileHit:", error);
-      return undefined;
+    const isReaction = (value: unknown): value is ProjectileTargetReaction =>
+      value === "stop" || value === "pass" || value === "stick";
+    // The modules (and the scripts, through them) are asked at once: the first that returns a reaction decides. A promise
+    // cannot decide, the projectile does not wait.
+    let reaction: ProjectileTargetReaction | undefined;
+    const hookId = isEvent ? "server-event-onProjectileHit" : "server-player-onProjectileHit";
+    for (const moduleHook of (this.map as any).hooks?.getHookFunctions?.(hookId) ?? []) {
+      try {
+        const answer = moduleHook(target, active.state, context);
+        if (answer && typeof answer.then === "function") {
+          answer.catch((error: unknown) => console.error("[RPGJS] Error during onProjectileHit:", error));
+        } else if (reaction === undefined && isReaction(answer)) {
+          reaction = answer;
+        }
+      } catch (error) {
+        console.error("[RPGJS] Error during onProjectileHit:", error);
+      }
     }
+    // The event (or player) itself has the last word.
+    const hook = target.onProjectileHit;
+    if (typeof hook === "function") {
+      try {
+        const own = hook.call(target, active.state, context);
+        if (isReaction(own)) reaction = own;
+      } catch (error) {
+        console.error("[RPGJS] Error during onProjectileHit:", error);
+      }
+    }
+    // Like `execMethod`, push the changes made by the hooks to the clients.
+    target.syncChanges?.();
+    return reaction;
   }
 
   private rebase(

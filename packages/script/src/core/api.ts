@@ -13,7 +13,7 @@ import type { ApiInfo, Host } from "./interpreter";
 /** A member of a handle (`$player.gold`): its TypeScript type, its documentation, and whether a script may assign it. */
 export interface MemberDesc { type: string; doc?: string; writable?: boolean }
 /** A method of a handle (`$player.addItem(...)`): its signature as TypeScript, e.g. `(item: string): void`. A method that returns `void` cannot be used as a value. */
-export interface MethodDesc { sig: string; doc?: string }
+export interface MethodDesc { sig: string; doc?: string; /** It answers at once (it reads): a listener that calls only such methods can reply to its signal. */ sync?: boolean }
 /** Members a handle takes by name (`$switch.door_open`, `$var.visits`): the description of the key, the type of the value, and whether a script may assign it. */
 export interface DynamicDesc { keyDoc: string; type: string; doc?: string; writable?: boolean }
 /** A `$name` a script can use: what it has (members, methods, a dynamic part), and whether its properties are declared by the script itself (`shared({ ... })`). */
@@ -69,6 +69,7 @@ export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>
       members: Object.keys(h.members ?? {}),
       methods: Object.keys(h.methods ?? {}),
       voidMethods: Object.entries(h.methods ?? {}).filter(([, m]) => returnsNothing(m.sig)).map(([k]) => k),
+      syncMethods: Object.entries(h.methods ?? {}).filter(([, m]) => m.sync).map(([k]) => k),
     }])),
     functions: Object.fromEntries(Object.entries(desc.functions).map(([name, f]) => [name, { ref: f.ref, void: returnsNothing(f.sig) }])),
     catalog,
@@ -103,7 +104,10 @@ export function describeApi(desc: ApiDescription): string {
   for (const [name, h] of Object.entries(desc.handles)) {
     out.push(`${h.doc ? `/** ${h.doc} */\n` : ""}declare const ${name}: {`);
     for (const [k, m] of Object.entries(h.members ?? {})) out.push(`  ${m.doc ? `/** ${m.doc} */ ` : ""}${m.writable ? "" : "readonly "}${k}: ${m.type};`);
-    for (const [k, m] of Object.entries(h.methods ?? {})) out.push(`  ${m.doc ? `/** ${m.doc} */ ` : ""}${k}${m.sig};`);
+    for (const [k, m] of Object.entries(h.methods ?? {})) {
+      const doc = [m.doc, m.sync ? "Answers at once: a listener that replies may call it." : ""].filter(Boolean).join(" ");
+      out.push(`  ${doc ? `/** ${doc} */ ` : ""}${k}${m.sig};`);
+    }
     if (h.declared) out.push("  // properties declared at the top of the script with shared({ name: { initial, client, persist } })");
     if (h.dynamic) out.push(`  ${h.dynamic.writable ? "" : "readonly "}[${h.dynamic.keyDoc}]: ${h.dynamic.type};`);
     out.push("};", "");
@@ -114,8 +118,10 @@ export function describeApi(desc: ApiDescription): string {
       "// where: { \"path.to.field\": value | { eq, ne, gt, gte, lt, lte, in: [...], has: value, exists: boolean } }  (all must hold)",
       "// when: [{ switch: name, is?: boolean } | { variable: name, <comparison> } | { item: id, <comparison> } | { stat: \"gold\" | \"level\", <comparison> }]  (all must hold)");
     for (const [name, sig] of Object.entries(desc.signals)) {
-      out.push(`${sig.doc ? `/** ${sig.doc} */\n` : ""}declare function on(signal: "${name}", filter: { where?: object; when?: object[] }, handler: (e: ${payloadType({ type: "object", fields: sig.payload })}) => void): void;`);
-      out.push(`declare function on(signal: "${name}", handler: (e: ${payloadType({ type: "object", fields: sig.payload })}) => void): void;`);
+      // A signal that takes a reply: the handler may return one of them.
+      const returns = sig.reply?.length ? `${sig.reply.map((r) => JSON.stringify(r)).join(" | ")} | void` : "void";
+      out.push(`${sig.doc ? `/** ${sig.doc} */\n` : ""}declare function on(signal: "${name}", filter: { where?: object; when?: object[] }, handler: (e: ${payloadType({ type: "object", fields: sig.payload })}) => ${returns}): void;`);
+      out.push(`declare function on(signal: "${name}", handler: (e: ${payloadType({ type: "object", fields: sig.payload })}) => ${returns}): void;`);
     }
   }
   out.push("", "// Also available: Math (min max floor ceil round abs sqrt pow trunc sign PI), Object (keys values entries), Array.isArray,",

@@ -20,6 +20,7 @@ import type {
     ProjectileImpactHookContext,
     ProjectileServerState,
     ProjectileTargetHitContext,
+    ProjectileTargetReaction,
 } from "./projectiles"
 
 type RpgClassMap<T> = new () => T
@@ -499,16 +500,20 @@ export interface RpgPlayerHooks<TAuthData = unknown> {
     onInShape?: (player: RpgPlayer, shape: RpgShape) => MaybePromise<void>
 
     /**
-     * Called when a projectile hits a player.
+     * Called when a projectile hits a player, before the projectile `onHit`.
+     * Return `"pass"`, `"stick"` or `"stop"` **at once** (not from a promise)
+     * to decide what the projectile does; the first module that replies wins.
+     * Return nothing to keep the projectile behavior.
      *
      * @example
      * ```ts
      * onProjectileHit(player, projectile, { owner }) {
      *   if (projectile.type === "snowball") player.hp -= 1
+     *   if (player.getVariable("ghost")) return "pass"
      * }
      * ```
      */
-    onProjectileHit?: (player: RpgPlayer, projectile: ProjectileServerState, context: ProjectileTargetHitContext) => MaybePromise<void>
+    onProjectileHit?: (player: RpgPlayer, projectile: ProjectileServerState, context: ProjectileTargetHitContext) => MaybePromise<ProjectileTargetReaction | void>
 
     /**
      *  When the player leaves the shape
@@ -779,10 +784,13 @@ export interface RpgEventHooks {
     onPlayerTouch?: (event: RpgEvent, player: RpgPlayer) => MaybePromise<void>
 
     /**
-     * Called when a projectile hits an event. Module hooks are notified only:
-     * the event's own `onProjectileHit` decides what the projectile does.
+     * Called when a projectile hits an event, before the projectile `onHit`.
+     * Return `"pass"`, `"stick"` or `"stop"` **at once** (not from a promise)
+     * to decide what the projectile does; the first module that replies wins,
+     * and the event's own `onProjectileHit` has the last word. Return nothing
+     * to keep the projectile behavior.
      */
-    onProjectileHit?: (event: RpgEvent, projectile: ProjectileServerState, context: ProjectileTargetHitContext) => MaybePromise<void>
+    onProjectileHit?: (event: RpgEvent, projectile: ProjectileServerState, context: ProjectileTargetHitContext) => MaybePromise<ProjectileTargetReaction | void>
 
     /** Called when an event starts touching a player or another event. */
     onTouch?: (event: RpgEvent, other: RpgPlayer | RpgEvent, context: RpgTouchContext) => MaybePromise<void>

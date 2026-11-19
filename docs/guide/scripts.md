@@ -106,13 +106,33 @@ installed, and a listener that fails does not stop the next one.
 | `battle.end` | `onEnd` of the `battle` scope | `result`, `troop`, `enemies` |
 | `combat.hit` | `combat.hooks.afterHit` of Action Battle, through `actionBattleHooks(scripts)`: for the attacker when it is a player, otherwise the target; nothing for a hit between two events | `damage`, `defeated`, `attacker`, `target` (`id`, `name`, `kind`) |
 | `player.hotbarChange` | `onHotbarChange` of the player | `action` (`initialize`, `assign`, `clear`, `select`, `refresh`), `slots` |
-| `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y` |
-| `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y` |
+| `player.projectileHit` | `onProjectileHit` of the player hit | `projectile` (`id`, `type`, `projectileId`), `x`, `y`; may reply `"pass"`, `"stick"` or `"stop"` (see [Reply to a projectile](#reply-to-a-projectile)) |
+| `event.projectileHit` | `onProjectileHit` of an event; the script acts for the owner of the projectile (nothing fires when an event launched it) | `projectile`, `x`, `y`; may reply `"pass"`, `"stick"` or `"stop"` (see [Reply to a projectile](#reply-to-a-projectile)) |
 | `projectile.end` | `onDestroy` of the projectiles; the script acts for the owner (nothing fires when an event launched it) | `projectile`, `reason`, `x`, `y` (where it ended: the impact, where it landed, or the end of its range), `surface` (`"target"`, `"wall"`, `"ground"`, or `""` when it flew out of range) |
 | `map.tick` | `onTick` of a map with players, about 60 times a second, once for each player of the map | `map`, `deltaMs`, `tick` |
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name` |
+
+### Reply to a projectile
+
+`event.projectileHit` and `player.projectileHit` are asked **before** the projectile decides what to do. A listener can return
+`"pass"` (it flies through, as through a bush), `"stick"` (it stays planted in the target) or `"stop"` (it stops, even a piercing
+one); return nothing to keep what the projectile does. The first listener that replies decides, and an event's own
+`onProjectileHit` has the last word.
+
+```js
+on("event.projectileHit", { where: { "projectile.type": "arrow" } }, (e) => {
+  if ($event.name === "Ghost") return "pass";
+  if ($player.getVariable("sticky_arrows") === true) return "stick";
+});
+```
+
+The projectile does not wait, so only a listener that **answers at once** can reply: it reads the payload, `$event`, `$player`
+and `$map`, and calls only the methods that read (`getVariable`, `hasVariable`, `getItem`, `hasItem`, `getEvent`, `getEvents`,
+`getPlayers`, `getShape`, `getShapes`, `getWeather`, `getLighting`). A listener that does anything else (`setVariable`,
+`showText`, `wait`, a function of the script) still runs, after the hit, but its reply is ignored. Put the reply and the effects
+in two listeners when you need both.
 
 The script acts for **the player of the signal** (`$player`) and, for the event signals, for **that event** (`$event`). The signals of
 the player fire in every kind of room, a map or not; `event.action` and `event.touch` only exist in a map, since events do. The zones

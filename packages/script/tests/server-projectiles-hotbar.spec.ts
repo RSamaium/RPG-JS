@@ -196,6 +196,65 @@ describe("scripts and the projectiles", () => {
   });
 });
 
+describe("scripts that reply to event.projectileHit", () => {
+  // The player stands at (100, 100): an event on the right, in the way of an arrow shot to the right.
+  async function shootThrough(source: string, setup?: (player: RpgPlayer) => void) {
+    const service = new ScriptService();
+    service.install({ id: "reply", source });
+    const { player, map } = await start(service);
+    setup?.(player);
+    await map.createDynamicEvent({ id: `crate-${n}`, x: 180, y: 100, event: { name: "Crate" } });
+    const onHit = vi.fn();
+    const onEnd = vi.fn();
+    player.projectiles.emit({
+      type: "arrow",
+      origin: { x: 140, y: 116 },
+      direction: { x: 1, y: 0 },
+      trajectory: { type: "linear", speed: 400, range: 160 },
+      onHit,
+      onEnd,
+    });
+    for (let i = 0; i < 30; i++) map.projectiles.step(1 / 30);
+    return { player, onHit, onEnd };
+  }
+
+  it("keeps the projectile behavior without a reply: it stops on the event", async () => {
+    const { onHit, onEnd } = await shootThrough(`on("event.projectileHit", () => {});`);
+    expect(onHit).toHaveBeenCalledTimes(1);
+    expect(onEnd.mock.calls[0][0].reason).toBe("hit");
+  });
+
+  it('lets the projectile fly through with "pass"', async () => {
+    const { onEnd } = await shootThrough(`on("event.projectileHit", () => "pass");`);
+    // It goes on to the end of its range (the hit is still reported, as for any target that lets it through).
+    expect(onEnd.mock.calls[0][0].reason).toBe("range");
+  });
+
+  it('plants the projectile in the event with "stick"', async () => {
+    const { onEnd } = await shootThrough(`on("event.projectileHit", () => { return "stick"; });`);
+    expect(onEnd.mock.calls[0][0].x).toBeLessThan(200);
+  });
+
+  it("replies from what the player knows, read at once", async () => {
+    const source = `on("event.projectileHit", (e) => { if ($player.getVariable("ghost_${n}") === true && e.projectile.type === "arrow") return "pass"; });`;
+    const { onEnd } = await shootThrough(source, (player) => player.setVariable(`ghost_${n}`, true));
+    expect(onEnd.mock.calls[0][0].reason).toBe("range");
+  });
+
+  it("cannot reply from a listener that waits, which still runs", async () => {
+    const source = `on("event.projectileHit", () => { $player.setVariable("seen_${n}", true); return "pass"; });`;
+    const { player, onEnd } = await shootThrough(source);
+    // setVariable is not a reader: the listener waits, so it only observes.
+    expect(onEnd.mock.calls[0][0].reason).toBe("hit");
+    await settled(() => expect(player.getVariable(`seen_${n}`)).toBe(true));
+  });
+
+  it("ignores a reply the signal does not take", async () => {
+    const { onEnd } = await shootThrough(`on("event.projectileHit", () => "explode");`);
+    expect(onEnd.mock.calls[0][0].reason).toBe("hit");
+  });
+});
+
 describe("scripts and the skills", () => {
   it("uses a skill the player knows, as player.useSkill does", async () => {
     const service = new ScriptService({ signals: { "test.go": { doc: "test", payload: {} } } });

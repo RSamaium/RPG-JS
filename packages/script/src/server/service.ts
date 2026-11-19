@@ -123,6 +123,26 @@ export class ScriptService {
     const report = await this.registry.emit(signal, payload, (script, program) =>
       createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script) }),
     );
+    this.reportFailures(signal, report);
+    return report;
+  }
+
+  /**
+   * Emits a signal that takes a reply (its `reply` in the catalog), for a hook of the game that cannot wait: gives at once what the
+   * first listener that did not wait returned, among the replies of the signal. The listeners that wait run afterwards, as observers;
+   * their failures are reported like the ones of `emit`.
+   */
+  emitSync(signal: string, payload: unknown, context: SignalContext): string | undefined {
+    const hook = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+    const accepted = this.description.signals?.[signal]?.reply ?? [];
+    const { reply, report } = this.registry.emitSync(signal, payload, accepted, (script, program) =>
+      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script) }),
+    );
+    void report.then((done) => this.reportFailures(signal, done));
+    return reply;
+  }
+
+  private reportFailures(signal: string, report: EmitReport) {
     for (const l of report.listeners) {
       if (!l.error) continue;
       const key = `${l.script}\0${signal}\0${l.error}`;
@@ -130,7 +150,6 @@ export class ScriptService {
       this.reported.add(key);
       console.error(`[script] "${l.script}" failed on "${signal}": ${l.error}`);
     }
-    return report;
   }
 
   private stateOf(script: string) {

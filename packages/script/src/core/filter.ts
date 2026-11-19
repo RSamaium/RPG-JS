@@ -11,7 +11,15 @@ export type PayloadType = "string" | "number" | "boolean" | "string[]" | "number
 export interface PayloadField { type: PayloadType; doc?: string; fields?: Record<string, PayloadField> }
 
 /** A signal the game emits: what it is, and what its payload holds. */
-export interface SignalDesc { doc?: string; payload: Record<string, PayloadField> }
+export interface SignalDesc {
+  doc?: string;
+  payload: Record<string, PayloadField>;
+  /**
+   * What a listener may return to decide what happens (`"pass"`), for a signal the game asks before acting. Only a listener
+   * that does not wait can reply: it calls no function and only the methods that answer at once (`$player.getVariable`).
+   */
+  reply?: string[];
+}
 
 /** Comparisons of a number (`gte: 5`), or of any value for `eq` and `ne`. Several in one object must all hold. */
 export type Comparison = { eq?: unknown; ne?: unknown; gt?: number; gte?: number; lt?: number; lte?: number };

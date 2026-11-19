@@ -148,12 +148,14 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
     },
   },
   "player.projectileHit": {
-    doc: "A projectile hits a player. The player the script acts for is the one hit. It does not change what the projectile does.",
+    doc: 'A projectile hits a player. The player the script acts for is the one hit. Return "pass" to let it fly through, "stick" to keep it planted, "stop" to stop it; return nothing to keep what it does. Only a listener that does not wait (no wait, showText…) can reply.',
     payload: PROJECTILE,
+    reply: ["stop", "pass", "stick"],
   },
   "event.projectileHit": {
-    doc: "A projectile hits an event. The player the script acts for is the owner of the projectile, so nothing fires when an event launched it. It does not change what the projectile does.",
+    doc: 'A projectile hits an event. The player the script acts for is the owner of the projectile, so nothing fires when an event launched it. Return "pass" to let it fly through, "stick" to keep it planted in the event, "stop" to stop it; return nothing to keep what it does. Only a listener that does not wait (no wait, showText…) can reply. The onProjectileHit of the event itself has the last word.',
     payload: PROJECTILE,
+    reply: ["stop", "pass", "stick"],
   },
   "projectile.end": {
     doc: "A projectile is gone: it hit something, reached its range, expired or landed (a bomb). The player the script acts for is the owner; nothing fires when an event launched it.",

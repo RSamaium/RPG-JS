@@ -4,7 +4,7 @@
  * any of them. Several bindings may listen to the same hook.
  */
 import type { RpgServer } from "@rpgjs/server";
-import type { HookScope, SignalBinding } from "./bindings";
+import type { HookScope, SignalBinding, SignalEmissions } from "./bindings";
 import type { ScriptService } from "./service";
 
 /**
@@ -15,7 +15,7 @@ import type { ScriptService } from "./service";
  * @returns A server module.
  */
 export function scriptHooks(service: ScriptService): RpgServer {
-  const module: Partial<Record<HookScope, Record<string, (...args: unknown[]) => Promise<void>>>> = {};
+  const module: Partial<Record<HookScope, Record<string, (...args: unknown[]) => unknown>>> = {};
   const byHook = new Map<string, SignalBinding[]>();
   // The signals of `background` bindings whose scripts still run, per player
   const running = new Set<string>();
@@ -25,6 +25,28 @@ export function scriptHooks(service: ScriptService): RpgServer {
   }
   for (const [id, bindings] of byHook) {
     const [scope, hook] = id.split(".") as [HookScope, string];
+    if (bindings.some((binding) => binding.reply)) {
+      // The game asks before acting and waits for no promise: reply at once, from the listeners that do not wait.
+      (module[scope] ??= {})[hook] = (...args: unknown[]) => {
+        let reply: string | undefined;
+        for (const binding of bindings) {
+          if (service.listeners(binding.signal).length === 0) continue;
+          const emissions = binding.emit(...args);
+          if (emissions && typeof (emissions as Promise<unknown>).then === "function") {
+            void (emissions as Promise<SignalEmissions>).then((later) => {
+              for (const emission of [later ?? []].flat()) void service.emit(binding.signal, emission.payload, emission.context);
+            });
+            continue;
+          }
+          for (const emission of [(emissions as SignalEmissions) ?? []].flat()) {
+            const answer = service.emitSync(binding.signal, emission.payload, emission.context);
+            reply ??= answer;
+          }
+        }
+        return reply;
+      };
+      continue;
+    }
     (module[scope] ??= {})[hook] = async (...args: unknown[]) => {
       for (const binding of bindings) {
         // `map.tick` runs on every tick: nothing to compute when no script listens

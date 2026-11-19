@@ -3462,6 +3462,7 @@
       "SignalRegistry",
       "SignalRegistryOptions",
       "SoundOptions",
+      "SyncEmitResult",
       "VariableValue",
       "WhereMatcher",
       "apiInfo",

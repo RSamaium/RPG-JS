@@ -394,8 +394,22 @@ export const Target: EventDefinition = {
 ```
 
 The hook receives the projectile (`type`, `ownerId`, `params`, `trajectory`) and
-`{ owner, map, x, y, hit }`. Module hooks are notified too, without a reply:
-`event.onProjectileHit` and `player.onProjectileHit` in `defineModule()`.
+`{ owner, map, x, y, hit }`. Module hooks can reply too: `event.onProjectileHit`
+and `player.onProjectileHit` in `defineModule()` may return `"pass"`, `"stick"`
+or `"stop"` **at once** (a promise cannot decide: the projectile does not
+wait). The first module that replies decides, and the event's own
+`onProjectileHit` has the last word. Scripts reply the same way with
+`event.projectileHit` (see the scripts guide).
+
+```ts
+defineModule<RpgServer>({
+  event: {
+    onProjectileHit(event, projectile) {
+      if (event.name() === "Ghost") return "pass"
+    },
+  },
+})
+```
 
 Loot pickups never stop projectiles: they fly over them.
 
