@@ -121,7 +121,7 @@ export class ScriptService {
   async emit(signal: string, payload: unknown, context: SignalContext): Promise<EmitReport> {
     const hook = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
     const report = await this.registry.emit(signal, payload, (script, program) =>
-      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script) }),
+      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit }),
     );
     this.reportFailures(signal, report);
     return report;
@@ -136,11 +136,16 @@ export class ScriptService {
     const hook = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
     const accepted = this.description.signals?.[signal]?.reply ?? [];
     const { reply, report } = this.registry.emitSync(signal, payload, accepted, (script, program) =>
-      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script) }),
+      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit }),
     );
     void report.then((done) => this.reportFailures(signal, done));
     return reply;
   }
+
+  /** What the world of a script emits (an event it walked arrives): a signal like the ones of the hooks. */
+  private readonly worldEmit = (signal: string, payload: Record<string, unknown>, context: SignalContext) => {
+    if (this.registry.listeners(signal).length > 0) void this.emit(signal, payload, context);
+  };
 
   private reportFailures(signal: string, report: EmitReport) {
     for (const l of report.listeners) {

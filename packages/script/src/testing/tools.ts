@@ -178,7 +178,8 @@ export interface TestCase extends RunSpec {
   dice?: number[];
   choices?: number[];
   /** Expectations are plain data. Keys: returns, page, error, effects, effectsInclude, effectsExclude, texts, notifications,
-   *  and paths like "player.gold", "player.items.potion", "shared.stock_potion", "state.reputation", "vars.x";
+   *  and paths like "player.gold", "player.hp", "player.items.potion", "shared.stock_potion", "state.reputation", "vars.x",
+   *  "events.guard.x", "events.guard.moving";
    *  a value is a number, text, boolean, null, or { min, max } for a range. */
   expect?: Record<string, unknown>;
 }
@@ -218,7 +219,7 @@ function judge(t: TestCase, r: SimulateResult): string[] {
     else if (k === "effectsExclude") { for (const b of want as string[]) if (names.includes(b)) out.push(`unexpected effect "${b}"`); }
     else if (k === "texts") { const got = r.effects.filter((e) => e.name === "showText").map((e: any) => e.params.text); if (!same(got, want)) out.push(`texts ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
     else if (k === "notifications") { const got = r.effects.filter((e) => e.name === "showNotification").map((e: any) => e.params.message); if (!same(got, want)) out.push(`notifications ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
-    else if (!KNOWN.has(k) && /^(player|shared|state|vars)\./.test(k)) {
+    else if (!KNOWN.has(k) && /^(player|shared|state|vars|events)\./.test(k)) {
       const got = atPath(r.state, k);
       if (!matches(got, want)) out.push(`${k} is ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
     } else out.push(`unknown expectation "${k}"`);

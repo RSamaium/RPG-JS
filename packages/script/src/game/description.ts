@@ -11,7 +11,7 @@ const VALUE = "string | number | boolean | null | object";
 
 /**
  * The API of scripts in a game, as data: `$player`, `$map`, `$room`, `$event`, `$shared`, `$data`, `$hook`, `$state`, the functions `wait`, `random`,
- * `Item`, `Graphic`, and the signals of the game. What each name does is in `GAME_API_IMPL`, over a `ScriptWorld`.
+ * `distance`, `inSight`, `Item`, `Graphic`, and the signals of the game. What each name does is in `GAME_API_IMPL`, over a `ScriptWorld`.
  */
 export const GAME_API_DESCRIPTION: ApiDescription = {
   signals: GAME_SIGNALS,
@@ -22,6 +22,13 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         gold: { type: "number", writable: true, doc: "The gold. Assign it with =, +=, -=, *=: it never goes below 0." },
         level: { type: "number" },
         name: { type: "string" },
+        x: { type: "number", doc: "Position on the map in pixels: the top-left of the hitbox, as changeMap and teleport take it." },
+        y: { type: "number" },
+        direction: { type: '"up" | "down" | "left" | "right"', doc: "Where the player faces." },
+        hp: { type: "number", writable: true, doc: "Health points. Assign them with =, +=, -=, *=: they stay between 0 and maxHp, and 0 makes the player dead (player.dead)." },
+        sp: { type: "number", writable: true, doc: "Skill points, between 0 and maxSp." },
+        maxHp: { type: "number", doc: "0 when the game gives the player no maximum (no parameters): hp is then not capped." },
+        maxSp: { type: "number", doc: "0 when the game gives the player no maximum." },
       },
       methods: {
         getItem: { sync: true, sig: "(id: string): { id: string; name: string; quantity: number } | undefined", doc: "A copy of an item of the inventory, or undefined when the player has none." },
@@ -52,6 +59,11 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
           sig: '(slot: number, entry: { type: "skill" | "item" | string; id: string }): void',
           doc: "Puts a skill the player knows, a usable item or the entry of a plugin in a slot of the hotbar (0 to 9), as player.assignHotbarSlot does. The entry that was elsewhere in the hotbar moves. Listen to player.hotbarChange for the changes.",
         },
+        teleport: { sig: "(position: { x: number; y: number }): void", doc: "Moves the player at once to a position of the map they are on. To go to another map, use changeMap." },
+        startBattle: {
+          sig: '(troopId: string, options?: { kind?: "turn" | "tactical" }): "victory" | "defeat" | "escape" | null',
+          doc: 'Plays a troop of the database with the battle system of the game and waits for the end of the battle: gives "victory", "defeat" or "escape", or null when the game has no battle system for it. kind picks a turn-based or a tactical battle; without it, the game picks. battle.start and battle.end fire as for any battle.',
+        },
         useSkill: {
           sig: "(skillId: string, options?: { target?: string }): boolean",
           doc: "Uses a skill the player knows, as player.useSkill does. With Action Battle on the map, a skill with an action follows its rules: its projectile, damage formula, factions, states, SP cost and cooldown. target is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy within the reach of the action, whatever the player faces. Gives false when the skill cannot be used now (not learned, not enough SP, cooldown, no target).",
@@ -66,8 +78,8 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
           sig: "(event: { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean }): string",
           doc: "Creates an event on the map and gives its id. It is described by plain data and listens to the same signals as any event (event.action, event.touch). A script makes 50 events on a map at most.",
         },
-        getEvent: { sync: true, sig: "(id: string): { id: string; name: string; x: number; y: number } | undefined", doc: "A copy of an event of the map, or undefined." },
-        getEvents: { sync: true, sig: "(): { id: string; name: string; x: number; y: number }[]", doc: "Copies of the events of the map." },
+        getEvent: { sync: true, sig: "(id: string): { id: string; name: string; x: number; y: number; direction: string } | undefined", doc: "A copy of an event of the map, with where it faces, or undefined." },
+        getEvents: { sync: true, sig: "(): { id: string; name: string; x: number; y: number; direction: string }[]", doc: "Copies of the events of the map." },
         removeEvent: { sig: "(id: string): boolean", doc: "Removes an event that a script made. The events of the game are not removed: it gives false." },
         getPlayers: { sync: true, sig: "(): { id: string; name: string }[]", doc: "The players on the map." },
         getVariable: { sync: true, sig: `(key: string): ${VALUE} | undefined`, doc: "A variable of the map, shared by its players. What you read is read-only." },
@@ -104,6 +116,25 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
           sig: "(options: { effect: string; at: { x: number; y: number }; preset?: object; duration?: number; scale?: number }): void",
           doc: "Plays a one-shot visual effect (particles) at a point of the map, for its players. effect is the name of a built-in particle preset, or of the effect described by preset (a particle preset { emitters: [...] }: the resolved preset of a Studio Visual Effect). duration is how long it stays drawn, at most 10 000 ms; without it, it ends with its particles. scale is 0.1 to 10.",
         },
+        attachShape: {
+          sig: '(eventId: string, zone: { name?: string; radius?: number; width?: number; height?: number; angle?: number; direction?: "up" | "down" | "left" | "right"; limitedByWalls?: boolean; positioning?: "center" | "top" | "bottom" | "left" | "right"; follow?: "position" | "direction"; properties?: object }): string',
+          doc: 'Attaches a zone to an event and gives its name: it moves with the event, and with follow: "direction" it turns with it. A circle of radius (or around width x height); with angle below 360 a cone facing direction: the sight of a guard. With limitedByWalls the walls hide what is behind them. Players entering and leaving it fire player.inShape and player.outShape, with shape.eventId. It counts in the 50 zones of scripts; removeShape removes it.',
+        },
+        moveEvent: {
+          sig: '(id: string, to: { x: number; y: number } | "player", options?: { speed?: number; wait?: boolean }): boolean',
+          doc: 'Walks an event of the map to a position (its top-left when it arrives) or to the player, around what blocks its way, and stops it there. event.arrived fires when it arrives. speed (0.1 to 20) is set on the event. With wait: true the script waits and gets whether it arrived (false when it was stopped, or after 60 seconds); without, it goes on at once and gets true. Every player of the map sees the event move.',
+        },
+        followPlayer: { sig: "(id: string, options?: { distance?: number }): void", doc: "An event follows the player, staying about distance pixels away (48 by default), until stopEvent, another move, or the player leaves the map. 50 events of a map at most follow or flee at once." },
+        fleePlayer: { sig: "(id: string, options?: { distance?: number }): void", doc: "An event runs away from the player until it is distance pixels away (160 by default), and again when the player comes closer, until stopEvent, another move, or the player leaves the map." },
+        stopEvent: { sig: "(id: string): void", doc: "Stops what scripts made an event do: a moveEvent, a follow, a flight. The routes the event has in the game go on." },
+        turnEvent: { sig: '(id: string, direction: "up" | "down" | "left" | "right" | "player"): void', doc: 'Turns an event to a direction, or toward the player with "player".' },
+        teleportEvent: { sig: "(id: string, position: { x: number; y: number }): void", doc: "Puts an event at a position of the map at once." },
+        setEventVisible: { sig: "(id: string, visible: boolean): void", doc: "Hides an event (no sprite, no collision, no touch or action) and shows it again where it was, with its state. A hidden event stops its routes." },
+        getTile: {
+          sync: true,
+          sig: "(x: number, y: number): { x: number; y: number; collision: boolean; properties: object; layers: { properties: object }[] } | undefined",
+          doc: "The tile at a position in pixels: its cell (x, y in tiles), whether it blocks, and the properties of its tiles (properties merges them, the top layer wins). undefined when the map has no tiles (a map that is not a Tiled map) or outside of it. A tile whose properties have interactive: true fires player.touchTile.",
+        },
         shakeMap: { sig: '(options?: { intensity?: number; duration?: number; frequency?: number; direction?: "x" | "y" | "both" }): void', doc: "Shakes the screen of the players of the map." },
       },
     },
@@ -113,7 +144,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
     },
     $event: {
       doc: "The event the script runs for (for the signals of an event).",
-      members: { id: { type: "string" }, name: { type: "string", doc: "Empty when the event has none." }, x: { type: "number" }, y: { type: "number" } },
+      members: { id: { type: "string" }, name: { type: "string", doc: "Empty when the event has none." }, x: { type: "number" }, y: { type: "number" }, direction: { type: '"up" | "down" | "left" | "right"', doc: "Where the event faces." } },
     },
     $shared: {
       doc: "Properties shared by all the players of the map, declared with shared({ ... }). Assignments (=, +=, -=) are applied at once; use take() to test and decrease in one step.",
@@ -145,6 +176,11 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
   functions: {
     wait: { sig: "(seconds: number): void", doc: "Pauses the script (60 seconds at most; not slept in a simulation)." },
     random: { sig: "(min: number, max: number): number", doc: "A whole number between min and max, both included. Seeded in a simulation." },
+    distance: { sig: "(a: { x: number; y: number }, b: { x: number; y: number }): number", doc: "The distance between two points in pixels: distance({ x: $player.x, y: $player.y }, $map.getEvent(id))." },
+    inSight: {
+      sig: '(from: { x: number; y: number; direction?: "up" | "down" | "left" | "right" }, to: { x: number; y: number }, options?: { range?: number; angle?: number; walls?: boolean }): boolean',
+      doc: "Whether to is in sight of from: within range pixels (200 by default), within angle degrees of where from faces (90 by default when from has a direction, a full circle otherwise), and with walls: true, with no wall between them. inSight($map.getEvent(\"guard\"), { x: $player.x, y: $player.y }, { walls: true }).",
+    },
     Item: { sig: "(id: string): string", ref: "item", doc: 'Reference to an item of the database, checked when the script is saved: Item("potion").' },
     Graphic: { sig: "(id: string): string", ref: "graphic", doc: 'Reference to a graphic of the database: Graphic("npc_marchand").' },
   },

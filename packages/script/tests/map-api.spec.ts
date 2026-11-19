@@ -21,7 +21,7 @@ describe("$map: the map the script runs in, with the names of RpgMap", () => {
       return [id, found, listed, removed, $map.getEvent(id)];
     `);
 
-    expect(r.value).toEqual(["shop-1", { id: "shop-1", name: "shop", x: 150, y: 100 }, ["shop-1"], true, undefined]);
+    expect(r.value).toEqual(["shop-1", { id: "shop-1", name: "shop", x: 150, y: 100, direction: "down" }, ["shop-1"], true, undefined]);
     expect(r.effects.map((e) => e.name)).toEqual(["createDynamicEvent", "removeEvent"]);
     expect(r.effects[0].params).toEqual({ id: "shop-1", x: 150, y: 100, name: "shop", graphic: "merchant", hitbox: { width: 40, height: 40 }, through: false });
   });

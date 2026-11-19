@@ -7,7 +7,7 @@ import { scriptHooks } from "./hooks";
 import { ScriptService, type ScriptServiceOptions } from "./service";
 
 export { ScriptService, type ScriptServiceOptions, type ScriptSource, type ScriptError, type SignalContext } from "./service";
-export { createRpgjsWorld, sharedPropsOf, SHARED_PREFIX, type RpgjsWorldOptions } from "./world";
+export { createRpgjsWorld, sharedPropsOf, SHARED_PREFIX, type RpgjsWorldOptions, type WorldEmit } from "./world";
 export { scriptHooks } from "./hooks";
 export { actionBattleHooks } from "./action-battle";
 export { DEFAULT_SIGNAL_BINDINGS, signalBinding, type HookScope, type SignalBinding, type BattleHookContext, type SignalEmission, type SignalEmissions } from "./bindings";

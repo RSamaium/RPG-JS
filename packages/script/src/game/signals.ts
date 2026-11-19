@@ -22,7 +22,14 @@ const MAP: SignalDesc["payload"] = {
 const SHAPE: SignalDesc["payload"] = {
   shape: {
     type: "object",
-    fields: { name: { type: "string" }, x: { type: "number" }, y: { type: "number" }, width: { type: "number" }, height: { type: "number" } },
+    fields: {
+      name: { type: "string" },
+      x: { type: "number" },
+      y: { type: "number" },
+      width: { type: "number" },
+      height: { type: "number" },
+      eventId: { type: "string", doc: 'Id of the event the zone is attached to ($map.attachShape), "" for a zone of the map.' },
+    },
   },
 };
 const ITEM: SignalDesc["payload"] = {
@@ -68,7 +75,7 @@ const PROJECTILE: SignalDesc["payload"] = {
 /**
  * The signals of the game: `player.joinRoom`, `player.leaveRoom`, `player.joinMap`, `player.leaveMap`, `player.levelUp`, `player.dead`,
  * `player.itemAdd`, `player.itemRemove`, `player.itemUse`, `player.itemEquip`, `player.goldChange`, `player.skillChange`, `player.connect`, `player.disconnect`, `battle.start`, `battle.command`, `battle.end`, `combat.hit`, `map.tick`, `event.action`,
- * `event.touch`. The room ones fire in every kind of room; the map and event ones only in a map.
+ * `event.touch`, `event.arrived`, `player.touchTile`. The room ones fire in every kind of room; the map and event ones only in a map.
  * A plugin adds its own with the `signals` option of `ScriptService`.
  */
 export const GAME_SIGNALS: Record<string, SignalDesc> = {
@@ -183,6 +190,22 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
       x: { type: "number", doc: "X where it ended: the impact, where it landed, or the end of its range." },
       y: { type: "number", doc: "Y where it ended: the impact, where it landed, or the end of its range." },
       surface: { type: "string", doc: 'What it ended on: "target" (a player or an event), "wall", "ground" (it landed on nothing), or "" (it flew out of range or expired).' },
+    },
+  },
+  "event.arrived": {
+    doc: "An event that a script walked with $map.moveEvent arrives. The player the script acts for is the one of the script that walked it.",
+    payload: {
+      ...EVENT,
+      x: { type: "number", doc: "X of the event where it stopped." },
+      y: { type: "number", doc: "Y of the event where it stopped." },
+    },
+  },
+  "player.touchTile": {
+    doc: "A player steps on a tile, or walks against it, whose properties have interactive: true (a barrel, a lever, lava). It fires once each time the player reaches such a tile.",
+    payload: {
+      x: { type: "number", doc: "X of the tile, in tiles." },
+      y: { type: "number", doc: "Y of the tile, in tiles." },
+      properties: { type: "object", doc: "The properties of the tile (the top layer wins)." },
     },
   },
   "event.action": { doc: "A player acts on an event (the action key, next to it).", payload: EVENT },

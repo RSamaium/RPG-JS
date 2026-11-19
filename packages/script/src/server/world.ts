@@ -4,7 +4,8 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { MAXHP, MAXSP, Vector2 } from "@rpgjs/common";
+import { MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -29,16 +30,116 @@ const madeByScripts = new WeakMap<object, Set<string>>();
 const shapesMadeByScripts = new WeakMap<object, Set<string>>();
 let eventCounter = 0;
 
+/** The zones scripts attached to events, by map: the event, and what stops the zone from turning with it. */
+const attachedByScripts = new WeakMap<object, Map<string, { event: any; unsubscribe?: () => void }>>();
+/** What scripts make the events of a map do (a move, a follow, a flight), by event: stopping it ends it. */
+const controlsByMap = new WeakMap<object, Map<string, { stop(): void }>>();
+
+/** How close the center of an event comes to its goal for it to have arrived, in pixels (the move stops within 48). */
+const ARRIVE_DISTANCE = 52;
+/** How often a move, a follow or a flight looks where the event is, in milliseconds. */
+const MOVE_CHECK_MS = 50;
+const KEEP_CHECK_MS = 200;
+
+/** The tags of a thing of the game: a list of strings, each once. */
+const tagList = (value: unknown): string[] =>
+  Array.isArray(value) ? [...new Set(value.filter((tag): tag is string => typeof tag === "string" && tag.length > 0))] : [];
+
+/** The center of a player or an event, in pixels: its physics body, otherwise its top-left plus half its hitbox. */
+function centerOf(map: any, object: any): { x: number; y: number } {
+  const body = map?.physic?.getEntityByUUID?.(object.id);
+  if (body?.position) return { x: Number(body.position.x), y: Number(body.position.y) };
+  const box = typeof object.hitbox === "function" ? object.hitbox() : { w: 0, h: 0 };
+  return { x: number(read(object.x)) + number(box?.w) / 2, y: number(read(object.y)) + number(box?.h) / 2 };
+}
+const directionToward = (from: { x: number; y: number }, to: { x: number; y: number }): DirectionName => {
+  const dx = to.x - from.x, dy = to.y - from.y;
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+};
+const BATTLE_HOOKS: Record<string, string> = { turn: "startTurnBased", tactical: "startTactical" };
+const OUTCOMES = new Set(["victory", "defeat", "escape"]);
+
+/**
+ * Plays a troop with the battle systems of the game: the `studioBattle` hooks of its modules (`start`, `startTurnBased`,
+ * `startTactical`), the contract the battle blocks of the Studio use. The module that plays the troop returns its result
+ * (`{ outcome }` or the outcome); a player who leaves a tactical battle (`abandon`) escaped.
+ */
+function playBattle(player: RpgPlayer, troopId: string, options: BattleOptions): Promise<BattleOutcome | null> {
+  const hooks = (player as any).hooks;
+  if (!hooks?.callHooks) return Promise.resolve(null);
+  const name = options.kind ? BATTLE_HOOKS[options.kind] : "start";
+  return new Promise((resolve, reject) => {
+    let outcome: BattleOutcome | null = null;
+    hooks.callHooks(`server-studioBattle-${name}`, player, troopId).subscribe({
+      next: (results: unknown) => {
+        for (const result of Array.isArray(results) ? results : [results]) {
+          const value = result && typeof result === "object" ? (result as { outcome?: unknown }).outcome : result;
+          const found = value === "abandon" ? "escape" : value;
+          if (outcome === null && typeof found === "string" && OUTCOMES.has(found)) outcome = found as BattleOutcome;
+        }
+      },
+      error: reject,
+      complete: () => resolve(outcome),
+    });
+  });
+}
+
+/** Emits a signal of the game, for the world that walks an event (`event.arrived`). */
+export type WorldEmit = (signal: string, payload: Record<string, unknown>, context: { player: RpgPlayer; map?: RpgMap | null; event?: RpgEvent | null }) => void;
+
 /** A state of the map as plain data: what RPGJS keeps may hold fields set to undefined, which a script has no use for. */
 const plainCopy = (state: unknown): object | null => (state == null ? null : JSON.parse(JSON.stringify(state)));
 
 /** The map of a script, over the map of RPGJS: the events a script makes are real events that listen to the same signals. */
-function mapPortOf(map: RpgMap, player: RpgPlayer): MapPort {
+function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
   const m = map as any;
   const made = madeByScripts.get(map) ?? madeByScripts.set(map, new Set()).get(map)!;
   const madeShapes = shapesMadeByScripts.get(map) ?? shapesMadeByScripts.set(map, new Set()).get(map)!;
+  const attached = attachedByScripts.get(map) ?? attachedByScripts.set(map, new Map()).get(map)!;
+  const controls = controlsByMap.get(map) ?? controlsByMap.set(map, new Map()).get(map)!;
   const shapeSnapshot = (s: any): ShapeSnapshot => ({ name: String(s.name), x: number(s.x), y: number(s.y), width: number(s.width), height: number(s.height) });
-  const snapshot = (e: any): EventSnapshot => ({ id: String(e.id ?? ""), name: String(read(e.name) ?? ""), x: number(read(e.x)), y: number(read(e.y)) });
+  const snapshot = (e: any): EventSnapshot => ({ id: String(e.id ?? ""), name: String(read(e.name) ?? ""), x: number(read(e.x)), y: number(read(e.y)), direction: String(read(e.direction) ?? "down") });
+  const eventOf = (id: string): any => {
+    const event = m.getEvent(id);
+    if (!event) throw new Error(`there is no event "${id}" on the map`);
+    return event;
+  };
+  /** Ends what scripts made an event do, if anything. */
+  const release = (id: string) => {
+    const control = controls.get(id);
+    controls.delete(id);
+    control?.stop();
+  };
+  const control = (id: string, stop: () => void) => {
+    if (!controls.has(id) && controls.size >= MAX_SCRIPT_MOVERS) throw new Error(`scripts move ${MAX_SCRIPT_MOVERS} events of a map at most at once`);
+    const entry = { stop };
+    controls.set(id, entry);
+    return () => { if (controls.get(id) === entry) controls.delete(id); };
+  };
+  const stopMoving = (event: any) => { try { event.stopMoveTo?.(); } catch { /* the event left the map */ } };
+  /** Keeps an event at a distance of the player (follow) or away from them (flee), until it is stopped or the player leaves. */
+  const keep = (id: string, mode: "follow" | "flee", distance: number) => {
+    const event = eventOf(id);
+    release(id);
+    let stopped = false, moving = false;
+    const done = control(id, () => { stopped = true; stopMoving(event); });
+    const loop = () => {
+      if (stopped) return;
+      if (m.getEvent(id) !== event || (player.getCurrentMap?.() as unknown) !== map) { done(); stopped = true; stopMoving(event); return; }
+      const from = centerOf(m, event), to = centerOf(m, player), d = Math.hypot(to.x - from.x, to.y - from.y);
+      if (mode === "follow") {
+        if (d > distance + 16 && !moving) { event.moveTo(player); moving = true; }
+        else if (d <= distance && moving) { stopMoving(event); moving = false; }
+      } else if (d < distance) {
+        // run along the line from the player through the event, a little beyond the distance
+        const ux = d > 0 ? (from.x - to.x) / d : 1, uy = d > 0 ? (from.y - to.y) / d : 0, step = distance - d + 32;
+        event.moveTo({ x: from.x + ux * step, y: from.y + uy * step });
+        moving = true;
+      } else if (moving) { stopMoving(event); moving = false; }
+      setTimeout(loop, KEEP_CHECK_MS);
+    };
+    loop();
+  };
   return {
     get id() { return String(m.id ?? ""); },
     async createDynamicEvent(o: EventOptions) {
@@ -100,9 +201,117 @@ function mapPortOf(map: RpgMap, player: RpgPlayer): MapPort {
     getShapes: () => (m.getShapes() as unknown[]).map(shapeSnapshot),
     removeShape(name) {
       if (!madeShapes.has(name)) return false;
-      m.removeShape(name);
+      const zone = attached.get(name);
+      if (zone) {
+        // a zone attached to an event lives in the physics of the map and in the event
+        const zoneId = zone.event._zoneIdMap?.get(name);
+        if (zoneId !== undefined) m.physic?.getZoneManager?.().removeZone(zoneId);
+        zone.event._zoneIdMap?.delete(name);
+        zone.event._attachedShapes?.delete(name);
+        zone.unsubscribe?.();
+        attached.delete(name);
+      } else m.removeShape(name);
       madeShapes.delete(name);
       return true;
+    },
+    attachShape(eventId, o: AttachedShapeOptions) {
+      const event = eventOf(eventId);
+      if (madeShapes.size >= MAX_SCRIPT_SHAPES) throw new Error(`a script makes ${MAX_SCRIPT_SHAPES} zones on a map at most`);
+      const name = o.name ?? `script-zone-${Date.now().toString(36)}-${++eventCounter}`;
+      if (m.getShape(name) || madeShapes.has(name)) throw new Error(`a zone "${name}" is already on the map`);
+      const { follow, ...options } = o;
+      const direction = options.direction ?? (follow === "direction" ? String(read(event.direction) ?? "down") : undefined);
+      const shape = event.attachShape(name, { ...options, name, ...(direction ? { direction } : {}) });
+      if (!shape) throw new Error(`the event "${eventId}" is not on the map: the zone was not made`);
+      let unsubscribe: (() => void) | undefined;
+      if (follow === "direction") {
+        // the cone turns with the event
+        const zoneId = event._zoneIdMap?.get(name);
+        const subscription = event.direction?.observable?.subscribe?.((value: unknown) => {
+          if (zoneId !== undefined) m.physic?.getZoneManager?.().updateZone(zoneId, { direction: String(value) });
+        });
+        unsubscribe = subscription ? () => subscription.unsubscribe() : undefined;
+      }
+      madeShapes.add(name);
+      attached.set(name, { event, unsubscribe });
+      return name;
+    },
+    moveEvent(id, to: MoveTarget, o: MoveEventOptions) {
+      const event = eventOf(id);
+      release(id);
+      if (o.speed !== undefined) event.speed = o.speed;
+      // RPGJS walks to the center of its target: a position is where the top-left of the event arrives
+      const box = typeof event.hitbox === "function" ? event.hitbox() : { w: 0, h: 0 };
+      const goal = () => (to === "player" ? centerOf(m, player) : { x: to.x + number(box?.w) / 2, y: to.y + number(box?.h) / 2 });
+      let finish: (arrived: boolean) => void = () => {};
+      const arrived = new Promise<boolean>((resolve) => { finish = resolve; });
+      let over = false;
+      const done = control(id, () => { if (!over) { over = true; stopMoving(event); finish(false); } });
+      event.moveTo(to === "player" ? player : goal());
+      const started = Date.now();
+      const check = () => {
+        if (over) return;
+        if (m.getEvent(id) !== event) { over = true; done(); finish(false); return; }
+        const at = centerOf(m, event), target = goal();
+        if (Math.hypot(target.x - at.x, target.y - at.y) <= ARRIVE_DISTANCE) {
+          over = true;
+          done();
+          stopMoving(event);
+          finish(true);
+          emit?.("event.arrived", {
+            event: { id: String(event.id), name: String(read(event.name) ?? ""), tags: tagList(event.tags) },
+            x: number(read(event.x)), y: number(read(event.y)),
+          }, { player, map, event });
+          return;
+        }
+        if (Date.now() - started > MAX_MOVE_SECONDS * 1000) { over = true; done(); stopMoving(event); finish(false); return; }
+        setTimeout(check, MOVE_CHECK_MS);
+      };
+      setTimeout(check, MOVE_CHECK_MS);
+      return o.wait ? arrived : true;
+    },
+    followPlayer: (id, o: DistanceOptions) => keep(id, "follow", o.distance ?? 48),
+    fleePlayer: (id, o: DistanceOptions) => keep(id, "flee", o.distance ?? 160),
+    stopEvent(id) {
+      const event = eventOf(id);
+      release(id);
+      stopMoving(event);
+    },
+    turnEvent(id, direction) {
+      const event = eventOf(id);
+      event.changeDirection(direction === "player" ? directionToward(centerOf(m, event), centerOf(m, player)) : direction);
+    },
+    async teleportEvent(id, position) {
+      const event = eventOf(id);
+      release(id);
+      await event.teleport(position);
+    },
+    setEventVisible(id, visible) {
+      if (visible) { if (!m.isEventSuspended?.(id)) eventOf(id); m.resumeEvent(id); return; }
+      eventOf(id);
+      release(id);
+      m.suspendEvent(id);
+    },
+    getTile(x, y): TileSnapshot | undefined {
+      const tiled = m.tiled;
+      if (!tiled || typeof tiled.getTileByPosition !== "function") return undefined;
+      const tileWidth = number(tiled.tilewidth), tileHeight = number(tiled.tileheight);
+      if (tileWidth <= 0 || tileHeight <= 0) return undefined;
+      const cellX = Math.floor(x / tileWidth), cellY = Math.floor(y / tileHeight);
+      if (cellX < 0 || cellY < 0 || cellX >= number(tiled.width) || cellY >= number(tiled.height)) return undefined;
+      const info = tiled.getTileByPosition(x, y, [0, 0], { populateTiles: true });
+      const layers = ((info?.tiles ?? []) as any[]).map((tile) => ({ properties: plainCopy(tile?.properties ?? {}) as Record<string, unknown> }));
+      return { x: cellX, y: cellY, collision: !!info?.hasCollision, properties: Object.assign({}, ...layers.map((l) => l.properties)), layers };
+    },
+    lineOfSight(from, to) {
+      const physic = m.physic;
+      if (!physic?.raycast) return true;
+      const start = new Vector2(from.x, from.y), end = new Vector2(to.x, to.y);
+      const direction = end.sub(start), length = direction.length();
+      if (length < 1e-5) return true;
+      direction.normalizeInPlace();
+      // only what stands still blocks the sight: walls and static hitboxes, not players or events
+      return physic.raycast(start, direction, length, undefined, (entity: any) => entity.isStatic?.() === true) === null;
     },
     playSound: (id, options: SoundOptions = {}) => m.playSound(id, options),
     stopSound: (id) => m.stopSound(id),
@@ -235,6 +444,8 @@ export interface RpgjsWorldOptions {
   state?: ScriptWorld["stateProps"];
   /** A whole number between `min` and `max`, both included. */
   rand?: (min: number, max: number) => number;
+  /** Emits a signal of the game: an event a script walked arrives (`event.arrived`). Nothing is emitted without it. */
+  emit?: WorldEmit;
 }
 
 /**
@@ -262,6 +473,20 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     set gold(value: number) { p.gold = value; },
     get level() { return number(read(p.level)); },
     get name() { return String(read(p.name)); },
+    get x() { return number(read(p.x)); },
+    get y() { return number(read(p.y)); },
+    get direction() { return String(read(p.direction) ?? "down"); },
+    get hp() { return number(p.hp); },
+    set hp(value: number) { p.hp = value; },
+    get sp() { return number(p.sp); },
+    set sp(value: number) { p.sp = value; },
+    // 0 when the game gives the player no maximum (no parameters)
+    get maxHp() { const max = p.param?.[MAXHP]; return Number.isFinite(max) ? max : 0; },
+    get maxSp() { const max = p.param?.[MAXSP]; return Number.isFinite(max) ? max : 0; },
+    async teleport(position) {
+      await p.teleport(position);
+    },
+    startBattle: (troopId, options) => playBattle(player, troopId, options),
     getItem(id) {
       const item = p.getItem(id);
       if (!item) return undefined;
@@ -321,12 +546,13 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
   return {
     player: playerPort,
     room: where,
-    ...(map ? { map: mapPortOf(map, player) } : {}),
+    ...(map ? { map: mapPortOf(map, player, options.emit) } : {}),
     event: {
       get id() { return event?.id ?? ""; },
       get name() { return String(read((event as any)?.name) ?? ""); },
       get x() { return number(read((event as any)?.x)); },
       get y() { return number(read((event as any)?.y)); },
+      get direction() { return String(read((event as any)?.direction) ?? "down"); },
     },
     wait: (seconds) => new Promise<void>((resolve) => setTimeout(resolve, Math.min(Math.max(seconds, 0), MAX_WAIT_SECONDS) * 1000)),
     rand: options.rand ?? ((min, max) => min + Math.floor(Math.random() * (max - min + 1))),

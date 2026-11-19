@@ -3,3 +3,4 @@
  */
 export * from "./tools";
 export { SimWorld, SimPlayer, SharedStore, type WorldInit } from "./world";
+export { ENGINE_COVERAGE, type EngineCoverage } from "../game/engine-coverage";

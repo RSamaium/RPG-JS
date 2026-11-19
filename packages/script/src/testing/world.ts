@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_SHAPES, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -10,6 +10,14 @@ export class SimPlayer implements PlayerPort {
   level = 3;
   name = "Hero";
   map = "start";
+  x = 100;
+  y = 100;
+  direction = "down";
+  maxHp = 100;
+  maxSp = 50;
+  private points = { hp: 100, sp: 50 };
+  /** How the battles the script starts end, in order; `null` when the game has no battle system for it. */
+  battles: (BattleOutcome | null)[] = [];
   items = new Map<string, number>();
   vars = new Map<string, unknown>();
   /** The answers `showChoices` gives, in order (the index of the choice, -1 to close it). */
@@ -25,6 +33,28 @@ export class SimPlayer implements PlayerPort {
   }
   /** Sets the gold without recording an effect: the starting point of a simulation. */
   start(gold: number) { this.amount = gold; }
+  /** Sets hp and sp without recording an effect: the starting point of a simulation. */
+  startPoints(hp: number, sp: number) { this.points = { hp, sp }; }
+
+  get hp() { return this.points.hp; }
+  set hp(value: number) {
+    this.points.hp = Math.min(this.maxHp > 0 ? this.maxHp : Infinity, Math.max(0, value));
+    this.record("hp", { value: this.points.hp });
+  }
+  get sp() { return this.points.sp; }
+  set sp(value: number) {
+    this.points.sp = Math.min(this.maxSp > 0 ? this.maxSp : Infinity, Math.max(0, value));
+    this.record("sp", { value: this.points.sp });
+  }
+  teleport(position: { x: number; y: number }) {
+    this.record("teleport", position);
+    this.x = position.x;
+    this.y = position.y;
+  }
+  async startBattle(troopId: string, options: BattleOptions = {}): Promise<BattleOutcome | null> {
+    this.record("startBattle", { troopId, ...options });
+    return this.battles.length ? this.battles.shift()! : "victory";
+  }
 
   getItem(id: string): ItemSnapshot | undefined {
     const quantity = this.items.get(id) ?? 0;
@@ -101,7 +131,7 @@ export class SimMap implements MapPort {
     const id = options.id ?? `script-event-${++this.counter}`;
     if (this.events.has(id)) throw new Error(`an event "${id}" is already on the map`);
     this.record("createDynamicEvent", options);
-    this.events.set(id, { id, name: options.name ?? "", x: options.x, y: options.y });
+    this.events.set(id, { id, name: options.name ?? "", x: options.x, y: options.y, direction: "down" });
     this.made.add(id);
     return id;
   }
@@ -147,6 +177,93 @@ export class SimMap implements MapPort {
 
   shapes = new Map<string, ShapeSnapshot>();
   private madeShapes = new Set<string>();
+  /** The zones scripts attached to events: the event, and the options. */
+  attached = new Map<string, { eventId: string } & AttachedShapeOptions>();
+  /** The events that are hidden. */
+  hidden = new Map<string, EventSnapshot>();
+  /** What each event does for scripts: "follow", "flee", or nothing. */
+  moving = new Map<string, "follow" | "flee">();
+  /** Tiles of the map, by cell (`x,y`), and their size in pixels. */
+  tiles = new Map<string, { collision: boolean; properties: Record<string, unknown> }>();
+  tileSize = 32;
+  /** What blocks the sight: rectangles of the map. */
+  walls: { x: number; y: number; width: number; height: number }[] = [];
+
+  private eventOf(id: string): EventSnapshot {
+    const event = this.events.get(id);
+    if (!event) throw new Error(`there is no event "${id}" on the map`);
+    return event;
+  }
+  attachShape(eventId: string, options: AttachedShapeOptions): string {
+    this.eventOf(eventId);
+    if (this.madeShapes.size >= MAX_SCRIPT_SHAPES) throw new Error(`a script makes ${MAX_SCRIPT_SHAPES} zones on a map at most`);
+    const name = options.name ?? `script-zone-${++this.counter}`;
+    if (this.shapes.has(name) || this.madeShapes.has(name)) throw new Error(`a zone "${name}" is already on the map`);
+    this.record("attachShape", { eventId, ...options });
+    this.attached.set(name, { eventId, ...options, name });
+    this.madeShapes.add(name);
+    return name;
+  }
+  /** In a simulation an event arrives at once: where it was sent, or next to the player. */
+  moveEvent(id: string, to: MoveTarget, options: MoveEventOptions = {}): boolean {
+    const event = this.eventOf(id);
+    this.record("moveEvent", { id, to, ...options });
+    this.moving.delete(id);
+    const goal = to === "player" ? { x: this.player.x, y: this.player.y + 32 } : to;
+    Object.assign(event, goal);
+    return true;
+  }
+  private keep(id: string, mode: "follow" | "flee", options: DistanceOptions) {
+    this.eventOf(id);
+    if (!this.moving.has(id) && this.moving.size >= MAX_SCRIPT_MOVERS) throw new Error(`scripts move ${MAX_SCRIPT_MOVERS} events of a map at most at once`);
+    this.record(mode === "follow" ? "followPlayer" : "fleePlayer", { id, ...options });
+    this.moving.set(id, mode);
+  }
+  followPlayer(id: string, options: DistanceOptions = {}) { this.keep(id, "follow", options); }
+  fleePlayer(id: string, options: DistanceOptions = {}) { this.keep(id, "flee", options); }
+  stopEvent(id: string) {
+    this.eventOf(id);
+    this.record("stopEvent", { id });
+    this.moving.delete(id);
+  }
+  turnEvent(id: string, direction: DirectionName | "player") {
+    const event = this.eventOf(id);
+    this.record("turnEvent", { id, direction });
+    if (direction !== "player") { event.direction = direction; return; }
+    const dx = this.player.x - event.x, dy = this.player.y - event.y;
+    event.direction = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "right" : "left") : dy > 0 ? "down" : "up";
+  }
+  teleportEvent(id: string, position: { x: number; y: number }) {
+    const event = this.eventOf(id);
+    this.record("teleportEvent", { id, ...position });
+    this.moving.delete(id);
+    Object.assign(event, position);
+  }
+  setEventVisible(id: string, visible: boolean) {
+    if (visible) {
+      const event = this.hidden.get(id);
+      if (!event) { this.eventOf(id); return; }
+      this.record("setEventVisible", { id, visible });
+      this.hidden.delete(id);
+      this.events.set(id, event);
+      return;
+    }
+    const event = this.eventOf(id);
+    this.record("setEventVisible", { id, visible });
+    this.moving.delete(id);
+    this.events.delete(id);
+    this.hidden.set(id, event);
+  }
+  getTile(x: number, y: number): TileSnapshot | undefined {
+    if (this.tiles.size === 0) return undefined;
+    const cx = Math.floor(x / this.tileSize), cy = Math.floor(y / this.tileSize);
+    const tile = this.tiles.get(`${cx},${cy}`) ?? { collision: false, properties: {} };
+    return { x: cx, y: cy, collision: tile.collision, properties: clone(tile.properties), layers: [{ properties: clone(tile.properties) }] };
+  }
+  /** Whether the segment between two points crosses no wall. */
+  lineOfSight(from: { x: number; y: number }, to: { x: number; y: number }): boolean {
+    return !this.walls.some((wall) => segmentHitsRect(from, to, wall));
+  }
   createShape(options: ShapeOptions): string {
     if (this.madeShapes.size >= MAX_SCRIPT_SHAPES) throw new Error(`a script makes ${MAX_SCRIPT_SHAPES} zones on a map at most`);
     const name = options.name ?? `script-zone-${++this.counter}`;
@@ -165,6 +282,7 @@ export class SimMap implements MapPort {
     if (!this.madeShapes.has(name)) return false;
     this.record("removeShape", { name });
     this.shapes.delete(name);
+    this.attached.delete(name);
     this.madeShapes.delete(name);
     return true;
   }
@@ -185,6 +303,20 @@ export class SimMap implements MapPort {
   }
 }
 
+/** Whether a segment crosses a rectangle (Liang-Barsky clipping). */
+function segmentHitsRect(a: { x: number; y: number }, b: { x: number; y: number }, r: { x: number; y: number; width: number; height: number }): boolean {
+  let t0 = 0, t1 = 1;
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const edges: [number, number][] = [[-dx, a.x - r.x], [dx, r.x + r.width - a.x], [-dy, a.y - r.y], [dy, r.y + r.height - a.y]];
+  for (const [p, q] of edges) {
+    if (p === 0) { if (q < 0) return false; continue; }
+    const t = q / p;
+    if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; }
+    else { if (t < t0) return false; if (t < t1) t1 = t; }
+  }
+  return true;
+}
+
 /** Properties shared by the players of a map: in the game, map.setSync({ name: { $initial, $syncWithClient, $permanent } }). */
 export class SharedStore {
   values: Record<string, unknown> = {};
@@ -196,7 +328,17 @@ export class SharedStore {
 
 /** The starting point of a simulation: the player (gold, level, name, items), their variables and switches, the data of `$state` and `$hook`, preset shared properties, forced dice and answers. */
 export interface WorldInit {
-  player?: { gold?: number; level?: number; name?: string; items?: Record<string, number> };
+  player?: {
+    gold?: number; level?: number; name?: string; items?: Record<string, number>;
+    x?: number; y?: number; direction?: string; hp?: number; sp?: number; maxHp?: number; maxSp?: number;
+  };
+  /** How the battles the script starts end, in order ("victory" when not given); null when the game has no battle system. */
+  battles?: (BattleOutcome | null)[];
+  /** The tiles of the map, by cell (x and y in tiles), and their size (32 pixels by default). */
+  tiles?: { x: number; y: number; collision?: boolean; properties?: Record<string, unknown> }[];
+  tileSize?: number;
+  /** What hides the sight of `inSight(..., { walls: true })`: rectangles of the map, in pixels. */
+  walls?: { x: number; y: number; width: number; height: number }[];
   vars?: Record<string, unknown>;
   state?: Record<string, unknown>;
   hook?: Record<string, unknown>;
@@ -212,11 +354,11 @@ export interface WorldInit {
   /** Zones of the game that are on the map: scripts can read them, and cannot remove them. */
   shapes?: { name: string; x?: number; y?: number; width?: number; height?: number }[];
   /** Events of the game that are on the map: scripts can read them, and cannot remove them. */
-  events?: { id: string; name?: string; x?: number; y?: number }[];
+  events?: { id: string; name?: string; x?: number; y?: number; direction?: string }[];
   /** The records of the database of the game, by collection: a script reads them with `$data`. Each has an `id`. */
   data?: Record<string, { id: string; [field: string]: unknown }[]>;
   /** The event the script runs for. */
-  event?: { id?: string; name?: string; x?: number; y?: number };
+  event?: { id?: string; name?: string; x?: number; y?: number; direction?: string };
   /** Answers `showChoices`, after any delay, instead of `choices`. */
   choose?: (text: string, choices: Choice[]) => Promise<Choice | null>;
   seed?: number;
@@ -237,7 +379,7 @@ export class SimWorld implements ScriptWorld {
   room = { id: "start", kind: "map" };
   /** The map, when the room is one. */
   map?: SimMap;
-  event = { id: "event_1", name: "", x: 5, y: 3 };
+  event = { id: "event_1", name: "", x: 5, y: 3, direction: "down" };
   state: Record<string, unknown> = {};
   /** The database of the game: the records of each collection. */
   private readonly records: Record<string, { id: string; [field: string]: unknown }[]>;
@@ -249,7 +391,13 @@ export class SimWorld implements ScriptWorld {
 
   constructor(init: WorldInit = {}) {
     this.player.start(init.player?.gold ?? 100);
-    Object.assign(this.player, { level: init.player?.level ?? 3, name: init.player?.name ?? "Hero" });
+    Object.assign(this.player, {
+      level: init.player?.level ?? 3, name: init.player?.name ?? "Hero",
+      x: init.player?.x ?? 100, y: init.player?.y ?? 100, direction: init.player?.direction ?? "down",
+      maxHp: init.player?.maxHp ?? 100, maxSp: init.player?.maxSp ?? 50,
+    });
+    this.player.startPoints(init.player?.hp ?? this.player.maxHp, init.player?.sp ?? this.player.maxSp);
+    this.player.battles = [...(init.battles ?? [])];
     for (const [k, v] of Object.entries(init.player?.items ?? {})) this.player.items.set(k, v);
     for (const [k, v] of Object.entries(init.vars ?? {})) this.player.vars.set(k, v);
     Object.assign(this.state, JSON.parse(JSON.stringify(init.state ?? {})));
@@ -265,7 +413,10 @@ export class SimWorld implements ScriptWorld {
     if (this.room.kind === "map") {
       this.map = new SimMap(this.room.id, this.player, (name, params) => this.effects.push({ name, params }));
       for (const s of init.shapes ?? []) this.map.shapes.set(s.name, { name: s.name, x: s.x ?? 0, y: s.y ?? 0, width: s.width ?? 1, height: s.height ?? 1 });
-      for (const e of init.events ?? []) this.map.events.set(e.id, { id: e.id, name: e.name ?? "", x: e.x ?? 0, y: e.y ?? 0 });
+      for (const e of init.events ?? []) this.map.events.set(e.id, { id: e.id, name: e.name ?? "", x: e.x ?? 0, y: e.y ?? 0, direction: e.direction ?? "down" });
+      for (const t of init.tiles ?? []) this.map.tiles.set(`${t.x},${t.y}`, { collision: !!t.collision, properties: clone(t.properties ?? {}) });
+      if (init.tileSize) this.map.tileSize = init.tileSize;
+      this.map.walls = clone(init.walls ?? []);
     }
   }
 
@@ -309,7 +460,12 @@ export class SimWorld implements ScriptWorld {
 
   snapshot() {
     return {
-      player: { gold: this.player.gold, level: this.player.level, name: this.player.name, map: this.player.map, items: Object.fromEntries(this.player.items) },
+      player: {
+        gold: this.player.gold, level: this.player.level, name: this.player.name, map: this.player.map, items: Object.fromEntries(this.player.items),
+        x: this.player.x, y: this.player.y, hp: this.player.hp, sp: this.player.sp,
+      },
+      /** The events of the map, by id: where they are, where they face, and whether they follow or flee the player. */
+      events: Object.fromEntries([...(this.map?.events.values() ?? [])].map((e) => [e.id, { ...e, moving: this.map?.moving.get(e.id) ?? null }])),
       vars: Object.fromEntries(this.player.vars),
       mapVars: Object.fromEntries(this.map?.vars ?? []),
       state: this.state,

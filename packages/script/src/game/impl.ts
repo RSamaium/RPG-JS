@@ -24,8 +24,13 @@ export interface NotificationOptions { type?: string; time?: number }
 /** The options of a GUI a script opens: RPGJS has more (`waitingAction`), a script never waits for a GUI, it listens to `gui.action`. */
 export interface GuiOptions { blockPlayerInput?: boolean }
 
+/** A direction of the game: where a player or an event faces. */
+export type DirectionName = "up" | "down" | "left" | "right";
+/** The directions of the game, in the order of `DirectionName`. */
+export const DIRECTIONS: readonly DirectionName[] = ["up", "down", "left", "right"];
+
 /** What a script gets of an event of the map: a copy, whose changes change nothing. */
-export interface EventSnapshot { id: string; name: string; x: number; y: number }
+export interface EventSnapshot { id: string; name: string; x: number; y: number; direction: string }
 /** What a script gets of a player of the map. */
 export interface PlayerSnapshot { id: string; name: string }
 /** An event a script makes, described by plain data: the game builds the real event. */
@@ -35,6 +40,38 @@ export interface EventOptions { id?: string; x: number; y: number; name?: string
 export interface ShapeSnapshot { name: string; x: number; y: number; width: number; height: number }
 /** A zone a script makes, described by plain data. */
 export interface ShapeOptions { name?: string; x: number; y: number; width: number; height: number; z?: number; color?: string; collision?: boolean; properties?: object }
+/**
+ * A zone attached to an event: it moves with the event, and turns with it when `follow` is "direction". A circle of `radius`, or
+ * the circle around `width` x `height`; with `angle` below 360 it is a cone that faces `direction`. With `limitedByWalls`, the
+ * walls hide what is behind them.
+ */
+export interface AttachedShapeOptions {
+  name?: string;
+  radius?: number;
+  width?: number;
+  height?: number;
+  angle?: number;
+  direction?: DirectionName;
+  limitedByWalls?: boolean;
+  positioning?: "center" | "top" | "bottom" | "left" | "right";
+  follow?: "position" | "direction";
+  properties?: object;
+}
+/** Where an event walks: a point of the map (the top-left of the event when it arrives), or the player of the script. */
+export type MoveTarget = { x: number; y: number } | "player";
+/** How an event walks: its `speed` (set on the event), and whether the script waits for it to arrive. */
+export interface MoveEventOptions { speed?: number; wait?: boolean }
+/** How far an event stays from the player it follows, or how far it runs from the player it flees, in pixels. */
+export interface DistanceOptions { distance?: number }
+/** A tile of the map as a script reads it: its cell, whether it blocks, and the properties of its tiles (the top layer wins). */
+export interface TileSnapshot { x: number; y: number; collision: boolean; properties: Record<string, unknown>; layers: { properties: Record<string, unknown> }[] }
+/** How a sight is tested: how far it reaches, how wide it is (degrees, around the direction of `from`), and whether walls hide. */
+export interface SightOptions { range?: number; angle?: number; walls?: boolean }
+/** How a battle ended, as the battle systems of the game tell it. */
+export type BattleOutcome = "victory" | "defeat" | "escape";
+/** Which battle system plays a troop: a turn-based one, a tactical one, or (without `kind`) the one the game uses. */
+export interface BattleOptions { kind?: "turn" | "tactical" }
+
 /** The options of a sound: `volume` from 0 to 1, and whether it loops. */
 export interface SoundOptions { volume?: number; loop?: boolean }
 /** The options of a screen shake: `intensity` 0 to 100, `duration` in ms up to 10 000, `frequency` 1 to 60, and the `direction`. */
@@ -44,8 +81,12 @@ export interface LightingTransition { duration?: number; easing?: "linear" | "ea
 
 /** The most events scripts make on one map. */
 export const MAX_SCRIPT_EVENTS = 50;
-/** The most zones scripts make on one map. */
+/** The most zones scripts make on one map, attached to events or not. */
 export const MAX_SCRIPT_SHAPES = 50;
+/** The most events that follow or flee a player for scripts on one map at once. */
+export const MAX_SCRIPT_MOVERS = 50;
+/** The longest a script waits for an event to arrive, in seconds: then the event stops where it is. */
+export const MAX_MOVE_SECONDS = 60;
 
 /** A record of the database of the game as a script reads it: its fields, its `id` and its `type` (the collection it belongs to). A copy. */
 export interface DataRecord { id: string; type: string; [field: string]: unknown }
@@ -151,6 +192,29 @@ export interface MapPort {
   launchProjectile(options: ProjectileLaunchOptions): string | Promise<string>;
   /** Plays a one-shot visual effect, as `map.playVisualEffect(position, effect, options)` does. */
   playVisualEffect(options: VisualEffectPlayOptions): void | Promise<void>;
+  /** Attaches a zone to an event, as `event.attachShape(name, options)` does. Counts in `MAX_SCRIPT_SHAPES`. Gives its name. */
+  attachShape(eventId: string, options: AttachedShapeOptions): string | Promise<string>;
+  /**
+   * Walks an event to a point or to the player, as `event.moveTo(target)` does, and stops it there. Emits `event.arrived` when it
+   * arrives. With `wait`, gives whether it arrived (false when it was stopped, or after `MAX_MOVE_SECONDS`); otherwise true.
+   */
+  moveEvent(id: string, to: MoveTarget, options: MoveEventOptions): boolean | Promise<boolean>;
+  /** Keeps an event at `distance` of the player of the script until `stopEvent`, another move, or the player leaves the map. */
+  followPlayer(id: string, options: DistanceOptions): void | Promise<void>;
+  /** Keeps an event `distance` away from the player of the script, the same way. */
+  fleePlayer(id: string, options: DistanceOptions): void | Promise<void>;
+  /** Stops what scripts made an event do (a move, a follow, a flight). The routes of the event itself go on. */
+  stopEvent(id: string): void | Promise<void>;
+  /** Turns an event to a direction, or toward the player of the script. */
+  turnEvent(id: string, direction: DirectionName | "player"): void | Promise<void>;
+  /** Puts an event at a position of the map at once. */
+  teleportEvent(id: string, position: { x: number; y: number }): void | Promise<void>;
+  /** Hides an event (no sprite, collision, touch or action) and shows it again with its state, as `event.suspend()` / `resume()` do. */
+  setEventVisible(id: string, visible: boolean): void | Promise<void>;
+  /** The tile at a position in pixels, or undefined when the map has no tiles (a map that is not a Tiled map). */
+  getTile(x: number, y: number): TileSnapshot | undefined;
+  /** Whether nothing that blocks (a wall, a static hitbox) stands between two points. */
+  lineOfSight(from: { x: number; y: number }, to: { x: number; y: number }): boolean;
 }
 
 /** The player of the script, with the names of `RpgPlayer`. Every change is the engine's to apply. */
@@ -159,6 +223,25 @@ export interface PlayerPort {
   gold: number;
   readonly level: number;
   readonly name: string;
+  /** Position on the map, in pixels (the top-left of the hitbox, as `changeMap` and `teleport` take it). */
+  readonly x: number;
+  readonly y: number;
+  /** Where the player faces: "up", "down", "left" or "right". */
+  readonly direction: string;
+  /** Health points; the engine keeps them between 0 and `maxHp` (0 makes the player dead). */
+  hp: number;
+  /** Skill points, between 0 and `maxSp`. */
+  sp: number;
+  /** The maximums of hp and sp; 0 when the game gives the player none. */
+  readonly maxHp: number;
+  readonly maxSp: number;
+  /** Moves the player to a position of the same map at once. */
+  teleport(position: { x: number; y: number }): void | Promise<void>;
+  /**
+   * Plays a troop with the battle systems of the game (the `studioBattle` hooks of its modules: `start`, `startTurnBased`,
+   * `startTactical`) and waits for the end. Gives how it ended, or null when no system played it or none told.
+   */
+  startBattle(troopId: string, options: BattleOptions): Promise<BattleOutcome | null>;
   getItem(id: string): ItemSnapshot | undefined;
   hasItem(id: string): boolean;
   addItem(id: string, nb: number): void | Promise<void>;
@@ -197,7 +280,7 @@ export interface ScriptWorld {
   room: { id: string; kind: string };
   /** The map, when the room is one. */
   map?: MapPort;
-  event: { id: string; name: string; x: number; y: number };
+  event: { id: string; name: string; x: number; y: number; direction: string };
   /** Pauses the script. */
   wait(seconds: number): void | Promise<void>;
   rand(min: number, max: number): number;
@@ -435,6 +518,95 @@ const hotbarSlot = (v: unknown): number => {
   return n;
 };
 
+const directionName = (v: unknown, what = "direction"): DirectionName => {
+  if (!DIRECTIONS.includes(v as DirectionName)) throw new Error(`${what} is ${DIRECTIONS.map((d) => `"${d}"`).join(", ")}`);
+  return v as DirectionName;
+};
+const POSITIONINGS = ["center", "top", "bottom", "left", "right"];
+const ATTACHED_SHAPE_KEYS = ["name", "radius", "width", "height", "angle", "direction", "limitedByWalls", "positioning", "follow", "properties"];
+const MAX_ZONE_SIZE = 4000;
+function attachedShapeOptions(o: unknown): AttachedShapeOptions {
+  const x = opts(o);
+  for (const k of Object.keys(x)) if (!ATTACHED_SHAPE_KEYS.includes(k)) throw new Error(`a zone of an event is described by ${ATTACHED_SHAPE_KEYS.join(", ")} (not "${k}")`);
+  const out: AttachedShapeOptions = {};
+  if (x.radius !== undefined) out.radius = range(x.radius, 1, MAX_ZONE_SIZE / 2, "radius");
+  if (x.width !== undefined) out.width = range(x.width, 1, MAX_ZONE_SIZE, "width");
+  if (x.height !== undefined) out.height = range(x.height, 1, MAX_ZONE_SIZE, "height");
+  if (out.radius === undefined && (out.width === undefined || out.height === undefined)) throw new Error("a zone of an event needs a radius, or a width and a height");
+  if (x.name !== undefined) { if (typeof x.name !== "string" || !EVENT_ID.test(x.name)) throw new Error("a zone name is 1 to 100 letters, digits, _ . or -"); out.name = x.name; }
+  if (x.angle !== undefined) out.angle = range(x.angle, 1, 360, "angle");
+  if (x.direction !== undefined) out.direction = directionName(x.direction);
+  if (x.limitedByWalls !== undefined) out.limitedByWalls = Boolean(x.limitedByWalls);
+  if (x.positioning !== undefined) { if (!POSITIONINGS.includes(x.positioning)) throw new Error(`positioning is ${POSITIONINGS.join(", ")}`); out.positioning = x.positioning; }
+  if (x.follow !== undefined) { if (!["position", "direction"].includes(x.follow)) throw new Error('follow is "position" or "direction"'); out.follow = x.follow; }
+  if (x.properties !== undefined) { const p = stateData(x.properties, "properties") as object; if (JSON.stringify(p).length > 1000) throw new Error("properties hold 1000 characters at most"); out.properties = p; }
+  return out;
+}
+const moveTarget = (v: unknown): MoveTarget => {
+  if (v === "player") return "player";
+  if (!v || typeof v !== "object") throw new Error('an event walks to a position { x, y } or to "player"');
+  return position(v);
+};
+function moveEventOptions(o: unknown): MoveEventOptions {
+  const x = opts(o), out: MoveEventOptions = {};
+  for (const k of Object.keys(x)) if (!["speed", "wait"].includes(k)) throw new Error(`a move takes speed and wait (not "${k}")`);
+  if (x.speed !== undefined) out.speed = range(x.speed, 0.1, 20, "speed");
+  if (x.wait !== undefined) out.wait = Boolean(x.wait);
+  return out;
+}
+const MAX_KEEP_DISTANCE = 2000;
+function distanceOptions(o: unknown, fallback: number): Required<DistanceOptions> {
+  const x = opts(o);
+  for (const k of Object.keys(x)) if (k !== "distance") throw new Error(`it takes the option distance only (not "${k}")`);
+  return { distance: x.distance === undefined ? fallback : range(x.distance, 0, MAX_KEEP_DISTANCE, "distance") };
+}
+/** How far an event that follows the player stays from it, and how far one that flees runs, by default, in pixels. */
+const FOLLOW_DISTANCE = 48, FLEE_DISTANCE = 160;
+/** How far a sight reaches, by default, and how wide it is when `from` faces a direction, in pixels and degrees. */
+const SIGHT_RANGE = 200, SIGHT_ANGLE = 90, MAX_SIGHT_RANGE = 5000;
+const FACING: Record<DirectionName, { x: number; y: number }> = { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } };
+
+/** The distance between two points, in pixels. */
+const distanceOf = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(b.x - a.x, b.y - a.y);
+
+/**
+ * Whether `to` is in sight of `from`: within `range`, within `angle` degrees of where `from` faces (a full circle when `from`
+ * gives no direction), and, with `walls`, with nothing that blocks between them.
+ */
+function inSight(w: ScriptWorld, from: unknown, to: unknown, o: unknown): boolean {
+  const a = position(from), b = position(to), x = opts(o), facing = opts(from).direction;
+  for (const k of Object.keys(x)) if (!["range", "angle", "walls"].includes(k)) throw new Error(`a sight takes range, angle and walls (not "${k}")`);
+  const reach = x.range === undefined ? SIGHT_RANGE : range(x.range, 0, MAX_SIGHT_RANGE, "range");
+  const direction = facing === undefined ? undefined : directionName(facing, "the direction of from");
+  const width = x.angle === undefined ? (direction ? SIGHT_ANGLE : 360) : range(x.angle, 1, 360, "angle");
+  const d = distanceOf(a, b);
+  if (d > reach) return false;
+  if (direction && width < 360 && d > 0) {
+    const f = FACING[direction];
+    const cos = ((b.x - a.x) * f.x + (b.y - a.y) * f.y) / d;
+    if ((Math.acos(Math.max(-1, Math.min(1, cos))) * 180) / Math.PI > width / 2) return false;
+  }
+  return x.walls ? mapOf(w).lineOfSight(a, b) : true;
+}
+const OUTCOMES: readonly BattleOutcome[] = ["victory", "defeat", "escape"];
+function battleOptions(o: unknown): BattleOptions {
+  const x = opts(o);
+  for (const k of Object.keys(x)) if (k !== "kind") throw new Error(`a battle takes the option kind only (not "${k}")`);
+  if (x.kind === undefined) return {};
+  if (!["turn", "tactical"].includes(x.kind)) throw new Error('kind is "turn" or "tactical"');
+  return { kind: x.kind };
+}
+/** hp and sp take =, +=, -=, *= and stay between 0 and their maximum. */
+const pointsWrite = (what: "hp" | "sp", max: "maxHp" | "maxSp") => (w: ScriptWorld, op: string, v: unknown) => {
+  const apply = GOLD_OPS[op];
+  if (!apply) throw new Error(`${what} accepts only ${Object.keys(GOLD_OPS).join(" ")}`);
+  const next = apply(w.player[what], Number(v));
+  if (!Number.isFinite(next)) throw new Error(`${what} must stay a finite number`);
+  // a maximum of 0: the game gives the player none, and RPGJS caps nothing
+  const cap = w.player[max] > 0 ? w.player[max] : Infinity;
+  w.player[what] = Math.round(Math.min(cap, Math.max(0, next)));
+};
+
 /**
  * What each name of `GAME_API_DESCRIPTION` does, over a `ScriptWorld`. Written once: the game and a simulation provide a world, and the
  * behavior (checks, limits, what is refused) is the same in both.
@@ -455,6 +627,13 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         },
         level: { read: (w) => w.player.level },
         name: { read: (w) => w.player.name },
+        x: { read: (w) => w.player.x },
+        y: { read: (w) => w.player.y },
+        direction: { read: (w) => w.player.direction },
+        hp: { read: (w) => w.player.hp, write: pointsWrite("hp", "maxHp") },
+        sp: { read: (w) => w.player.sp, write: pointsWrite("sp", "maxSp") },
+        maxHp: { read: (w) => w.player.maxHp },
+        maxSp: { read: (w) => w.player.maxSp },
       },
       methods: {
         getItem: (w, [id]) => w.player.getItem(text(id, "an item id")),
@@ -477,6 +656,11 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         closeGui: (w, [id, d]) => w.player.closeGui(guiId(id), d === undefined ? undefined : guiData(d)),
         assignHotbarSlot: (w, [slot, entry]) => w.player.assignHotbarSlot(hotbarSlot(slot), hotbarEntry(entry)),
         useSkill: (w, [id, o]) => w.player.useSkill(text(id, "a skill id"), skillUseOptions(o)),
+        teleport: (w, [p]) => w.player.teleport(position(p)),
+        startBattle: async (w, [id, o]) => {
+          const outcome = await w.player.startBattle(text(id, "a troop id"), battleOptions(o));
+          return outcome && OUTCOMES.includes(outcome) ? outcome : null;
+        },
         changeMap: (w, [m, p]) => {
           const map = text(m, "a map id");
           if (p === undefined) return w.player.changeMap(map);
@@ -524,6 +708,21 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         shakeMap: (w, [o]) => mapOf(w).shakeMap(shakeOptions(o)),
         launchProjectile: (w, [o]) => mapOf(w).launchProjectile(launchOptions(o)),
         playVisualEffect: (w, [o]) => mapOf(w).playVisualEffect(visualEffectOptions(o)),
+        attachShape: (w, [id, o]) => mapOf(w).attachShape(text(id, "an event id"), attachedShapeOptions(o)),
+        moveEvent: (w, [id, to, o]) => mapOf(w).moveEvent(text(id, "an event id"), moveTarget(to), moveEventOptions(o)),
+        followPlayer: (w, [id, o]) => mapOf(w).followPlayer(text(id, "an event id"), distanceOptions(o, FOLLOW_DISTANCE)),
+        fleePlayer: (w, [id, o]) => mapOf(w).fleePlayer(text(id, "an event id"), distanceOptions(o, FLEE_DISTANCE)),
+        stopEvent: (w, [id]) => mapOf(w).stopEvent(text(id, "an event id")),
+        turnEvent: (w, [id, d]) => mapOf(w).turnEvent(text(id, "an event id"), d === "player" ? "player" : directionName(d, 'direction (or "player")')),
+        teleportEvent: (w, [id, p]) => mapOf(w).teleportEvent(text(id, "an event id"), position(p)),
+        setEventVisible: (w, [id, v]) => {
+          if (typeof v !== "boolean") throw new Error("visible is true or false");
+          return mapOf(w).setEventVisible(text(id, "an event id"), v);
+        },
+        getTile: (w, [x, y]) => {
+          const tile = mapOf(w).getTile(finite(x, "x"), finite(y, "y"));
+          return tile ? copyOf(tile) : undefined;
+        },
       },
     },
     $data: {
@@ -536,7 +735,7 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
       },
     },
     $room: { members: { kind: { read: (w) => w.room.kind }, id: { read: (w) => w.room.id } } },
-    $event: { members: { id: { read: (w) => w.event.id }, name: { read: (w) => w.event.name }, x: { read: (w) => w.event.x }, y: { read: (w) => w.event.y } } },
+    $event: { members: { id: { read: (w) => w.event.id }, name: { read: (w) => w.event.name }, x: { read: (w) => w.event.x }, y: { read: (w) => w.event.y }, direction: { read: (w) => w.event.direction } } },
     $shared: {
       methods: {
         take: (w, [name, amount, o]) => {
@@ -578,6 +777,8 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
   functions: {
     wait: (w, [s]) => w.wait(Number(s)),
     random: (w, [a, b]) => w.rand(Number(a), Number(b)),
+    distance: (_w, [a, b]) => distanceOf(position(a), position(b)),
+    inSight: (w, [from, to, o]) => inSight(w, from, to, o),
     Item: (_w, [id]) => String(id),
     Graphic: (_w, [id]) => String(id),
   },
