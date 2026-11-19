@@ -773,7 +773,11 @@ Projectile direction uses the same generic projectile options as
 On a map where action-battle is enabled, `player.useSkill(id, target?)` runs a
 skill that has an `action` with the action-battle rules: SP cost, cooldown,
 projectile, damage formula, factions, states and hit reactions. Without a
-target, the soft targeting picks the nearest enemy in front of the player.
+target, it aims at the nearest enemy within the reach of the action
+(`action.range`, otherwise the skill targeting range), whatever the player
+faces, and turns the player toward it; with none in reach, it is used straight
+ahead. (A skill key pressed by the player keeps the soft targeting in front of
+the player.)
 A skill without `action` keeps the native RPGJS rule. This is what a hotbar
 skill, your own server code and the scripts (`$player.useSkill`) call, so they
 all hit the same way:

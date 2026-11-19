@@ -1168,6 +1168,69 @@ const syncActionBattleActionBar = (
   }
 };
 
+/** The events and players of the map a skill action can be used on, by its `target` and the `targeting.affects` option. */
+const collectActionBattleSkillTargets = (
+  player: RpgPlayer,
+  map: NonNullable<ReturnType<RpgPlayer["getCurrentMap"]>>,
+  actionConfig: { target?: string },
+  options: ActionBattleOptions
+): Array<RpgPlayer | RpgEvent> => {
+  const affects = options.targeting?.affects || "events";
+  const targetKind = (actionConfig.target ?? "enemy") as any;
+  const candidates: Array<RpgPlayer | RpgEvent> = [];
+  if (affects === "events" || affects === "both") {
+    candidates.push(
+      ...map
+        .getEvents()
+        .filter((event: RpgEvent) =>
+          canActionBattleUseTarget(player, event, targetKind, options.combat?.targets)
+        )
+    );
+  }
+  if (affects === "players" || affects === "both") {
+    candidates.push(
+      ...map
+        .getPlayers()
+        .filter(
+          (other: RpgPlayer) =>
+            other.id !== player.id &&
+            canActionBattleUseTarget(player, other, targetKind, options.combat?.targets)
+        )
+    );
+  }
+  return candidates;
+};
+
+/**
+ * The nearest target of a skill used without one (by `player.useSkill(id)`),
+ * whatever the player faces, within the reach of the action: `action.range`
+ * (pixels), otherwise the skill targeting range (tiles). `null` when none.
+ */
+const resolveNearestActionBattleSkillTarget = (
+  player: RpgPlayer,
+  map: NonNullable<ReturnType<RpgPlayer["getCurrentMap"]>>,
+  skillId: string,
+  actionConfig: { target?: string; range?: number },
+  options: ActionBattleOptions
+) => {
+  const targeting = resolveSkillTargeting(player, skillId, options);
+  const tileSize = getActionBattleTileSize(map);
+  const range =
+    Number(actionConfig.range) > 0
+      ? Number(actionConfig.range)
+      : targeting && targeting.range > 0
+        ? targeting.range * tileSize.width
+        : // No reach given: anywhere on the map (finite, so the distance still ranks them).
+          1_000_000;
+  return resolveActionBattleSoftTarget(
+    player,
+    collectActionBattleSkillTargets(player, map, actionConfig, options),
+    "down",
+    // Every direction counts the same: the nearest one wins.
+    { range, coneDegrees: 360, directionWeight: 0, distanceWeight: 1, threatWeight: 0 }
+  );
+};
+
 const isEntityTarget = (
   value: unknown
 ): value is RpgPlayer | RpgEvent | Array<RpgPlayer | RpgEvent> =>
@@ -1248,38 +1311,7 @@ const handleActionBattleSkillUse = (
   let automaticTargetValidated = false;
   if (!targeting || !target) {
     if (actionConfig) {
-      const affects = options.targeting?.affects || "events";
-      const candidates: Array<RpgPlayer | RpgEvent> = [];
-      if (affects === "events" || affects === "both") {
-        candidates.push(
-          ...map
-            .getEvents()
-            .filter((event: RpgEvent) =>
-              canActionBattleUseTarget(
-                player,
-                event,
-                actionConfig.target ?? "enemy",
-                options.combat?.targets
-              )
-            )
-        );
-      }
-      if (affects === "players" || affects === "both") {
-        candidates.push(
-          ...map
-            .getPlayers()
-            .filter(
-              (other: RpgPlayer) =>
-                other.id !== player.id &&
-                canActionBattleUseTarget(
-                  player,
-                  other,
-                  actionConfig.target ?? "enemy",
-                  options.combat?.targets
-                )
-            )
-        );
-      }
+      const candidates = collectActionBattleSkillTargets(player, map, actionConfig, options);
       const direction =
         typeof player.getDirection === "function"
           ? player.getDirection()
@@ -1508,7 +1540,17 @@ const registerActionBattleSkillUse = () => {
     if (!skillData || !getActionBattleActionConfig(skillData)) return undefined;
     // Without a map there is nothing to aim at: the native rule applies.
     if (!map) return undefined;
-    if (!handleActionBattleSkillUse(player, skillId, target, options)) {
+    const actionConfig = getActionBattleActionConfig(skillData)!;
+    let resolvedTarget = target;
+    if (resolvedTarget === undefined && actionConfig.target !== "self") {
+      // Without a target, the nearest one in reach, whatever the player faces.
+      const nearest = resolveNearestActionBattleSkillTarget(player, map, skillId, actionConfig, options);
+      if (nearest) {
+        resolvedTarget = nearest.target as RpgPlayer;
+        player.changeDirection?.(nearest.direction as any);
+      }
+    }
+    if (!handleActionBattleSkillUse(player, skillId, resolvedTarget, options)) {
       throw new Error(`The skill "${skillId}" cannot be used now (not learned, not enough SP, cooldown or no target)`);
     }
     return skillData;

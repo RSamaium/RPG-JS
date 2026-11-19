@@ -196,7 +196,7 @@ The player of the signal, with the names of `RpgPlayer`.
 | `showChoices(text, choices)` | 2 to 8 choices `{ text, value }`; gives the choice picked, or `null` when the player closes it |
 | `showNotification(message, options?)` | a notification. Options: `type` (`info`, `warn`, `error`), `time` |
 | `changeMap(map, { x, y }?)` | moves the player to a map |
-| `useSkill(skillId, { target }?)` | uses a skill the player knows, as `player.useSkill` does; gives `false` when it cannot be used now. With Action Battle on the map, a skill with an `action` follows the battle rules: its projectile, damage formula, factions, states, SP cost and cooldown. `target` is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy in front of the player |
+| `useSkill(skillId, { target }?)` | uses a skill the player knows, as `player.useSkill` does; gives `false` when it cannot be used now. With Action Battle on the map, a skill with an `action` follows the battle rules: its projectile, damage formula, factions, states, SP cost and cooldown. `target` is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy within the reach of the action, whatever the player faces |
 | `openGui(id, data?, options?)`, `updateGui(id, data)`, `closeGui(id, data?)` | a GUI of the client, as `player.gui(id).open(data, options)`, `.update(data)` and `player.removeGui(id, data)` do. See [GUIs](#guis-of-the-client) |
 
 RPGJS has variables, not switches: a flag is a variable (`$player.setVariable("tournament", true)`). A private switch of an event is

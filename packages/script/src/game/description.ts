@@ -54,7 +54,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         },
         useSkill: {
           sig: "(skillId: string, options?: { target?: string }): boolean",
-          doc: "Uses a skill the player knows, as player.useSkill does. With Action Battle on the map, a skill with an action follows its rules: its projectile, damage formula, factions, states, SP cost and cooldown. target is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy in front of the player. Gives false when the skill cannot be used now (not learned, not enough SP, cooldown, no target).",
+          doc: "Uses a skill the player knows, as player.useSkill does. With Action Battle on the map, a skill with an action follows its rules: its projectile, damage formula, factions, states, SP cost and cooldown. target is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy within the reach of the action, whatever the player faces. Gives false when the skill cannot be used now (not learned, not enough SP, cooldown, no target).",
         },
       },
     },
