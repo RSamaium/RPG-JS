@@ -22,6 +22,7 @@ import { normalizeStudioDatabase, normalizeStudioDatabaseRecord } from "./databa
 import { createStudioDefaultClass, normalizeStudioSkillsToLearn } from "./skills-to-learn";
 import { getStudioSkillChangeNotification } from "./skill-notification";
 import { triggerMatchesExecution, type StudioTouchTarget } from "./touch-runtime";
+import { studioProjectileHitReaction } from "@common/projectile";
 import { compileStudioMapStream, isStudioDirectLoadPayload, prepareStudioMapPayload, type PreparedStudioMapPayload } from "./map-streaming";
 import { prepareStudioTerrainControlRegions } from "./terrain-control-streaming";
 import { isHydratedMedia } from "./media-reference";
@@ -1640,6 +1641,23 @@ export default (_config?: unknown) => {
               await defaultHandler();
             }
           };
+
+          // Only an event with a page "Hit by a projectile" is hit by projectiles: the others stay out of their way.
+          if (object.triggers.some((trigger: any) => trigger?.type === "onProjectileHit")) {
+            eventObj.onProjectileHit = function (projectile: any, hitContext: { owner?: RpgPlayer | RpgEvent }) {
+              const owner = hitContext?.owner;
+              const player = owner && typeof (owner as any).isEvent === "function" && (owner as any).isEvent() ? null : (owner as RpgPlayer | undefined) ?? null;
+              const page = eventObj.applyActiveTrigger(player, this);
+              const { runs, reaction } = studioProjectileHitReaction(page, projectile);
+              // The reply is sync (it decides what the projectile does); the blocks run after it.
+              if (runs) {
+                void eventObj.executeBlocks(player, "onProjectileHit", this)
+                  .then(() => player?.syncChanges?.())
+                  .catch((error: unknown) => console.error("[StudioGame] projectile hit blocks failed", error));
+              }
+              return reaction;
+            };
+          }
 
           eventObj.onPlayerTouch = async function (player: RpgPlayer) {
             const context = createContext(player, this, "onTouch");

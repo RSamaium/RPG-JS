@@ -1,4 +1,16 @@
+import type { VisualEffectTuning } from "@rpgjs/common";
 import type { ClientProjectileSurface } from "../Game/ProjectileManager";
+
+/**
+ * A particle effect of a projectile: the name of a preset of `@canvasengine/presets`, or a preset of its own
+ * (such as a part of a Studio Visual Effect), tuned like `map.playVisualEffect`.
+ */
+export interface ProjectileFx extends VisualEffectTuning {
+  /** Built-in preset, used without `preset`. */
+  name?: string;
+  /** The particle preset (`{ emitters: [...] }`). */
+  preset?: Record<string, unknown>;
+}
 
 /**
  * Look of a projectile drawn by the standard projectile component. Register it
@@ -20,8 +32,11 @@ import type { ClientProjectileSurface } from "../Game/ProjectileManager";
 export interface ProjectileLook {
   /** Spritesheet id drawn instead of a shape. Its `default` animation is played. */
   graphic?: string;
-  /** Built-in shape used without a `graphic`. Defaults to `orb`. */
-  shape?: "arrow" | "orb" | "bomb";
+  /**
+   * Built-in shape used without a `graphic`. Defaults to `orb`. `none` draws no body: the projectile is only its
+   * `trailFx` (a fireball made of particles).
+   */
+  shape?: "arrow" | "orb" | "bomb" | "none";
   /** Main color, as `#rrggbb` or a number. */
   color?: string | number;
   /** Highlight color (fletching, flash, sparks). */
@@ -35,13 +50,13 @@ export interface ProjectileLook {
   shadow?: boolean;
   /** Ribbon following the projectile: `true`, or its color, width and length (in frames). */
   trail?: boolean | { color?: string | number; width?: number; length?: number };
-  /** Particle preset of `@canvasengine/presets` attached to the flying projectile. */
-  trailFx?: string;
+  /** Particle effect attached to the flying projectile: a preset name of `@canvasengine/presets`, or a `ProjectileFx`. */
+  trailFx?: string | ProjectileFx;
   /**
-   * Particle preset played on impact, replacing the drawn one. Give one name,
-   * or one per surface.
+   * Particle effect played on impact, replacing the drawn one: a preset name or a `ProjectileFx`, or one of
+   * them per surface (`{ target, wall, ground }`).
    */
-  impactFx?: string | Partial<Record<ClientProjectileSurface, string>>;
+  impactFx?: string | ProjectileFx | Partial<Record<ClientProjectileSurface, string | ProjectileFx>>;
   /** Sound id played on impact. It fades with the distance to the local player and pans to the side of the impact. */
   impactSound?: string;
   /** Shake the map on impact: `true`, or the intensity. It fades with the distance to the local player. */
@@ -104,23 +119,47 @@ export function projectileTrailOptions(
   };
 }
 
-/**
- * Particle preset of the flying projectile, or `null`. `"auto"` and `"none"`
- * (Studio defaults) are not preset names and draw no particles.
- */
-export function projectileTrailFx(value: unknown): string | null {
-  if (typeof value !== "string" || !value || value === "auto" || value === "none") return null;
-  return value;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+/** A `ProjectileFx` given as a preset name or an object, or `null` when it draws nothing. */
+function projectileFx(value: unknown): ProjectileFx | null {
+  if (typeof value === "string") {
+    // `auto` and `none` (Studio defaults) are not preset names.
+    return value && value !== "auto" && value !== "none" ? { name: value } : null;
+  }
+  if (!isRecord(value)) return null;
+  const preset = isRecord(value.preset) && Array.isArray(value.preset.emitters) ? value.preset : undefined;
+  const name = typeof value.name === "string" && value.name ? value.name : undefined;
+  if (!preset && !name) return null;
+  const finite = (field: unknown) => (typeof field === "number" && Number.isFinite(field) ? field : undefined);
+  const tuning: VisualEffectTuning = {
+    ...(typeof value.color === "string" && value.color ? { color: value.color } : {}),
+    ...(finite(value.intensity) !== undefined ? { intensity: value.intensity as number } : {}),
+    ...(finite(value.sizeScale) !== undefined ? { sizeScale: value.sizeScale as number } : {}),
+    ...(finite(value.speedScale) !== undefined ? { speedScale: value.speedScale as number } : {}),
+  };
+  return { ...(preset ? { preset } : { name }), ...tuning };
 }
 
-/** Particle preset to play for an impact on `surface`, or `null` for the drawn impact. */
+/**
+ * Particle effect of the flying projectile, or `null`. `"auto"` and `"none"`
+ * (Studio defaults) are not preset names and draw no particles.
+ */
+export function projectileTrailFx(value: unknown): ProjectileFx | null {
+  return projectileFx(value);
+}
+
+/** Particle effect to play for an impact on `surface`, or `null` for the drawn impact. */
 export function projectileImpactFx(
   impactFx: ProjectileLook["impactFx"],
   surface: ClientProjectileSurface | undefined,
-): string | null {
-  if (typeof impactFx === "string") return impactFx || null;
-  if (!impactFx || typeof impactFx !== "object") return null;
-  return impactFx[surface ?? "target"] || null;
+): ProjectileFx | null {
+  if (typeof impactFx === "string") return projectileFx(impactFx);
+  if (!isRecord(impactFx)) return null;
+  // One effect for every surface, or one per surface.
+  if ("preset" in impactFx || "name" in impactFx) return projectileFx(impactFx);
+  return projectileFx((impactFx as Record<string, unknown>)[surface ?? "target"]);
 }
 
 /**

@@ -5,6 +5,7 @@ import type {
 } from "@rpgjs/action-battle";
 import type { RpgPlayer } from "@rpgjs/server";
 import { createStudioActionBattleAnimations } from "./action-battle-animations";
+import { playStudioSkillVisualEffect } from "./skill-visual-effect";
 
 export type StudioHotbarContent = "skills" | "items" | "mixed";
 
@@ -270,14 +271,21 @@ export const createStudioActionBattleAudio = (
  * player's current Studio project/map configuration. The client safely ignores
  * those server-only resolvers while sharing animation and audio presentation.
  *
+ * Skills and combat items with a Visual Effect (`action.visual.effect`, or `split` with `castEffect` /
+ * `impactEffect`) play it on the map from the caster to the target, and their hit lands at the effect `hitAt`.
+ * Projectile actions with a Projectile record (`action.projectileId`) fly with its path and its look.
+ *
  * @param config - Optional fallback combat audio settings.
- * @returns Action Battle animation, audio, and dynamic hotbar options.
+ * @returns Action Battle animation, audio, skill effect, and dynamic hotbar options.
  */
 export const createStudioActionBattlePreset = (
   config: StudioCombatAudioConfig = {},
-): Pick<ActionBattleOptions, "animations" | "audio" | "ui"> => ({
+): Pick<ActionBattleOptions, "animations" | "audio" | "ui" | "skills"> => ({
   animations: createStudioActionBattleAnimations(),
   audio: createStudioActionBattleAudio(config),
+  skills: {
+    playEffect: playStudioSkillVisualEffect,
+  },
   ui: {
     hotbar: {
       enabled: (player) => resolveStudioHotbarSettings(player).enabled,

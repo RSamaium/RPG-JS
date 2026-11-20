@@ -18,6 +18,7 @@ import type {
   ActionBattleTargetOptions,
   ActionBattleProjectileImpactContext,
   ActionBattleProjectileOptions,
+  ActionBattleSkillEffectResult,
   ActionBattleUseContext,
 } from "./contracts";
 import type { NormalizedActionBattleAttackProfile } from "../types";
@@ -481,6 +482,82 @@ export const shouldUseActionBattleUsable = (
   );
 };
 
+/**
+ * Lets `skills.playEffect` play the effect of a skill or a combat item, at
+ * cast. `undefined` when nothing was played.
+ */
+const playSkillEffect = (
+  input: { attacker: ActionBattleEntity; target?: ActionBattleEntity | ActionBattleEntity[] | null; usable: any; skill?: any },
+  actionConfig: ActionBattleActionConfig | undefined
+): ActionBattleSkillEffectResult | undefined => {
+  const playEffect = getActionBattleOptions().skills?.playEffect;
+  // A projectile asks even without a visual: the effect may give the projectile itself.
+  if (!playEffect || !actionConfig || (!actionConfig.visual && actionConfig.mode !== "projectile")) return undefined;
+  let played: ActionBattleSkillEffectResult | boolean | void;
+  try {
+    played = playEffect({
+      mode: actionConfig.mode,
+      attacker: input.attacker,
+      target: firstTarget(input.target),
+      skill: input.skill,
+      usable: input.usable,
+      action: actionConfig,
+      visual: actionConfig.visual ?? {},
+    });
+  } catch (error) {
+    console.error("[ActionBattle] skills.playEffect failed:", error);
+    return undefined;
+  }
+  if (!played) return undefined;
+  return played === true ? {} : played;
+};
+
+/** The action as the effect played it: its particles off, its projectile and area from the effect. */
+const withPlayedEffect = (
+  actionConfig: ActionBattleActionConfig | undefined,
+  effect: ActionBattleSkillEffectResult | undefined
+): ActionBattleActionConfig | undefined => {
+  if (!effect || !actionConfig) return actionConfig;
+  return {
+    ...actionConfig,
+    ...(effect.area ? { area: effect.area } : {}),
+    ...(effect.projectile
+      ? {
+          projectile: {
+            ...actionConfig.projectile,
+            ...effect.projectile,
+            payload: { ...actionConfig.projectile?.payload, ...effect.projectile.payload },
+            params: { ...actionConfig.projectile?.params, ...effect.projectile.params },
+          },
+        }
+      : {}),
+    visual: { ...actionConfig.visual, castFx: "none", impactFx: "none" },
+  };
+};
+
+/**
+ * Runs the hit now, or after `delayMs` while the attacker is on the same map
+ * and the target is still there and not defeated.
+ */
+const afterHitDelay = (
+  attacker: ActionBattleEntity,
+  target: ActionBattleEntity | ActionBattleEntity[] | null | undefined,
+  delayMs: number | undefined,
+  hit: () => void
+) => {
+  if (!delayMs || !Number.isFinite(delayMs) || delayMs <= 0) {
+    hit();
+    return;
+  }
+  const map = (attacker as any).getCurrentMap?.();
+  setTimeout(() => {
+    if ((attacker as any).getCurrentMap?.() !== map) return;
+    const first = firstTarget(target);
+    if (first && ((first as any).getCurrentMap?.() !== map || isActionBattleTargetDefeated(first))) return;
+    hit();
+  }, delayMs);
+};
+
 export const executeActionBattleUse = (input: {
   attacker: ActionBattleEntity;
   target?: ActionBattleEntity | ActionBattleEntity[] | null;
@@ -502,9 +579,12 @@ export const executeActionBattleUse = (input: {
     );
   }
 
+  // A skill that failed (no SP...) plays no effect.
+  const effect = skillSucceeded ? playSkillEffect(input, actionConfig) : undefined;
+  const usedConfig = withPlayedEffect(actionConfig, effect);
   const action = buildActionContext({
     ...input,
-    action: actionConfig,
+    action: usedConfig,
   });
   const hook = getUseHook(input.usable);
 
@@ -517,7 +597,7 @@ export const executeActionBattleUse = (input: {
       result: input.skill
         ? {
             metadata: {
-              visual: actionConfig?.visual,
+              visual: usedConfig?.visual,
             },
           }
         : undefined,
@@ -544,22 +624,23 @@ export const executeActionBattleUse = (input: {
     return true;
   }
 
-  if (actionConfig?.mode === "projectile") {
-    action.projectile(actionConfig.projectile as ActionBattleProjectileOptions);
+  if (usedConfig?.mode === "projectile") {
+    action.projectile((usedConfig.projectile ?? {}) as ActionBattleProjectileOptions);
     return true;
   }
 
-  if (actionConfig?.area) {
-    const center = firstTarget(input.target) ?? input.attacker;
-    const hitbox = (center as any).hitbox?.() ?? { w: 0, h: 0 };
-    action.area(
-      { x: (center as any).x() + hitbox.w / 2, y: (center as any).y() + hitbox.h / 2 },
-      actionConfig.area
-    );
-    return true;
-  }
-
-  action.defaultEffect(input.target);
+  afterHitDelay(input.attacker, input.target, effect?.hitDelayMs, () => {
+    if (usedConfig?.area) {
+      const center = firstTarget(input.target) ?? input.attacker;
+      const hitbox = (center as any).hitbox?.() ?? { w: 0, h: 0 };
+      action.area(
+        { x: (center as any).x() + hitbox.w / 2, y: (center as any).y() + hitbox.h / 2 },
+        usedConfig.area
+      );
+      return;
+    }
+    action.defaultEffect(input.target);
+  });
   return true;
 };
 

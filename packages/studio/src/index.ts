@@ -56,6 +56,12 @@ export {
 } from "./item-workflow";
 export type { StudioEnemyInteraction, StudioEnemyInteractionResolver } from "./enemy-interaction";
 export { runStudioEvent } from "./run-event";
+export { playStudioSkillVisualEffect } from "./skill-visual-effect";
+export { studioProjectileGraphics, studioProjectileLooks } from "./projectile-looks";
+export { playStudioVisualEffect } from "@common/visual-effects";
+export type { VisualEffect as StudioVisualEffect } from "@common/visual-effects";
+export { studioProjectileHitReaction, studioProjectileLook, studioProjectileOptions } from "@common/projectile";
+export type { StudioProjectileRecord } from "@common/projectile";
 export { loadStudioPlugins } from "./server";
 export { studioPluginScriptId, syncStudioPluginsToScripts } from "./plugins";
 export type { StudioPluginSyncReport, StudioScriptHost, StudioScriptInstall } from "./plugins";

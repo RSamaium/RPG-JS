@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
-import { projectileImpactFeedback } from "./projectile-visual";
+import { describe, expect, it, test } from "vitest";
+import { projectileImpactFeedback, projectileImpactFx, projectileTrailFx } from "./projectile-visual";
 
 describe("projectileImpactFeedback", () => {
   const impact = { x: 1000, y: 1000 };
@@ -31,5 +31,24 @@ describe("projectileImpactFeedback", () => {
 
   test("a look without shake gives no shake", () => {
     expect(projectileImpactFeedback(impact, { x: 1000, y: 1000 }, {})?.shake).toBe(0);
+  });
+});
+
+describe("particle effects of a projectile", () => {
+  const preset = { emitters: [{ burst: 4 }] };
+
+  it("reads a preset name, or a preset of its own with its tuning", () => {
+    expect(projectileTrailFx("fireball")).toEqual({ name: "fireball" });
+    expect(projectileTrailFx("none")).toBeNull();
+    expect(projectileTrailFx({ preset, color: "#ff0000", intensity: 2, sizeScale: "big" })).toEqual({ preset, color: "#ff0000", intensity: 2 });
+    // A preset without emitters is not one
+    expect(projectileTrailFx({ preset: { emitters: "x" } })).toBeNull();
+  });
+
+  it("plays one impact effect for every surface, or one per surface", () => {
+    expect(projectileImpactFx({ preset }, "wall")).toEqual({ preset });
+    expect(projectileImpactFx({ target: "hitSpark", wall: { preset } }, "wall")).toEqual({ preset });
+    expect(projectileImpactFx({ target: "hitSpark", wall: { preset } }, undefined)).toEqual({ name: "hitSpark" });
+    expect(projectileImpactFx({ target: "hitSpark" }, "ground")).toBeNull();
   });
 });

@@ -1,5 +1,6 @@
 import { createStudioItemWorkflowHooks } from "./item-workflow";
 import { createStudioSkillOnUse } from "./skill-workflow";
+import { playStudioVisualEffect } from "@common/visual-effects";
 
 const getRecordType = (record: any): string | undefined => {
   return record?._type ?? record?.itemType ?? record?.type ?? record?.resourceType;
@@ -15,6 +16,26 @@ const mediaId = (value: any): any =>
   value && typeof value === "object"
     ? value._id ?? value.id ?? value.mediaId ?? value.fileName
     : value;
+
+const effectId = (value: unknown): string | undefined =>
+  typeof value === "string" && value ? value : undefined;
+
+/**
+ * `action.visual` read by Action Battle (`skills.playEffect`): the skill fields `visualEffect` /
+ * `visualEffectSplit` + `casterVisualEffect` / `targetVisualEffect` come first; without them, the
+ * `action.visual.effect` / `split` / `castEffect` / `impactEffect` of the record stay.
+ */
+const normalizeSkillVisual = (record: any): any => {
+  const visual = record.action?.visual;
+  const effect = effectId(record.visualEffect);
+  const castEffect = effectId(record.casterVisualEffect);
+  const impactEffect = effectId(record.targetVisualEffect);
+  if (record.visualEffectSplit === true && (castEffect || impactEffect)) {
+    return { ...visual, ...(effect ? { effect } : {}), split: true, castEffect, impactEffect };
+  }
+  if (effect) return { ...visual, effect, split: false };
+  return visual;
+};
 
 const normalizeSkillRecord = (record: any): any => {
   const hitRate = normalizeHitRate(record.hitRate ?? record.successRate);
@@ -38,6 +59,7 @@ const normalizeSkillRecord = (record: any): any => {
         graphic: mediaId(record.action.projectile.graphic),
       }
     : undefined;
+  const visual = normalizeSkillVisual(record);
   const normalized = {
     ...record,
     spCost: record.spCost ?? record.mpCost ?? 0,
@@ -55,8 +77,10 @@ const normalizeSkillRecord = (record: any): any => {
         (targeting.range > 0 ? "instant" : "melee"),
       target: record.action?.target ?? legacyTarget,
       cooldownMs: Number(record.action?.cooldownMs ?? 0),
-      ...(record.action?.visual ? { visual: record.action.visual } : {}),
+      ...(visual ? { visual } : {}),
       ...(projectile ? { projectile } : {}),
+      // A Projectile record of the database, read when the skill is cast (`skills.playEffect`).
+      ...(effectId(record.action?.projectileId) ? { projectileId: record.action.projectileId } : {}),
     },
   };
   const onUse = createStudioSkillOnUse(
@@ -87,17 +111,29 @@ const normalizeItemRecord = (record: any, type: string): any => {
   delete baseRecord.useAnimation;
   delete baseRecord.useSound;
   delete baseRecord.useParticleEffect;
+  delete baseRecord.useVisualEffect;
+  delete baseRecord.throwProjectile;
+  delete baseRecord.throwCooldownMs;
+  // An item thrown in combat (a bomb, a boomerang): Action Battle uses it through its combat flow, with the Projectile
+  // record it points to. It has no use hook: the hook would replace the throw.
+  const throwProjectile = isRegularItem ? effectId(record.throwProjectile) : undefined;
   const workflowHooks = createStudioItemWorkflowHooks(itemId, workflowTriggers);
   const useAnimation = isRegularItem ? mediaId(record.useAnimation) : undefined;
   const useSound = isRegularItem ? mediaId(record.useSound) : undefined;
+  const useVisualEffect = isRegularItem ? effectId(record.useVisualEffect) : undefined;
   const useParticleEffect = isRegularItem
     && typeof record.useParticleEffect === "string"
     && record.useParticleEffect !== "none"
       ? record.useParticleEffect
       : undefined;
-  const showUseFeedback = useAnimation || useSound || useParticleEffect
+  const showUseFeedback = useVisualEffect || useAnimation || useSound || useParticleEffect
     ? (player: any) => {
         const map = player.getCurrentMap?.() ?? player.map;
+        // The use Visual Effect replaces the use animation and the particles; a deleted one falls back to them.
+        if (useVisualEffect && playStudioVisualEffect(map, useVisualEffect, { from: player, to: player })) {
+          if (useSound) player.playSound?.(useSound);
+          return;
+        }
         if (useAnimation && map?.showAnimation) {
           const x = typeof player.x === "function" ? player.x() : player.x;
           const y = typeof player.y === "function" ? player.y() : player.y;
@@ -118,7 +154,7 @@ const normalizeItemRecord = (record: any, type: string): any => {
         }
       }
     : undefined;
-  const onUse = isRegularItem && (showUseFeedback || workflowHooks.onUse)
+  const onUse = isRegularItem && !throwProjectile && (showUseFeedback || workflowHooks.onUse)
     ? async (player: any) => {
         showUseFeedback?.(player);
         await workflowHooks.onUse?.(player);
@@ -133,8 +169,19 @@ const normalizeItemRecord = (record: any, type: string): any => {
           ? record.consumable
           : true,
         ...(useAnimation ? { useAnimation } : {}),
+        ...(useVisualEffect ? { useVisualEffect } : {}),
         ...(useSound ? { useSound } : {}),
         ...(useParticleEffect ? { useParticleEffect } : {}),
+        ...(throwProjectile
+          ? {
+              action: {
+                mode: "projectile",
+                target: "enemy",
+                cooldownMs: Math.max(0, Number(record.throwCooldownMs ?? 0) || 0),
+                projectileId: throwProjectile,
+              },
+            }
+          : {}),
       }
     : {
         paramsModifier: record.paramsModifier ?? {},
@@ -148,6 +195,14 @@ const normalizeItemRecord = (record: any, type: string): any => {
     ...(onUse ? { onUse } : {}),
   };
 };
+
+/** Visual Effect records: the sounds of the timeline point to media ids. */
+const normalizeVisualEffectRecord = (record: any): any => ({
+  ...record,
+  ...(Array.isArray(record.sounds)
+    ? { sounds: record.sounds.map((entry: any) => ({ ...entry, sound: mediaId(entry?.sound) })) }
+    : {}),
+});
 
 export const normalizeStudioDatabaseRecord = (
   record: any,
@@ -167,7 +222,11 @@ export const normalizeStudioDatabaseRecord = (
     ? normalizeSkillRecord(record)
     : type === "item" || type === "weapon" || type === "armor"
       ? normalizeItemRecord(record, type)
-      : record;
+      : type === "visualEffect"
+        ? normalizeVisualEffectRecord(record)
+        : type === "projectile"
+          ? { ...record, ...(record.graphic ? { graphic: mediaId(record.graphic) } : {}) }
+          : record;
   const data = {
     ...source,
     id,

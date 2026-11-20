@@ -119,6 +119,31 @@ persist the same complete binding to override the project. A map without
 the hotbar on map changes, filters its allowed entries, and preserves
 temporarily hidden player assignments.
 
+## Visual Effects and projectiles
+
+The Studio database holds Visual Effects (a particle preset with the sounds of
+its timeline and the moment it hits) and Projectiles (a path, a range, an
+image and a Visual Effect). The game plays them with the effects and the
+projectiles of the engine, so nothing more is needed than the preset above:
+
+- the blocks **Play a visual effect** (`play_visual_effect`) and **Launch a
+  projectile** (`launch_projectile`) of an event;
+- a skill with a Visual Effect (`visualEffect`, or `visualEffectSplit` with
+  `casterVisualEffect` and `targetVisualEffect`) plays it from the caster to
+  the target, and its damage lands at the `hitAt` of the effect;
+- a skill or an item thrown in combat (`throwProjectile`) that points to a
+  Projectile flies with its path, its area and its look;
+- an item with a use Visual Effect (`useVisualEffect`) plays it on the player;
+- an event page **Hit by a projectile** (`onProjectileHit`) runs when a
+  projectile hits the event, and says whether the projectile stops, passes
+  through or sticks.
+
+A projectile flies with the id of its record as its type. The client registers
+one look per Projectile record (`engine.registerProjectileLook`): its image,
+and the parts of its Visual Effect that fly with it and play where it hits.
+At launch, the part of the effect that starts on the launcher plays with
+`map.playVisualEffect`.
+
 ## MMORPG mode
 
 Studio MMORPG maps use an authoritative, chunked data path:

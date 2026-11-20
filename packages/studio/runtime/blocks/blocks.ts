@@ -31,6 +31,8 @@ import {
   schemaShowUpAnimation,
   schemaTransferPlayer,
   schemaShowAnimation,
+  schemaPlayVisualEffect,
+  schemaLaunchProjectile,
   schemaCameraFollow,
   schemaSetWeather,
   schemaSetHotbar,
@@ -187,6 +189,9 @@ export const defaultBlocks = [
     schemaTransferPlayer,
   
     schemaShowAnimation,
+
+    schemaPlayVisualEffect,
+    schemaLaunchProjectile,
 
     schemaCameraFollow,
 

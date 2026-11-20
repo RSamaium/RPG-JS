@@ -4,9 +4,20 @@
   }
   <Graphics draw={drawTrail} />
   @if (trailFx()) {
-    <Fx name={trailFx} loop={true} y={lift} maxParticles={80} />
+    <Fx
+      name={trailName}
+      preset={trailPreset}
+      color={trailColor}
+      intensity={trailIntensity}
+      sizeScale={trailSizeScale}
+      speedScale={trailSpeedScale}
+      target={atPlace}
+      loop={true}
+      y={lift}
+      maxParticles={80}
+    />
   }
-  @if (bodyVisible()) {
+  @if (bodyVisible() && shape() !== 'none') {
     <Container y={lift} rotation={rotation} scale={bodyScale}>
       @if (sheet()) {
         <Sprite sheet={sheet} anchor={0.5} />
@@ -20,7 +31,15 @@
   }
   @if (impact()) {
     @if (impactFx()) {
-      <Fx name={impactFx} />
+      <Fx
+        name={impactName}
+        preset={impactPreset}
+        color={impactColor}
+        intensity={impactIntensity}
+        sizeScale={impactSizeScale}
+        speedScale={impactSpeedScale}
+        target={atPlace}
+      />
     } @else {
       <Graphics draw={drawImpact} />
     }
@@ -115,10 +134,24 @@
   // A planted projectile stays drawn; any other impact replaces it.
   const bodyVisible = computed(() => !impact() || stuck());
   const trailFx = computed(() => {
-    const name = projectileTrailFx(visual().trailFx);
-    return name && !impact() && !stuck() ? name : null;
+    const fx = projectileTrailFx(visual().trailFx);
+    return fx && !impact() && !stuck() ? fx : null;
   });
   const impactFx = computed(() => projectileImpactFx(visual().impactFx, impact()?.surface));
+  // An effect of a projectile plays where the projectile is: its emitters "on the target" too.
+  const atPlace = { x: 0, y: 0 };
+  const trailName = computed(() => trailFx()?.name);
+  const trailPreset = computed(() => trailFx()?.preset);
+  const trailColor = computed(() => trailFx()?.color);
+  const trailIntensity = computed(() => trailFx()?.intensity);
+  const trailSizeScale = computed(() => trailFx()?.sizeScale);
+  const trailSpeedScale = computed(() => trailFx()?.speedScale);
+  const impactName = computed(() => impactFx()?.name);
+  const impactPreset = computed(() => impactFx()?.preset);
+  const impactColor = computed(() => impactFx()?.color);
+  const impactIntensity = computed(() => impactFx()?.intensity);
+  const impactSizeScale = computed(() => impactFx()?.sizeScale);
+  const impactSpeedScale = computed(() => impactFx()?.speedScale);
 
   const trailOptions = computed(() => projectileTrailOptions(visual().trail, color()));
   // Last drawn positions, newest first.

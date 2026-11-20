@@ -1985,6 +1985,8 @@ export type {
   ActionBattleProjectileImpactContext,
   ActionBattleProjectileOptions,
   ActionBattleAreaOptions,
+  ActionBattleSkillEffectContext,
+  ActionBattleSkillEffectResult,
   ActionBattleTargetContext,
   ActionBattleTargetOptions,
   ActionBattleTargetSelector,

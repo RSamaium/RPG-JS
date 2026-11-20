@@ -14,6 +14,8 @@ import type {
   ActionBattleCombatSystem,
   ActionBattleHitHooks,
   ActionBattleHitbox,
+  ActionBattleSkillEffectContext,
+  ActionBattleSkillEffectResult,
 } from "./core/contracts";
 
 export type ActionBattleAoeMask = string[] | string;
@@ -172,6 +174,33 @@ export interface ActionBattleSkillOptions {
   targeting?: ActionBattleSkillTargetingResolver;
   getTargeting?: ActionBattleSkillTargetingResolver;
   defaultAoeMask?: ActionBattleAoeMask;
+  /**
+   * Server only. Plays the effect of a skill or a combat item when it is cast,
+   * for an action with a `visual` or a projectile. Return `false` or nothing
+   * when nothing was played: the `castFx` / `impactFx` particles stay. Return
+   * `true` or a result when it was played: they are turned off, `hitDelayMs`
+   * delays the hit of an instant or melee action without `onUse`, `projectile`
+   * and `area` change the projectile of the action.
+   *
+   * @example
+   * ```ts
+   * provideActionBattle({
+   *   skills: {
+   *     playEffect: ({ attacker, target, visual }) => {
+   *       if (!visual.effect) return false;
+   *       const map = attacker.getCurrentMap();
+   *       map.playVisualEffect({ x: attacker.x(), y: attacker.y() }, visual.effect, {
+   *         target: target ? { x: target.x(), y: target.y() } : undefined,
+   *       });
+   *       return { hitDelayMs: 300 };
+   *     },
+   *   },
+   * });
+   * ```
+   */
+  playEffect?: (
+    context: ActionBattleSkillEffectContext
+  ) => ActionBattleSkillEffectResult | boolean | void;
 }
 
 export interface ActionBattleTargetingOptions {
