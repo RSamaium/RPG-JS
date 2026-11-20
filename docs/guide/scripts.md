@@ -114,6 +114,8 @@ installed, and a listener that fails does not stop the next one.
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name`, `event.tags` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name`, `event.tags` |
+| `timer.fire` | a timer a script started with `$player.startTimer` fires, for its player | `name` |
+| `enemy.defeated` | `actionBattleHooks(scripts)` of Action Battle: a player defeats an event | `event.id`, `event.name`, `event.tags`, `enemy` (the id of the enemy when `$map.spawnEnemy` made it or the event gives one, `""` otherwise) |
 | `event.arrived` | an event a script walked with `$map.moveEvent` arrives; for the player of that script | `event.id`, `event.name`, `event.tags`, `x`, `y` |
 
 ### Tags
@@ -193,6 +195,10 @@ on("player.levelUp", {
 
 Comparisons are `eq`, `ne`, `gt`, `gte`, `lt`, `lte`.
 
+- `every`: the listener runs at most once every `every` seconds (0.05 to 3 600) **for each player**. A listener of `map.tick` runs
+  about 60 times a second for each player of the map: `on("map.tick", { every: 0.5 }, ...)` runs it twice a second, and the
+  service skips the other ticks before the script even starts.
+
 ### Add more signals
 
 The mapping from the hooks of RPGJS to signals is data, so it can be extended. A binding says which hook of which module scope
@@ -237,6 +243,9 @@ The player of the signal, with the names of `RpgPlayer`.
 | `maxHp`, `maxSp` | read; 0 when the game gives the player no maximum (no parameters), and then nothing is capped |
 | `exp` | read, and assign with `=` or `+=`: it never goes below 0, and the player levels up as it grows (`player.levelUp`) |
 | `teleport({ x, y })` | moves the player at once to a position of the map they are on |
+| `canMove` | read, and assign `true` or `false`: whether the player moves with its inputs. Set it to `false` for a cutscene and back to `true` after: nothing gives it back by itself |
+| `cameraFollow(target, { smoothMove, time }?)` | points the camera of the player at an event (its id), or back at the player with `"player"`. `smoothMove` glides to it in `time` ms (10 000 at most). Only this player sees it |
+| `startTimer(name, seconds, { repeat }?)`, `stopTimer(name)` | a timer of the player: `timer.fire` (`{ name }`) is emitted for this player after `seconds` (0.1 to 3 600), and again with `repeat`, until `stopTimer` or the player leaves the game. The same name restarts it. 20 timers per player at most |
 | `showEmotionBubble(emotion)` | an emotion bubble above the player, for every player of the map: `"like"`, `"surprise"`, `"idea"`, `"question"`, `"exclamation"`… |
 | `addState(id)`, `removeState(id)`, `hasState(id)`, `getStates()` | the states of the database (poison, sleep, haste…), with their effects on the parameters. `addState` gives `false` when the player already has it, `removeState` when the player does not |
 | `learnSkill(id)`, `forgetSkill(id)`, `hasSkill(id)`, `getSkills()` | the skills of the player (`player.skillChange` fires). `false` when it already knows it, or does not |
@@ -304,7 +313,7 @@ on("player.inShape", { where: { "shape.name": "well-area" } }, () => {
 
 | Name | What it does |
 | --- | --- |
-| `createDynamicEvent(options)` | makes an event and gives its id. Plain data: `id` (letters, digits, `_`, `.`, `-`), `x` and `y`, and optionally `name`, `graphic` (the id of a graphic), `hitbox: { width, height }`, `through`. It is a real event: it listens to `event.action` and `event.touch` like the others, and has no look beyond its graphic |
+| `createDynamicEvent(options)` | makes an event and gives its id. Plain data: `id` (letters, digits, `_`, `.`, `-`), `x` and `y`, and optionally `name`, `graphic` (the id of a graphic), `hitbox: { width, height }`, `through`, `forPlayer` (the event exists for the player of the script only: the others neither see nor touch it, it goes when that player leaves the map, and its id is made unique for the player). It is a real event: it listens to `event.action` and `event.touch` like the others, and has no look beyond its graphic |
 | `getEvent(id)`, `getEvents()` | copies `{ id, name, x, y, direction }` of the events of the map, the ones of the game too |
 | `removeEvent(id)` | removes an event **a script made**; an event of the game stays and it gives `false` |
 | `getPlayers()` | `{ id, name }` of the players on the map |
@@ -325,16 +334,20 @@ A follow or a flight lasts until `stopEvent`, another move of the same event, or
 at most follow or flee at once.
 
 ```js
-// the guard sees the player in front of it, says so and chases them
-on("map.tick", (e) => {
-  if (e.tick % 30 !== 0) return;                       // twice a second
+// the guard sees the player in front of it, chases them, and gives up when it loses them
+on("map.tick", { every: 0.5 }, () => {                // twice a second for each player
   const guard = $map.getEvent("guard");
-  if (!guard || !inSight(guard, { x: $player.x, y: $player.y }, { range: 180, walls: true })) return;
-  if ($player.getVariable("seen")) return;
-  $player.setVariable("seen", true);
-  $map.turnEvent("guard", "player");
-  $player.showNotification("Halt!");
-  $map.followPlayer("guard", { distance: 32 });
+  if (!guard) return;
+  const sees = inSight(guard, { x: $player.x, y: $player.y }, { range: 180, walls: true });
+  if (sees && !$player.getVariable("seen")) {
+    $player.setVariable("seen", true);
+    $map.turnEvent("guard", "player");
+    $map.showEmotionBubble("guard", "exclamation");
+    $map.followPlayer("guard", { distance: 32 });
+  } else if (!sees && $player.getVariable("seen")) {
+    $player.setVariable("seen", false);
+    $map.stopEvent("guard");
+  }
 });
 ```
 
@@ -375,7 +388,7 @@ on("event.action", { where: { "event.name": "chest" } }, () => {
 
 | Name | What it does |
 | --- | --- |
-| `spawnEnemy({ enemy, x, y, id?, name? })` | makes an enemy appear and gives the id of its event: the game turns the event into the enemy `enemy`. It counts in the 50 events of scripts, `removeEvent` removes it, and it is refused when the game has no such enemy |
+| `spawnEnemy({ enemy, x, y, id?, name?, forPlayer? })` | makes an enemy appear and gives the id of its event: the game turns the event into the enemy `enemy`. It counts in the 50 events of scripts, `removeEvent` removes it, and it is refused when the game has no such enemy. `forPlayer` makes it for the player of the script only. `enemy.defeated` fires when a player defeats it |
 
 The game says what an enemy is: a module implements `scriptEnemy.create(event, enemyId)`, makes the enemy and returns `true` (it
 returns nothing for an enemy it does not know). A Studio game does it already, from the enemies of its database, with their battle
@@ -505,6 +518,7 @@ not exist gives `undefined` and `[]`.
 | `wait(seconds)` | pauses the script (60 seconds at most) |
 | `random(min, max)` | a whole number, both included |
 | `Item("id")` | a reference to an item of the database, checked when the script is saved |
+| `log(...values)` | writes a line where the author reads it: the console of the server (or `onLog`) and `service.logs`, with the id of the script. Texts as they are, anything else as JSON, 500 characters at most. A simulation keeps it in its effects (`log`) |
 | `distance(a, b)` | the distance between two points `{ x, y }`, in pixels |
 | `inSight(from, to, options?)` | whether `to` is in sight of `from`: within `range` pixels (200 by default), within `angle` degrees of where `from` faces (90 by default when `from` has a `direction`, a full circle otherwise), and with `walls: true`, with no wall between them. `from` is often an event: `inSight($map.getEvent("guard"), { x: $player.x, y: $player.y })` |
 | `$hook` | the payload of the signal, as `$hook.map` (`e` is the same data) |
@@ -526,8 +540,10 @@ on("player.inShape", { where: { "shape.name": "trap" } }, () => {
 
 ### What scripts have of the engine
 
-Every public method and property of `RpgPlayer`, `RpgEvent` and `RpgMap` is either given to scripts or left out on purpose, with
-the reason (internal to the engine, physics set by the game, a GUI of the engine, the rules of the battle system…):
+Every public method and property of `RpgPlayer`, `RpgEvent`, `RpgMap`, the GUIs (`Gui`) and the projectiles of the server, and every
+export of `@rpgjs/action-battle`, is either given to scripts (by a name, or by the signal that tells it) or left out on purpose, with
+the reason (internal to the engine, physics set by the game, a GUI of the engine, the rules of the battle system, the bricks of an
+AI…):
 `ENGINE_COVERAGE` of `@rpgjs/script/testing` lists the decisions. A test of `@rpgjs/script` fails when a method of the engine has
 none, so a new method gets a decision instead of being forgotten.
 
@@ -545,6 +561,28 @@ scripts.uninstall("late")
 
 `inject(ScriptService)` gives the service back. `service.listeners("player.dead")` says who listens, in the order they run, with
 their filter.
+
+**Keep `$state` between two starts.** Without a store, `$state` lives in memory and is lost when the server stops. Give the service a
+`stateStore`: it reads the state of a script once, when the script is installed (a signal waits for it), and saves it after the
+changes of a turn. `await scripts.flushState()` saves what is left before the server stops. A store that fails is reported and the
+game goes on.
+
+```ts
+import { readFile, writeFile } from "node:fs/promises"
+
+const scripts = new ScriptService({
+  stateStore: {
+    load: async (script) => JSON.parse(await readFile(`state/${encodeURIComponent(script)}.json`, "utf8").catch(() => "{}")),
+    save: (script, data) => writeFile(`state/${encodeURIComponent(script)}.json`, JSON.stringify(data)),
+  },
+  onLog: ({ script, message }) => console.log(`[${script}] ${message}`),
+})
+```
+
+`scripts.logs` keeps the last 200 lines the scripts wrote with `log(...)`, with their script and their time.
+
+**Enemies that fall.** `actionBattleHooks(scripts)` given to Action Battle (`provideActionBattle({ combat: { hooks: actionBattleHooks(scripts) } })`)
+emits `combat.hit` after each hit, and `enemy.defeated` when a player defeats an event.
 
 A plugin that has its own events adds its signals, so that scripts can listen to them and the compiler can check their payload:
 
@@ -564,7 +602,7 @@ await scripts.emit("quests.start", { questId: "wolves" }, { player })
 import { checkScript, runTests, simulate, describeGameApi } from "@rpgjs/script/testing"
 
 describeGameApi()                       // the API and the signals, as TypeScript declarations: give them to an agent
-checkScript(source)                     // { ok, diagnostics with lines, listeners, permissions, shared… }
+checkScript(source)                     // { ok, diagnostics and warnings with lines, listeners, permissions, shared… }
 
 await simulate({
   source,
@@ -576,6 +614,15 @@ await runTests(source, [
   { name: "levels up", emit: { signal: "player.levelUp", payload: { gained: 3 } }, expect: { "player.gold": 40 } },
 ])
 ```
+
+`checkScript` also gives **warnings**, which do not refuse the script but point at what is likely wrong, with the line: a listener
+of `map.tick` without `every`, a `showText`, `showChoices`, `wait` or `startBattle` inside one (the ticks of the player are skipped
+until it is done), an event or a zone or a timer made in a loop, a `followPlayer` or `fleePlayer` that nothing stops, and
+`$player.canMove = false` never set back to `true`.
+
+`describeGameApi()` starts with the API **by family** (rewards and dialogues, positions and sight, zones, movement and cutscenes,
+look of events, scenery, battle and character, time, debugging), each with its names and an example: an agent finds the family of
+a request first.
 
 The world of a simulation is a map called `start` by default; `world: { room: { id: "battle-1", kind: "battle" } }` makes it a room
 that is not a map, `events` and `shapes` put the events and the zones of the game on the map, and `data` (`{ quests_quest: [{ id: "wolves", name: "Wolves" }] }`) the records of its database, for `$data`.

@@ -15,6 +15,51 @@ const VALUE = "string | number | boolean | null | object";
  */
 export const GAME_API_DESCRIPTION: ApiDescription = {
   signals: GAME_SIGNALS,
+  families: [
+    {
+      name: "Rewards and dialogues", doc: "talk to the player, give and take, remember",
+      names: ["$player.showText", "$player.showChoices", "$player.showNotification", "$player.gold", "$player.addItem", "$player.removeItem", "$player.getVariable", "$player.setVariable", "$state", "$shared", "$data"],
+      example: 'on("event.action", { where: { "event.name": "merchant" } }, () => { if ($player.showChoices("Buy a potion?", [{ text: "Yes", value: true }, { text: "No", value: false }])?.value) { $player.gold -= 10; $player.addItem("potion", 1); } });',
+    },
+    {
+      name: "Positions and sight", doc: "where the player and the events are, and who sees whom",
+      names: ["$player.x", "$player.y", "$player.direction", "$event.direction", "$map.getEvent", "distance", "inSight"],
+      example: 'on("map.tick", { every: 0.5 }, () => { const guard = $map.getEvent("guard"); if (guard && inSight(guard, { x: $player.x, y: $player.y }, { walls: true })) { $map.showEmotionBubble("guard", "exclamation"); } });',
+    },
+    {
+      name: "Zones", doc: "areas of the map, fixed or attached to an event, that players enter and leave",
+      names: ["$map.createShape", "$map.attachShape", "$map.removeShape", "player.inShape", "player.outShape"],
+      example: 'on("player.inShape", { where: { "shape.eventId": "healer" } }, () => { $player.hp = $player.maxHp; });',
+    },
+    {
+      name: "Movement and cutscenes", doc: "walk, turn, follow, flee, hide events; freeze the player and move the camera",
+      names: ["$map.moveEvent", "$map.followPlayer", "$map.fleePlayer", "$map.stopEvent", "$map.turnEvent", "$map.teleportEvent", "$map.setEventVisible", "$player.teleport", "$player.canMove", "$player.cameraFollow", "event.arrived"],
+      example: '$player.canMove = false; $player.cameraFollow("guard", { smoothMove: true }); $map.moveEvent("guard", { x: 320, y: 96 }, { wait: true }); $player.showText("The gate is open."); $player.cameraFollow("player"); $player.canMove = true;',
+    },
+    {
+      name: "Look of events", doc: "graphics, animations and emotion bubbles",
+      names: ["$map.setEventGraphic", "$map.playEventAnimation", "$map.showEmotionBubble", "$player.showEmotionBubble"],
+    },
+    {
+      name: "Scenery", doc: "the tiles of the map and the ones players touch",
+      names: ["$map.getTile", "player.touchTile"],
+      example: 'on("player.touchTile", (e) => { if (e.properties.kind === "lava") { $player.hp -= 10; } });',
+    },
+    {
+      name: "Battle and character", doc: "hp, sp, states, experience, skills, equipment, items, battles and enemies",
+      names: ["$player.hp", "$player.sp", "$player.addState", "$player.exp", "$player.learnSkill", "$player.equip", "$player.useItem", "$player.useSkill", "$player.startBattle", "$map.spawnEnemy", "enemy.defeated", "battle.end"],
+      example: 'on("enemy.defeated", { where: { enemy: "slime" } }, () => { const c = { ...($state.kills ?? {}) }; c[$player.name] = (c[$player.name] ?? 0) + 1; $state.kills = c; });',
+    },
+    {
+      name: "Time", doc: "do something later, or again and again, for a player",
+      names: ["$player.startTimer", "$player.stopTimer", "timer.fire", "wait", 'on(signal, { every })'],
+      example: 'on("player.touchTile", (e) => { if (e.properties.kind === "poison") { $player.startTimer("poison", 1, { repeat: true }); } });\non("timer.fire", { where: { name: "poison" } }, () => { $player.hp -= 5; });',
+    },
+    {
+      name: "Debugging", doc: "write what the script does where its author reads it",
+      names: ["log"],
+    },
+  ],
   handles: {
     $player: {
       doc: "The player the script acts for. The names are the ones of RpgPlayer.",
@@ -29,6 +74,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         sp: { type: "number", writable: true, doc: "Skill points, between 0 and maxSp." },
         maxHp: { type: "number", doc: "0 when the game gives the player no maximum (no parameters): hp is then not capped." },
         maxSp: { type: "number", doc: "0 when the game gives the player no maximum." },
+        canMove: { type: "boolean", writable: true, doc: "Whether the player moves with its inputs. Set it to false during a cutscene, and back to true after: nothing gives it back by itself." },
         exp: { type: "number", writable: true, doc: "Experience points. Assign them with = or +=: they never go below 0, and the player levels up as they grow (player.levelUp)." },
       },
       methods: {
@@ -60,6 +106,12 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
           sig: '(slot: number, entry: { type: "skill" | "item" | string; id: string }): void',
           doc: "Puts a skill the player knows, a usable item or the entry of a plugin in a slot of the hotbar (0 to 9), as player.assignHotbarSlot does. The entry that was elsewhere in the hotbar moves. Listen to player.hotbarChange for the changes.",
         },
+        cameraFollow: { sig: '(target: string, options?: { smoothMove?: boolean; time?: number }): void', doc: 'Points the camera of the player at an event (its id), or back at the player with "player". smoothMove glides to it in time milliseconds (10 000 at most). Only this player sees it.' },
+        startTimer: {
+          sig: "(name: string, seconds: number, options?: { repeat?: boolean }): void",
+          doc: "Starts a timer of the player: timer.fire { name } is emitted for this player after seconds (0.1 to 3 600), and again every seconds with repeat, until stopTimer or the player leaves the game. Starting a timer of the same name restarts it. 20 timers per player at most.",
+        },
+        stopTimer: { sig: "(name: string): boolean", doc: "Stops a timer of the player. Gives false when there is none of that name." },
         showEmotionBubble: { sig: "(emotion: string): void", doc: 'Shows an emotion bubble above the player, for every player of the map: "like", "surprise", "idea", "question", "exclamation", "angry", "sad", "love", "music", "sleep"… or one the game adds.' },
         addState: { sig: "(id: string): boolean", doc: "Gives a state of the database (poison, sleep, haste…), with its effects on the parameters, as player.addState does. Gives false when the player already has it." },
         removeState: { sig: "(id: string): boolean", doc: "Takes a state away. Gives false when the player does not have it." },
@@ -88,8 +140,8 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
       members: { id: { type: "string" } },
       methods: {
         createDynamicEvent: {
-          sig: "(event: { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean }): string",
-          doc: "Creates an event on the map and gives its id. It is described by plain data and listens to the same signals as any event (event.action, event.touch). A script makes 50 events on a map at most.",
+          sig: "(event: { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean; forPlayer?: boolean }): string",
+          doc: "Creates an event on the map and gives its id. It is described by plain data and listens to the same signals as any event (event.action, event.touch). With forPlayer: true it exists for the player of the script only (the others neither see nor touch it, and it goes when that player leaves the map); its id is then made unique for the player. A script makes 50 events on a map at most.",
         },
         getEvent: { sync: true, sig: "(id: string): { id: string; name: string; x: number; y: number; direction: string } | undefined", doc: "A copy of an event of the map, with where it faces, or undefined." },
         getEvents: { sync: true, sig: "(): { id: string; name: string; x: number; y: number; direction: string }[]", doc: "Copies of the events of the map." },
@@ -147,8 +199,8 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         playEventAnimation: { sig: "(id: string, animationName: string, times?: number): void", doc: "Plays an animation of the graphic of an event (attack, skill…), times times (1 by default, 100 at most), then the event walks and stands as before." },
         showEmotionBubble: { sig: "(id: string, emotion: string): void", doc: 'Shows an emotion bubble above an event: "surprise" when a guard sees the player.' },
         spawnEnemy: {
-          sig: "(enemy: { enemy: string; x: number; y: number; id?: string; name?: string }): string",
-          doc: "Makes an enemy appear and gives the id of its event: the game turns the event into the enemy `enemy` (an enemy of its database in a Studio game; with Action Battle it fights with its AI). It counts in the 50 events of scripts, and removeEvent removes it. Refused when the game has no such enemy.",
+          sig: "(enemy: { enemy: string; x: number; y: number; id?: string; name?: string; forPlayer?: boolean }): string",
+          doc: "Makes an enemy appear and gives the id of its event: the game turns the event into the enemy `enemy` (an enemy of its database in a Studio game; with Action Battle it fights with its AI). It counts in the 50 events of scripts, and removeEvent removes it. With forPlayer: true it exists for the player of the script only. enemy.defeated fires when a player defeats it. Refused when the game has no such enemy.",
         },
         getTile: {
           sync: true,
@@ -196,6 +248,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
   functions: {
     wait: { sig: "(seconds: number): void", doc: "Pauses the script (60 seconds at most; not slept in a simulation)." },
     random: { sig: "(min: number, max: number): number", doc: "A whole number between min and max, both included. Seeded in a simulation." },
+    log: { sig: "(...values: any[]): void", doc: "Writes a line where the author of the script reads it: the console of the server and the logs of the service (a simulation keeps it in its effects). Texts as they are, anything else as JSON, 500 characters at most." },
     distance: { sig: "(a: { x: number; y: number }, b: { x: number; y: number }): number", doc: "The distance between two points in pixels: distance({ x: $player.x, y: $player.y }, $map.getEvent(id))." },
     inSight: {
       sig: '(from: { x: number; y: number; direction?: "up" | "down" | "left" | "right" }, to: { x: number; y: number }, options?: { range?: number; angle?: number; walls?: boolean }): boolean',

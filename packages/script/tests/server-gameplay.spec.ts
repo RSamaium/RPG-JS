@@ -267,7 +267,7 @@ describe("appearance, states, character sheet and enemies on a real game", () =>
       true, true, false,
       true, 1, false,
     ]));
-    expect((player as any).exp).toBe(exp + 50);
+    await settled(() => expect((player as any).exp).toBe(exp + 50));
   });
 
   it("makes an enemy appear through the enemies of the game, and refuses one the game does not have", async () => {

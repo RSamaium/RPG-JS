@@ -200,6 +200,17 @@ export const GAME_SIGNALS: Record<string, SignalDesc> = {
       y: { type: "number", doc: "Y of the event where it stopped." },
     },
   },
+  "timer.fire": {
+    doc: "A timer of the player that a script started with $player.startTimer fires. The player the script acts for is the player of the timer.",
+    payload: { name: { type: "string", doc: "The name of the timer." } },
+  },
+  "enemy.defeated": {
+    doc: "A player defeats an enemy of an action battle (with actionBattleHooks). The player the script acts for is the one who defeated it.",
+    payload: {
+      ...EVENT,
+      enemy: { type: "string", doc: "The id of the enemy, when $map.spawnEnemy made it or the game gives one; \"\" otherwise." },
+    },
+  },
   "player.touchTile": {
     doc: "A player steps on a tile, or walks against it, whose properties have interactive: true (a barrel, a lever, lava). It fires once each time the player reaches such a tile.",
     payload: {

@@ -31,9 +31,14 @@ export interface FnDesc { sig: string; doc?: string; /** a reference to a record
  * Everything a script may use, as plain data: the compiler refuses what is not here, `describeApi` turns it into the declarations
  * given to an agent, and each environment provides an `ApiImpl` for it.
  */
+/** A family of the API: what a kind of gameplay request needs, the names it uses, and an example. */
+export interface ApiFamily { name: string; doc: string; names: string[]; example?: string }
+
 export interface ApiDescription {
   handles: Record<string, HandleDesc>;
   functions: Record<string, FnDesc>;
+  /** The API by family of gameplay, listed first in the declarations given to an agent. */
+  families?: ApiFamily[];
   /** The signals the game emits, which scripts listen to with `on("signal", ...)`. */
   signals?: Record<string, SignalDesc>;
 }
@@ -101,6 +106,14 @@ const payloadType = (f: PayloadField): string =>
  */
 export function describeApi(desc: ApiDescription): string {
   const out: string[] = ["// Script API. Scripts are a JavaScript subset; only what is declared here exists.", ""];
+  if (desc.families?.length) {
+    out.push("// The API by family of gameplay: find the family of the request, then read the declarations of its names below.");
+    for (const family of desc.families) {
+      out.push(`// ## ${family.name}: ${family.doc}`, `//    ${family.names.join(", ")}`);
+      if (family.example) for (const line of family.example.split("\n")) out.push(`//    ${line}`);
+    }
+    out.push("");
+  }
   for (const [name, h] of Object.entries(desc.handles)) {
     out.push(`${h.doc ? `/** ${h.doc} */\n` : ""}declare const ${name}: {`);
     for (const [k, m] of Object.entries(h.members ?? {})) out.push(`  ${m.doc ? `/** ${m.doc} */ ` : ""}${m.writable ? "" : "readonly "}${k}: ${m.type};`);

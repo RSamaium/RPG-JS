@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
-import { RpgEvent, RpgMap, RpgPlayer } from "@rpgjs/server";
+import { Gui, RpgEvent, RpgMap, RpgMapProjectiles, RpgPlayer, RpgPlayerProjectiles } from "@rpgjs/server";
+import * as actionBattle from "@rpgjs/action-battle";
 import { ENGINE_COVERAGE, type EngineCoverage } from "../src/game/engine-coverage";
 import { GAME_API_DESCRIPTION } from "../src/game/description";
 
@@ -17,8 +18,9 @@ function publicNames(cls: { prototype: object }): string[] {
 
 const decided = (coverage: EngineCoverage) => [...Object.keys(coverage.exposed), ...Object.values(coverage.excluded).flat()];
 
-/** Whether the game API has a name such as `$player.addItem` or `distance`. */
+/** Whether the game API has a name such as `$player.addItem` or `distance`, or a signal such as `combat.hit`. */
 function inGameApi(name: string): boolean {
+  if (GAME_API_DESCRIPTION.signals?.[name]) return true;
   const [handle, member] = name.split(".");
   if (!member) return name in GAME_API_DESCRIPTION.functions;
   const h = GAME_API_DESCRIPTION.handles[handle];
@@ -31,9 +33,14 @@ const classes: [keyof typeof ENGINE_COVERAGE, string[]][] = [
   // what an event has beyond the methods of a player
   ["event", publicNames(RpgEvent).filter((name) => !playerNames.includes(name))],
   ["map", publicNames(RpgMap)],
+  ["gui", publicNames(Gui)],
+  ["mapProjectiles", publicNames(RpgMapProjectiles)],
+  ["playerProjectiles", publicNames(RpgPlayerProjectiles)],
+  // a module: the names it exports
+  ["actionBattle", Object.keys(actionBattle).sort()],
 ];
 
-describe("every method of the engine is exposed to scripts or excluded with a reason", () => {
+describe("every method of the engine and of its modules is exposed to scripts or excluded with a reason", () => {
   test.each(classes)("%s: each public method has a decision", (key, names) => {
     const known = new Set(decided(ENGINE_COVERAGE[key]));
     // A new method of the engine lands here: expose it in the game API, or exclude it with a reason in engine-coverage.ts

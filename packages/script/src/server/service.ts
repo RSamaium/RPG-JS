@@ -14,6 +14,30 @@ import { parseScript } from "../parse";
 import { DEFAULT_SIGNAL_BINDINGS, type SignalBinding } from "./bindings";
 import { createRpgjsWorld } from "./world";
 
+/**
+ * Where the `$state` of the scripts is kept between two starts of the server: one record of plain data per script id. The game
+ * gives one (a file, a database, a key-value store); without it `$state` lives in memory and is lost when the server stops.
+ *
+ * @example
+ * ```ts
+ * import { readFile, writeFile } from "node:fs/promises";
+ * const stateStore: ScriptStateStore = {
+ *   load: async (script) => JSON.parse(await readFile(`state/${encodeURIComponent(script)}.json`, "utf8").catch(() => "{}")),
+ *   save: (script, data) => writeFile(`state/${encodeURIComponent(script)}.json`, JSON.stringify(data)),
+ * };
+ * provideScripts({ stateStore, scripts })
+ * ```
+ */
+export interface ScriptStateStore {
+  load(script: string): Record<string, unknown> | undefined | null | Promise<Record<string, unknown> | undefined | null>;
+  save(script: string, data: Record<string, unknown>): void | Promise<void>;
+}
+
+/** A line a script wrote with `log(...)`. */
+export interface ScriptLog { script: string; message: string; at: number }
+/** The most lines `ScriptService.logs` keeps: the oldest go first. */
+export const MAX_SCRIPT_LOGS = 200;
+
 /** A script given to the game: its text, or the tree an editor already computed from it. The id and the version name it. */
 export type ScriptSource = { id: string; version?: number } & ({ source: string; tree?: undefined } | { tree: AstNode; source?: undefined });
 
@@ -26,6 +50,10 @@ export interface ScriptServiceOptions {
   bindings?: SignalBinding[];
   /** Budget of each handler. */
   limits?: Limits;
+  /** Where `$state` is kept between two starts of the server. In memory when not given. */
+  stateStore?: ScriptStateStore;
+  /** Receives each line a script writes with `log(...)`, as well as `logs` keeps it. The console of the server when not given. */
+  onLog?: (log: ScriptLog) => void;
 }
 
 /** Why a script was refused. */
@@ -57,6 +85,15 @@ export class ScriptService {
   readonly bindings: SignalBinding[];
   private registry: SignalRegistry;
   private states = new Map<string, Map<string, unknown>>();
+  private readonly stateStore?: ScriptStateStore;
+  private readonly onLog?: (log: ScriptLog) => void;
+  /** The `$state` of the scripts that is still loading from the store. */
+  private loading = new Map<string, Promise<void>>();
+  /** The scripts whose `$state` changed since it was last saved. */
+  private dirty = new Set<string>();
+  private flushing: Promise<void> | undefined;
+  /** The last lines the scripts wrote with `log(...)`, oldest first. */
+  logs: ScriptLog[] = [];
   /** The failures already written to the console, so that a listener failing on every tick is reported once. */
   private reported = new Set<string>();
 
@@ -65,6 +102,8 @@ export class ScriptService {
     const described = Object.fromEntries(this.bindings.flatMap((b) => (b.describe ? [[b.signal, b.describe]] : [])));
     this.description = { ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...described, ...options.signals } };
     this.registry = new SignalRegistry({ description: this.description, impl: GAME_API_IMPL, limits: options.limits });
+    this.stateStore = options.stateStore;
+    this.onLog = options.onLog;
     for (const script of options.scripts ?? []) this.install(script);
   }
 
@@ -80,6 +119,7 @@ export class ScriptService {
   install(script: ScriptSource): boolean {
     try {
       this.registry.install(script.id, this.compile(script));
+      this.loadState(script.id);
       this.errors = this.errors.filter((e) => e.script !== script.id);
       this.forgetReported(script.id);
       return true;
@@ -97,7 +137,8 @@ export class ScriptService {
 
   uninstall(id: string): void {
     this.registry.uninstall(id);
-    this.states.delete(id);
+    // with a store the state stays in memory too: a script installed again finds it, saved or not
+    if (!this.stateStore) this.states.delete(id);
     this.forgetReported(id);
   }
 
@@ -120,9 +161,10 @@ export class ScriptService {
    */
   async emit(signal: string, payload: unknown, context: SignalContext): Promise<EmitReport> {
     const hook = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+    if (this.loading.size > 0) await Promise.all(this.loading.values());
     const report = await this.registry.emit(signal, payload, (script, program) =>
-      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit }),
-    );
+      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit, log: (message) => this.log(script, message) }),
+    String(context.player?.id ?? ""));
     this.reportFailures(signal, report);
     return report;
   }
@@ -135,9 +177,10 @@ export class ScriptService {
   emitSync(signal: string, payload: unknown, context: SignalContext): string | undefined {
     const hook = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
     const accepted = this.description.signals?.[signal]?.reply ?? [];
+    // a $state that is still loading is read as it is: a hook that cannot wait does not wait for the store
     const { reply, report } = this.registry.emitSync(signal, payload, accepted, (script, program) =>
-      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit }),
-    );
+      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit, log: (message) => this.log(script, message) }),
+    String(context.player?.id ?? ""));
     void report.then((done) => this.reportFailures(signal, done));
     return reply;
   }
@@ -161,6 +204,64 @@ export class ScriptService {
     let data = this.states.get(script);
     if (!data) this.states.set(script, (data = new Map()));
     const store = data;
-    return { get: (key: string) => store.get(key), set: (key: string, value: unknown) => void store.set(key, value) };
+    return {
+      get: (key: string) => store.get(key),
+      set: (key: string, value: unknown) => {
+        store.set(key, value);
+        this.markDirty(script);
+      },
+    };
+  }
+
+  /** Reads the `$state` of a script from the store, once: what the script already set while it loaded wins. */
+  private loadState(script: string) {
+    if (!this.stateStore || this.states.has(script) || this.loading.has(script)) return;
+    const loaded = (async () => {
+      try {
+        const saved = await this.stateStore!.load(script);
+        const data = this.states.get(script) ?? new Map<string, unknown>();
+        for (const [key, value] of Object.entries(saved ?? {})) if (!data.has(key)) data.set(key, value);
+        this.states.set(script, data);
+      } catch (error) {
+        console.error(`[script] the state of "${script}" could not be loaded: ${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        this.loading.delete(script);
+      }
+    })();
+    this.loading.set(script, loaded);
+  }
+
+  private markDirty(script: string) {
+    if (!this.stateStore) return;
+    this.dirty.add(script);
+    // the changes of one turn are saved together
+    if (!this.flushing) this.flushing = Promise.resolve().then(() => this.flushState());
+  }
+
+  /**
+   * Saves now the `$state` that changed since it was last saved, and waits for the store. The service saves by itself after
+   * each change; call it before the server stops.
+   */
+  async flushState(): Promise<void> {
+    this.flushing = undefined;
+    if (!this.stateStore) return;
+    const scripts = [...this.dirty];
+    this.dirty.clear();
+    await Promise.all(scripts.map(async (script) => {
+      try {
+        await this.stateStore!.save(script, Object.fromEntries(this.states.get(script) ?? []));
+      } catch (error) {
+        console.error(`[script] the state of "${script}" could not be saved: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }));
+  }
+
+  /** Keeps a line a script wrote, and gives it to `onLog` or to the console. */
+  private log(script: string, message: string) {
+    const entry: ScriptLog = { script, message, at: Date.now() };
+    this.logs.push(entry);
+    if (this.logs.length > MAX_SCRIPT_LOGS) this.logs.splice(0, this.logs.length - MAX_SCRIPT_LOGS);
+    if (this.onLog) this.onLog(entry);
+    else console.log(`[script] "${script}": ${message}`);
   }
 }

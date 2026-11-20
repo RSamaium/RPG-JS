@@ -1,19 +1,20 @@
 /**
- * What scripts have of the engine: every public method and property of `RpgPlayer`, `RpgEvent` and `RpgMap` is either exposed to
- * scripts (with the name a script uses) or excluded on purpose, with the reason. A test lists the methods of the engine and fails
- * when one has no decision, so that a new method of the engine gets one instead of being forgotten.
+ * What scripts have of the engine and of its modules: every public method and property of `RpgPlayer`, `RpgEvent`, `RpgMap`, the
+ * GUIs and the projectiles of the server, and every export of `@rpgjs/action-battle`, is either exposed to scripts (with the name a
+ * script uses, or the signal that gives it) or excluded on purpose, with the reason. A test lists them and fails when one has no
+ * decision, so that a new method gets one instead of being forgotten.
  */
 
 /** The decision for each method of a class of the engine: the name a script uses for it, or why scripts do not have it. */
 export interface EngineCoverage {
-  /** Method or property of the engine → the name of the game API that gives it to scripts (`$player.addItem`). */
+  /** Method or property of the engine → the name of the game API (`$player.addItem`) or the signal (`combat.hit`) that gives it to scripts. */
   exposed: Record<string, string>;
   /** Why scripts do not have them → the methods and properties. */
   excluded: Record<string, readonly string[]>;
 }
 
 /** The decisions for `RpgPlayer`, `RpgEvent` and `RpgMap`. */
-export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; map: EngineCoverage } = {
+export const ENGINE_COVERAGE: Record<"player" | "event" | "map" | "gui" | "mapProjectiles" | "playerProjectiles" | "actionBattle", EngineCoverage> = {
   /** `RpgPlayer` (the player of the script; an event has them too). */
   player: {
     exposed: {
@@ -22,6 +23,8 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
       allRecovery: "$player.hp",
       assignHotbarSlot: "$player.assignHotbarSlot",
       attachShape: "$map.attachShape",
+      cameraFollow: "$player.cameraFollow",
+      canMove: "$player.canMove",
       changeDirection: "$map.turnEvent",
       changeMap: "$player.changeMap",
       createDynamicEvent: "$map.createDynamicEvent",
@@ -84,8 +87,8 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
         "worldPositionX", "worldPositionY"
       ],
       "physics and collisions of the character, set by the game: scripts move events with $map.moveEvent, followPlayer, fleePlayer and teleportEvent": [
-        "canMove", "hitbox", "interactive", "mass", "otherPlayersCollision", "position", "pushable", "setHitbox", "setMass",
-        "setSizes", "through", "throughEvent", "throughOtherPlayer", "z"
+        "hitbox", "interactive", "mass", "otherPlayersCollision", "position", "pushable", "setHitbox", "setMass", "setSizes",
+        "through", "throughEvent", "throughOtherPlayer", "z"
       ],
       "moves a character with physics strategies or routes: the player moves by its inputs, scripts teleport it and walk events with $map.moveEvent": [
         "addMovement", "applyIceMovement", "breakRoutes", "clearMovements", "dash", "followPath", "frequency",
@@ -93,10 +96,10 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
         "oscillate", "removeMovement", "replayRoutes", "shootProjectile", "speed"
       ],
       "how the client draws the character beyond its graphic and its animations (components, camera, tint, hit texts, GUIs on the sprite): the game designs it; scripts change the graphic of an event and play its animations": [
-        "animationFixed", "animationName", "cameraFollow", "componentsBottom", "componentsCenter", "componentsLeft",
-        "componentsRight", "componentsTop", "directionFixed", "flash", "graphics", "hideAttachedGui", "removeComponents",
-        "setComponentsBottom", "setComponentsCenter", "setComponentsLeft", "setComponentsRight", "setComponentsTop",
-        "setGraphicAnimation", "showAttachedGui", "showHit", "tint"
+        "animationFixed", "animationName", "componentsBottom", "componentsCenter", "componentsLeft", "componentsRight",
+        "componentsTop", "directionFixed", "flash", "graphics", "hideAttachedGui", "removeComponents", "setComponentsBottom",
+        "setComponentsCenter", "setComponentsLeft", "setComponentsRight", "setComponentsTop", "setGraphicAnimation",
+        "showAttachedGui", "showHit", "tint"
       ],
       "opens a GUI of the engine (menu, shop, save, game over, input) that the game wires itself: scripts open the GUIs of plugins with $player.openGui": [
         "callGameover", "callMainMenu", "callShop", "showCharacterSelect", "showInput", "showLoad", "showSave", "showSaveLoad"
@@ -238,6 +241,100 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
       ],
       "hides or shows many events at once, for a scene of the game: scripts hide one event with $map.setEventVisible": [
         "getSuspendedEvents", "isEventSuspended", "resumeEvents", "suspendEvents"
+      ],
+    },
+  },
+  /** `Gui` of the server (`player.gui(id)`). */
+  gui: {
+    exposed: {
+      close: "$player.closeGui",
+      open: "$player.openGui",
+      update: "$player.updateGui",
+    },
+    excluded: {
+      "scripts hear what a GUI sends with the signal gui.action; the open of a GUI is matched by the engine": [
+        "emit", "matchesOpenId", "on"
+      ],
+    },
+  },
+  /** `RpgMapProjectiles` (`map.projectiles`). */
+  mapProjectiles: {
+    exposed: {
+      emit: "$map.launchProjectile",
+    },
+    excluded: {
+      "the flight of a projectile, run by the engine on each tick: scripts launch projectiles and hear event.projectileHit, player.projectileHit and projectile.end": [
+        "callHook", "canHit", "clear", "createStates", "finish", "flush", "getActiveNetworkProjectiles", "handleDestroy",
+        "handleDestroyState", "handleHit", "handleHitState", "naturalEndReason", "notifyTarget", "ownerCenter", "ownerOf",
+        "pathOf", "rebase", "resolveHit", "resolveIndexedDirection", "resolveLanding", "spawnInstant", "spawnNow", "step",
+        "stepLinger"
+      ],
+    },
+  },
+  /** `RpgPlayerProjectiles` (`player.projectiles`). */
+  playerProjectiles: {
+    exposed: {
+      emit: "$map.launchProjectile",
+    },
+    excluded: {
+
+    },
+  },
+  /** The exports of `@rpgjs/action-battle`. */
+  actionBattle: {
+    exposed: {
+      applyActionBattleEntityHit: "combat.hit",
+      applyActionBattleHit: "combat.hit",
+      applyPlayerHitToEvent: "combat.hit",
+      createActionEnemy: "$map.spawnEnemy",
+      executeActionBattleUse: "$player.useSkill",
+      isActionBattleEnabled: "$player.useSkill",
+    },
+    excluded: {
+      "identifiers and defaults of the module, read by the game when it configures it": [
+        "ACTION_BATTLE_ACTION_BAR_GUI_ID", "ACTION_BATTLE_CLIENT_VISUAL_ID", "ACTION_BATTLE_COMBAT_AUDIO_ID",
+        "ACTION_BATTLE_DAMAGE_COMPONENT_ID", "ACTION_BATTLE_DODGE", "ACTION_BATTLE_ENEMY_FACTION", "ACTION_BATTLE_GUARD_END",
+        "ACTION_BATTLE_GUARD_START", "ACTION_BATTLE_HITBOX_FRAME_MS", "ACTION_BATTLE_HIT_FX_COMPONENT_ID",
+        "ACTION_BATTLE_PLAYER_FACTION", "ACTION_BATTLE_SOFT_TARGET_COMPONENT_ID", "ACTION_BATTLE_TELEGRAPH_COMPONENT_ID",
+        "DEFAULT_ACTION_BATTLE_ATTACK_PROFILE", "DEFAULT_ACTION_BATTLE_ENEMY_ATTACK_PROFILES",
+        "DEFAULT_ACTION_BATTLE_HIT_REACTION", "DEFAULT_KNOCKBACK", "DEFAULT_PLAYER_ATTACK_HITBOXES",
+        "DEFAULT_ZELDA_PLAYER_HITBOXES"
+      ],
+      "the rules of the combat (hits, guard, dodge, targets, weapons, attack profiles, factions), applied by the module: scripts hear combat.hit and enemy.defeated, and use skills with $player.useSkill": [
+        "ActionBattleHitTracker", "acquireActionBattleAttackSlot", "beginActionBattleGuard", "canActionBattleDodge",
+        "canActionBattleTarget", "canActionBattleUseTarget", "clearActionBattleDefense", "consumeActionBattleCounter",
+        "defaultCombatSystem", "defaultKnockbackResolver", "defaultRpgjsDamageResolver", "directionToActionBattleTarget",
+        "endActionBattleGuard", "getActionBattleActionConfig", "getActionBattleActionRange",
+        "getActionBattleControlLockDuration", "getActionBattleFaction", "getActionBattleSystems", "getActionBattleTargets",
+        "getNormalizedActionBattleAttackProfile", "getPlayerWeaponKnockbackForce", "handleActionBattleProjectileDestroy",
+        "handleActionBattleProjectileImpact", "isActionBattleCombatEntity", "isActionBattleEntityInvincible",
+        "isActionBattleEvent", "isActionBattleGuarding", "isActionBattlePlayer", "matchesActionBattleTargetSelector",
+        "normalizeActionBattleAttackProfile", "normalizeActionBattleEnemyAttackProfiles", "normalizeActionBattleGuardOptions",
+        "normalizeActionBattleHitReaction", "releaseActionBattleAttackSlot", "resolveActionBattleCharge",
+        "resolveActionBattleComboStep", "resolveActionBattleDefense", "resolveActionBattleHitboxSpeed",
+        "resolveActionBattleSoftTarget", "resolveActionBattleWeapon", "resolveActionBattleWeaponAttackProfile",
+        "runActionBattleActiveHitbox", "scheduleActionBattleStartup", "setActionBattleInvincibility",
+        "shouldUseActionBattleUsable"
+      ],
+      "the setup, the look and the sound of the module, configured by the game": [
+        "ActionBattleUi", "createActionBattleAttackId", "createActionBattleClientVisuals", "createActionBattleCombatAudioVisual",
+        "createActionBattleServer", "createActionBattleSystems", "createActionBattleUi", "createActionBattleVisual",
+        "createClassicActionBattleVisual", "createDefaultPlayerHitboxResolver", "createFxActionBattleVisual", "default",
+        "emitActionBattleClientVisual", "openActionBattleActionBar", "openActionBattleHotbar", "playActionBattleAudioCue",
+        "playActionBattleMomentAudio", "playActionBattleVisual", "playLocalActionBattleAttackAudio", "provideActionBattle",
+        "resolveActionBattleUi", "setActionBattlePreviewStarter", "updateActionBattleActionBar", "updateActionBattleHotbar",
+        "visual"
+      ],
+      "how the game defines its enemies and their AI: scripts name an enemy by its id in $map.spawnEnemy": [
+        "AiDebug", "AiState", "AttackPattern", "BattleAi", "EnemyType", "defaultEnemyBehaviors", "defaultEnemyPresets",
+        "defineActionBattleAiPreset", "defineActionBattleEnemy"
+      ],
+      "the bricks of the AI of an enemy, put together in the game (its preset): scripts make enemies appear with $map.spawnEnemy and walk events with $map.moveEvent": [
+        "action", "callAction", "chase", "condition", "cooldown", "decision", "defineAiBehavior", "defineAiTree",
+        "distanceLessThan", "faceTarget", "flee", "fleeFromTarget", "holdPosition", "hpBelow", "idle", "ifDistanceLessThan",
+        "ifHpBelow", "ifTargetInRange", "ifTargetVisible", "inState", "isEnemyType", "keepDistance", "moveToPoint",
+        "moveToTarget", "once", "patrol", "phase", "rule", "run", "selector", "sequence", "sequenceWithDelay", "setMode",
+        "setSpeed", "targetInRange", "targetVisible", "teleportNearTarget", "teleportTo", "useAttack", "useSkill", "wait"
       ],
     },
   },

@@ -34,7 +34,11 @@ export interface EventSnapshot { id: string; name: string; x: number; y: number;
 /** What a script gets of a player of the map. */
 export interface PlayerSnapshot { id: string; name: string }
 /** An event a script makes, described by plain data: the game builds the real event. */
-export interface EventOptions { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean }
+export interface EventOptions {
+  id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean;
+  /** The event exists for the player of the script only (a scenario event of RPGJS): the others neither see nor touch it. */
+  forPlayer?: boolean;
+}
 
 /** What a script gets of a zone of the map: a copy. */
 export interface ShapeSnapshot { name: string; x: number; y: number; width: number; height: number }
@@ -68,7 +72,7 @@ export interface TileSnapshot { x: number; y: number; collision: boolean; proper
 /** How a sight is tested: how far it reaches, how wide it is (degrees, around the direction of `from`), and whether walls hide. */
 export interface SightOptions { range?: number; angle?: number; walls?: boolean }
 /** An enemy a script makes appear: an event the game turns into an enemy of the kind `enemy` (an id of its enemies). */
-export interface EnemySpawnOptions { enemy: string; x: number; y: number; id?: string; name?: string }
+export interface EnemySpawnOptions { enemy: string; x: number; y: number; id?: string; name?: string; forPlayer?: boolean }
 
 /** How a battle ended, as the battle systems of the game tell it. */
 export type BattleOutcome = "victory" | "defeat" | "escape";
@@ -88,6 +92,16 @@ export const MAX_SCRIPT_EVENTS = 50;
 export const MAX_SCRIPT_SHAPES = 50;
 /** The most events that follow or flee a player for scripts on one map at once. */
 export const MAX_SCRIPT_MOVERS = 50;
+/** The most timers a player has for scripts at once. */
+export const MAX_SCRIPT_TIMERS = 20;
+/** The shortest and the longest delay of a timer, in seconds. */
+export const MIN_TIMER_SECONDS = 0.1;
+export const MAX_TIMER_SECONDS = 3600;
+/** The options of a timer: whether it fires again every `seconds` until it is stopped. */
+export interface TimerOptions { repeat?: boolean }
+/** The options of the camera: whether it glides to its target, and in how many milliseconds. */
+export interface CameraOptions { smoothMove?: boolean; time?: number }
+
 /** The longest a script waits for an event to arrive, in seconds: then the event stops where it is. */
 export const MAX_MOVE_SECONDS = 60;
 
@@ -258,6 +272,14 @@ export interface PlayerPort {
   startBattle(troopId: string, options: BattleOptions): Promise<BattleOutcome | null>;
   /** Experience points; RPGJS levels the player up as they grow. */
   exp: number;
+  /** Whether the player moves with its inputs: false during a cutscene, as `player.canMove` is. */
+  canMove: boolean;
+  /** Points the camera of the player at an event, or back at the player, as `player.cameraFollow(target, options)` does. */
+  cameraFollow(target: string, options: CameraOptions): void | Promise<void>;
+  /** Starts (or restarts) a timer of the player: `timer.fire` is emitted for the player after `seconds`, and again with `repeat`. */
+  startTimer(name: string, seconds: number, options: TimerOptions): void | Promise<void>;
+  /** Stops a timer of the player. False when there is none of that name. */
+  stopTimer(name: string): boolean | Promise<boolean>;
   /** Shows an emotion bubble above the player, as `player.showEmotionBubble(emotion)` does. */
   showEmotionBubble(emotion: string): void | Promise<void>;
   /** Gives a state of the database (poison, sleep…), as `player.addState(id)` does. False when the player already has it. */
@@ -320,6 +342,8 @@ export interface ScriptWorld {
   event: { id: string; name: string; x: number; y: number; direction: string };
   /** Pauses the script. */
   wait(seconds: number): void | Promise<void>;
+  /** Writes a line of the script where its author reads it (the console of the server, the logs of the service). */
+  log(message: string): void;
   rand(min: number, max: number): number;
   /** Properties shared by the players of a map. `set` receives the new value, the operator and its operand. */
   sharedProps: { has(name: string): boolean; get(name: string): unknown; set(name: string, value: unknown, op: string, operand: unknown): void };
@@ -386,7 +410,7 @@ const collection = (v: unknown) => {
 };
 /** A record is given as a copy of plain data: a script never holds what the game holds. */
 const copyOf = <T>(value: T): T => JSON.parse(JSON.stringify(value));
-const EVENT_KEYS = ["id", "x", "y", "name", "graphic", "hitbox", "through"];
+const EVENT_KEYS = ["id", "x", "y", "name", "graphic", "hitbox", "through", "forPlayer"];
 const EVENT_ID = /^[A-Za-z0-9_.-]{1,100}$/;
 const COORDINATE = 100_000;
 /** What a script describes of an event, checked: plain data, and nothing the game does not know. */
@@ -406,6 +430,7 @@ function eventOptions(o: unknown): EventOptions {
     out.hitbox = { width: h.width, height: h.height };
   }
   if (x.through !== undefined) out.through = Boolean(x.through);
+  if (x.forPlayer !== undefined) out.forPlayer = Boolean(x.forPlayer);
   return out;
 }
 const MAX_STATE_DATA = 4000;
@@ -632,7 +657,7 @@ const emotion = (v: unknown) => {
   return v;
 };
 const MAX_ANIMATION_TIMES = 100;
-const SPAWN_KEYS = ["enemy", "x", "y", "id", "name"];
+const SPAWN_KEYS = ["enemy", "x", "y", "id", "name", "forPlayer"];
 function spawnOptions(o: unknown): EnemySpawnOptions {
   const x = opts(o);
   for (const k of Object.keys(x)) if (!SPAWN_KEYS.includes(k)) throw new Error(`an enemy is described by ${SPAWN_KEYS.join(", ")} (not "${k}")`);
@@ -640,8 +665,35 @@ function spawnOptions(o: unknown): EnemySpawnOptions {
   const out: EnemySpawnOptions = { enemy: text(x.enemy, "the id of an enemy"), x: px, y: py };
   if (x.id !== undefined) { if (typeof x.id !== "string" || !EVENT_ID.test(x.id)) throw new Error("an event id is 1 to 100 letters, digits, _ . or -"); out.id = x.id; }
   if (x.name !== undefined) out.name = text(x.name, "name");
+  if (x.forPlayer !== undefined) out.forPlayer = Boolean(x.forPlayer);
   return out;
 }
+const TIMER_NAME = /^[A-Za-z0-9_.-]{1,50}$/;
+const timerName = (v: unknown) => {
+  if (typeof v !== "string" || !TIMER_NAME.test(v)) throw new Error("a timer is named by 1 to 50 letters, digits, _ . or -");
+  return v;
+};
+function timerOptions(o: unknown): TimerOptions {
+  const x = opts(o);
+  for (const k of Object.keys(x)) if (k !== "repeat") throw new Error(`a timer takes the option repeat only (not "${k}")`);
+  return x.repeat === undefined ? {} : { repeat: Boolean(x.repeat) };
+}
+function cameraOptions(o: unknown): CameraOptions {
+  const x = opts(o), out: CameraOptions = {};
+  for (const k of Object.keys(x)) if (!["smoothMove", "time"].includes(k)) throw new Error(`the camera takes smoothMove and time (not "${k}")`);
+  if (x.smoothMove !== undefined) out.smoothMove = Boolean(x.smoothMove);
+  if (x.time !== undefined) out.time = range(x.time, 0, 10_000, "time");
+  return out;
+}
+/** What `log` writes of a value: a text as it is, anything else as JSON; 500 characters at most. */
+const MAX_LOG = 500;
+const logText = (values: unknown[]) => {
+  const line = values.map((v) => {
+    if (typeof v === "string") return v;
+    try { return JSON.stringify(v) ?? String(v); } catch { return String(v); }
+  }).join(" ");
+  return line.length > MAX_LOG ? `${line.slice(0, MAX_LOG)}…` : line;
+};
 function battleOptions(o: unknown): BattleOptions {
   const x = opts(o);
   for (const k of Object.keys(x)) if (k !== "kind") throw new Error(`a battle takes the option kind only (not "${k}")`);
@@ -687,6 +739,14 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         sp: { read: (w) => w.player.sp, write: pointsWrite("sp", "maxSp") },
         maxHp: { read: (w) => w.player.maxHp },
         maxSp: { read: (w) => w.player.maxSp },
+        canMove: {
+          read: (w) => w.player.canMove,
+          write: (w, op, v) => {
+            if (op !== "=") throw new Error("canMove accepts only =");
+            if (typeof v !== "boolean") throw new Error("canMove is true or false");
+            w.player.canMove = v;
+          },
+        },
         exp: {
           read: (w) => w.player.exp,
           write: (w, op, v) => {
@@ -720,6 +780,9 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         useSkill: (w, [id, o]) => w.player.useSkill(text(id, "a skill id"), skillUseOptions(o)),
         teleport: (w, [p]) => w.player.teleport(position(p)),
         showEmotionBubble: (w, [e]) => w.player.showEmotionBubble(emotion(e)),
+        cameraFollow: (w, [target, o]) => w.player.cameraFollow(target === "player" ? "player" : text(target, 'an event id (or "player")'), cameraOptions(o)),
+        startTimer: (w, [name, seconds, o]) => w.player.startTimer(timerName(name), range(seconds, MIN_TIMER_SECONDS, MAX_TIMER_SECONDS, "seconds"), timerOptions(o)),
+        stopTimer: (w, [name]) => w.player.stopTimer(timerName(name)),
         addState: (w, [id]) => w.player.addState(text(id, "a state id")),
         removeState: (w, [id]) => w.player.removeState(text(id, "a state id")),
         hasState: (w, [id]) => w.player.hasState(text(id, "a state id")),
@@ -863,6 +926,7 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
     wait: (w, [s]) => w.wait(Number(s)),
     random: (w, [a, b]) => w.rand(Number(a), Number(b)),
     distance: (_w, [a, b]) => distanceOf(position(a), position(b)),
+    log: (w, values) => w.log(logText(values)),
     inSight: (w, [from, to, o]) => inSight(w, from, to, o),
     Item: (_w, [id]) => String(id),
     Graphic: (_w, [id]) => String(id),

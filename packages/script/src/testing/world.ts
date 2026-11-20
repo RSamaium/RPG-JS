@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { type EnemySpawnOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -19,6 +19,9 @@ export class SimPlayer implements PlayerPort {
   /** How the battles the script starts end, in order; `null` when the game has no battle system for it. */
   battles: (BattleOutcome | null)[] = [];
   private experience = 0;
+  private movable = true;
+  /** The timers the scripts started: their delay and whether they repeat. A test emits `timer.fire` to make one fire. */
+  timers = new Map<string, { seconds: number; repeat: boolean }>();
   states = new Set<string>();
   skills = new Set<string>();
   /** The items that can be equipped, and the ones that are. */
@@ -53,6 +56,22 @@ export class SimPlayer implements PlayerPort {
   set sp(value: number) {
     this.points.sp = Math.min(this.maxSp > 0 ? this.maxSp : Infinity, Math.max(0, value));
     this.record("sp", { value: this.points.sp });
+  }
+  get canMove() { return this.movable; }
+  set canMove(value: boolean) {
+    this.movable = value;
+    this.record("canMove", { value });
+  }
+  cameraFollow(target: string, options: CameraOptions = {}) { this.record("cameraFollow", { target, ...options }); }
+  startTimer(name: string, seconds: number, options: TimerOptions = {}) {
+    if (!this.timers.has(name) && this.timers.size >= MAX_SCRIPT_TIMERS) throw new Error(`a player has ${MAX_SCRIPT_TIMERS} timers at most`);
+    this.record("startTimer", { name, seconds, ...options });
+    this.timers.set(name, { seconds, repeat: !!options.repeat });
+  }
+  stopTimer(name: string) {
+    if (!this.timers.delete(name)) return false;
+    this.record("stopTimer", { name });
+    return true;
   }
   get exp() { return this.experience; }
   set exp(value: number) {
@@ -533,6 +552,10 @@ export class SimWorld implements ScriptWorld {
     set: (key, value) => { this.effects.push({ name: "state", params: { key } }); this.state[key] = value; },
   };
 
+  log(message: string) {
+    this.effects.push({ name: "log", params: { message } });
+  }
+
   async wait(seconds: number) {
     this.effects.push({ name: "wait", params: { seconds } });
   }
@@ -554,7 +577,8 @@ export class SimWorld implements ScriptWorld {
     return {
       player: {
         gold: this.player.gold, level: this.player.level, name: this.player.name, map: this.player.map, items: Object.fromEntries(this.player.items),
-        x: this.player.x, y: this.player.y, hp: this.player.hp, sp: this.player.sp, exp: this.player.exp,
+        x: this.player.x, y: this.player.y, hp: this.player.hp, sp: this.player.sp, exp: this.player.exp, canMove: this.player.canMove,
+        timers: Object.fromEntries(this.player.timers),
         states: [...this.player.states], skills: [...this.player.skills], equipped: [...this.player.equipped],
       },
       /** The events of the map, by id: where they are, where they face, and whether they follow or flee the player. */

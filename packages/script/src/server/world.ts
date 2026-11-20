@@ -5,7 +5,7 @@
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import { MAXHP, MAXSP, Vector2 } from "@rpgjs/common";
-import { type EnemySpawnOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -101,6 +101,16 @@ function makeEnemy(event: RpgEvent, enemyId: string): Promise<boolean> {
     });
   });
 }
+/** The enemies scripts made appear, by event: the id of the enemy (`enemy.defeated` gives it). */
+const enemiesMadeByScripts = new WeakMap<object, string>();
+/** The id of the enemy an event is, when a script made it appear with `$map.spawnEnemy`; "" otherwise. */
+export const enemyIdOf = (event: unknown): string => (event && typeof event === "object" ? enemiesMadeByScripts.get(event) ?? "" : "");
+
+/** The timers scripts started, by player and name. */
+const timersByPlayer = new WeakMap<object, Map<string, { cancel(): void }>>();
+/** An event for one player only: a scenario event of RPGJS, owned by the player. */
+const scenarioFor = (player: RpgPlayer) => ({ mode: "scenario", scenarioOwnerId: player.id });
+
 /** What RPGJS throws when an action cannot be done (not learned, not in the inventory…): the script hears it as false. */
 const attempt = (action: () => unknown): boolean => {
   try { action(); return true; } catch { return false; }
@@ -184,7 +194,10 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
           if (o.graphic) this.setGraphic(o.graphic);
         },
       };
-      const created: string | undefined = await m.createDynamicEvent({ id, x: o.x, y: o.y, ...(o.hitbox ? { hitbox: o.hitbox } : {}), event: definition });
+      const created: string | undefined = await m.createDynamicEvent(
+        { id, x: o.x, y: o.y, ...(o.hitbox ? { hitbox: o.hitbox } : {}), event: definition },
+        ...(o.forPlayer ? [scenarioFor(player)] : []),
+      );
       if (!created) throw new Error("the map did not make the event");
       made.add(created);
       return created;
@@ -352,7 +365,10 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
       if (made.size >= MAX_SCRIPT_EVENTS) throw new Error(`a script makes ${MAX_SCRIPT_EVENTS} events on a map at most`);
       const id = o.id ?? `script-enemy-${Date.now().toString(36)}-${++eventCounter}`;
       if (m.getEvent(id)) throw new Error(`an event "${id}" is already on the map`);
-      const created: string | undefined = await m.createDynamicEvent({ id, x: o.x, y: o.y, event: { name: o.name ?? o.enemy, onInit(this: any) { this.name = o.name ?? o.enemy; } } });
+      const created: string | undefined = await m.createDynamicEvent(
+        { id, x: o.x, y: o.y, event: { name: o.name ?? o.enemy, onInit(this: any) { this.name = o.name ?? o.enemy; } } },
+        ...(o.forPlayer ? [scenarioFor(player)] : []),
+      );
       const event = created ? m.getEvent(created) : undefined;
       if (!event) throw new Error("the map did not make the event");
       if (!(await makeEnemy(event, o.enemy))) {
@@ -360,6 +376,7 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
         throw new Error(`the game has no enemy "${o.enemy}": a module of the game makes its enemies with scriptEnemy.create(event, enemyId)`);
       }
       made.add(created!);
+      enemiesMadeByScripts.set(event, o.enemy);
       return created!;
     },
     lineOfSight(from, to) {
@@ -503,8 +520,10 @@ export interface RpgjsWorldOptions {
   state?: ScriptWorld["stateProps"];
   /** A whole number between `min` and `max`, both included. */
   rand?: (min: number, max: number) => number;
-  /** Emits a signal of the game: an event a script walked arrives (`event.arrived`). Nothing is emitted without it. */
+  /** Emits a signal of the game: an event a script walked arrives (`event.arrived`), a timer fires (`timer.fire`). Nothing is emitted without it. */
   emit?: WorldEmit;
+  /** Where `log(...)` writes. The console of the server when not given. */
+  log?: (message: string) => void;
 }
 
 /**
@@ -526,6 +545,7 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
   const room = options.room ?? map ?? player.getCurrentRoom();
   const where = describeRoom(room);
   const data = new Map<string, unknown>();
+  const options_emit = options.emit;
 
   const playerPort: PlayerPort = {
     get gold() { return number(p.gold); },
@@ -546,7 +566,44 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
       await p.teleport(position);
     },
     startBattle: (troopId, options) => playBattle(player, troopId, options),
-    get exp() { return number(read(p.exp)); },
+    get canMove() { return read(p.canMove) !== false; },
+    set canMove(value: boolean) { p.canMove = value; },
+    cameraFollow(target, options: CameraOptions) {
+      const map = (p.getCurrentMap?.() ?? null) as any;
+      const object = target === "player" ? player : map?.getEvent?.(target);
+      if (!object) throw new Error(`there is no event "${target}" on the map`);
+      const smoothMove = options.smoothMove === undefined && options.time === undefined
+        ? undefined
+        : options.time === undefined ? options.smoothMove : { enabled: options.smoothMove ?? true, time: options.time };
+      p.cameraFollow(object, smoothMove === undefined ? undefined : { smoothMove });
+    },
+    startTimer(name, seconds, options: TimerOptions) {
+      const timers = timersByPlayer.get(player) ?? timersByPlayer.set(player, new Map()).get(player)!;
+      timers.get(name)?.cancel();
+      if (!timers.has(name) && timers.size >= MAX_SCRIPT_TIMERS) throw new Error(`a player has ${MAX_SCRIPT_TIMERS} timers at most`);
+      let cancelled = false;
+      const entry = { cancel: () => { cancelled = true; } };
+      timers.set(name, entry);
+      const fire = () => {
+        if (cancelled || timers.get(name) !== entry) return;
+        // a player who left the game has no map: the timer ends
+        if (!p.getCurrentMap?.() && !p.getCurrentRoom?.()) { timers.delete(name); return; }
+        if (!options.repeat) timers.delete(name);
+        options_emit?.("timer.fire", { name }, { player });
+        if (options.repeat) setTimeout(fire, seconds * 1000);
+      };
+      setTimeout(fire, seconds * 1000);
+    },
+    stopTimer(name) {
+      const timers = timersByPlayer.get(player);
+      const entry = timers?.get(name);
+      if (!entry) return false;
+      entry.cancel();
+      timers!.delete(name);
+      return true;
+    },
+    // RPGJS gives NaN to a player without an experience curve: read as 0
+    get exp() { const value = Number(read(p.exp)); return Number.isFinite(value) ? value : 0; },
     set exp(value: number) { p.exp = value; },
     showEmotionBubble(emotion) { p.showEmotionBubble(emotion); },
     hasState: (id) => !!p.getState?.(id),
@@ -641,6 +698,7 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
       get y() { return number(read((event as any)?.y)); },
       get direction() { return String(read((event as any)?.direction) ?? "down"); },
     },
+    log: options.log ?? ((message) => console.log(`[script] ${message}`)),
     wait: (seconds) => new Promise<void>((resolve) => setTimeout(resolve, Math.min(Math.max(seconds, 0), MAX_WAIT_SECONDS) * 1000)),
     rand: options.rand ?? ((min, max) => min + Math.floor(Math.random() * (max - min + 1))),
     sharedProps: sharedPropsOf(room, options.shared ?? []),
