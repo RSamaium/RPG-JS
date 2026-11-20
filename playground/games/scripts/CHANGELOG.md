@@ -1,5 +1,15 @@
 # @rpgjs/playground-scripts
 
+## 1.0.4
+
+### Patch Changes
+
+- Updated dependencies [e132046]
+  - @rpgjs/common@5.4.0
+  - @rpgjs/server@5.5.0
+  - @rpgjs/client@5.6.0
+  - @rpgjs/vite@5.0.6
+
 ## 1.0.3
 
 ### Patch Changes
