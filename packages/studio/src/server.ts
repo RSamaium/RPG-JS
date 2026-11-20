@@ -12,7 +12,7 @@ import { apiUrl, configureStudioConstants } from "./constants";
 import { RATIO_MAP_X, RATIO_MAP_Y } from "@common/map";
 import { matchesPageConditions } from "@common/blocks";
 import type { ProjectBasic } from "@common/types/project";
-import { applyTriggerSettings, getEventTypeRuntime, getGraphicKey, getGraphicScale, RpgMapExtended } from "./event-type-runtime";
+import { applyTriggerSettings, getEventTypeRuntime, getGraphicKey, getGraphicScale, initializeStudioEnemy, RpgMapExtended } from "./event-type-runtime";
 import { normalizeEventType } from "@common/event-types";
 import { normalizeWeatherState } from "@common/weather";
 import { getGameDataProvider, getStudioGameRuntimeConfig, configureStudioGameRuntime, invalidateGameDataProviderProject, normalizeBundleBasePath, onGameDataInvalidated, resetGameDataProvider, shouldReadEventsFromBundle } from "./data-provider";
@@ -1729,5 +1729,15 @@ export default (_config?: unknown) => {
       const database = normalizeStudioDatabase(response);
       return addStudioDefaultClass(database, resolvedGameConfig);
     },
-  });
+    // The scripts make enemies appear ($map.spawnEnemy): an event becomes an enemy of the database, with its battle AI
+    scriptEnemy: {
+      create(event: RpgEvent, enemyId: string) {
+        const map = event.getCurrentMap?.() as RpgMap | undefined;
+        const enemy = (map as any)?.database?.()?.[enemyId];
+        if (!enemy || typeof enemy !== "object" || (enemy._type !== undefined && enemy._type !== "enemy")) return undefined;
+        initializeStudioEnemy(event, enemy, map);
+        return true;
+      },
+    },
+  } as RpgServer);
 };

@@ -62,6 +62,8 @@ function frozen<T>(value: T): T {
  */
 export class SignalRegistry {
   private scripts = new Map<string, Program>();
+  /** When each throttled listener (`every`) last ran, for each subject (a player). */
+  private lastRuns = new Map<string, number>();
 
   constructor(private options: SignalRegistryOptions) {}
 
@@ -73,6 +75,21 @@ export class SignalRegistry {
 
   uninstall(id: string): void {
     this.scripts.delete(id);
+    for (const key of this.lastRuns.keys()) if (key.startsWith(`${id}\0`)) this.lastRuns.delete(key);
+  }
+
+  /**
+   * Whether a listener with `every` may run now for this subject: at most once every `every` seconds. Records the run when it may.
+   * A listener without `every` always may.
+   */
+  private due(script: string, program: Program, handler: Handler, subject: string): boolean {
+    const every = handler.filter?.every;
+    if (every === undefined) return true;
+    const key = `${script}\0${program.handlers.indexOf(handler)}\0${subject}`;
+    const now = Date.now(), last = this.lastRuns.get(key);
+    if (last !== undefined && now - last < every * 1000) return false;
+    this.lastRuns.set(key, now);
+    return true;
   }
 
   has(id: string): boolean {
@@ -94,7 +111,7 @@ export class SignalRegistry {
    * next one runs. `worldFor` gives the world of a script (its player, its shared properties): called once per listener that is
    * reached.
    */
-  async emit(signal: string, payload: unknown, worldFor: (script: string, program: Program, payload: unknown) => ScriptWorld): Promise<EmitReport> {
+  async emit(signal: string, payload: unknown, worldFor: (script: string, program: Program, payload: unknown) => ScriptWorld, subject = ""): Promise<EmitReport> {
     const limits = this.options.limits ?? DEFAULT_LIMITS;
     const data = frozen(payload);
     const listeners: ListenerReport[] = [];
@@ -108,6 +125,7 @@ export class SignalRegistry {
           const world = worldFor(script, program, payload);
           const unmet = conditionFailure(handler.filter?.when, world.player);
           if (unmet) { report.why = unmet; continue; }
+          if (!this.due(script, program, handler, subject)) { report.why = `it ran less than ${handler.filter!.every} seconds ago (every)`; continue; }
           report.matched = true;
           await program.run(handler, [data], hostFromApi(this.options.description, this.options.impl, world), limits);
           report.ran = true;
@@ -125,7 +143,7 @@ export class SignalRegistry {
    * wait run at once, in installation order: the first that returns one of `accepted` decides, the others still run. A listener
    * that waits (`wait`, `showText`) cannot reply: it runs afterwards, as an observer.
    */
-  emitSync(signal: string, payload: unknown, accepted: readonly string[], worldFor: (script: string, program: Program, payload: unknown) => ScriptWorld): SyncEmitResult {
+  emitSync(signal: string, payload: unknown, accepted: readonly string[], worldFor: (script: string, program: Program, payload: unknown) => ScriptWorld, subject = ""): SyncEmitResult {
     const limits = this.options.limits ?? DEFAULT_LIMITS;
     const data = frozen(payload);
     const listeners: ListenerReport[] = [];
@@ -141,6 +159,7 @@ export class SignalRegistry {
           const world = worldFor(script, program, payload);
           const unmet = conditionFailure(handler.filter?.when, world.player);
           if (unmet) { report.why = unmet; continue; }
+          if (!this.due(script, program, handler, subject)) { report.why = `it ran less than ${handler.filter!.every} seconds ago (every)`; continue; }
           report.matched = true;
           const host = hostFromApi(this.options.description, this.options.impl, world);
           const ran = program.runSync(handler, [data], host, limits);

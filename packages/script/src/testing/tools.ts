@@ -18,6 +18,8 @@ export interface Diagnostic { line: number; message: string }
 export interface CheckResult {
   ok: boolean;
   diagnostics: Diagnostic[];
+  /** What is valid but likely wrong (a listener of map.tick without every, a follow nothing stops…). They do not refuse the script. */
+  warnings: Diagnostic[];
   exports: string[];
   handlers: string[];
   /** What the script listens to: the signal and the filter of each listener. */
@@ -40,6 +42,66 @@ const descriptionWith = (signals?: ModuleSignals): ApiDescription =>
 
 const strip = (m: string) => m.replace(/^line \S+: /, "");
 
+/** The calls that wait for something (a player, a battle, time): in a listener of map.tick they hold the ticks of the player. */
+const WAITING_CALLS = new Set(["showText", "showChoices", "wait", "startBattle"]);
+/** The calls that each make one more thing of a limited number. */
+const MAKING_CALLS = new Set(["createDynamicEvent", "spawnEnemy", "createShape", "attachShape", "startTimer"]);
+const LOOPS = new Set(["ForStatement", "ForInStatement", "ForOfStatement", "WhileStatement", "DoWhileStatement"]);
+
+/** The name a call is made with: `wait` of wait(...), `showText` of $player.showText(...). */
+const calledName = (node: any): string | undefined =>
+  node.callee?.type === "Identifier" ? node.callee.name : node.callee?.type === "MemberExpression" && !node.callee.computed ? node.callee.property?.name : undefined;
+
+/** Walks a tree, giving each node with the nodes above it. */
+function walk(node: any, visit: (node: any, above: any[]) => void, above: any[] = []): void {
+  if (!node || typeof node.type !== "string") return;
+  visit(node, above);
+  for (const [key, value] of Object.entries(node)) {
+    if (key === "loc" || key === "start" || key === "end") continue;
+    if (Array.isArray(value)) for (const child of value) walk(child, visit, [...above, node]);
+    else if (value && typeof value === "object") walk(value, visit, [...above, node]);
+  }
+}
+
+/**
+ * What is valid in a script but likely wrong, with the line: a listener of `map.tick` without `every` (it runs about 60 times a
+ * second per player) or that waits, something made in a loop, an event that follows or flees and that nothing stops, a player
+ * whose moves are taken and never given back.
+ */
+export function scriptWarnings(ast: any): Diagnostic[] {
+  const warnings: Diagnostic[] = [];
+  const lineOf = (node: any) => node?.loc?.start?.line ?? 0;
+  let stopsEvents = false, givesMovesBack = false;
+  const followers: any[] = [], moveTakers: any[] = [];
+  walk(ast, (node, above) => {
+    if (node.type === "CallExpression") {
+      const name = calledName(node);
+      if (name === "on" && node.callee.type === "Identifier" && node.arguments[0]?.type === "Literal" && node.arguments[0].value === "map.tick") {
+        const filter = node.arguments.length > 2 ? node.arguments[1] : undefined;
+        const hasEvery = filter?.type === "ObjectExpression" && filter.properties.some((p: any) => (p.key?.name ?? p.key?.value) === "every");
+        if (!hasEvery) warnings.push({ line: lineOf(node), message: 'on("map.tick") runs about 60 times a second for each player: add { every: 0.5 } (or more) unless it must run on every tick' });
+        walk(node.arguments[node.arguments.length - 1], (inner) => {
+          if (inner.type === "CallExpression" && WAITING_CALLS.has(calledName(inner) ?? "")) {
+            warnings.push({ line: lineOf(inner), message: `${calledName(inner)}() waits inside a listener of map.tick: the ticks of the player are skipped until it is done. Start it from another signal, or with a timer` });
+          }
+        });
+      }
+      if (name && MAKING_CALLS.has(name) && above.some((n) => LOOPS.has(n.type))) {
+        warnings.push({ line: lineOf(node), message: `${name}() in a loop makes one more each turn: a map holds 50 events and 50 zones of scripts, a player 20 timers` });
+      }
+      if (name === "followPlayer" || name === "fleePlayer") followers.push(node);
+      if (name === "stopEvent" || name === "moveEvent" || name === "teleportEvent") stopsEvents = true;
+    }
+    if (node.type === "AssignmentExpression" && node.left?.type === "MemberExpression" && node.left.property?.name === "canMove") {
+      if (node.right?.type === "Literal" && node.right.value === false) moveTakers.push(node);
+      else givesMovesBack = true;
+    }
+  });
+  if (!stopsEvents) for (const node of followers) warnings.push({ line: lineOf(node), message: `${calledName(node)}() is never stopped in this script: the event goes on until the player leaves the map. Call $map.stopEvent(id) when it is over` });
+  if (!givesMovesBack) for (const node of moveTakers) warnings.push({ line: lineOf(node), message: "$player.canMove = false is never set back to true in this script: the player keeps no moves" });
+  return warnings.sort((a, b) => a.line - b.line);
+}
+
 /**
  * Options of `checkScript`: the exported functions the request requires, which make the check fail when missing, and the signals
  * of the modules a game uses (a signal of a module is accepted only when it is given here).
@@ -61,7 +123,7 @@ export interface CheckOptions { requiredExports?: string[]; signals?: ModuleSign
  * ```
  */
 export function checkScript(source: string, catalog?: Record<string, string[]>, options: CheckOptions = {}): CheckResult {
-  const empty = { exports: [], handlers: [], listeners: [], events: [], refs: [], permissions: [], shared: [] as CheckResult["shared"] };
+  const empty = { warnings: [] as Diagnostic[], exports: [], handlers: [], listeners: [], events: [], refs: [], permissions: [], shared: [] as CheckResult["shared"] };
   let ast;
   try { ast = parseScript(source); } catch (e: any) {
     return { ok: false, diagnostics: [{ line: e.loc?.line ?? 0, message: `syntax error: ${strip(String(e.message))}` }], ...empty };
@@ -72,7 +134,7 @@ export function checkScript(source: string, catalog?: Record<string, string[]>, 
     const missing = (options.requiredExports ?? []).filter((n) => !program.exported.has(n));
     if (missing.length) return { ok: false, diagnostics: missing.map((n) => ({ line: 0, message: `missing exported function "${n}": the request requires it, write export function ${n}(...) { ... }` })), ...empty };
     return {
-      ok: true, diagnostics: [], program,
+      ok: true, diagnostics: [], warnings: scriptWarnings(ast), program,
       exports: [...program.exported], handlers: program.handlers.map((h) => h.event),
       listeners: program.handlers.map((h) => ({ signal: h.event, filter: h.filter })),
       events: program.events.map((e) => ({ name: e.name, pages: e.pages.length })),
@@ -178,7 +240,8 @@ export interface TestCase extends RunSpec {
   dice?: number[];
   choices?: number[];
   /** Expectations are plain data. Keys: returns, page, error, effects, effectsInclude, effectsExclude, texts, notifications,
-   *  and paths like "player.gold", "player.items.potion", "shared.stock_potion", "state.reputation", "vars.x";
+   *  and paths like "player.gold", "player.hp", "player.items.potion", "shared.stock_potion", "state.reputation", "vars.x",
+   *  "events.guard.x", "events.guard.moving";
    *  a value is a number, text, boolean, null, or { min, max } for a range. */
   expect?: Record<string, unknown>;
 }
@@ -218,7 +281,7 @@ function judge(t: TestCase, r: SimulateResult): string[] {
     else if (k === "effectsExclude") { for (const b of want as string[]) if (names.includes(b)) out.push(`unexpected effect "${b}"`); }
     else if (k === "texts") { const got = r.effects.filter((e) => e.name === "showText").map((e: any) => e.params.text); if (!same(got, want)) out.push(`texts ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
     else if (k === "notifications") { const got = r.effects.filter((e) => e.name === "showNotification").map((e: any) => e.params.message); if (!same(got, want)) out.push(`notifications ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`); }
-    else if (!KNOWN.has(k) && /^(player|shared|state|vars)\./.test(k)) {
+    else if (!KNOWN.has(k) && /^(player|shared|state|vars|events)\./.test(k)) {
       const got = atPath(r.state, k);
       if (!matches(got, want)) out.push(`${k} is ${JSON.stringify(got)}, expected ${JSON.stringify(want)}`);
     } else out.push(`unknown expectation "${k}"`);

@@ -89,8 +89,9 @@ installed, and a listener that fails does not stop the next one.
 | `player.leaveRoom` | `onLeaveRoom` of the player | `kind`, `id`, `mapTags` |
 | `player.joinMap` | `onJoinMap` of the player, in a map | `map` (id of the map), `mapTags` |
 | `player.leaveMap` | `onLeaveMap` of the player, in a map | `map`, `mapTags` |
-| `player.inShape` | `onInShape` of the player: enters a zone of the map | `shape.name`, `shape.x`, `shape.y`, `shape.width`, `shape.height` |
-| `player.outShape` | `onOutShape` of the player: leaves a zone | the same |
+| `player.inShape` | `onInShape` of the player: enters a zone of the map; `onDetectInShape` of an event: enters a zone a script attached to it | `shape.name`, `shape.x`, `shape.y`, `shape.width`, `shape.height`, `shape.eventId` (the event of an attached zone, `""` for a zone of the map) |
+| `player.outShape` | `onOutShape` of the player, `onDetectOutShape` of an event: leaves a zone | the same |
+| `player.touchTile` | `onMove` of the player: steps on a tile, or walks against it, whose properties have `interactive: true`; once each time the player reaches such a tile | `x`, `y` (the cell, in tiles), `properties` |
 | `player.levelUp` | `onLevelUp` of the player | `gained` (levels gained), `level` (the level after the gain) |
 | `player.dead` | `onDead` of the player | |
 | `player.itemAdd` | `onItemAdd` of the player: items enter the inventory | `item` (id of the item), `quantity`, `itemTags` |
@@ -113,6 +114,9 @@ installed, and a listener that fails does not stop the next one.
 | `gui.action` | `onGuiInteraction` of the player: a GUI of the client sent an interaction (see [GUIs](#guis-of-the-client)) | `gui` (id of the GUI), `event` (the name the component sent), `data` |
 | `event.action` | `onAction` of any event | `event.id`, `event.name`, `event.tags` |
 | `event.touch` | `onPlayerTouch` of any event | `event.id`, `event.name`, `event.tags` |
+| `timer.fire` | a timer a script started with `$player.startTimer` fires, for its player | `name` |
+| `enemy.defeated` | `actionBattleHooks(scripts)` of Action Battle: a player defeats an event | `event.id`, `event.name`, `event.tags`, `enemy` (the id of the enemy when `$map.spawnEnemy` made it or the event gives one, `""` otherwise) |
+| `event.arrived` | an event a script walked with `$map.moveEvent` arrives; for the player of that script | `event.id`, `event.name`, `event.tags`, `x`, `y` |
 
 ### Tags
 
@@ -191,6 +195,10 @@ on("player.levelUp", {
 
 Comparisons are `eq`, `ne`, `gt`, `gte`, `lt`, `lte`.
 
+- `every`: the listener runs at most once every `every` seconds (0.05 to 3 600) **for each player**. A listener of `map.tick` runs
+  about 60 times a second for each player of the map: `on("map.tick", { every: 0.5 }, ...)` runs it twice a second, and the
+  service skips the other ticks before the script even starts.
+
 ### Add more signals
 
 The mapping from the hooks of RPGJS to signals is data, so it can be extended. A binding says which hook of which module scope
@@ -230,6 +238,20 @@ The player of the signal, with the names of `RpgPlayer`.
 | --- | --- |
 | `gold` | read, and assign with `=`, `+=`, `-=`, `*=`: it never goes below 0 |
 | `level`, `name` | read |
+| `x`, `y`, `direction` | read: the position on the map (the top-left of the hitbox, as `changeMap` and `teleport` take it) and where the player faces (`"up"`, `"down"`, `"left"`, `"right"`) |
+| `hp`, `sp` | read, and assign with `=`, `+=`, `-=`, `*=`: they stay between 0 and `maxHp` / `maxSp`; `hp` at 0 makes the player dead (`player.dead`) |
+| `maxHp`, `maxSp` | read; 0 when the game gives the player no maximum (no parameters), and then nothing is capped |
+| `exp` | read, and assign with `=` or `+=`: it never goes below 0, and the player levels up as it grows (`player.levelUp`) |
+| `teleport({ x, y })` | moves the player at once to a position of the map they are on |
+| `canMove` | read, and assign `true` or `false`: whether the player moves with its inputs. Set it to `false` for a cutscene and back to `true` after: nothing gives it back by itself |
+| `cameraFollow(target, { smoothMove, time }?)` | points the camera of the player at an event (its id), or back at the player with `"player"`. `smoothMove` glides to it in `time` ms (10 000 at most). Only this player sees it |
+| `startTimer(name, seconds, { repeat }?)`, `stopTimer(name)` | a timer of the player: `timer.fire` (`{ name }`) is emitted for this player after `seconds` (0.1 to 3 600), and again with `repeat`, until `stopTimer` or the player leaves the game. The same name restarts it. 20 timers per player at most |
+| `showEmotionBubble(emotion)` | an emotion bubble above the player, for every player of the map: `"like"`, `"surprise"`, `"idea"`, `"question"`, `"exclamation"`… |
+| `addState(id)`, `removeState(id)`, `hasState(id)`, `getStates()` | the states of the database (poison, sleep, haste…), with their effects on the parameters. `addState` gives `false` when the player already has it, `removeState` when the player does not |
+| `learnSkill(id)`, `forgetSkill(id)`, `hasSkill(id)`, `getSkills()` | the skills of the player (`player.skillChange` fires). `false` when it already knows it, or does not |
+| `equip(id, equipped?)`, `isEquipped(id)` | equips a weapon or an armor of the inventory, or takes it off with `false` (`player.itemEquip` fires). `false` when it cannot: not in the inventory, not equipment, refused by the class, already so |
+| `useItem(id)` | uses an item of the inventory as the player would: its effects and states apply, then one is consumed (`player.itemUse` fires). `false` when it cannot |
+| `startBattle(troopId, { kind }?)` | plays a troop with the battle system of the game and **waits** for the end: gives `"victory"`, `"defeat"` or `"escape"`, or `null` when the game has no battle system for it. `kind` is `"turn"` or `"tactical"`; without it the game picks. See [Battles](#battles) |
 | `getItem(id)` | a copy `{ id, name, quantity }` of an item of the inventory, or `undefined` |
 | `hasItem(id)`, `addItem(id, nb?)`, `removeItem(id, nb?)` | a player who has fewer items loses what they have, one who has none loses nothing |
 | `getVariable(key)`, `setVariable(key, value)`, `hasVariable(key)`, `removeVariable(key)` | the variables of the player. A value is a text, a number, true/false, null or plain data of at most 2 000 characters, and is copied |
@@ -267,7 +289,7 @@ on("gui.action", { where: { gui: "quests_panel", event: "accept" } }, (e) => {
 ### Where the script is: `$room`, `$event`
 
 - `$room`: `kind` (`"map"` for a map, otherwise the kind of the gameplay room) and `id` of the room the script runs in.
-- `$event`: `id`, `name`, `x`, `y` of the event the script runs for (empty and 0 when there is none).
+- `$event`: `id`, `name`, `x`, `y` and `direction` of the event the script runs for (empty and 0 when there is none).
 
 ### The map: `$map`
 
@@ -291,10 +313,119 @@ on("player.inShape", { where: { "shape.name": "well-area" } }, () => {
 
 | Name | What it does |
 | --- | --- |
-| `createDynamicEvent(options)` | makes an event and gives its id. Plain data: `id` (letters, digits, `_`, `.`, `-`), `x` and `y`, and optionally `name`, `graphic` (the id of a graphic), `hitbox: { width, height }`, `through`. It is a real event: it listens to `event.action` and `event.touch` like the others, and has no look beyond its graphic |
-| `getEvent(id)`, `getEvents()` | copies `{ id, name, x, y }` of the events of the map, the ones of the game too |
+| `createDynamicEvent(options)` | makes an event and gives its id. Plain data: `id` (letters, digits, `_`, `.`, `-`), `x` and `y`, and optionally `name`, `graphic` (the id of a graphic), `hitbox: { width, height }`, `through`, `forPlayer` (the event exists for the player of the script only: the others neither see nor touch it, it goes when that player leaves the map, and its id is made unique for the player). It is a real event: it listens to `event.action` and `event.touch` like the others, and has no look beyond its graphic |
+| `getEvent(id)`, `getEvents()` | copies `{ id, name, x, y, direction }` of the events of the map, the ones of the game too |
 | `removeEvent(id)` | removes an event **a script made**; an event of the game stays and it gives `false` |
 | `getPlayers()` | `{ id, name }` of the players on the map |
+
+**Moving events.** Every player of the map sees what an event does: a script moves the events of the game as well as its own.
+
+| Name | What it does |
+| --- | --- |
+| `moveEvent(id, to, options?)` | walks an event to `{ x, y }` (its top-left when it arrives) or to `"player"`, around what blocks its way, and stops it there. `event.arrived` fires when it arrives. Options: `speed` (0.1 to 20, set on the event), `wait` (the script waits, and gets whether the event arrived: `false` when it was stopped, or after 60 seconds; without it the script goes on at once) |
+| `followPlayer(id, { distance }?)` | the event follows the player, about `distance` pixels away (48 by default) |
+| `fleePlayer(id, { distance }?)` | the event runs away until it is `distance` pixels away (160 by default), and again when the player comes closer |
+| `stopEvent(id)` | stops what scripts made the event do (a move, a follow, a flight); the routes the event has in the game go on |
+| `turnEvent(id, direction)` | turns the event to `"up"`, `"down"`, `"left"`, `"right"`, or toward the player with `"player"` |
+| `teleportEvent(id, { x, y })` | puts the event at a position at once |
+| `setEventVisible(id, visible)` | hides the event (no sprite, collision, touch or action; `getEvent` gives `undefined`) and shows it again where it was, with its state, as `event.suspend()` and `resume()` do |
+
+A follow or a flight lasts until `stopEvent`, another move of the same event, or the player leaving the map. **50 events** of a map
+at most follow or flee at once.
+
+```js
+// the guard sees the player in front of it, chases them, and gives up when it loses them
+on("map.tick", { every: 0.5 }, () => {                // twice a second for each player
+  const guard = $map.getEvent("guard");
+  if (!guard) return;
+  const sees = inSight(guard, { x: $player.x, y: $player.y }, { range: 180, walls: true });
+  if (sees && !$player.getVariable("seen")) {
+    $player.setVariable("seen", true);
+    $map.turnEvent("guard", "player");
+    $map.showEmotionBubble("guard", "exclamation");
+    $map.followPlayer("guard", { distance: 32 });
+  } else if (!sees && $player.getVariable("seen")) {
+    $player.setVariable("seen", false);
+    $map.stopEvent("guard");
+  }
+});
+```
+
+**Zones attached to an event**
+
+| Name | What it does |
+| --- | --- |
+| `attachShape(eventId, zone)` | attaches a zone to the event and gives its name: it moves with the event, and with `follow: "direction"` it turns with it. A circle of `radius`, or around `width` x `height`; with `angle` below 360 a cone facing `direction`; with `limitedByWalls` the walls hide what is behind them. Also `name`, `positioning` (`center`, `top`, `bottom`, `left`, `right`), `properties`. Players entering and leaving it fire `player.inShape` and `player.outShape`, with `shape.eventId`. It counts in the 50 zones of scripts, and `removeShape(name)` removes it |
+
+```js
+on("player.joinMap", () => {
+  if ($map.getEvent("healer")) $map.attachShape("healer", { name: "aura", radius: 80 });
+});
+on("player.inShape", { where: { "shape.eventId": "healer" } }, () => {
+  $player.hp = $player.maxHp;
+});
+```
+
+**How events look**
+
+| Name | What it does |
+| --- | --- |
+| `setEventGraphic(id, graphic)` | changes the graphic of an event: an opened chest, a lit torch |
+| `playEventAnimation(id, animationName, times?)` | plays an animation of its graphic (attack, skill…) `times` times (1 by default, 100 at most), then the event walks and stands as before |
+| `showEmotionBubble(id, emotion)` | an emotion bubble above an event: `"surprise"` when a guard sees the player |
+
+```js
+on("event.action", { where: { "event.name": "chest" } }, () => {
+  const key = $event.id + "_opened";
+  if ($player.getVariable(key)) return;
+  $player.setVariable(key, true);
+  $map.setEventGraphic($event.id, "chest_open");
+  $player.addItem("potion", 1);
+});
+```
+
+**Enemies**
+
+| Name | What it does |
+| --- | --- |
+| `spawnEnemy({ enemy, x, y, id?, name?, forPlayer? })` | makes an enemy appear and gives the id of its event: the game turns the event into the enemy `enemy`. It counts in the 50 events of scripts, `removeEvent` removes it, and it is refused when the game has no such enemy. `forPlayer` makes it for the player of the script only. `enemy.defeated` fires when a player defeats it |
+
+The game says what an enemy is: a module implements `scriptEnemy.create(event, enemyId)`, makes the enemy and returns `true` (it
+returns nothing for an enemy it does not know). A Studio game does it already, from the enemies of its database, with their battle
+AI. With Action Battle in your own game:
+
+```ts
+import { createActionEnemy } from "@rpgjs/action-battle/server";
+import { Slime, Wolf } from "./enemies";
+
+const presets = { slime: Slime, wolf: Wolf };
+
+export default defineModule<RpgServer>({
+  scriptEnemy: {
+    create(event, enemyId) {
+      if (!presets[enemyId]) return;
+      createActionEnemy(event, enemyId, presets);
+      return true;
+    },
+  },
+} as RpgServer);
+```
+
+**Tiles**
+
+| Name | What it does |
+| --- | --- |
+| `getTile(x, y)` | the tile at a position in pixels: `{ x, y, collision, properties, layers }`, its cell in tiles, whether it blocks, and the properties of its tiles (`properties` merges them, the top layer wins). `undefined` when the map has no tiles (it is not a Tiled map) or outside of it |
+
+A tile whose properties have `interactive: true` fires `player.touchTile` when a player steps on it or walks against it (a barrel
+that blocks): give the barrels, the levers or the lava of a tileset that property in Tiled.
+
+```js
+on("player.touchTile", (e) => {
+  if (e.properties.kind === "barrel") $player.showText("An old barrel. It smells of wine.");
+  if (e.properties.kind === "lava") $player.hp -= 10;
+});
+```
 
 **Variables of the map**: `getVariable(key)`, `setVariable(key, value)`, `hasVariable(key)`, `removeVariable(key)`. They are shared by
 the players of the map, separate from the variables of a player, and hold the same plain values.
@@ -387,7 +518,71 @@ not exist gives `undefined` and `[]`.
 | `wait(seconds)` | pauses the script (60 seconds at most) |
 | `random(min, max)` | a whole number, both included |
 | `Item("id")` | a reference to an item of the database, checked when the script is saved |
+| `log(...values)` | writes a line where the author reads it: the console of the server (or `onLog`) and `service.logs`, with the id of the script. Texts as they are, anything else as JSON, 500 characters at most. A simulation keeps it in its effects (`log`) |
+| `distance(a, b)` | the distance between two points `{ x, y }`, in pixels |
+| `inSight(from, to, options?)` | whether `to` is in sight of `from`: within `range` pixels (200 by default), within `angle` degrees of where `from` faces (90 by default when `from` has a `direction`, a full circle otherwise), and with `walls: true`, with no wall between them. `from` is often an event: `inSight($map.getEvent("guard"), { x: $player.x, y: $player.y })` |
 | `$hook` | the payload of the signal, as `$hook.map` (`e` is the same data) |
+
+### The API of RpgPlayer and RpgMap
+
+Most of the public API of the engine is given to scripts with its own names: a name that **mirrors** a method or a property of
+`RpgPlayer` or `RpgMap`. Its arguments are checked against its signature (a wrong one is refused with the name of the parameter:
+`options.type must be "alpha" or "tint" or "both"`), then given to the engine as they are, and what the engine gives back is copied
+as plain data. `describeGameApi()` lists them all with their signatures.
+
+| On | Names |
+| --- | --- |
+| physics of the player | `through`, `throughEvent`, `throughOtherPlayer`, `pushable`, `speed`, `frequency`, `z`, `directionFixed`, `animationFixed` (read and assign); `hitbox`, `mass` (read); `setHitbox`, `setMass`, `setSizes`, `knockbackActive` |
+| look | `tint`, `graphics`, `animationName`; `setGraphic`, `setGraphicAnimation`, `setAnimation`, `flash`, `showHit`, `showComponentAnimation`, `setComponentsTop` / `Bottom` / `Left` / `Right` / `Center`, `removeComponents`, `showAttachedGui`, `hideAttachedGui` |
+| parameters and battle | `parameters`, `paramsModifier`, `atk`, `pdef`, `sdef`, `effects`, `elements`, `elementsEfficiency`, `statesEfficiency`, `expCurve`, `initialLevel`, `finalLevel`, `expForNextlevel`; `addParameter`, `setParameter`, `getParamValue`, `getParamItem`, `hasEffect`, `applyDamage(attackerId, skillId?)`, `setClass`, `setActor`, `changeActor` |
+| moves | `dash`, `knockback`, `followPath`, `oscillate`, `applyIceMovement`, `shootProjectile`, `clearMovements`, `hasActiveMovements`, `moveRoutes`, `infiniteMoveRoute`, `breakRoutes`, `replayRoutes`, `autoChangeMap` |
+| sounds, loot, items, hotbar | `playSound`, `stopSound`, `stopAllSounds`, `dropLoot`, `buyItem`, `sellItem`, `getHotbar`, `getHotbarCapacity`, `configureHotbar`, `selectHotbarSlot`, `clearHotbarSlot`, `useHotbarSlot`, `useActiveHotbarSlot`, `placeHotbarItem`, `showHotbar`, `hideHotbar`, `refreshHotbar` |
+| GUIs of the game | `callShop`, `callMainMenu`, `callGameover`, `showInput`, `showSave`, `showLoad`, `showSaveLoad`, `showCharacterSelect` |
+| the rest | `changeRoom`, `getVariableKeys`, `clearVariables`, `setLocale`, `getLocale`, `t(key, params?)`, `getShapes`, `getInShapes` |
+| the map | `widthPx`, `heightPx`; `getPlayer`, `getTick`, `queryArea`, `queryHitbox`, `findSpawnPosition`, `getInteractableObjectIds`, `isMoving`, `movePlayer`, `getBodyPosition`, `setBodyPosition`, `updateHitbox`, `suspendEvents`, `resumeEvents`, `getSuspendedEvents`, `isEventSuspended`, `addInDatabase`, `removeInDatabase`, `dropLoot`, `broadcast`, `getVariableKeys`, `clearVariables` |
+
+What the engine takes in another form than data is given as data, and translated:
+
+- **A route** is a list of steps: a name of `Move` (`up`, `tileLeft`, `random`, `towardPlayer`, `turnTowardPlayer`…), `{ name: repeat }`,
+  or `{ wait: seconds }`: `["up", { tileRight: 2 }, "turnTowardPlayer", { wait: 0.5 }]`. "Player" is the player of the script.
+- **A component** is `{ type: "text", value: "{name}" }`, `{ type: "hpBar" }`, `{ type: "image", value: "icon" }`… as `Components` makes them.
+- **An attacker** (`applyDamage`) is the id of a player or an event of the map; **an area** (`queryArea`) is `{ x, y, radius }` or
+  `{ x, y, width, height }`; **events to hide** (`suspendEvents`) are a list of ids.
+
+**An event has the same.** `$map.eventCall(id, method, ...args)` calls on an event a method a character has, `$map.eventGet(id, property)`
+reads a property and `$map.eventSet(id, property, value)` changes it, checked the same way:
+
+```js
+on("event.action", { where: { "event.name": "guard" } }, () => {
+  $map.eventSet("guard", "speed", 6);
+  $map.eventCall("guard", "flash", { type: "tint", tint: "#ff0000" });
+  $map.eventCall("guard", "moveRoutes", ["left", "left", { wait: 0.5 }, "turnTowardPlayer"]);
+});
+```
+
+### Battles
+
+`$player.startBattle(troopId, { kind })` asks the battle systems of the game to play a troop, through the hooks a battle module
+implements: `studioBattle: { start, startTurnBased, startTactical }` (the ones the battle blocks of the Studio call). Without `kind`
+it calls `start`, with `"turn"` `startTurnBased`, with `"tactical"` `startTactical`. The module that plays the troop returns
+`{ outcome }` when the battle is over; a player who leaves a tactical battle escaped. `battle.start` and `battle.end` fire as for any
+battle.
+
+```js
+on("player.inShape", { where: { "shape.name": "trap" } }, () => {
+  const outcome = $player.startBattle("wolves");
+  if (outcome === "defeat") { $player.hp = 1; $player.changeMap("village", { x: 120, y: 200 }); }
+});
+```
+
+### What scripts have of the engine
+
+Every public method and property of `RpgPlayer`, `RpgEvent`, `RpgMap`, the GUIs (`Gui`) and the projectiles of the server, and every
+export of `@rpgjs/action-battle`, is either given to scripts (by a name, or by the signal that tells it) or left out on purpose, with
+the reason. What is left out is only what is not gameplay (the life cycle, the synchronization, the hooks of the engine), the private
+methods of the engine, and what takes or gives what is not data (a class, a function, a body of the physics engine):
+`ENGINE_COVERAGE` of `@rpgjs/script/testing` lists the decisions. A test of `@rpgjs/script` fails when a method of the engine has
+none, so a new method gets a decision instead of being forgotten.
 
 ## Install scripts while the game runs
 
@@ -403,6 +598,28 @@ scripts.uninstall("late")
 
 `inject(ScriptService)` gives the service back. `service.listeners("player.dead")` says who listens, in the order they run, with
 their filter.
+
+**Keep `$state` between two starts.** Without a store, `$state` lives in memory and is lost when the server stops. Give the service a
+`stateStore`: it reads the state of a script once, when the script is installed (a signal waits for it), and saves it after the
+changes of a turn. `await scripts.flushState()` saves what is left before the server stops. A store that fails is reported and the
+game goes on.
+
+```ts
+import { readFile, writeFile } from "node:fs/promises"
+
+const scripts = new ScriptService({
+  stateStore: {
+    load: async (script) => JSON.parse(await readFile(`state/${encodeURIComponent(script)}.json`, "utf8").catch(() => "{}")),
+    save: (script, data) => writeFile(`state/${encodeURIComponent(script)}.json`, JSON.stringify(data)),
+  },
+  onLog: ({ script, message }) => console.log(`[${script}] ${message}`),
+})
+```
+
+`scripts.logs` keeps the last 200 lines the scripts wrote with `log(...)`, with their script and their time.
+
+**Enemies that fall.** `actionBattleHooks(scripts)` given to Action Battle (`provideActionBattle({ combat: { hooks: actionBattleHooks(scripts) } })`)
+emits `combat.hit` after each hit, and `enemy.defeated` when a player defeats an event.
 
 A plugin that has its own events adds its signals, so that scripts can listen to them and the compiler can check their payload:
 
@@ -422,7 +639,7 @@ await scripts.emit("quests.start", { questId: "wolves" }, { player })
 import { checkScript, runTests, simulate, describeGameApi } from "@rpgjs/script/testing"
 
 describeGameApi()                       // the API and the signals, as TypeScript declarations: give them to an agent
-checkScript(source)                     // { ok, diagnostics with lines, listeners, permissions, shared… }
+checkScript(source)                     // { ok, diagnostics and warnings with lines, listeners, permissions, shared… }
 
 await simulate({
   source,
@@ -446,6 +663,15 @@ checkScript(`export function close() {\n  $player.closeGui();\n}`).diagnostics
 
 A script already installed in a game is not refused for its arguments when the game starts: the check is made when it is saved, as
 the references of `Item("…")` to the catalog are.
+
+`checkScript` also gives **warnings**, which do not refuse the script but point at what is likely wrong, with the line: a listener
+of `map.tick` without `every`, a `showText`, `showChoices`, `wait` or `startBattle` inside one (the ticks of the player are skipped
+until it is done), an event or a zone or a timer made in a loop, a `followPlayer` or `fleePlayer` that nothing stops, and
+`$player.canMove = false` never set back to `true`.
+
+`describeGameApi()` starts with the API **by family** (rewards and dialogues, positions and sight, zones, movement and cutscenes,
+look of events, scenery, battle and character, time, debugging), each with its names and an example: an agent finds the family of
+a request first.
 
 The world of a simulation is a map called `start` by default; `world: { room: { id: "battle-1", kind: "battle" } }` makes it a room
 that is not a map, `events` and `shapes` put the events and the zones of the game on the map, and `data` (`{ quests_quest: [{ id: "wolves", name: "Wolves" }] }`) the records of its database, for `$data`.

@@ -59,7 +59,10 @@ export function registerPresentationListeners(socket: AbstractWebsocket, engine:
         throw new Error("Please provide an object or x and y coordinates");
       }
       const player = object ? engine.scene.getObjectById(object) : undefined;
-      engine.getComponentAnimation(id).displayEffect(params, player || position)
+      const target = player || position;
+      // An object this client does not have (not synchronized yet, hidden from it): nothing to draw the animation on
+      if (!target) return;
+      engine.getComponentAnimation(id).displayEffect(params, target)
     });
 
     socket.on("setAnimation", (data) => {

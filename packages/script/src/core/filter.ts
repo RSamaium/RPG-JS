@@ -38,7 +38,16 @@ export type Condition =
  * What a listener asks before it runs: `where` (conditions on the payload) and `when` (conditions on the player). All entries must
  * hold. A filter is plain data, so it can be read before anything runs.
  */
-export interface ListenFilter { where?: Record<string, WhereMatcher>; when?: Condition[] }
+export interface ListenFilter {
+  where?: Record<string, WhereMatcher>;
+  when?: Condition[];
+  /** Runs the listener at most once every `every` seconds for each player: `map.tick` twice a second is `{ every: 0.5 }`. */
+  every?: number;
+}
+
+/** The shortest and the longest `every` of a filter, in seconds. */
+export const MIN_EVERY_SECONDS = 0.05;
+export const MAX_EVERY_SECONDS = 3600;
 
 /** What a condition reads of the player. */
 export interface ConditionPlayer { gold: number; level: number; getItem(id: string): { quantity: number } | undefined; getVariable(id: string): unknown }
@@ -143,8 +152,11 @@ function fieldAt(payload: Record<string, PayloadField>, path: string): PayloadFi
 
 /** What is wrong with a filter written in a script, as text, or undefined when it is valid. Knowing the signal checks the paths. */
 export function validateFilter(filter: unknown, signal?: SignalDesc & { name: string }): string | undefined {
-  if (!isPlain(filter)) return "a filter is { where, when }";
-  for (const key of Object.keys(filter)) if (key !== "where" && key !== "when") return `a filter is { where, when }, not "${key}"`;
+  if (!isPlain(filter)) return "a filter is { where, when, every }";
+  for (const key of Object.keys(filter)) if (key !== "where" && key !== "when" && key !== "every") return `a filter is { where, when, every }, not "${key}"`;
+  if (filter.every !== undefined && (typeof filter.every !== "number" || !(filter.every >= MIN_EVERY_SECONDS && filter.every <= MAX_EVERY_SECONDS))) {
+    return `"every" is a number of seconds from ${MIN_EVERY_SECONDS} to ${MAX_EVERY_SECONDS}`;
+  }
 
   if (filter.where !== undefined) {
     if (!isPlain(filter.where)) return '"where" is { "path": value-or-operators }';

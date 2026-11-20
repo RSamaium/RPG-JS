@@ -87,7 +87,47 @@ export function signalBinding<TArgs extends unknown[]>(binding: SignalBinding<TA
  */
 const zoneOf = (args: unknown[]): RpgShape | undefined =>
   args.find((a): a is RpgShape => !!a && typeof (a as { playerIsIn?: unknown }).playerIsIn === "function");
-const shapePayload = (shape: RpgShape) => ({ shape: { name: String(shape.name), x: Number(shape.x), y: Number(shape.y), width: Number(shape.width), height: Number(shape.height) } });
+const shapePayload = (shape: RpgShape, eventId = "") => ({
+  shape: { name: String(shape.name), x: Number(shape.x), y: Number(shape.y), width: Number(shape.width), height: Number(shape.height), eventId },
+});
+/** The player of an `onDetectInShape` / `onDetectOutShape` hook of an event: the argument that is a player, not the event or the zone. */
+const detectedPlayer = (event: RpgEvent, args: unknown[]): RpgPlayer | undefined =>
+  args.find((a): a is RpgPlayer => !!a && a !== event && typeof (a as { playerIsIn?: unknown }).playerIsIn !== "function"
+    && typeof (a as { isEvent?: unknown }).isEvent === "function" && !(a as { isEvent(): boolean }).isEvent());
+/** A zone attached to an event: players entering and leaving it fire the signals of the zones, with the id of the event. */
+const attachedZone = (signal: "player.inShape" | "player.outShape", hook: "onDetectInShape" | "onDetectOutShape") =>
+  signalBinding<[RpgEvent, ...unknown[]]>({
+    signal, scope: "event", hook,
+    emit: (event, ...args) => {
+      const shape = zoneOf(args), player = detectedPlayer(event, args);
+      return shape && player ? { payload: shapePayload(shape, String(event.id)), context: { player, event } } : undefined;
+    },
+  });
+
+/** A tile the player stands on or walks against, whose properties have `interactive: true`, by player: it fires once per tile. */
+const touchedTiles = new WeakMap<object, string>();
+const FACING_STEP: Record<string, [number, number]> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+/** The tiles a player touches: the one under its center and the one just ahead of it, where it faces. */
+function touchedTile(player: RpgPlayer): { x: number; y: number; properties: Record<string, unknown> } | undefined {
+  const map = player.getCurrentMap?.() as any;
+  const tiled = map?.tiled;
+  if (!tiled || typeof tiled.getTileByPosition !== "function") return undefined;
+  const tileWidth = Number(tiled.tilewidth), tileHeight = Number(tiled.tileheight);
+  if (!(tileWidth > 0 && tileHeight > 0)) return undefined;
+  const p = player as any, box = typeof p.hitbox === "function" ? p.hitbox() : { w: 0, h: 0 };
+  const read = (v: unknown) => Number(typeof v === "function" ? (v as () => unknown)() : v) || 0;
+  const cx = read(p.x) + (Number(box?.w) || 0) / 2, cy = read(p.y) + (Number(box?.h) || 0) / 2;
+  const [fx, fy] = FACING_STEP[String(typeof p.direction === "function" ? p.direction() : p.direction)] ?? [0, 0];
+  const ahead = { x: cx + fx * ((Number(box?.w) || 0) / 2 + 2), y: cy + fy * ((Number(box?.h) || 0) / 2 + 2) };
+  for (const point of [{ x: cx, y: cy }, ahead]) {
+    const x = Math.floor(point.x / tileWidth), y = Math.floor(point.y / tileHeight);
+    if (x < 0 || y < 0 || x >= Number(tiled.width) || y >= Number(tiled.height)) continue;
+    const info = tiled.getTileByPosition(point.x, point.y, [0, 0], { populateTiles: true });
+    const properties = Object.assign({}, ...((info?.tiles ?? []) as any[]).map((tile) => tile?.properties ?? {})) as Record<string, unknown>;
+    if (properties["interactive"] === true) return { x, y, properties: JSON.parse(JSON.stringify(properties)) };
+  }
+  return undefined;
+}
 /** The tags of a thing of the game as a signal gives them: a list of strings, each once, empty when it has none. */
 const tagList = (value: unknown): string[] =>
   Array.isArray(value) ? [...new Set(value.filter((tag): tag is string => typeof tag === "string" && tag.length > 0))] : [];
@@ -148,7 +188,8 @@ const tags = (value: unknown): string[] => (Array.isArray(value) ? value.map(Str
 
 /**
  * The signals of the game: the hooks `onJoinRoom`, `onLeaveRoom`, `onJoinMap`, `onLeaveMap`, `onInShape`, `onOutShape`, `onLevelUp`, `onDead`,
- * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip`, `onGoldChange`, `onSkillChange`, `onConnected`, `onDisconnected`, `onHotbarChange` and `onProjectileHit` of the player, `onStart`, `onCommand` and `onEnd` of a turn-based battle (scope `battle`), `onProjectileHit` of the events, `onDestroy` of the projectiles, `onAction` and `onPlayerTouch` of the events,
+ * `onItemAdd`, `onItemRemove`, `onItemUse`, `onItemEquip`, `onGoldChange`, `onSkillChange`, `onConnected`, `onDisconnected`, `onHotbarChange`, `onMove` and `onProjectileHit` of the player,
+ * `onDetectInShape` and `onDetectOutShape` of the events (the zones scripts attach to them), `onStart`, `onCommand` and `onEnd` of a turn-based battle (scope `battle`), `onProjectileHit` of the events, `onDestroy` of the projectiles, `onAction` and `onPlayerTouch` of the events,
  * and `onTick` of the maps. The ones of the player fire in every kind of room, a map or not.
  */
 export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
@@ -187,6 +228,18 @@ export const DEFAULT_SIGNAL_BINDINGS: SignalBinding[] = [
   signalBinding<[RpgPlayer, ...unknown[]]>({
     signal: "player.outShape", scope: "player", hook: "onOutShape",
     emit: (player, ...args) => { const shape = zoneOf(args); return shape ? { payload: shapePayload(shape), context: { player } } : undefined; },
+  }),
+  attachedZone("player.inShape", "onDetectInShape"),
+  attachedZone("player.outShape", "onDetectOutShape"),
+  signalBinding<[RpgPlayer]>({
+    signal: "player.touchTile", scope: "player", hook: "onMove",
+    emit: (player) => {
+      const tile = touchedTile(player);
+      const key = tile ? `${tile.x},${tile.y}` : "";
+      if (touchedTiles.get(player) === key) return undefined;
+      touchedTiles.set(player, key);
+      return tile ? { payload: tile, context: { player } } : undefined;
+    },
   }),
   signalBinding<[RpgPlayer]>({
     signal: "player.dead", scope: "player", hook: "onDead",

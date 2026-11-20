@@ -11,9 +11,23 @@ import type { PayloadField, SignalDesc } from "./filter";
 import type { ApiInfo, ApiParam, Host } from "./interpreter";
 
 /** A member of a handle (`$player.gold`): its TypeScript type, its documentation, and whether a script may assign it. */
-export interface MemberDesc { type: string; doc?: string; writable?: boolean }
+export interface MemberDesc {
+  type: string; doc?: string; writable?: boolean;
+  /**
+   * The property of the engine it mirrors (`player.through`, `map.widthPx`): the value is read from it, and written to it after it
+   * is checked against `type`. The environment does it; nothing else is written for it.
+   */
+  engine?: string;
+}
 /** A method of a handle (`$player.addItem(...)`): its signature as TypeScript, e.g. `(item: string): void`. A method that returns `void` cannot be used as a value. */
-export interface MethodDesc { sig: string; doc?: string; /** It answers at once (it reads): a listener that calls only such methods can reply to its signal. */ sync?: boolean }
+export interface MethodDesc {
+  sig: string; doc?: string; /** It answers at once (it reads): a listener that calls only such methods can reply to its signal. */ sync?: boolean;
+  /**
+   * The method of the engine it mirrors (`player.flash`, `map.getTick`): the arguments are checked against `sig`, then given to it
+   * as they are; what it returns is given back as plain data (nothing for a `void` signature). The environment does it.
+   */
+  engine?: string;
+}
 /** Members a handle takes by name (`$switch.door_open`, `$var.visits`): the description of the key, the type of the value, and whether a script may assign it. */
 export interface DynamicDesc { keyDoc: string; type: string; doc?: string; writable?: boolean }
 /** A `$name` a script can use: what it has (members, methods, a dynamic part), and whether its properties are declared by the script itself (`shared({ ... })`). */
@@ -31,9 +45,14 @@ export interface FnDesc { sig: string; doc?: string; /** a reference to a record
  * Everything a script may use, as plain data: the compiler refuses what is not here, `describeApi` turns it into the declarations
  * given to an agent, and each environment provides an `ApiImpl` for it.
  */
+/** A family of the API: what a kind of gameplay request needs, the names it uses, and an example. */
+export interface ApiFamily { name: string; doc: string; names: string[]; example?: string }
+
 export interface ApiDescription {
   handles: Record<string, HandleDesc>;
   functions: Record<string, FnDesc>;
+  /** The API by family of gameplay, listed first in the declarations given to an agent. */
+  families?: ApiFamily[];
   /** The signals the game emits, which scripts listen to with `on("signal", ...)`. */
   signals?: Record<string, SignalDesc>;
 }
@@ -142,6 +161,14 @@ const payloadType = (f: PayloadField): string =>
  */
 export function describeApi(desc: ApiDescription): string {
   const out: string[] = ["// Script API. Scripts are a JavaScript subset; only what is declared here exists.", ""];
+  if (desc.families?.length) {
+    out.push("// The API by family of gameplay: find the family of the request, then read the declarations of its names below.");
+    for (const family of desc.families) {
+      out.push(`// ## ${family.name}: ${family.doc}`, `//    ${family.names.join(", ")}`);
+      if (family.example) for (const line of family.example.split("\n")) out.push(`//    ${line}`);
+    }
+    out.push("");
+  }
   for (const [name, h] of Object.entries(desc.handles)) {
     out.push(`${h.doc ? `/** ${h.doc} */\n` : ""}declare const ${name}: {`);
     for (const [k, m] of Object.entries(h.members ?? {})) out.push(`  ${m.doc ? `/** ${m.doc} */ ` : ""}${m.writable ? "" : "readonly "}${k}: ${m.type};`);
