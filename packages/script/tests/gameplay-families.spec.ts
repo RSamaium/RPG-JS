@@ -258,7 +258,7 @@ describe("8. experience, skills, equipment and items", () => {
       { player: { items: { sword: 1, potion: 2 } }, sheet: { equipment: ["sword", "axe"], usable: ["potion"] } },
     );
     expect(r.value).toEqual([true, true, true, false, true, false, 1]);
-    expect(await fails(`$player.equip("sword", "yes");`)).toMatch(/true or false/);
+    expect(await fails(`const on = "yes"; $player.equip("sword", on);`)).toMatch(/true or false/);
   });
 });
 

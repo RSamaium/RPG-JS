@@ -34,6 +34,7 @@ import {
   schemaCameraFollow,
   schemaSetWeather,
   schemaSetHotbar,
+  schemaUseHotbarSlot,
   schemaCallMainMenu,
   schemaCallGameover,
   schemaShowSave,
@@ -192,6 +193,8 @@ export const defaultBlocks = [
     schemaSetWeather,
 
     schemaSetHotbar,
+
+    schemaUseHotbarSlot,
 
     schemaCallMainMenu,
 

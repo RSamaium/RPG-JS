@@ -7,6 +7,7 @@ import { createStudioRuntimeEventEditing } from "./runtime-event-editing";
 import { Move, RpgEvent, RpgMap, RpgPlayer, RpgServer, type RpgGameplayRoom, provideServerMapStreaming, type RpgPlayerConnectionContext } from "@rpgjs/server";
 import { defineModule, normalizeLightingState, WorldMapsManager, type RpgActionInput, type WorldMapConfig } from "@rpgjs/common";
 import { createBlockExecutionService } from "./block-executor";
+import { runStudioGuiInteraction } from "./gui-workflow";
 import { apiUrl, configureStudioConstants } from "./constants";
 import { RATIO_MAP_X, RATIO_MAP_Y } from "@common/map";
 import { matchesPageConditions } from "@common/blocks";
@@ -1246,6 +1247,9 @@ export default (_config?: unknown) => {
           await applyPlayerPresentation(player, config);
         }
       },
+      // A GUI of the Studio sends an interaction: run the block collection of that GUI it names
+      onGuiInteraction: (player: RpgPlayer, interaction: { guiId: string; name: string; data: unknown }) =>
+        runStudioGuiInteraction(player, interaction),
       onInput: (player: RpgPlayer, input: RpgActionInput<unknown>) => {
         if (input.action == "escape") {
           const map = player.getCurrentMap?.();

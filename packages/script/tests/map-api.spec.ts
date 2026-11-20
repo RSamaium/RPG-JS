@@ -197,7 +197,8 @@ describe("$map: the map the script runs in, with the names of RpgMap", () => {
 
     it("refuses a value out of range, and says which", async () => {
       await expect(run(`$map.playSound("a", { volume: 3 });`)).rejects.toThrow(/volume/);
-      await expect(run(`$map.playSound(7);`)).rejects.toThrow(/sound/);
+      await expect(run(`const id = 7; $map.playSound(id);`)).rejects.toThrow(/sound/);
+      await expect(run(`$map.playSound(7);`)).rejects.toThrow(/the argument 1 \(id\) must be a string/);
       await expect(run(`$map.showAnimation({ x: "a", y: 1 }, "g");`)).rejects.toThrow(/position/);
       await expect(run(`$map.shakeMap({ intensity: 1000 });`)).rejects.toThrow(/intensity/);
       await expect(run(`$map.shakeMap({ direction: "z" });`)).rejects.toThrow(/direction/);

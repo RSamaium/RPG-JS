@@ -8,7 +8,7 @@
  *   simulation cannot drift from the game by forgetting or inventing a name.
  */
 import type { PayloadField, SignalDesc } from "./filter";
-import type { ApiInfo, Host } from "./interpreter";
+import type { ApiInfo, ApiParam, Host } from "./interpreter";
 
 /** A member of a handle (`$player.gold`): its TypeScript type, its documentation, and whether a script may assign it. */
 export interface MemberDesc {
@@ -73,14 +73,50 @@ const HANDLE = Symbol("handle"), HOSTFN = Symbol("host-fn");
 const returnsNothing = (sig: string) => /\)\s*:\s*void\s*$/.test(sig);
 
 /**
+ * The parameters of a signature written as TypeScript (`(id: string, data?: object): void`): name, type, whether it is optional
+ * (`?`) or a rest parameter (`...`). Commas inside a type (`{ x: number; y: number }`, `Record<string, number>`) and in quoted
+ * texts do not split it.
+ *
+ * @param sig - The signature, starting with `(`.
+ * @returns The parameters, or `undefined` when the signature cannot be read (nothing is then checked).
+ */
+export function signatureParams(sig: string): ApiParam[] | undefined {
+  const text = sig.trim();
+  if (!text.startsWith("(")) return undefined;
+  const parts: string[] = [];
+  let depth = 0, quote = "", start = 1, end = -1;
+  for (let i = 1; i < text.length && end < 0; i++) {
+    const ch = text[i];
+    if (quote) { if (ch === "\\") i++; else if (ch === quote) quote = ""; continue; }
+    if (ch === '"' || ch === "'" || ch === "`") quote = ch;
+    else if ("([{<".includes(ch)) depth++;
+    else if (ch === ">" && text[i - 1] === "=") continue; // the arrow of a function type
+    else if (")]}>".includes(ch)) {
+      if (depth === 0 && ch === ")") end = i;
+      else depth--;
+    } else if (ch === "," && depth === 0) { parts.push(text.slice(start, i)); start = i + 1; }
+  }
+  if (end < 0) return undefined;
+  parts.push(text.slice(start, end));
+  const params: ApiParam[] = [];
+  for (const part of parts.map((p) => p.trim()).filter(Boolean)) {
+    const match = /^(\.\.\.)?([A-Za-z_$][\w$]*)(\?)?\s*:\s*([\s\S]+)$/.exec(part);
+    if (!match) return undefined;
+    params.push({ name: match[2], type: match[4].trim(), optional: !!match[3], rest: !!match[1] });
+  }
+  return params;
+}
+
+/**
  * What the compiler needs to know about an API: names, members, methods, which functions return nothing, which are references,
  * and the signals.
  *
  * @param desc - The description of the API.
  * @param catalog - The ids a reference may take, by kind (`{ item: ["potion"] }`). A kind that is not given is not checked.
+ * @param options - `checkArguments`: refuse a call with missing or extra arguments, or a literal of the wrong kind (see `ApiInfo`).
  * @returns The `ApiInfo` to give to `compileProgram`.
  */
-export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>): ApiInfo {
+export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>, options: { checkArguments?: boolean } = {}): ApiInfo {
   return {
     handles: Object.fromEntries(Object.entries(desc.handles).map(([name, h]) => [name, {
       dynamic: !!h.dynamic,
@@ -89,9 +125,14 @@ export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>
       methods: Object.keys(h.methods ?? {}),
       voidMethods: Object.entries(h.methods ?? {}).filter(([, m]) => returnsNothing(m.sig)).map(([k]) => k),
       syncMethods: Object.entries(h.methods ?? {}).filter(([, m]) => m.sync).map(([k]) => k),
+      params: Object.fromEntries(Object.entries(h.methods ?? {}).flatMap(([k, m]) => {
+        const params = signatureParams(m.sig);
+        return params ? [[k, params]] : [];
+      })),
     }])),
-    functions: Object.fromEntries(Object.entries(desc.functions).map(([name, f]) => [name, { ref: f.ref, void: returnsNothing(f.sig) }])),
+    functions: Object.fromEntries(Object.entries(desc.functions).map(([name, f]) => [name, { ref: f.ref, void: returnsNothing(f.sig), params: signatureParams(f.sig) }])),
     catalog,
+    checkArguments: options.checkArguments,
     signals: desc.signals,
   };
 }

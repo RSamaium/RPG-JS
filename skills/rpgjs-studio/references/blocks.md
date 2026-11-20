@@ -39,12 +39,22 @@ Blocks can declare `requiredCapabilities`.
 - `event`: needs a current RPGJS event.
 - `map`: needs a current map.
 - `variables`, `inventory`, `equipment`, `skills`, `ui`, `audio`: domain-specific capabilities.
+- `guiInteraction`: needs the interaction of a GUI that started the workflow.
 
 When building a map entry workflow (`mapLoadBlockCollectionId` / `mapLoadBlocks`), use
 blocks that can run with a current player and map, but without a current event. The
 Studio UI uses `eventBuilderProfiles.mapLoad` for this context; it hides blocks that
 require `event`, and removes field options such as `current_event` from compatible
 schemas.
+
+A GUI workflow is a block collection attached to a GUI (`blockCollectionIds` of the
+GUI). The code of the GUI starts it with the id of the collection as the name of the
+interaction (`interaction(blockCollectionId, data)`). The game runs it on the server for
+the player, with the source `gui_interaction` (`eventBuilderProfiles.guiInteraction`, or
+`guiInteractionMap` when the GUI is used on a map): there is no current event, and
+`context.guiInteraction` holds the collection id and the data the GUI sent. Only a
+collection attached to that GUI runs. The data comes from the client: a block reads only
+what it validates.
 
 ## Core endpoints
 
@@ -1150,6 +1160,21 @@ Custom `effect`:
 - `snow`
 - `fog`
 - `clouds`
+
+### `use_hotbar_slot`
+
+GUI workflows only. Uses the hotbar slot the GUI interaction selected: the integer
+`index` (0 to 9) of the data the GUI sent, with the rules of the hotbar. It never reads
+a skill or item id from the client. A missing or out of range index stops the workflow.
+
+```json
+{
+  "type": "use_hotbar_slot",
+  "data": {}
+}
+```
+
+The code of the GUI sends the slot: `interaction("BLOCK_COLLECTION_ID", { index: 2 })`.
 
 ### `call_main_menu`
 

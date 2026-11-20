@@ -55,7 +55,9 @@ describe("the names that mirror the engine, in a simulation", () => {
       ["player.getParamValue", { args: ["maxHp"] }],
     ]);
     expect(await error(`$player.flash({ type: "blink" });`)).toMatch(/options.type must be "alpha" or "tint" or "both"/);
-    expect(await error(`$player.setHitbox(24);`)).toMatch(/needs height/);
+    // a missing argument is refused when the script is checked; one the check cannot see, when it runs
+    expect((await simulate({ source: `export function f() { $player.setHitbox(24); }`, call: { fn: "f" } })).diagnostics?.[0].message).toMatch(/needs 2 arguments/);
+    expect(await error(`const args = [24]; $player.setHitbox(...args);`)).toMatch(/needs height/);
     expect(await error(`$player.moveRoutes("up");`)).toMatch(/routes must be a list/);
   });
 

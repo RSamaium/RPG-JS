@@ -51,12 +51,21 @@ export interface Host {
 
 /** What the compiler knows about the API, to refuse unknown names and collect permissions and references. */
 export interface ApiInfo {
-  handles: Record<string, { dynamic?: boolean; declared?: boolean; members: string[]; methods: string[]; voidMethods?: string[]; /** Methods that answer at once: a listener that calls only these can reply to its signal. */ syncMethods?: string[] }>;
-  functions: Record<string, { ref?: string; void?: boolean }>;
+  handles: Record<string, { dynamic?: boolean; declared?: boolean; members: string[]; methods: string[]; voidMethods?: string[]; /** Methods that answer at once: a listener that calls only these can reply to its signal. */ syncMethods?: string[]; /** The parameters of each method, read from its signature. */ params?: Record<string, ApiParam[]> }>;
+  functions: Record<string, { ref?: string; void?: boolean; /** The parameters, read from the signature. */ params?: ApiParam[] }>;
+  /** Refuses a call of the API with fewer arguments than its required parameters, more than it takes, or a literal of another
+   *  kind than a `string`, `number` or `boolean` parameter. Set when a script is checked before it is saved. */
+  checkArguments?: boolean;
   catalog?: Record<string, string[]>; // ref type -> known ids
   /** The signals the game emits. When given, `on("signal", ...)` only accepts these, and checks the paths of its filter. */
   signals?: Record<string, SignalDesc>;
 }
+
+/** A parameter of a function or method of the API, read from its signature (`(id: string, data?: object): void`). */
+export interface ApiParam { name: string; type: string; optional: boolean; rest: boolean }
+
+/** The literals a parameter of a primitive type accepts: a text for `string`, a number for `number`, true/false for `boolean`. */
+const PRIMITIVE_TYPES = new Set(["string", "number", "boolean"]);
 
 /** A property shared by the players of a map, declared by a script with `shared({ name: { initial, client, persist } })`. */
 export interface SharedDecl { name: string; initial: string | number | boolean | null; client: boolean; persist: boolean }
@@ -365,6 +374,35 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
   const statementCalls = new Set<AstNode>(); // calls whose result is ignored on purpose: allowed even when they return nothing
   const noValue = (what: string, node: AstNode): never => fail(`${what} returns nothing (void): its result cannot be used. Call it on its own line, and test the situation before or after.`, node);
 
+  /**
+   * Checks the arguments of a call of the API against the parameters of its signature: how many there are (unless one is spread)
+   * and the kind of a literal given to a `string`, `number` or `boolean` parameter.
+   */
+  const argumentsCheck = (label: string, params: ApiParam[] | undefined, n: AstNode) => {
+    if (!api?.checkArguments || !params) return;
+    const args: AstNode[] = n.arguments;
+    const shown = `(${params.map((p) => `${p.rest ? "..." : ""}${p.name}${p.optional ? "?" : ""}: ${p.type}`).join(", ")})`;
+    const plural = (count: number) => `${count} argument${count === 1 ? "" : "s"}`;
+    if (!args.some((a) => a.type === "SpreadElement")) {
+      const required = params.filter((p) => !p.optional && !p.rest).length;
+      const most = params.some((p) => p.rest) ? Infinity : params.length;
+      if (args.length < required) {
+        fail(`${label} needs ${required < most ? "at least " : ""}${plural(required)} ${shown}, got ${args.length}`, n);
+      }
+      if (args.length > most) fail(`${label} takes ${most === 0 ? "no argument" : `at most ${plural(most)} ${shown}`}, got ${args.length}`, n);
+    }
+    args.forEach((arg, i) => {
+      const param = params[Math.min(i, params.length - 1)];
+      if (!param || (i >= params.length && !param.rest) || arg.type === "SpreadElement" || !PRIMITIVE_TYPES.has(param.type)) return;
+      const kind = arg.type === "TemplateLiteral" ? "string"
+        : arg.type === "Literal" && !arg.regex ? (arg.value === null ? "null" : typeof arg.value)
+        : undefined;
+      if (kind && kind !== param.type) {
+        fail(`${label}: the argument ${i + 1} (${param.name}) must be a ${param.type}, got ${arg.type === "Literal" ? arg.raw ?? JSON.stringify(arg.value) : "a text"}`, arg);
+      }
+    });
+  };
+
   const isDenied = (k: string, node: AstNode) => { if (DENIED.has(k)) fail(`access to "${k}" is not allowed`, node); };
   const memberCheck = (objNode: AstNode, key: string, node: AstNode, method: boolean) => {
     if (objNode.type !== "Identifier" || !api) return;
@@ -542,6 +580,7 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       if (!declared(name) && !known.has(name)) fail(`unknown name "${name}"`, callee);
       const info = api?.functions[name];
       if (info?.void && !declared(name) && !statementCalls.has(n)) noValue(`"${name}"`, n);
+      if (info && !declared(name)) argumentsCheck(`"${name}"`, info.params, n);
       if (info?.ref && n.arguments[0]?.type === "Literal") {
         const id = String(n.arguments[0].value);
         program.refs.push({ function: name, id, line: n.loc?.start.line ?? 0 });
@@ -567,6 +606,9 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       isDenied(key, n);
       memberCheck(callee.object, key, n, true);
       if (callee.object.type === "Identifier" && !declared(callee.object.name) && api?.handles[callee.object.name]?.voidMethods?.includes(key) && !statementCalls.has(n)) noValue(`"${callee.object.name}.${key}"`, n);
+      if (callee.object.type === "Identifier" && !declared(callee.object.name)) {
+        argumentsCheck(`"${callee.object.name}.${key}"`, api?.handles[callee.object.name]?.params?.[key], n);
+      }
       // A method of a handle that answers at once (`$player.getVariable`) runs synchronously, so a listener that only reads can
       // reply to its signal (see `Program.runSync`).
       const syncMethod = callee.object.type === "Identifier" && !declared(callee.object.name)

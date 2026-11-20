@@ -36,6 +36,8 @@ export interface BlockExecutionOptions {
   variableScope?: 'player' | 'map';
   /** Read-only inputs seeded into the local workflow condition context. */
   initialVariables?: Readonly<Record<string, unknown>>;
+  /** The GUI interaction that started the workflow (source `gui_interaction`), given to the blocks as `context.guiInteraction`. */
+  guiInteraction?: GameExecutionContext["guiInteraction"];
 }
 
 /**
@@ -195,6 +197,7 @@ export class BlockExecutionService {
       executors: this.executors,
       moveApi: Move,
       areaShapeApi: AreaShape,
+      ...(options?.guiInteraction ? { guiInteraction: options.guiInteraction } : {}),
      
       // Switch operations
       getVariable: (variableId: string): unknown => {

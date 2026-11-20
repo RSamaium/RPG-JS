@@ -27,11 +27,15 @@
     }
   </Container>
 
+  <!-- The weather is drawn over the whole screen, above the sprites: it never takes the pointer events,
+       so the click, hover and cursor of `engine.interactions` reach the sprites under it. -->
   @for (builtinWeather of builtinWeatherList() ; track builtinWeather.key) {
-    <Weather ...builtinWeather.props />
+    <Container zIndex={builtinWeather.props.zIndex} eventMode="none">
+      <Weather ...builtinWeather.props />
+    </Container>
   }
   @for (customWeather of customWeatherList() ; track customWeather.key) {
-    <Container zIndex={customWeather.zIndex}>
+    <Container zIndex={customWeather.zIndex} eventMode="none">
       <customWeather.component ...customWeather.props />
     </Container>
   }

@@ -652,6 +652,18 @@ await runTests(source, [
 ])
 ```
 
+`checkScript` is what an editor calls before it saves a script. Besides what refuses a script when it is installed, it checks the
+calls of the API against their declarations: a call with fewer arguments than the required parameters, more than the function
+takes, or a literal of another kind than a `string`, `number` or `boolean` parameter is refused with the line and the signature:
+
+```ts
+checkScript(`export function close() {\n  $player.closeGui();\n}`).diagnostics
+// [{ line: 2, message: '"$player.closeGui" needs at least 1 argument (id: string, data?: object), got 0' }]
+```
+
+A script already installed in a game is not refused for its arguments when the game starts: the check is made when it is saved, as
+the references of `Item("…")` to the catalog are.
+
 `checkScript` also gives **warnings**, which do not refuse the script but point at what is likely wrong, with the line: a listener
 of `map.tick` without `every`, a `showText`, `showChoices`, `wait` or `startBattle` inside one (the ticks of the player are skipped
 until it is done), an event or a zone or a timer made in a loop, a `followPlayer` or `fleePlayer` that nothing stops, and

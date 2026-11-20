@@ -174,6 +174,10 @@ When `effect` matches a registered id, the scene renders that component instead 
 Every client renders it, including players who join later. A registered id replaces
 a built-in effect of the same name, so a game can restyle `rain`.
 
+The weather layer never takes pointer events: a click, a hover or the cursor of
+`engine.interactions` reaches the sprites under it, whatever the weather. A weather
+component therefore cannot be clicked; draw clickable things in a GUI or on a sprite.
+
 ## Rendering With CanvasEngine Preset
 
 The scene already renders the weather state with CanvasEngine. To draw it yourself
@@ -192,4 +196,6 @@ elsewhere, feed `@canvasengine/presets` with it:
 </Canvas>
 ```
 
-You can derive those values from `engine.sceneMap.weather()` / `engine.sceneMap.getWeather()`.
+You can derive those values from `engine.sceneMap.weather()` / `engine.sceneMap.getWeather()`. If you draw it above
+clickable sprites, put it in a container with `eventMode="none"`: its full-screen layer would
+otherwise take the pointer events of the sprites under it.
