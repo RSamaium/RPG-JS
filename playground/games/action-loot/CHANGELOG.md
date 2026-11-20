@@ -4,12 +4,12 @@
 
 ### Patch Changes
 
-- Updated dependencies [e132046]
-- Updated dependencies [e132046]
-  - @rpgjs/action-battle@5.4.0
-  - @rpgjs/common@5.4.0
-  - @rpgjs/server@5.5.0
-  - @rpgjs/client@5.6.0
+- Updated dependencies [bf389d4]
+- Updated dependencies [bf389d4]
+  - @rpgjs/action-battle@5.3.1
+  - @rpgjs/common@5.3.1
+  - @rpgjs/server@5.4.1
+  - @rpgjs/client@5.5.1
   - @rpgjs/vite@5.0.6
 
 ## 1.0.2

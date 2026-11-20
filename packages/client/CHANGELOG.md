@@ -1,16 +1,13 @@
 # @rpgjs/client
 
-## 5.6.0
-
-### Minor Changes
-
-- e132046: `map.playVisualEffect(position, effect, options)` takes a `target` (the map pixels the effect aims at: its emitters with `pathSpace: "target"` or `at: "target"` go there), the tuning of the preset (`color`, `intensity`, `sizeScale`, `speedScale`), a `delay` and `sounds` played on its timeline. The projectile looks take a preset of their own: `trailFx` and `impactFx` accept `{ preset, color, ... }` besides a preset name, and `shape: "none"` draws a projectile made only of its particles.
+## 5.5.1
 
 ### Patch Changes
 
-- Updated dependencies [e132046]
-  - @rpgjs/common@5.4.0
-  - @rpgjs/server@5.5.0
+- bf389d4: `map.playVisualEffect(position, effect, options)` takes a `target` (the map pixels the effect aims at: its emitters with `pathSpace: "target"` or `at: "target"` go there), the tuning of the preset (`color`, `intensity`, `sizeScale`, `speedScale`), a `delay` and `sounds` played on its timeline. The projectile looks take a preset of their own: `trailFx` and `impactFx` accept `{ preset, color, ... }` besides a preset name, and `shape: "none"` draws a projectile made only of its particles.
+- Updated dependencies [bf389d4]
+  - @rpgjs/common@5.3.1
+  - @rpgjs/server@5.4.1
 
 ## 5.5.0
 

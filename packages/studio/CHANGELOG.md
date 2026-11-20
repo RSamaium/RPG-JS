@@ -1,10 +1,10 @@
 # @rpgjs/studio
 
-## 5.6.0
+## 5.5.1
 
-### Minor Changes
+### Patch Changes
 
-- e132046: The Visual Effects and the Projectiles of the Studio database play with the published package (#499):
+- bf389d4: The Visual Effects and the Projectiles of the Studio database play with the published package (#499):
 
   - the blocks `play_visual_effect` and `launch_projectile` are in `defaultExecutors`;
   - a skill with a Visual Effect plays it from the caster to the target, and its damage lands at the `hitAt` of the effect (`createStudioActionBattlePreset` gives `skills.playEffect`);

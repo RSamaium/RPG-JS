@@ -4,8 +4,8 @@
 
 ### Patch Changes
 
-- Updated dependencies [e132046]
-  - @rpgjs/server@5.5.0
+- Updated dependencies [bf389d4]
+  - @rpgjs/server@5.4.1
 
 ## 5.0.5
 
