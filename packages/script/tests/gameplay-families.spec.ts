@@ -196,3 +196,85 @@ describe("5. battle and stats", () => {
     expect(report.results.map((r) => r.failures)).toEqual([[], []]);
   });
 });
+
+describe("6. how events look", () => {
+  it("changes the graphic of an event, plays its animations and shows emotion bubbles", async () => {
+    const r = await run(
+      `$map.setEventGraphic("chest", "chest_open");
+       $map.playEventAnimation("guard", "attack", 2);
+       $map.showEmotionBubble("guard", "surprise");
+       $player.showEmotionBubble("like");`,
+      { events: [{ id: "chest" }, { id: "guard" }] },
+    );
+    expect(r.effects).toEqual([
+      { name: "setEventGraphic", params: { id: "chest", graphic: "chest_open" } },
+      { name: "playEventAnimation", params: { id: "guard", animationName: "attack", times: 2 } },
+      { name: "showEmotionBubble", params: { id: "guard", emotion: "surprise" } },
+      { name: "showEmotionBubble", params: { emotion: "like" } },
+    ]);
+  });
+
+  it("checks the event, the emotion and the times", async () => {
+    const world = { events: [{ id: "guard" }] };
+    expect(await fails(`$map.setEventGraphic("nobody", "x");`, world)).toMatch(/no event "nobody"/);
+    expect(await fails(`$map.showEmotionBubble("guard", "<b>");`, world)).toMatch(/an emotion is a name/);
+    expect(await fails(`$map.playEventAnimation("guard", "attack", 500);`, world)).toMatch(/times is a number from 1 to 100/);
+  });
+});
+
+describe("7. states", () => {
+  it("gives, reads and takes away the states of the player", async () => {
+    const r = await run(
+      `const given = $player.addState("poison"); const twice = $player.addState("poison");
+       const had = $player.hasState("poison"); const list = $player.getStates();
+       const removed = $player.removeState("poison"); const again = $player.removeState("poison");
+       return [given, twice, had, list, removed, again, $player.hasState("poison")];`,
+      { sheet: { states: ["haste"] } },
+    );
+    expect(r.value).toEqual([true, false, true, ["haste", "poison"], true, false, false]);
+  });
+});
+
+describe("8. experience, skills, equipment and items", () => {
+  it("gives experience, which only grows", async () => {
+    const r = await run(`$player.exp += 120; $player.exp = -5; return $player.exp;`, { sheet: { exp: 30 } });
+    expect(r.value).toBe(0);
+    expect(await fails(`$player.exp -= 3;`)).toMatch(/only = and \+=/);
+  });
+
+  it("teaches and makes forget skills", async () => {
+    const r = await run(
+      `return [$player.learnSkill("fire"), $player.learnSkill("fire"), $player.hasSkill("fire"), $player.getSkills(), $player.forgetSkill("ice"), $player.forgetSkill("fire"), $player.getSkills()];`,
+      { sheet: { skills: ["heal"] } },
+    );
+    expect(r.value).toEqual([true, false, true, ["heal", "fire"], false, true, ["heal"]]);
+  });
+
+  it("equips and uses items of the inventory", async () => {
+    const r = await run(
+      `const equipped = $player.equip("sword"); const isIt = $player.isEquipped("sword"); const off = $player.equip("sword", false);
+       const notMine = $player.equip("axe"); const used = $player.useItem("potion"); const cannot = $player.useItem("sword");
+       return [equipped, isIt, off, notMine, used, cannot, $player.getItem("potion").quantity];`,
+      { player: { items: { sword: 1, potion: 2 } }, sheet: { equipment: ["sword", "axe"], usable: ["potion"] } },
+    );
+    expect(r.value).toEqual([true, true, true, false, true, false, 1]);
+    expect(await fails(`$player.equip("sword", "yes");`)).toMatch(/true or false/);
+  });
+});
+
+describe("9. enemies", () => {
+  it("makes an enemy appear, which counts in the events of scripts and can be removed", async () => {
+    const r = await run(
+      `const id = $map.spawnEnemy({ enemy: "slime", x: 200, y: 120, id: "slime-1" });
+       return [id, $map.getEvent(id).name, $map.removeEvent(id)];`,
+      { enemies: ["slime"] },
+    );
+    expect(r.value).toEqual(["slime-1", "slime", true]);
+    expect(r.effects[0]).toEqual({ name: "spawnEnemy", params: { enemy: "slime", x: 200, y: 120, id: "slime-1" } });
+  });
+
+  it("refuses an enemy the game does not have, or what an enemy is not described by", async () => {
+    expect(await fails(`$map.spawnEnemy({ enemy: "dragon", x: 1, y: 1 });`, { enemies: ["slime"] })).toMatch(/no enemy "dragon"/);
+    expect(await fails(`$map.spawnEnemy({ enemy: "slime", x: 1, y: 1, hp: 3 });`)).toMatch(/not "hp"/);
+  });
+});

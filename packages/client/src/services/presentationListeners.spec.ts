@@ -26,6 +26,25 @@ describe("presentation packets", () => {
     });
   });
 
+  it("skips a component animation of an object this client does not have", () => {
+    const handlers = new Map<string, (data: any) => void>();
+    const socket = { on: (event: string, cb: (data: any) => void) => handlers.set(event, cb) } as any;
+    const displayEffect = vi.fn();
+    const known = { id: "hero" };
+    const engine = {
+      scene: { weatherState: { set: vi.fn() }, lightingState: { set: vi.fn() }, getObjectById: (id: string) => (id === "hero" ? known : undefined) },
+      getComponentAnimation: () => ({ displayEffect }),
+    } as any;
+    registerPresentationListeners(socket, engine);
+
+    // an emotion bubble on an event that is not synchronized yet
+    handlers.get("showComponentAnimation")!({ id: "emotion-bubble", object: "chest-1", params: { emotion: "surprise" } });
+    handlers.get("showComponentAnimation")!({ id: "emotion-bubble", object: "hero", params: { emotion: "like" } });
+
+    expect(displayEffect).toHaveBeenCalledTimes(1);
+    expect(displayEffect).toHaveBeenCalledWith({ emotion: "like" }, known);
+  });
+
   it("routes presentation packets to the engine", () => {
     const handlers = new Map<string, (data: any) => void>();
     const socket = { on: (event: string, cb: (data: any) => void) => handlers.set(event, cb) } as any;

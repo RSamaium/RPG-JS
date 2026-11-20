@@ -680,6 +680,41 @@ const characterRuntime: EventTypeRuntime = {
   },
 };
 
+/**
+ * Turns an event into an enemy of the database of a Studio game: its parameters, level, natural attack, HP/SP, skills, and its
+ * battle AI (or the touch the interaction resolver gives), then its graphic. Used by the enemy event type and by the scripts
+ * (`$map.spawnEnemy`).
+ */
+export function initializeStudioEnemy(
+  event: RpgEvent,
+  enemy: any,
+  map: RpgMap | undefined,
+  options: { level?: number; fallbackParams?: any; object?: any; eventType?: string } = {},
+): void {
+  assignParams(event, enemy);
+  event.level = options.level ?? enemy.initialLevel ?? 1;
+  initializeEnemyNaturalAttackFromStudioConfig(event, enemy);
+  initializeEnemyVitalsFromParameters(event);
+  learnEnemySkills(event, enemy);
+  const interaction = getStudioEnemyInteractionResolver() && map
+    ? getStudioEnemyInteractionResolver()!({ event, enemy, map })
+    : "action";
+  if (typeof interaction === "object" && interaction) {
+    (event as any).__studioEnemyTouch = interaction.onTouch;
+  }
+  if (interaction === "action" || !interaction) {
+    const aiOptions = resolveEnemyBattleAiOptions(enemy);
+    (event as any).battleAi = new BattleAi(event, {
+      ...aiOptions,
+      rewards: {
+        ...enemy.reward,
+        showNotification: true,
+      },
+    });
+  }
+  applyGraphicSetting({ event, trigger: enemy, fallbackParams: options.fallbackParams, object: options.object, eventType: options.eventType } as any);
+}
+
 const enemyRuntime: EventTypeRuntime = {
   triggerSettings: [applyEnemyGraphicSetting, applyHitboxSetting],
   hooks: {
@@ -689,28 +724,12 @@ const enemyRuntime: EventTypeRuntime = {
       const map = context.map ?? context.event.getCurrentMap?.();
       const enemy = map?.database?.()?.[enemyId];
       if (enemy) {
-        assignParams(context.event, enemy);
-        context.event.level = trigger?.typeData?.level ?? enemy.initialLevel ?? 1;
-        initializeEnemyNaturalAttackFromStudioConfig(context.event, enemy);
-        initializeEnemyVitalsFromParameters(context.event);
-        learnEnemySkills(context.event, enemy);
-        const interaction = getStudioEnemyInteractionResolver() && map
-          ? getStudioEnemyInteractionResolver()!({ event: context.event, enemy, map })
-          : "action";
-        if (typeof interaction === "object" && interaction) {
-          (context.event as any).__studioEnemyTouch = interaction.onTouch;
-        }
-        if (interaction === "action" || !interaction) {
-          const aiOptions = resolveEnemyBattleAiOptions(enemy);
-          (context.event as any).battleAi = new BattleAi(context.event, {
-            ...aiOptions,
-            rewards: {
-              ...enemy.reward,
-              showNotification: true,
-            },
-          });
-        }
-        applyGraphicSetting({ event: context.event, trigger: enemy, fallbackParams: context.params, object: context.object, eventType: context.eventType });
+        initializeStudioEnemy(context.event, enemy, map, {
+          level: trigger?.typeData?.level,
+          fallbackParams: context.params,
+          object: context.object,
+          eventType: context.eventType,
+        });
       }
       await next();
     },

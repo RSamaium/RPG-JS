@@ -18,6 +18,7 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
   player: {
     exposed: {
       addItem: "$player.addItem",
+      addState: "$player.addState",
       allRecovery: "$player.hp",
       assignHotbarSlot: "$player.assignHotbarSlot",
       attachShape: "$map.attachShape",
@@ -25,9 +26,15 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
       changeMap: "$player.changeMap",
       createDynamicEvent: "$map.createDynamicEvent",
       direction: "$player.direction",
+      equip: "$player.equip",
+      equipments: "$player.isEquipped",
+      exp: "$player.exp",
+      forgetSkill: "$player.forgetSkill",
       getDirection: "$player.direction",
       getGui: "$player.updateGui",
       getItem: "$player.getItem",
+      getSkill: "$player.hasSkill",
+      getState: "$player.hasState",
       getTile: "$map.getTile",
       getVariable: "$player.getVariable",
       gold: "$player.gold",
@@ -35,6 +42,7 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
       hasItem: "$player.hasItem",
       hasVariable: "$player.hasVariable",
       hp: "$player.hp",
+      learnSkill: "$player.learnSkill",
       level: "$player.level",
       moveTo: "$map.moveEvent",
       name: "$player.name",
@@ -42,17 +50,24 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
       recovery: "$player.hp",
       removeGui: "$player.closeGui",
       removeItem: "$player.removeItem",
+      removeState: "$player.removeState",
       removeVariable: "$player.removeVariable",
+      setAnimation: "$map.playEventAnimation",
+      setGraphic: "$map.setEventGraphic",
       setVariable: "$player.setVariable",
       showAnimation: "$map.showAnimation",
       showChoices: "$player.showChoices",
       showComponentAnimation: "$map.showComponentAnimation",
+      showEmotionBubble: "$player.showEmotionBubble",
       showNotification: "$player.showNotification",
       showText: "$player.showText",
+      skills: "$player.getSkills",
       sp: "$player.sp",
+      states: "$player.getStates",
       stopMoveTo: "$map.stopEvent",
       teleport: "$player.teleport",
       tiles: "$map.getTile",
+      useItem: "$player.useItem",
       useSkill: "$player.useSkill",
       x: "$player.x",
       y: "$player.y",
@@ -77,11 +92,11 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
         "getActiveMovements", "hasActiveMovements", "infiniteMoveRoute", "knockback", "knockbackActive", "moveRoutes",
         "oscillate", "removeMovement", "replayRoutes", "shootProjectile", "speed"
       ],
-      "how the client draws the character (graphic, animation, components, camera, effects): the game designs it; scripts show animations with $map.showAnimation": [
+      "how the client draws the character beyond its graphic and its animations (components, camera, tint, hit texts, GUIs on the sprite): the game designs it; scripts change the graphic of an event and play its animations": [
         "animationFixed", "animationName", "cameraFollow", "componentsBottom", "componentsCenter", "componentsLeft",
         "componentsRight", "componentsTop", "directionFixed", "flash", "graphics", "hideAttachedGui", "removeComponents",
-        "setAnimation", "setComponentsBottom", "setComponentsCenter", "setComponentsLeft", "setComponentsRight",
-        "setComponentsTop", "setGraphic", "setGraphicAnimation", "showAttachedGui", "showEmotionBubble", "showHit", "tint"
+        "setComponentsBottom", "setComponentsCenter", "setComponentsLeft", "setComponentsRight", "setComponentsTop",
+        "setGraphicAnimation", "showAttachedGui", "showHit", "tint"
       ],
       "opens a GUI of the engine (menu, shop, save, game over, input) that the game wires itself: scripts open the GUIs of plugins with $player.openGui": [
         "callGameover", "callMainMenu", "callShop", "showCharacterSelect", "showInput", "showLoad", "showSave", "showSaveLoad"
@@ -89,15 +104,17 @@ export const ENGINE_COVERAGE: { player: EngineCoverage; event: EngineCoverage; m
       "moves the player to another room or server: the game owns its room flow, scripts use $player.changeMap": [
         "autoChangeMap", "changeRoom", "setMap", "transferRoom"
       ],
-      "the rules of the battle system (parameters, states, elements, effects, formulas, damage): the game and its battle module own them; scripts read and change hp and sp and start battles": [
-        "addParameter", "addState", "applyDamage", "applyEffect", "applyStates", "atk", "coefficientElements", "effects",
-        "elements", "elementsDefense", "elementsEfficiency", "findStateEfficiency", "getFeature", "getFormulas", "getParamItem",
-        "getParamValue", "getState", "hasEffect", "parameters", "paramsModifier", "pdef", "removeState", "sdef", "setParameter",
-        "states", "statesDefense", "statesEfficiency"
+      "the rules of the battle system (parameters, defenses, elements, effects, formulas, damage): the game and its battle module own them; scripts change hp, sp, states, and start battles": [
+        "addParameter", "applyDamage", "applyEffect", "applyStates", "atk", "coefficientElements", "effects", "elements",
+        "elementsDefense", "elementsEfficiency", "findStateEfficiency", "getFeature", "getFormulas", "getParamItem",
+        "getParamValue", "hasEffect", "parameters", "paramsModifier", "pdef", "sdef", "setParameter", "statesDefense",
+        "statesEfficiency"
       ],
-      "the character sheet the game designs (class, actor, experience, skills, equipment): scripts reward with gold, items and variables": [
-        "changeActor", "equip", "equipments", "exp", "expCurve", "expForNextlevel", "finalLevel", "forgetSkill", "getSkill",
-        "initialLevel", "items", "learnSkill", "setActor", "setClass", "skills", "useItem"
+      "the class, the actor and the curve of experience the game designs: scripts give experience, skills and equipment": [
+        "changeActor", "expCurve", "expForNextlevel", "finalLevel", "initialLevel", "setActor", "setClass"
+      ],
+      "the instances of the inventory: scripts read an item with $player.getItem and count with hasItem": [
+        "items"
       ],
       "trade goes through the shop of the game: scripts give and take items and gold": [
         "buyItem", "sellItem"

@@ -27,6 +27,21 @@ const serverModule = defineModule<RpgServer>({
       await p.changeMap("field", { x: 100, y: 100 });
     },
   },
+  database: {
+    poison: { id: "poison", _type: "state", name: "Poison" },
+    fire: { id: "fire", _type: "skill", name: "Fire", spCost: 0 },
+    sword: { id: "sword", _type: "weapon", name: "Sword" },
+    potion: { id: "potion", _type: "item", name: "Potion", consumable: true, hitRate: 1 },
+  },
+  // How the game makes the enemies scripts ask for (with Action Battle: createActionEnemy(event, preset))
+  scriptEnemy: {
+    create(event: any, enemyId: string) {
+      if (enemyId !== "slime") return undefined;
+      event.setGraphic("slime");
+      event.isSlime = true;
+      return true;
+    },
+  },
   // A battle system of the game, as the battle modules implement it
   studioBattle: {
     async start(_player: RpgPlayer, troop: string) {
@@ -205,5 +220,70 @@ describe("tiles on a real map", () => {
     await (player as any).execMethod("onMove");
     await settled(() => expect(player.getVariable(`kind_${n}`)).toBe("barrel"));
     expect(player.getVariable(`touched_${n}`)).toBe(1);
+  });
+});
+
+describe("appearance, states, character sheet and enemies on a real game", () => {
+  it("changes the graphic of an event, plays its animation and shows emotion bubbles", async () => {
+    const { player, map } = await start([onLevelUp("look", `
+      $map.setEventGraphic("chest_${n}", "chest_open");
+      $map.playEventAnimation("chest_${n}", "attack", 2);
+      $map.showEmotionBubble("chest_${n}", "surprise");
+      $player.showEmotionBubble("like");
+      $player.setVariable("look_${n}", true);
+    `)]);
+    await map.createDynamicEvent({ id: `chest_${n}`, x: 200, y: 100, event: { name: "chest" } });
+    const chest = map.getEvent(`chest_${n}`);
+    const bubbles = vi.spyOn(chest, "showEmotionBubble");
+    const animations = vi.spyOn(chest, "setAnimation");
+    const playerBubbles = vi.spyOn(player as any, "showEmotionBubble");
+    await levelUp(player);
+
+    await settled(() => expect(player.getVariable(`look_${n}`)).toBe(true));
+    expect(chest.graphics()).toContain("chest_open");
+    expect(animations).toHaveBeenCalledWith("attack", 2);
+    expect(bubbles).toHaveBeenCalledWith("surprise");
+    expect(playerBubbles).toHaveBeenCalledWith("like");
+  });
+
+  it("gives and takes states, skills, equipment, items and experience", async () => {
+    const { player } = await start([onLevelUp("sheet", `
+      $player.addItem("sword", 1);
+      $player.addItem("potion", 2);
+      $player.setVariable("sheet_${n}", [
+        $player.addState("poison"), $player.hasState("poison"), $player.getStates(), $player.removeState("poison"), $player.removeState("poison"),
+        $player.learnSkill("fire"), $player.learnSkill("fire"), $player.hasSkill("fire"), $player.getSkills(), $player.forgetSkill("fire"),
+        $player.equip("sword"), $player.isEquipped("sword"), $player.equip("potion"),
+        $player.useItem("potion"), $player.getItem("potion").quantity, $player.useItem("nothing"),
+      ]);
+      $player.exp += 50;
+    `)]);
+    const exp = (player as any).exp;
+    await levelUp(player);
+
+    await settled(() => expect(player.getVariable(`sheet_${n}`)).toEqual([
+      true, true, ["poison"], true, false,
+      true, false, true, ["fire"], true,
+      true, true, false,
+      true, 1, false,
+    ]));
+    expect((player as any).exp).toBe(exp + 50);
+  });
+
+  it("makes an enemy appear through the enemies of the game, and refuses one the game does not have", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { player, map } = await start([onLevelUp("spawn", `
+      const id = $map.spawnEnemy({ enemy: "slime", x: 220, y: 100, id: "slime_${n}" });
+      $player.setVariable("spawned_${n}", id);
+      $map.spawnEnemy({ enemy: "dragon", x: 260, y: 100, id: "dragon_${n}" });
+    `)]);
+    await levelUp(player);
+
+    await settled(() => expect(player.getVariable(`spawned_${n}`)).toBe(`slime_${n}`));
+    expect(map.getEvent(`slime_${n}`).isSlime).toBe(true);
+    expect(map.getEvent(`slime_${n}`).graphics()).toContain("slime");
+    await settled(() => expect(error.mock.calls.some((c) => String(c[0]).includes('no enemy "dragon"'))).toBe(true));
+    // the event made for the dragon was removed
+    expect(map.getEvent(`dragon_${n}`)).toBeUndefined();
   });
 });

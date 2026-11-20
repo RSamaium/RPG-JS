@@ -67,6 +67,9 @@ export interface DistanceOptions { distance?: number }
 export interface TileSnapshot { x: number; y: number; collision: boolean; properties: Record<string, unknown>; layers: { properties: Record<string, unknown> }[] }
 /** How a sight is tested: how far it reaches, how wide it is (degrees, around the direction of `from`), and whether walls hide. */
 export interface SightOptions { range?: number; angle?: number; walls?: boolean }
+/** An enemy a script makes appear: an event the game turns into an enemy of the kind `enemy` (an id of its enemies). */
+export interface EnemySpawnOptions { enemy: string; x: number; y: number; id?: string; name?: string }
+
 /** How a battle ended, as the battle systems of the game tell it. */
 export type BattleOutcome = "victory" | "defeat" | "escape";
 /** Which battle system plays a troop: a turn-based one, a tactical one, or (without `kind`) the one the game uses. */
@@ -215,6 +218,17 @@ export interface MapPort {
   getTile(x: number, y: number): TileSnapshot | undefined;
   /** Whether nothing that blocks (a wall, a static hitbox) stands between two points. */
   lineOfSight(from: { x: number; y: number }, to: { x: number; y: number }): boolean;
+  /** Changes the graphic of an event, as `event.setGraphic(graphic)` does. */
+  setEventGraphic(id: string, graphic: string): void | Promise<void>;
+  /** Plays an animation of the graphic of an event `times` times, as `event.setAnimation(name, times)` does. */
+  playEventAnimation(id: string, animationName: string, times: number): void | Promise<void>;
+  /** Shows an emotion bubble above an event, as `event.showEmotionBubble(emotion)` does. */
+  showEmotionBubble(id: string, emotion: string): void | Promise<void>;
+  /**
+   * Makes an event and asks the game to turn it into an enemy (the `scriptEnemy.create(event, enemyId)` hooks of its modules).
+   * Counts in `MAX_SCRIPT_EVENTS`. Refuses an enemy the game does not have (the event is then removed). Gives the id of the event.
+   */
+  spawnEnemy(options: EnemySpawnOptions): string | Promise<string>;
 }
 
 /** The player of the script, with the names of `RpgPlayer`. Every change is the engine's to apply. */
@@ -242,6 +256,29 @@ export interface PlayerPort {
    * `startTactical`) and waits for the end. Gives how it ended, or null when no system played it or none told.
    */
   startBattle(troopId: string, options: BattleOptions): Promise<BattleOutcome | null>;
+  /** Experience points; RPGJS levels the player up as they grow. */
+  exp: number;
+  /** Shows an emotion bubble above the player, as `player.showEmotionBubble(emotion)` does. */
+  showEmotionBubble(emotion: string): void | Promise<void>;
+  /** Gives a state of the database (poison, sleep…), as `player.addState(id)` does. False when the player already has it. */
+  addState(id: string): boolean | Promise<boolean>;
+  /** Takes a state away. False when the player does not have it. */
+  removeState(id: string): boolean | Promise<boolean>;
+  hasState(id: string): boolean;
+  /** The ids of the states of the player. */
+  getStates(): string[];
+  /** Teaches a skill of the database. False when the player already knows it. */
+  learnSkill(id: string): boolean | Promise<boolean>;
+  /** Makes the player forget a skill. False when the player does not know it. */
+  forgetSkill(id: string): boolean | Promise<boolean>;
+  hasSkill(id: string): boolean;
+  /** The ids of the skills the player knows. */
+  getSkills(): string[];
+  /** Equips (or takes off) a weapon or an armor of the inventory, as `player.equip(id, equipped)` does. False when it cannot. */
+  equip(id: string, equipped: boolean): boolean | Promise<boolean>;
+  isEquipped(id: string): boolean;
+  /** Uses an item of the inventory, as `player.useItem(id)` does (its effects, then it is consumed). False when it cannot. */
+  useItem(id: string): boolean | Promise<boolean>;
   getItem(id: string): ItemSnapshot | undefined;
   hasItem(id: string): boolean;
   addItem(id: string, nb: number): void | Promise<void>;
@@ -589,6 +626,22 @@ function inSight(w: ScriptWorld, from: unknown, to: unknown, o: unknown): boolea
   return x.walls ? mapOf(w).lineOfSight(a, b) : true;
 }
 const OUTCOMES: readonly BattleOutcome[] = ["victory", "defeat", "escape"];
+/** An emotion of a bubble: a built-in one ("like", "surprise", "idea"…) or one the game adds. */
+const emotion = (v: unknown) => {
+  if (typeof v !== "string" || !/^[a-z0-9_-]{1,50}$/i.test(v)) throw new Error('an emotion is a name of 1 to 50 letters, digits, _ or - ("like", "surprise", "idea"…)');
+  return v;
+};
+const MAX_ANIMATION_TIMES = 100;
+const SPAWN_KEYS = ["enemy", "x", "y", "id", "name"];
+function spawnOptions(o: unknown): EnemySpawnOptions {
+  const x = opts(o);
+  for (const k of Object.keys(x)) if (!SPAWN_KEYS.includes(k)) throw new Error(`an enemy is described by ${SPAWN_KEYS.join(", ")} (not "${k}")`);
+  const { x: px, y: py } = eventOptions({ x: x.x, y: x.y });
+  const out: EnemySpawnOptions = { enemy: text(x.enemy, "the id of an enemy"), x: px, y: py };
+  if (x.id !== undefined) { if (typeof x.id !== "string" || !EVENT_ID.test(x.id)) throw new Error("an event id is 1 to 100 letters, digits, _ . or -"); out.id = x.id; }
+  if (x.name !== undefined) out.name = text(x.name, "name");
+  return out;
+}
 function battleOptions(o: unknown): BattleOptions {
   const x = opts(o);
   for (const k of Object.keys(x)) if (k !== "kind") throw new Error(`a battle takes the option kind only (not "${k}")`);
@@ -634,6 +687,15 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         sp: { read: (w) => w.player.sp, write: pointsWrite("sp", "maxSp") },
         maxHp: { read: (w) => w.player.maxHp },
         maxSp: { read: (w) => w.player.maxSp },
+        exp: {
+          read: (w) => w.player.exp,
+          write: (w, op, v) => {
+            if (op !== "=" && op !== "+=") throw new Error("exp accepts only = and +=: the experience of a player grows");
+            const next = op === "=" ? Number(v) : w.player.exp + Number(v);
+            if (!Number.isFinite(next)) throw new Error("exp must stay a finite number");
+            w.player.exp = Math.max(0, Math.floor(next));
+          },
+        },
       },
       methods: {
         getItem: (w, [id]) => w.player.getItem(text(id, "an item id")),
@@ -657,6 +719,21 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
         assignHotbarSlot: (w, [slot, entry]) => w.player.assignHotbarSlot(hotbarSlot(slot), hotbarEntry(entry)),
         useSkill: (w, [id, o]) => w.player.useSkill(text(id, "a skill id"), skillUseOptions(o)),
         teleport: (w, [p]) => w.player.teleport(position(p)),
+        showEmotionBubble: (w, [e]) => w.player.showEmotionBubble(emotion(e)),
+        addState: (w, [id]) => w.player.addState(text(id, "a state id")),
+        removeState: (w, [id]) => w.player.removeState(text(id, "a state id")),
+        hasState: (w, [id]) => w.player.hasState(text(id, "a state id")),
+        getStates: (w) => [...w.player.getStates()],
+        learnSkill: (w, [id]) => w.player.learnSkill(text(id, "a skill id")),
+        forgetSkill: (w, [id]) => w.player.forgetSkill(text(id, "a skill id")),
+        hasSkill: (w, [id]) => w.player.hasSkill(text(id, "a skill id")),
+        getSkills: (w) => [...w.player.getSkills()],
+        equip: (w, [id, on]) => {
+          if (on !== undefined && typeof on !== "boolean") throw new Error("equipped is true or false");
+          return w.player.equip(text(id, "an item id"), on ?? true);
+        },
+        isEquipped: (w, [id]) => w.player.isEquipped(text(id, "an item id")),
+        useItem: (w, [id]) => w.player.useItem(text(id, "an item id")),
         startBattle: async (w, [id, o]) => {
           const outcome = await w.player.startBattle(text(id, "a troop id"), battleOptions(o));
           return outcome && OUTCOMES.includes(outcome) ? outcome : null;
@@ -719,6 +796,14 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
           if (typeof v !== "boolean") throw new Error("visible is true or false");
           return mapOf(w).setEventVisible(text(id, "an event id"), v);
         },
+        setEventGraphic: (w, [id, graphic]) => {
+          if (typeof graphic !== "string" || !graphic || graphic.length > 200) throw new Error("graphic is the id of a graphic, a text of 200 characters at most");
+          return mapOf(w).setEventGraphic(text(id, "an event id"), graphic);
+        },
+        playEventAnimation: (w, [id, name, times]) =>
+          mapOf(w).playEventAnimation(text(id, "an event id"), text(name, "an animation name"), times === undefined ? 1 : Math.floor(range(times, 1, MAX_ANIMATION_TIMES, "times"))),
+        showEmotionBubble: (w, [id, e]) => mapOf(w).showEmotionBubble(text(id, "an event id"), emotion(e)),
+        spawnEnemy: (w, [o]) => mapOf(w).spawnEnemy(spawnOptions(o)),
         getTile: (w, [x, y]) => {
           const tile = mapOf(w).getTile(finite(x, "x"), finite(y, "y"));
           return tile ? copyOf(tile) : undefined;

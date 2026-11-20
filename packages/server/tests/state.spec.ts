@@ -128,6 +128,8 @@ const serverModule = defineModule({
     berserk: BerserkState,
     regeneration: RegenerationState,
     shield: ShieldState,
+    // a state as plain data, as a Studio game gives its records
+    rage: { name: "Rage", description: "Attacks without thinking", effects: [], _type: "state" },
   },
   player: {
     async onConnected(player) {
@@ -465,3 +467,14 @@ describe("State Management - State Efficiency", () => {
   });
 });
 
+
+describe("State Management - States of plain data", () => {
+  test("adds, finds and removes a state the database gives as plain data", () => {
+    const state = player.addState("rage") as any;
+    expect(state).toMatchObject({ id: "rage", name: "Rage" });
+    expect(player.getState("rage")).toBe(state);
+    expect(player.addState("rage")).toBeNull();
+    player.removeState("rage");
+    expect(player.getState("rage")).toBeUndefined();
+  });
+});

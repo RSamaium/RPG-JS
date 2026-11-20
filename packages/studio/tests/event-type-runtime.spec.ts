@@ -10,6 +10,7 @@ import {
   resolveEnemyBattleAiOptions,
 } from "../src/event-type-runtime";
 import { configureStudioEnemyInteraction } from "../src/enemy-interaction";
+import { initializeStudioEnemy } from "../src/event-type-runtime";
 
 describe("Studio event runtime", () => {
   test("uses the media id before fileName for Studio media graphics", () => {
@@ -592,6 +593,25 @@ describe("Studio enemy interaction chosen by the host", () => {
     try {
       const { event, context } = createContext();
       await getEventTypeRuntime("enemy").hooks!.onInit!(context, async () => {});
+      expect(event.battleAi).toBeUndefined();
+    } finally {
+      configureStudioEnemyInteraction(undefined);
+    }
+  });
+});
+
+describe("an enemy made by a script ($map.spawnEnemy)", () => {
+  test("becomes the enemy of the database: its level, its graphic and the interaction of the host", () => {
+    const onTouch = vi.fn();
+    configureStudioEnemyInteraction(() => ({ onTouch }));
+    try {
+      const map: any = { database: () => ({}) };
+      const event: any = { hp: 0, sp: 0, param: {}, getCurrentMap: () => map, setGraphic: vi.fn(), learnSkill: vi.fn() };
+      initializeStudioEnemy(event, { parameters: {}, initialLevel: 3, graphic: "slime" }, map);
+
+      expect(event.level).toBe(3);
+      expect(event.setGraphic).toHaveBeenCalledWith("slime");
+      expect(event.__studioEnemyTouch).toBe(onTouch);
       expect(event.battleAi).toBeUndefined();
     } finally {
       configureStudioEnemyInteraction(undefined);

@@ -5,7 +5,7 @@
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import { MAXHP, MAXSP, Vector2 } from "@rpgjs/common";
-import { MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { type EnemySpawnOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -84,6 +84,30 @@ function playBattle(player: RpgPlayer, troopId: string, options: BattleOptions):
   });
 }
 
+/**
+ * Asks the modules of the game to turn an event into an enemy: their `scriptEnemy.create(event, enemyId)` hooks. A module that
+ * knows the enemy makes it (with Action Battle, `createActionEnemy(event, preset)`; a Studio game, from its database) and returns
+ * true; the others return nothing.
+ */
+function makeEnemy(event: RpgEvent, enemyId: string): Promise<boolean> {
+  const hooks = (event as any).hooks;
+  if (!hooks?.callHooks) return Promise.resolve(false);
+  return new Promise((resolve, reject) => {
+    let made = false;
+    hooks.callHooks("server-scriptEnemy-create", event, enemyId).subscribe({
+      next: (results: unknown) => { for (const result of Array.isArray(results) ? results : [results]) if (result === true) made = true; },
+      error: reject,
+      complete: () => resolve(made),
+    });
+  });
+}
+/** What RPGJS throws when an action cannot be done (not learned, not in the inventory…): the script hears it as false. */
+const attempt = (action: () => unknown): boolean => {
+  try { action(); return true; } catch { return false; }
+};
+const idsOf = (list: unknown): string[] =>
+  (Array.isArray(list) ? list : []).map((entry: any) => String(read(entry?.id) ?? "")).filter(Boolean);
+
 /** Emits a signal of the game, for the world that walks an event (`event.arrived`). */
 export type WorldEmit = (signal: string, payload: Record<string, unknown>, context: { player: RpgPlayer; map?: RpgMap | null; event?: RpgEvent | null }) => void;
 
@@ -125,6 +149,13 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
     const done = control(id, () => { stopped = true; stopMoving(event); });
     const loop = () => {
       if (stopped) return;
+      try { step(); } catch {
+        // the map or the player is gone (the game closed it): the follow ends
+        done(); stopped = true; stopMoving(event); return;
+      }
+      if (!stopped) setTimeout(loop, KEEP_CHECK_MS);
+    };
+    const step = () => {
       if (m.getEvent(id) !== event || (player.getCurrentMap?.() as unknown) !== map) { done(); stopped = true; stopMoving(event); return; }
       const from = centerOf(m, event), to = centerOf(m, player), d = Math.hypot(to.x - from.x, to.y - from.y);
       if (mode === "follow") {
@@ -132,11 +163,10 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
         else if (d <= distance && moving) { stopMoving(event); moving = false; }
       } else if (d < distance) {
         // run along the line from the player through the event, a little beyond the distance
-        const ux = d > 0 ? (from.x - to.x) / d : 1, uy = d > 0 ? (from.y - to.y) / d : 0, step = distance - d + 32;
-        event.moveTo({ x: from.x + ux * step, y: from.y + uy * step });
+        const ux = d > 0 ? (from.x - to.x) / d : 1, uy = d > 0 ? (from.y - to.y) / d : 0, reach = distance - d + 32;
+        event.moveTo({ x: from.x + ux * reach, y: from.y + uy * reach });
         moving = true;
       } else if (moving) { stopMoving(event); moving = false; }
-      setTimeout(loop, KEEP_CHECK_MS);
     };
     loop();
   };
@@ -251,6 +281,13 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
       const started = Date.now();
       const check = () => {
         if (over) return;
+        try { look(); } catch {
+          // the map or the player is gone: the move ends
+          over = true; done(); stopMoving(event); finish(false); return;
+        }
+        if (!over) setTimeout(check, MOVE_CHECK_MS);
+      };
+      const look = () => {
         if (m.getEvent(id) !== event) { over = true; done(); finish(false); return; }
         const at = centerOf(m, event), target = goal();
         if (Math.hypot(target.x - at.x, target.y - at.y) <= ARRIVE_DISTANCE) {
@@ -264,8 +301,7 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
           }, { player, map, event });
           return;
         }
-        if (Date.now() - started > MAX_MOVE_SECONDS * 1000) { over = true; done(); stopMoving(event); finish(false); return; }
-        setTimeout(check, MOVE_CHECK_MS);
+        if (Date.now() - started > MAX_MOVE_SECONDS * 1000) { over = true; done(); stopMoving(event); finish(false); }
       };
       setTimeout(check, MOVE_CHECK_MS);
       return o.wait ? arrived : true;
@@ -302,6 +338,29 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
       const info = tiled.getTileByPosition(x, y, [0, 0], { populateTiles: true });
       const layers = ((info?.tiles ?? []) as any[]).map((tile) => ({ properties: plainCopy(tile?.properties ?? {}) as Record<string, unknown> }));
       return { x: cellX, y: cellY, collision: !!info?.hasCollision, properties: Object.assign({}, ...layers.map((l) => l.properties)), layers };
+    },
+    setEventGraphic(id, graphic) {
+      eventOf(id).setGraphic(graphic);
+    },
+    playEventAnimation(id, animationName, times) {
+      eventOf(id).setAnimation(animationName, times);
+    },
+    showEmotionBubble(id, emotion) {
+      eventOf(id).showEmotionBubble(emotion);
+    },
+    async spawnEnemy(o: EnemySpawnOptions) {
+      if (made.size >= MAX_SCRIPT_EVENTS) throw new Error(`a script makes ${MAX_SCRIPT_EVENTS} events on a map at most`);
+      const id = o.id ?? `script-enemy-${Date.now().toString(36)}-${++eventCounter}`;
+      if (m.getEvent(id)) throw new Error(`an event "${id}" is already on the map`);
+      const created: string | undefined = await m.createDynamicEvent({ id, x: o.x, y: o.y, event: { name: o.name ?? o.enemy, onInit(this: any) { this.name = o.name ?? o.enemy; } } });
+      const event = created ? m.getEvent(created) : undefined;
+      if (!event) throw new Error("the map did not make the event");
+      if (!(await makeEnemy(event, o.enemy))) {
+        m.removeEvent(created);
+        throw new Error(`the game has no enemy "${o.enemy}": a module of the game makes its enemies with scriptEnemy.create(event, enemyId)`);
+      }
+      made.add(created!);
+      return created!;
     },
     lineOfSight(from, to) {
       const physic = m.physic;
@@ -487,6 +546,34 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
       await p.teleport(position);
     },
     startBattle: (troopId, options) => playBattle(player, troopId, options),
+    get exp() { return number(read(p.exp)); },
+    set exp(value: number) { p.exp = value; },
+    showEmotionBubble(emotion) { p.showEmotionBubble(emotion); },
+    hasState: (id) => !!p.getState?.(id),
+    getStates: () => idsOf(read(p.states)),
+    addState(id) {
+      if (p.getState(id)) return false;
+      p.addState(id);
+      return true;
+    },
+    removeState(id) {
+      if (!p.getState(id)) return false;
+      return attempt(() => p.removeState(id));
+    },
+    hasSkill: (id) => !!p.getSkill?.(id),
+    getSkills: () => idsOf(read(p.skills)),
+    learnSkill(id) {
+      if (p.getSkill(id)) return false;
+      p.learnSkill(id);
+      return true;
+    },
+    forgetSkill(id) {
+      if (!p.getSkill(id)) return false;
+      return attempt(() => p.forgetSkill(id));
+    },
+    isEquipped: (id) => !!read(p.getItem(id)?.equipped),
+    equip: (id, equipped) => attempt(() => p.equip(id, equipped)),
+    useItem: (id) => attempt(() => p.useItem(id)),
     getItem(id) {
       const item = p.getItem(id);
       if (!item) return undefined;

@@ -235,7 +235,13 @@ The player of the signal, with the names of `RpgPlayer`.
 | `x`, `y`, `direction` | read: the position on the map (the top-left of the hitbox, as `changeMap` and `teleport` take it) and where the player faces (`"up"`, `"down"`, `"left"`, `"right"`) |
 | `hp`, `sp` | read, and assign with `=`, `+=`, `-=`, `*=`: they stay between 0 and `maxHp` / `maxSp`; `hp` at 0 makes the player dead (`player.dead`) |
 | `maxHp`, `maxSp` | read; 0 when the game gives the player no maximum (no parameters), and then nothing is capped |
+| `exp` | read, and assign with `=` or `+=`: it never goes below 0, and the player levels up as it grows (`player.levelUp`) |
 | `teleport({ x, y })` | moves the player at once to a position of the map they are on |
+| `showEmotionBubble(emotion)` | an emotion bubble above the player, for every player of the map: `"like"`, `"surprise"`, `"idea"`, `"question"`, `"exclamation"`… |
+| `addState(id)`, `removeState(id)`, `hasState(id)`, `getStates()` | the states of the database (poison, sleep, haste…), with their effects on the parameters. `addState` gives `false` when the player already has it, `removeState` when the player does not |
+| `learnSkill(id)`, `forgetSkill(id)`, `hasSkill(id)`, `getSkills()` | the skills of the player (`player.skillChange` fires). `false` when it already knows it, or does not |
+| `equip(id, equipped?)`, `isEquipped(id)` | equips a weapon or an armor of the inventory, or takes it off with `false` (`player.itemEquip` fires). `false` when it cannot: not in the inventory, not equipment, refused by the class, already so |
+| `useItem(id)` | uses an item of the inventory as the player would: its effects and states apply, then one is consumed (`player.itemUse` fires). `false` when it cannot |
 | `startBattle(troopId, { kind }?)` | plays a troop with the battle system of the game and **waits** for the end: gives `"victory"`, `"defeat"` or `"escape"`, or `null` when the game has no battle system for it. `kind` is `"turn"` or `"tactical"`; without it the game picks. See [Battles](#battles) |
 | `getItem(id)` | a copy `{ id, name, quantity }` of an item of the inventory, or `undefined` |
 | `hasItem(id)`, `addItem(id, nb?)`, `removeItem(id, nb?)` | a player who has fewer items loses what they have, one who has none loses nothing |
@@ -345,6 +351,51 @@ on("player.joinMap", () => {
 on("player.inShape", { where: { "shape.eventId": "healer" } }, () => {
   $player.hp = $player.maxHp;
 });
+```
+
+**How events look**
+
+| Name | What it does |
+| --- | --- |
+| `setEventGraphic(id, graphic)` | changes the graphic of an event: an opened chest, a lit torch |
+| `playEventAnimation(id, animationName, times?)` | plays an animation of its graphic (attack, skill…) `times` times (1 by default, 100 at most), then the event walks and stands as before |
+| `showEmotionBubble(id, emotion)` | an emotion bubble above an event: `"surprise"` when a guard sees the player |
+
+```js
+on("event.action", { where: { "event.name": "chest" } }, () => {
+  const key = $event.id + "_opened";
+  if ($player.getVariable(key)) return;
+  $player.setVariable(key, true);
+  $map.setEventGraphic($event.id, "chest_open");
+  $player.addItem("potion", 1);
+});
+```
+
+**Enemies**
+
+| Name | What it does |
+| --- | --- |
+| `spawnEnemy({ enemy, x, y, id?, name? })` | makes an enemy appear and gives the id of its event: the game turns the event into the enemy `enemy`. It counts in the 50 events of scripts, `removeEvent` removes it, and it is refused when the game has no such enemy |
+
+The game says what an enemy is: a module implements `scriptEnemy.create(event, enemyId)`, makes the enemy and returns `true` (it
+returns nothing for an enemy it does not know). A Studio game does it already, from the enemies of its database, with their battle
+AI. With Action Battle in your own game:
+
+```ts
+import { createActionEnemy } from "@rpgjs/action-battle/server";
+import { Slime, Wolf } from "./enemies";
+
+const presets = { slime: Slime, wolf: Wolf };
+
+export default defineModule<RpgServer>({
+  scriptEnemy: {
+    create(event, enemyId) {
+      if (!presets[enemyId]) return;
+      createActionEnemy(event, enemyId, presets);
+      return true;
+    },
+  },
+} as RpgServer);
 ```
 
 **Tiles**

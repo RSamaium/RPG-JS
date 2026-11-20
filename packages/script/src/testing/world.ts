@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { type EnemySpawnOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -18,6 +18,14 @@ export class SimPlayer implements PlayerPort {
   private points = { hp: 100, sp: 50 };
   /** How the battles the script starts end, in order; `null` when the game has no battle system for it. */
   battles: (BattleOutcome | null)[] = [];
+  private experience = 0;
+  states = new Set<string>();
+  skills = new Set<string>();
+  /** The items that can be equipped, and the ones that are. */
+  equipment = new Set<string>();
+  equipped = new Set<string>();
+  /** The items that can be used. Every item can when it is empty. */
+  usable = new Set<string>();
   items = new Map<string, number>();
   vars = new Map<string, unknown>();
   /** The answers `showChoices` gives, in order (the index of the choice, -1 to close it). */
@@ -45,6 +53,54 @@ export class SimPlayer implements PlayerPort {
   set sp(value: number) {
     this.points.sp = Math.min(this.maxSp > 0 ? this.maxSp : Infinity, Math.max(0, value));
     this.record("sp", { value: this.points.sp });
+  }
+  get exp() { return this.experience; }
+  set exp(value: number) {
+    this.experience = value;
+    this.record("exp", { value });
+  }
+  /** Sets the experience without recording an effect: the starting point of a simulation. */
+  startExp(value: number) { this.experience = value; }
+  showEmotionBubble(emotion: string) { this.record("showEmotionBubble", { emotion }); }
+  hasState(id: string) { return this.states.has(id); }
+  getStates() { return [...this.states]; }
+  addState(id: string) {
+    if (this.states.has(id)) return false;
+    this.record("addState", { id });
+    this.states.add(id);
+    return true;
+  }
+  removeState(id: string) {
+    if (!this.states.delete(id)) return false;
+    this.record("removeState", { id });
+    return true;
+  }
+  hasSkill(id: string) { return this.skills.has(id); }
+  getSkills() { return [...this.skills]; }
+  learnSkill(id: string) {
+    if (this.skills.has(id)) return false;
+    this.record("learnSkill", { id });
+    this.skills.add(id);
+    return true;
+  }
+  forgetSkill(id: string) {
+    if (!this.skills.delete(id)) return false;
+    this.record("forgetSkill", { id });
+    return true;
+  }
+  isEquipped(id: string) { return this.equipped.has(id); }
+  equip(id: string, equipped: boolean) {
+    if (!this.hasItem(id) || !this.equipment.has(id) || this.equipped.has(id) === equipped) return false;
+    this.record("equip", { id, equipped });
+    if (equipped) this.equipped.add(id); else this.equipped.delete(id);
+    return true;
+  }
+  useItem(id: string) {
+    if (!this.hasItem(id) || (this.usable.size > 0 && !this.usable.has(id))) return false;
+    this.record("useItem", { id });
+    const left = (this.items.get(id) ?? 0) - 1;
+    if (left > 0) this.items.set(id, left); else this.items.delete(id);
+    return true;
   }
   teleport(position: { x: number; y: number }) {
     this.record("teleport", position);
@@ -260,6 +316,30 @@ export class SimMap implements MapPort {
     const tile = this.tiles.get(`${cx},${cy}`) ?? { collision: false, properties: {} };
     return { x: cx, y: cy, collision: tile.collision, properties: clone(tile.properties), layers: [{ properties: clone(tile.properties) }] };
   }
+  /** The enemies the game has; any enemy when it is empty. */
+  enemies = new Set<string>();
+  setEventGraphic(id: string, graphic: string) {
+    this.eventOf(id);
+    this.record("setEventGraphic", { id, graphic });
+  }
+  playEventAnimation(id: string, animationName: string, times: number) {
+    this.eventOf(id);
+    this.record("playEventAnimation", { id, animationName, times });
+  }
+  showEmotionBubble(id: string, emotion: string) {
+    this.eventOf(id);
+    this.record("showEmotionBubble", { id, emotion });
+  }
+  spawnEnemy(options: EnemySpawnOptions): string {
+    if (this.enemies.size > 0 && !this.enemies.has(options.enemy)) throw new Error(`the game has no enemy "${options.enemy}": a module of the game makes its enemies with scriptEnemy.create(event, enemyId)`);
+    if (this.made.size >= MAX_SCRIPT_EVENTS) throw new Error(`a script makes ${MAX_SCRIPT_EVENTS} events on a map at most`);
+    const id = options.id ?? `script-enemy-${++this.counter}`;
+    if (this.events.has(id)) throw new Error(`an event "${id}" is already on the map`);
+    this.record("spawnEnemy", options);
+    this.events.set(id, { id, name: options.name ?? options.enemy, x: options.x, y: options.y, direction: "down" });
+    this.made.add(id);
+    return id;
+  }
   /** Whether the segment between two points crosses no wall. */
   lineOfSight(from: { x: number; y: number }, to: { x: number; y: number }): boolean {
     return !this.walls.some((wall) => segmentHitsRect(from, to, wall));
@@ -332,6 +412,10 @@ export interface WorldInit {
     gold?: number; level?: number; name?: string; items?: Record<string, number>;
     x?: number; y?: number; direction?: string; hp?: number; sp?: number; maxHp?: number; maxSp?: number;
   };
+  /** What the player has of its character sheet: experience, states, skills, the items that can be equipped and the ones that are, the items that can be used (every item when not given). */
+  sheet?: { exp?: number; states?: string[]; skills?: string[]; equipment?: string[]; equipped?: string[]; usable?: string[] };
+  /** The enemies the game has, for $map.spawnEnemy (any when not given). */
+  enemies?: string[];
   /** How the battles the script starts end, in order ("victory" when not given); null when the game has no battle system. */
   battles?: (BattleOutcome | null)[];
   /** The tiles of the map, by cell (x and y in tiles), and their size (32 pixels by default). */
@@ -398,6 +482,13 @@ export class SimWorld implements ScriptWorld {
     });
     this.player.startPoints(init.player?.hp ?? this.player.maxHp, init.player?.sp ?? this.player.maxSp);
     this.player.battles = [...(init.battles ?? [])];
+    const sheet = init.sheet ?? {};
+    this.player.startExp(sheet.exp ?? 0);
+    this.player.states = new Set(sheet.states ?? []);
+    this.player.skills = new Set(sheet.skills ?? []);
+    this.player.equipment = new Set([...(sheet.equipment ?? []), ...(sheet.equipped ?? [])]);
+    this.player.equipped = new Set(sheet.equipped ?? []);
+    this.player.usable = new Set(sheet.usable ?? []);
     for (const [k, v] of Object.entries(init.player?.items ?? {})) this.player.items.set(k, v);
     for (const [k, v] of Object.entries(init.vars ?? {})) this.player.vars.set(k, v);
     Object.assign(this.state, JSON.parse(JSON.stringify(init.state ?? {})));
@@ -417,6 +508,7 @@ export class SimWorld implements ScriptWorld {
       for (const t of init.tiles ?? []) this.map.tiles.set(`${t.x},${t.y}`, { collision: !!t.collision, properties: clone(t.properties ?? {}) });
       if (init.tileSize) this.map.tileSize = init.tileSize;
       this.map.walls = clone(init.walls ?? []);
+      this.map.enemies = new Set(init.enemies ?? []);
     }
   }
 
@@ -462,7 +554,8 @@ export class SimWorld implements ScriptWorld {
     return {
       player: {
         gold: this.player.gold, level: this.player.level, name: this.player.name, map: this.player.map, items: Object.fromEntries(this.player.items),
-        x: this.player.x, y: this.player.y, hp: this.player.hp, sp: this.player.sp,
+        x: this.player.x, y: this.player.y, hp: this.player.hp, sp: this.player.sp, exp: this.player.exp,
+        states: [...this.player.states], skills: [...this.player.skills], equipped: [...this.player.equipped],
       },
       /** The events of the map, by id: where they are, where they face, and whether they follow or flee the player. */
       events: Object.fromEntries([...(this.map?.events.values() ?? [])].map((e) => [e.id, { ...e, moving: this.map?.moving.get(e.id) ?? null }])),

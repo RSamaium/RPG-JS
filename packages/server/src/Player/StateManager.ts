@@ -77,8 +77,12 @@ export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
       return stateInput;
     }
 
-    private _createStateInstance(stateClass: StateClass) {
-      return new (stateClass as StateClass)();
+    /** A state of the database is a class, or plain data (a Studio record): plain data gives a copy of it. */
+    private _createStateInstance(stateClass: StateClass, id?: string) {
+      if (typeof stateClass === "function") return new (stateClass as StateClass)();
+      const instance: any = { ...(stateClass as object) };
+      if (instance.id === undefined && id !== undefined) instance.id = id;
+      return instance;
     }
 
     /**
@@ -154,17 +158,21 @@ export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
     }
 
     getState(stateClass: StateClass | string): StateData | undefined {
+      const id = typeof stateClass === "string" ? stateClass : (stateClass as { id?: string } | undefined)?.id;
       if (isString(stateClass)) stateClass = (this as any).databaseById(stateClass);
       return this.states().find((state) => {
         if (isString(stateClass)) {
           return state.id == stateClass;
         }
+        // a state of plain data (a Studio record) is found by its id
+        if (typeof stateClass !== "function") return id !== undefined && state.id == id;
         return isInstanceOf(state, stateClass);
       });
     }
 
     addState(stateClass: StateClass | string, chance = 1): object | null {
       const state = this.getState(stateClass);
+      const id = typeof stateClass === "string" ? stateClass : undefined;
       if (isString(stateClass)) {
         stateClass = (this as any).databaseById(stateClass);
       }
@@ -173,7 +181,7 @@ export function WithStateManager<TBase extends PlayerCtor>(Base: TBase) {
           throw StateLog.addFailed(stateClass);
         }
         //const efficiency = this.findStateEfficiency(stateClass)
-        const instance = this._createStateInstance(stateClass as StateClass);
+        const instance = this._createStateInstance(stateClass as StateClass, id);
         this.states().push(instance);
         this.applyStates(<any>this, instance);
         return instance;
