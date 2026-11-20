@@ -177,6 +177,9 @@ export interface SetHotbarParams {
   slotCount?: number;
 }
 
+/** Parameters for the use_hotbar_slot block: none, the slot comes from the GUI interaction. */
+export type UseHotbarSlotParams = Record<string, never>;
+
 /** How a battle ended, as the battle system that played it tells. */
 export type BattleOutcome = 'victory' | 'defeat' | 'escape';
 
@@ -1159,6 +1162,7 @@ export interface BlockParamsMap {
   show_animation: ShowAnimationParams;
   camera_follow: CameraFollowParams;
   set_hotbar: SetHotbarParams;
+  use_hotbar_slot: UseHotbarSlotParams;
   call_main_menu: CallMainMenuParams;
   call_gameover: CallGameoverParams;
   show_save: ShowSaveParams;
@@ -1256,10 +1260,11 @@ export type ExecutionCapability =
   | 'equipment'
   | 'skills'
   | 'ui'
-  | 'audio';
+  | 'audio'
+  | 'guiInteraction';
 
 export interface EventBuilderExecutionProfile {
-  source: 'event_page' | 'common_event' | 'map_load' | string;
+  source: 'event_page' | 'common_event' | 'map_load' | 'gui_interaction' | string;
   capabilities: readonly ExecutionCapability[];
   blocks?: {
     include?: readonly string[];
@@ -1560,6 +1565,16 @@ export interface GameExecutionContext {
   event: ExecutionEvent | any;
   /** Current map instance for map-level workflows */
   map?: any;
+  /**
+   * The GUI interaction that started the workflow (source `gui_interaction`): the block collection the GUI asked for and
+   * the data it sent. The data comes from the client: a block reads only what it validates (an index, never an item id).
+   */
+  guiInteraction?: {
+    blockCollectionId: string;
+    data: Readonly<Record<string, unknown>>;
+    /** Runtime id of the GUI that sent it (`rpg-main-menu`, `rpg-hotbar`...). */
+    gui?: string;
+  };
   /** Reference to executors for recursive execution */
   executors?: RuntimeBlockExecutorRegistry;
   /** Metadata for the current target while executing query_area children. */
