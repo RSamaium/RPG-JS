@@ -1,5 +1,17 @@
 # @rpgjs/playground-action-loot
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [bf389d4]
+- Updated dependencies [bf389d4]
+  - @rpgjs/action-battle@5.3.1
+  - @rpgjs/common@5.3.1
+  - @rpgjs/server@5.4.1
+  - @rpgjs/client@5.5.1
+  - @rpgjs/vite@5.0.6
+
 ## 1.0.2
 
 ### Patch Changes
