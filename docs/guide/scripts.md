@@ -435,6 +435,18 @@ await runTests(source, [
 ])
 ```
 
+`checkScript` is what an editor calls before it saves a script. Besides what refuses a script when it is installed, it checks the
+calls of the API against their declarations: a call with fewer arguments than the required parameters, more than the function
+takes, or a literal of another kind than a `string`, `number` or `boolean` parameter is refused with the line and the signature:
+
+```ts
+checkScript(`export function close() {\n  $player.closeGui();\n}`).diagnostics
+// [{ line: 2, message: '"$player.closeGui" needs at least 1 argument (id: string, data?: object), got 0' }]
+```
+
+A script already installed in a game is not refused for its arguments when the game starts: the check is made when it is saved, as
+the references of `Item("…")` to the catalog are.
+
 The world of a simulation is a map called `start` by default; `world: { room: { id: "battle-1", kind: "battle" } }` makes it a room
 that is not a map, `events` and `shapes` put the events and the zones of the game on the map, and `data` (`{ quests_quest: [{ id: "wolves", name: "Wolves" }] }`) the records of its database, for `$data`.
 

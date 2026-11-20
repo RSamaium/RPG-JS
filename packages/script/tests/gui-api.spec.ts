@@ -31,7 +31,8 @@ describe("a script opens, updates and closes the GUIs of a game, as player.gui(i
   it("refuses an id that is not a GUI of a plugin: the GUIs of the game (rpg-…) are not the scripts'", async () => {
     await expect(run(`$player.openGui("rpg-title-screen");`)).rejects.toThrow(/GUI/);
     await expect(run(`$player.openGui("");`)).rejects.toThrow(/GUI/);
-    await expect(run(`$player.openGui(3);`)).rejects.toThrow(/GUI/);
+    await expect(run(`const id = 3; $player.openGui(id);`)).rejects.toThrow(/GUI/);
+    await expect(run(`$player.openGui(3);`)).rejects.toThrow(/the argument 1 \(id\) must be a string/);
     await expect(run(`$player.closeGui("rpg-main-menu");`)).rejects.toThrow(/GUI/);
   });
 
