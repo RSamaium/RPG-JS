@@ -1,5 +1,48 @@
 # @rpgjs/client
 
+## 5.5.0
+
+### Minor Changes
+
+- 5a21bac: Projectiles can aim at a point or an entity with `target`; an `arc` lands on it and, with `landing: { radius }`, hits what stands there. Types without a registered component are drawn by a standard projectile component whose look (shape or spritesheet, shadow, trail, impact by surface, sound, shake) is declared per type on the client with `projectiles.looks`, so the server only sends the type; `params` can still override single fields of one shot. Impacts carry a `surface` (`target`, `wall` or `ground`), components receive `flightAngle`, and `params.impactDuration` sets how long an impact stays drawn.
+
+  Action Battle weapons whose `action.mode` is `projectile` now turn the basic attack into a shot released at the end of the attack startup, aimed at the soft target found within `action.range`. `action.projectile` accepts `trajectory`, `landing`, `linger`, `pierce`, `wall`, `collide` and `delay`, and an `arc` lands on the target of the action. Action Battle projectiles are stopped by walls and hit non-combat events that declare `onProjectileHit` (a switch, a bush) without damaging them.
+
+  Action Battle no longer ships its own projectile component: its projectiles are drawn by the standard projectile component of `@rpgjs/client`, so `projectile.params` takes the standard look options. Register a component for `action-battle-skill` to keep a custom look.
+
+  A ranged weapon keeps the timing of its own `attackProfile` instead of the melee combo steps, and its soft targeting also aims at scenery that declares `onProjectileHit`. `LPCSpritesheetPreset` gains a `shoot` animation for bows.
+
+  `projectiles.emit()` accepts `delay`, a wind-up in ms before the projectile leaves.
+
+  Fixes enemies driven by a behavior tree or a `simpleBehavior` staying in the alert state after spotting a target, where their attacks were neither shown nor chained. Fixes weapon actions failing after their damage because no skill states could be applied, which left the enemy AI unaware of the hit. The client now predicts the attack lock from the equipped weapon profile, which removes the position corrections after a shot.
+
+- bb3f5d3: `engine.hideMapObjects({ events, players })` hides map objects for the local client only, while a module draws its own scene on the map (a battle board, a cutscene, a minigame). Each kind takes `true`, a list of ids or a function, and `players` also takes `'others'` (every player but the local one). Only the drawing is hidden (sprite, name, components, attached GUIs, lighting shadow): the objects keep being synchronized, the server and the other players see no change, and objects that enter the map later follow the same filter. It returns a function that shows the objects again; calls compose, and the filters are dropped on a map change. `engine.isMapObjectHidden(id)` reads it reactively.
+- 53a7ec6: The impact sound and map shake of the standard projectile component only reach the players near the impact: they fade with the distance to the local player (the sound also pans to the side of the impact) and stop beyond `feedbackDistance` (480 px by default, set per look). In an MMORPG, a fight elsewhere on the map no longer shakes every screen.
+- a8ea400: `map.playVisualEffect(position, effect, options?)` plays a one-shot particle effect for the players of the map: a built-in preset by name, or a resolved particle preset (the payload of a Studio Visual Effect) with `options.preset`. The client registers the `rpg:visual-effect` component animation (the CanvasEngine `Fx` preset) by default.
+
+  Scripts: `$map.playVisualEffect({ effect, at, preset?, duration?, scale? })`, and `$map.launchProjectile` takes `owner: "player"` so the player of the script launches the projectile: it flies through them, and `projectile.end` and `event.projectileHit` fire for them.
+
+### Patch Changes
+
+- 4a3affe: A component animation (an emotion bubble, a hit) sent for an object the client does not have yet, such as an event made a moment before, is skipped instead of throwing an unhandled error.
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+- 5f6665a: `player.useSkill` refuses a silenced player (`CAN_NOT_SKILL`) before any skill use handler runs, and a skill given as a class or an object reaches the handlers by its id. With Action Battle, a target given to `useSkill` must be allowed by the action and within its reach, and the player turns toward the target only once the skill is used. A ranged weapon releases no projectile when the player is defeated, changes map or cancels the attack during the startup. The client weapon profile is kept per connection. Projectile targets are synchronized after a hit only when a hook ran.
+- b72be55: The weather of a map no longer blocks the pointer events of the sprites. Its full-screen layer, drawn above the events, was hit-tested first (the viewport is interactive), so the `click`, `hoverPopover` and `cursor` behaviors of `engine.interactions` never fired on a map with a weather. The built-in `<Weather>` and the custom weather components are now rendered in a container with `eventMode="none"`.
+- Updated dependencies [5a21bac]
+- Updated dependencies [f0ee243]
+- Updated dependencies [561e68c]
+- Updated dependencies [e05bfa1]
+- Updated dependencies [4a3affe]
+- Updated dependencies [e3bbe79]
+- Updated dependencies [66d1866]
+- Updated dependencies [5f6665a]
+- Updated dependencies [c7cde92]
+- Updated dependencies [98d480d]
+- Updated dependencies [f2a2530]
+- Updated dependencies [a8ea400]
+  - @rpgjs/server@5.4.0
+  - @rpgjs/common@5.3.0
+
 ## 5.4.0
 
 ### Minor Changes

@@ -1,5 +1,52 @@
 # @rpgjs/server
 
+## 5.4.0
+
+### Minor Changes
+
+- 5a21bac: Projectiles can aim at a point or an entity with `target`; an `arc` lands on it and, with `landing: { radius }`, hits what stands there. Types without a registered component are drawn by a standard projectile component whose look (shape or spritesheet, shadow, trail, impact by surface, sound, shake) is declared per type on the client with `projectiles.looks`, so the server only sends the type; `params` can still override single fields of one shot. Impacts carry a `surface` (`target`, `wall` or `ground`), components receive `flightAngle`, and `params.impactDuration` sets how long an impact stays drawn.
+
+  Action Battle weapons whose `action.mode` is `projectile` now turn the basic attack into a shot released at the end of the attack startup, aimed at the soft target found within `action.range`. `action.projectile` accepts `trajectory`, `landing`, `linger`, `pierce`, `wall`, `collide` and `delay`, and an `arc` lands on the target of the action. Action Battle projectiles are stopped by walls and hit non-combat events that declare `onProjectileHit` (a switch, a bush) without damaging them.
+
+  Action Battle no longer ships its own projectile component: its projectiles are drawn by the standard projectile component of `@rpgjs/client`, so `projectile.params` takes the standard look options. Register a component for `action-battle-skill` to keep a custom look.
+
+  A ranged weapon keeps the timing of its own `attackProfile` instead of the melee combo steps, and its soft targeting also aims at scenery that declares `onProjectileHit`. `LPCSpritesheetPreset` gains a `shoot` animation for bows.
+
+  `projectiles.emit()` accepts `delay`, a wind-up in ms before the projectile leaves.
+
+  Fixes enemies driven by a behavior tree or a `simpleBehavior` staying in the alert state after spotting a target, where their attacks were neither shown nor chained. Fixes weapon actions failing after their damage because no skill states could be applied, which left the enemy AI unaware of the hit. The client now predicts the attack lock from the equipped weapon profile, which removes the position corrections after a shot.
+
+- 66d1866: Module hooks `event.onProjectileHit` and `player.onProjectileHit` can reply `"pass"`, `"stick"` or `"stop"` (returned at once, not from a promise) to decide what the projectile does; the first module that replies wins and the event's own `onProjectileHit` has the last word.
+
+  Scripts: `event.projectileHit` and `player.projectileHit` take the same replies. Only a listener that answers at once can reply: it reads the payload and the handles and calls only the methods that read, now marked `sync` in the API description (`getVariable`, `hasItem`, `getEvent`...). A listener that waits still runs as an observer. Script core: `SignalDesc.reply`, `MethodDesc.sync`, `SignalRegistry.emitSync`, `Program.runSync` and `ScriptService.emitSync`; a binding declares `reply: true` for a hook that asks before acting.
+
+- c7cde92: The `onDestroy` hook of the projectiles receives `x`, `y` (where the projectile ended: the impact, where it landed, or the end of its range) and `surface` (`target`, `wall` or `ground`).
+
+  Scripts: `projectile.end` gives that point instead of the origin of the projectile, which it gave for a bomb that landed or a shot that reached its range, and adds `surface`. `$map.launchProjectile` takes `arc` (lob it onto `toward`), `landingRadius` (hit what stands where it lands) and `delay` (a wind-up in ms).
+
+- 98d480d: Scripts can react to kinds of things, marked by tags, rather than to names. An event has `tags` (`event.tags`, empty by default), taken from the `tags` of its definition (`createDynamicEvent({ event: { name, tags } })`) or of `@EventData({ tags })`. The signals about a thing of the game give its tags as a list, empty when it has none: `event.action` and `event.touch` give `event.tags`, `player.joinMap`, `player.leaveMap`, `player.joinRoom` and `player.leaveRoom` give `mapTags` (the `tags` of the map data), the item signals give `itemTags` and `player.skillChange` gives `skillTags` (the `tags` of the record in the database). Filter with `where: { "event.tags": { has: "help" } }`; the descriptions of the signals name the new fields. A Studio game gives an event the tags of its Studio event (a new optional `tags` field) and a map the tags of its Studio map.
+- f2a2530: `registerSkillUseHandler(handler)` lets a battle system run `player.useSkill`. Action Battle uses it: on a map where it is enabled, `player.useSkill(id, target?)` runs a skill that has an `action` with the battle rules (projectile, damage formula, factions, states, SP cost, cooldown, soft targeting without a target). Hotbar skills, server code and scripts now hit the same way.
+
+  Scripts: `$player.useSkill(skillId, { target? })` uses a skill (target: id of an event or a player of the map) and gives `false` when it cannot be used now. The `damage` of `$map.launchProjectile` is now really removed from what the projectile hits (it was only stored in the payload); it is fixed damage, without the battle rules. The script docs no longer say `projectile` can be a Studio projectile record: it is the type the clients draw.
+
+- a8ea400: `map.playVisualEffect(position, effect, options?)` plays a one-shot particle effect for the players of the map: a built-in preset by name, or a resolved particle preset (the payload of a Studio Visual Effect) with `options.preset`. The client registers the `rpg:visual-effect` component animation (the CanvasEngine `Fx` preset) by default.
+
+  Scripts: `$map.playVisualEffect({ effect, at, preset?, duration?, scale? })`, and `$map.launchProjectile` takes `owner: "player"` so the player of the script launches the projectile: it flies through them, and `projectile.end` and `event.projectileHit` fire for them.
+
+### Patch Changes
+
+- f0ee243: Damage formulas no longer turn HP into `NaN`: a parameter that is not set (such as an `ATK` lost by `changeMap()`) counts as 0, the default skill formula takes a skill without `power` or `coefficient`, and a custom formula that gives no number deals no damage and logs a warning.
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+- e05bfa1: Hotbar: an item received after the hotbar was seeded takes the first free accessible slot (`player.configureHotbar({ autoAssignItems: false })` turns it off).
+- 4a3affe: A state of the database given as plain data (a Studio record, `{ name, effects, _type: "state" }`) can be added, found and removed: `player.addState("poison")` failed with `stateClass is not a constructor`. The state is a copy of the record, with its id.
+- e3bbe79: Projectiles: the hooks of a projectile launched by an event (`onHit`, `onEnd`, `onLand`, `canHit`, `onProjectileHit`, `projectiles.onImpact`) receive that event as `owner`, typed `ProjectileOwner`.
+- 5f6665a: `player.useSkill` refuses a silenced player (`CAN_NOT_SKILL`) before any skill use handler runs, and a skill given as a class or an object reaches the handlers by its id. With Action Battle, a target given to `useSkill` must be allowed by the action and within its reach, and the player turns toward the target only once the skill is used. A ranged weapon releases no projectile when the player is defeated, changes map or cancels the attack during the startup. The client weapon profile is kept per connection. Projectile targets are synchronized after a hit only when a hook ran.
+- Updated dependencies [561e68c]
+- Updated dependencies [a8ea400]
+  - @rpgjs/common@5.3.0
+  - @rpgjs/physic@5.1.1
+  - @rpgjs/testing@5.0.5
+
 ## 5.3.0
 
 ### Minor Changes

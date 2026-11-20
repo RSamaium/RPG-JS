@@ -1,5 +1,33 @@
 # @rpgjs/action-battle
 
+## 5.3.0
+
+### Minor Changes
+
+- 5a21bac: Projectiles can aim at a point or an entity with `target`; an `arc` lands on it and, with `landing: { radius }`, hits what stands there. Types without a registered component are drawn by a standard projectile component whose look (shape or spritesheet, shadow, trail, impact by surface, sound, shake) is declared per type on the client with `projectiles.looks`, so the server only sends the type; `params` can still override single fields of one shot. Impacts carry a `surface` (`target`, `wall` or `ground`), components receive `flightAngle`, and `params.impactDuration` sets how long an impact stays drawn.
+
+  Action Battle weapons whose `action.mode` is `projectile` now turn the basic attack into a shot released at the end of the attack startup, aimed at the soft target found within `action.range`. `action.projectile` accepts `trajectory`, `landing`, `linger`, `pierce`, `wall`, `collide` and `delay`, and an `arc` lands on the target of the action. Action Battle projectiles are stopped by walls and hit non-combat events that declare `onProjectileHit` (a switch, a bush) without damaging them.
+
+  Action Battle no longer ships its own projectile component: its projectiles are drawn by the standard projectile component of `@rpgjs/client`, so `projectile.params` takes the standard look options. Register a component for `action-battle-skill` to keep a custom look.
+
+  A ranged weapon keeps the timing of its own `attackProfile` instead of the melee combo steps, and its soft targeting also aims at scenery that declares `onProjectileHit`. `LPCSpritesheetPreset` gains a `shoot` animation for bows.
+
+  `projectiles.emit()` accepts `delay`, a wind-up in ms before the projectile leaves.
+
+  Fixes enemies driven by a behavior tree or a `simpleBehavior` staying in the alert state after spotting a target, where their attacks were neither shown nor chained. Fixes weapon actions failing after their damage because no skill states could be applied, which left the enemy AI unaware of the hit. The client now predicts the attack lock from the equipped weapon profile, which removes the position corrections after a shot.
+
+- f2a2530: `registerSkillUseHandler(handler)` lets a battle system run `player.useSkill`. Action Battle uses it: on a map where it is enabled, `player.useSkill(id, target?)` runs a skill that has an `action` with the battle rules (projectile, damage formula, factions, states, SP cost, cooldown, soft targeting without a target). Hotbar skills, server code and scripts now hit the same way.
+
+  Scripts: `$player.useSkill(skillId, { target? })` uses a skill (target: id of an event or a player of the map) and gives `false` when it cannot be used now. The `damage` of `$map.launchProjectile` is now really removed from what the projectile hits (it was only stored in the payload); it is fixed damage, without the battle rules. The script docs no longer say `projectile` can be a Studio projectile record: it is the type the clients draw.
+
+- 86ac65b: `player.useSkill(id)` without a target (server code, scripts) aims at the nearest enemy within the reach of the action (`action.range`, otherwise the skill targeting range), whatever the player faces, and turns the player toward it. With none in reach, the skill is used straight ahead. A skill key pressed by the player keeps the soft targeting in front of the player.
+
+### Patch Changes
+
+- d9a4e1b: Modules built with `rpgjsModuleViteConfig` now publish declarations for every source file their entries reach, including type-only modules the bundler erases (`types.ts`, contracts). The published types of `@rpgjs/action-battle`, `@rpgjs/calendar` and `@rpgjs/chat` no longer import missing declarations, so types such as the Action Battle contracts, the calendar config and event types, and the chat channels are no longer lost as `any`.
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+- 5f6665a: `player.useSkill` refuses a silenced player (`CAN_NOT_SKILL`) before any skill use handler runs, and a skill given as a class or an object reaches the handlers by its id. With Action Battle, a target given to `useSkill` must be allowed by the action and within its reach, and the player turns toward the target only once the skill is used. A ranged weapon releases no projectile when the player is defeated, changes map or cancels the attack during the startup. The client weapon profile is kept per connection. Projectile targets are synchronized after a hit only when a hook ran.
+
 ## 5.2.0
 
 ### Minor Changes
