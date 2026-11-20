@@ -9,6 +9,8 @@ export {
   pixelsToTiles,
 } from "./map";
 export * from "./weather";
+export * from "./visual-effects";
+export * from "./projectile";
 
 export * from "./blocks";
 export * from "./utils";

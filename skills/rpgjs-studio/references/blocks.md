@@ -1053,6 +1053,42 @@ Or on map position:
 }
 ```
 
+### `play_visual_effect`
+
+Use to play a Visual Effect of the database, with its sounds, from the player, an event or a position. With a target
+(`player`, `event` or `position`), it travels there and plays its impact on it; with `"target": "none"`, it travels the
+way the source faces, without its impact. The block does not wait for the effect.
+
+```json
+{
+  "type": "play_visual_effect",
+  "data": {
+    "effect": "VISUAL_EFFECT_ID",
+    "source": "event",
+    "sourceEventId": "$this",
+    "target": "player"
+  }
+}
+```
+
+### `launch_projectile`
+
+Use to launch a Projectile of the database (an arrow, a bomb, a boomerang, a laser) from this event or the player, the
+way it faces (`facing`) or toward the player, an event or a position. It hits the player (who loses `damage` HP) and
+the events with a page `onProjectileHit`; it goes through the other events.
+
+```json
+{
+  "type": "launch_projectile",
+  "data": {
+    "projectile": "PROJECTILE_ID",
+    "source": "event",
+    "target": "player",
+    "damage": 10
+  }
+}
+```
+
 ### `camera_follow`
 
 Use to make the current player's camera follow a player or event target.

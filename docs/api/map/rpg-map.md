@@ -2004,12 +2004,19 @@ map.playVisualEffect(position, effect, options?)
 
 ```ts
 // A built-in preset
-map.playVisualEffect({ x: 200, y: 150 }, "explosion");
+map.playVisualEffect({ x: 200, y: 150 }, "magicBurst");
 
 // A preset resolved from a Studio Visual Effect, drawn for one second
 map.playVisualEffect({ x: player.x(), y: player.y() }, "holy-burst", {
   preset: holyBurst,
   duration: 1000,
+});
+
+// A bolt from the player to an enemy, green, with its sound
+map.playVisualEffect({ x: player.x(), y: player.y() }, "fireball", {
+  target: { x: enemy.x(), y: enemy.y() },
+  color: "#6dff4a",
+  sounds: [{ sound: "fire", start: 0, volume: 0.8 }],
 });
 ```
 

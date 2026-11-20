@@ -146,7 +146,54 @@ export interface ActionBattleActionConfig {
     accentColor?: string | number;
     /** Scale applied to the impact particle effect. */
     scale?: number;
+    /**
+     * Id of an effect of the game, played from the caster to the target by
+     * `skills.playEffect` (for example a Studio Visual Effect).
+     */
+    effect?: string;
+    /** With `split`, `castEffect` plays on the caster and `impactEffect` on the target. */
+    split?: boolean;
+    castEffect?: string;
+    impactEffect?: string;
   };
+}
+
+/**
+ * Context given to `skills.playEffect` when a skill or a combat item is cast.
+ * For an instant or melee action, the effect goes from the caster to the
+ * target; for a projectile, the effect plays the launch and may give the
+ * projectile its path and its look.
+ */
+export interface ActionBattleSkillEffectContext {
+  /** `melee`, `instant` or `projectile` (the `mode` of the action). */
+  mode?: ActionBattleActionMode;
+  attacker: ActionBattleEntity;
+  /** The first target, when there is one. */
+  target?: ActionBattleEntity;
+  /** The skill, when a skill is used. */
+  skill?: any;
+  /** The skill or item used. */
+  usable?: any;
+  /** The `action` of the skill or item. */
+  action: ActionBattleActionConfig;
+  visual: NonNullable<ActionBattleActionConfig["visual"]>;
+}
+
+/** What `skills.playEffect` played. */
+export interface ActionBattleSkillEffectResult {
+  /**
+   * Wait before the hit of an instant or melee action without `onUse`, in ms,
+   * so the damage lands when the effect reaches the target.
+   */
+  hitDelayMs?: number;
+  /**
+   * Projectile only: options merged into the projectile of the action (`type`,
+   * `trajectory`, `pattern`, `pierce`, `wall`, `payload`, `params`...), so the
+   * effect can give its path and its look.
+   */
+  projectile?: Partial<ActionBattleProjectileOptions>;
+  /** An area that replaces the `area` of the action (a bomb exploding where it ends). */
+  area?: ActionBattleAreaOptions;
 }
 
 /**

@@ -110,6 +110,8 @@ export type {
   ActionBattleProjectileOptions,
   ActionBattleAreaOptions,
   ActionBattleSkillTargetingConfig,
+  ActionBattleSkillEffectContext,
+  ActionBattleSkillEffectResult,
   ActionBattleUsable,
   ActionBattleUseContext,
   ActionBattleHitContext,

@@ -521,15 +521,15 @@ dust on the ground.
 | Look field | Default | Description |
 | --- | --- | --- |
 | `graphic` | none | Spritesheet id drawn instead of a shape (its `default` animation). |
-| `shape` | `orb` | Built-in shape without a `graphic`: `arrow`, `orb` or `bomb`. A `bomb` explodes on impact. |
+| `shape` | `orb` | Built-in shape without a `graphic`: `arrow`, `orb` or `bomb`. A `bomb` explodes on impact. `none` draws no body: the projectile is only its `trailFx` (a fireball made of particles). |
 | `color`, `accentColor` | light blue, white | Main and highlight colors, as `#rrggbb` or a number. |
 | `scale` | `1` | Size of the projectile and of its impact. |
 | `rotate` | `true` | Point the projectile along its flight. |
 | `spin` | none | Turns per second, for a boomerang or a thrown axe. |
 | `shadow` | `true` | Shadow on the ground. |
 | `trail` | none | `true`, or `{ color, width, length }` (length in frames): a ribbon following the projectile. |
-| `trailFx` | none | Particle preset of `@canvasengine/presets` attached to the flying projectile. |
-| `impactFx` | none | Particle preset replacing the drawn impact: one name, or `{ target, wall, ground }`. |
+| `trailFx` | none | Particle effect attached to the flying projectile: a preset name of `@canvasengine/presets`, or `{ preset, color, intensity, sizeScale, speedScale }` with a preset of its own. |
+| `impactFx` | none | Particle effect replacing the drawn impact: a preset name or `{ preset, ... }`, or one of them per surface `{ target, wall, ground }`. |
 | `impactSound` | none | Sound id played on impact. It fades with the distance to the local player and pans to the side of the impact. |
 | `shake` | none | Shake the map on impact: `true`, or the intensity. It fades with the distance to the local player. |
 | `feedbackDistance` | `480` | Beyond this distance from the local player (pixels), the impact plays no sound and does not shake the map, so a fight elsewhere on an MMORPG map stays silent. |
@@ -537,6 +537,18 @@ dust on the ground.
 
 These fields are typed by `ProjectileLook`, exported by `@rpgjs/client`. A look
 can also be registered at runtime with `engine.registerProjectileLook(type, look)`.
+
+A preset of its own (`{ emitters: [...] }`, such as the parts of a Studio Visual
+Effect) gives a projectile particles that no built-in preset has:
+
+```ts
+engine.registerProjectileLook('fire-bolt', {
+  shape: 'none',
+  trailFx: { preset: fireTrail, color: '#ff8a3d' },
+  impactFx: { preset: fireBurst, intensity: 1.4 },
+  impactSound: 'fire-hit',
+})
+```
 
 The same fields sent in the server `params` override the look for one shot. Keep
 that for what really changes per shot, such as the color of an elemental arrow;

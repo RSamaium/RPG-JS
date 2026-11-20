@@ -895,6 +895,45 @@ export interface ShowAnimationParams {
 }
 
 /**
+ * Where a visual effect starts or goes: the player, an event or a position.
+ */
+export type PlayVisualEffectAnchorType = 'player' | 'event' | 'position';
+
+/**
+ * Parameters for the play_visual_effect block
+ *
+ * Plays a Visual Effect of the database from a character or a position, optionally toward a target.
+ */
+export interface PlayVisualEffectParams {
+  /** Id of the Visual Effect */
+  effect: string;
+  source: PlayVisualEffectAnchorType;
+  sourceEventId?: string;
+  sourcePosition?: { x: number; y: number };
+  /** Without a target, the effect travels the way the source faces, without its impact */
+  target?: PlayVisualEffectAnchorType | 'none';
+  targetEventId?: string;
+  targetPosition?: { x: number; y: number };
+}
+
+/**
+ * Parameters for the launch_projectile block
+ *
+ * Launches a Projectile of the database from the player or the event.
+ */
+export interface LaunchProjectileParams {
+  /** Id of the Projectile */
+  projectile: string;
+  source: 'event' | 'player';
+  /** Where it goes: the way the launcher faces (default), the player, an event or a position */
+  target?: 'facing' | 'player' | 'event' | 'position';
+  targetEventId?: string;
+  targetPosition?: { x: number; y: number };
+  /** HP the player loses when it is hit */
+  damage?: number;
+}
+
+/**
  * Smooth camera transition options supported by RPGJS.
  */
 export type CameraFollowSmoothMove = boolean | {
@@ -1160,6 +1199,8 @@ export interface BlockParamsMap {
   set_weather: SetWeatherParams;
   change_screen_tone: ChangeScreenToneParams;
   show_animation: ShowAnimationParams;
+  play_visual_effect: PlayVisualEffectParams;
+  launch_projectile: LaunchProjectileParams;
   camera_follow: CameraFollowParams;
   set_hotbar: SetHotbarParams;
   use_hotbar_slot: UseHotbarSlotParams;

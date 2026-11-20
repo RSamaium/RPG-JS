@@ -47,7 +47,7 @@ export { RpgClientObject } from "./Game/Object";
 export { RpgClientPlayer } from "./Game/Player";
 export { RpgClientEvent } from "./Game/Event";
 export * from "./Game/ProjectileManager";
-export type { ProjectileLook } from "./components/projectile-visual";
+export type { ProjectileFx, ProjectileLook } from "./components/projectile-visual";
 export * from "./Game/ClientVisuals";
 export * from "./Game/MusicManager";
 export type {

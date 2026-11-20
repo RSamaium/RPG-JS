@@ -799,6 +799,42 @@ learned, too expensive or cooling down. Another battle system can plug into
 `player.useSkill` the same way with `registerSkillUseHandler` from
 `@rpgjs/server`.
 
+### Play an effect of the game at cast
+
+`skills.playEffect` plays the effect of a skill or a combat item when it is
+cast (server only), for an action with a `visual` or a projectile. It receives
+the attacker, the first target, the skill or item, its `action` and its
+`visual`. Return `false` (or nothing) when it played nothing: the `castFx` and
+`impactFx` particles stay. Return `true` or a result when it played something:
+those particles are turned off, and the result can
+
+- delay the hit of an instant or melee action without `onUse` with
+  `hitDelayMs`, so the damage lands when the effect reaches the target;
+- give a projectile its path and its look with `projectile` (merged into
+  `action.projectile`: `type`, `trajectory`, `pattern`, `params`...);
+- replace the `area` of the action (a bomb that explodes where it ends).
+
+```ts
+provideActionBattle({
+  skills: {
+    playEffect: ({ attacker, target, visual }) => {
+      if (!visual.effect) return false;
+      attacker.getCurrentMap()?.playVisualEffect(
+        { x: attacker.x(), y: attacker.y() },
+        visual.effect,
+        { target: target ? { x: target.x(), y: target.y() } : undefined },
+      );
+      return { hitDelayMs: 300 };
+    },
+  },
+});
+```
+
+`visual.effect` names the effect of the game (with `visual.split`,
+`castEffect` plays on the caster and `impactEffect` on the target). The Studio
+preset (`createStudioActionBattlePreset`) plays the Visual Effects and the
+Projectiles of the Studio database this way.
+
 ### Ranged weapons and projectile behaviors
 
 A weapon whose `action.mode` is `projectile` turns the basic attack into a

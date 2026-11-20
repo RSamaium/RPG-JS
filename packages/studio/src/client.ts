@@ -18,6 +18,7 @@ import FadeComponent from "./components/fade.ce";
 import CinematicComponent from "./components/cinematic.ce";
 import { trigger } from "canvasengine";
 import UpComponent from "./components/up.ce";
+import { studioProjectileGraphics, studioProjectileLooks } from "./projectile-looks";
 import {
   configureStudioGameRuntime,
   getGameDataProvider,
@@ -343,6 +344,10 @@ export default (config: StudioGameModuleConfig) => {
         if (database.length > 0) {
           engine.globalConfig.database = database;
         }
+        // The projectiles of the database fly with the type of their record: the standard projectile draws them.
+        for (const [type, look] of Object.entries(studioProjectileLooks(database))) {
+          engine.registerProjectileLook(type, look as any);
+        }
         const databaseAnimationMediaRefs =
           collectStudioActionBattleMediaRefs(database);
         const actorMediaRefs = database
@@ -369,6 +374,7 @@ export default (config: StudioGameModuleConfig) => {
           const mediaRefs = [
             ...animationMediaRefs,
             ...databaseAnimationMediaRefs,
+            ...studioProjectileGraphics(database),
             ...actorMediaRefs,
             ...actorIllustrationRefs,
           ].filter(Boolean);

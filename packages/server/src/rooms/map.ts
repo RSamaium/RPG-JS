@@ -2682,27 +2682,55 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    * @method map.playVisualEffect(position, effect, options?)
    * @param position - Where the effect plays, in map pixels
    * @param effect - Name of a built-in particle preset, or of the effect described by `options.preset`
-   * @param options - `preset` (the resolved particle preset, such as the payload of a Studio Visual Effect), `duration` (ms it stays drawn), `scale`
+   * @param options - `preset` (the resolved particle preset, such as the payload of a Studio Visual Effect), `duration` (ms it stays drawn), `scale`,
+   * `target` (map pixels the effect aims at), `color` / `intensity` / `sizeScale` / `speedScale` (tuning of the preset), `delay` (ms before it starts)
+   * and `sounds` (each played at its `start`)
    * @returns {void}
    * @memberof RpgMap
    * @example
    * ```ts
    * // A built-in preset
-   * map.playVisualEffect({ x: 200, y: 150 }, "explosion");
+   * map.playVisualEffect({ x: 200, y: 150 }, "magicBurst");
    *
    * // A preset resolved from a Studio Visual Effect, drawn for one second
    * map.playVisualEffect({ x: player.x(), y: player.y() }, "holy-burst", {
    *   preset: holyBurst,
    *   duration: 1000,
    * });
+   *
+   * // A bolt from the player to an enemy, green, with its sound
+   * map.playVisualEffect({ x: player.x(), y: player.y() }, "fireball", {
+   *   target: { x: enemy.x(), y: enemy.y() },
+   *   color: "#6dff4a",
+   *   sounds: [{ sound: "fire", start: 0, volume: 0.8 }],
+   * });
    * ```
    */
   playVisualEffect(position: { x: number, y: number }, effect: string, options: VisualEffectOptions = {}) {
-    this.showComponentAnimation(VISUAL_EFFECT_ANIMATION_ID, position, {
+    const at = { x: position.x, y: position.y }
+    const finite = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value)
+    const sounds = (options.sounds ?? [])
+      .filter((entry) => typeof entry?.sound === "string" && entry.sound)
+      .map((entry) => ({
+        sound: entry.sound,
+        start: finite(entry.start) ? Math.max(0, entry.start) : 0,
+        volume: finite(entry.volume) ? Math.max(0, Math.min(1, entry.volume)) : 1,
+      }))
+    this.showComponentAnimation(VISUAL_EFFECT_ANIMATION_ID, at, {
       name: effect,
       ...(options.preset ? { preset: options.preset } : {}),
       ...(options.duration !== undefined ? { displayDuration: options.duration } : {}),
       ...(options.scale !== undefined ? { scale: options.scale } : {}),
+      // The Fx component reads the target relative to where the effect plays.
+      ...(options.target && finite(options.target.x) && finite(options.target.y)
+        ? { target: { x: options.target.x - at.x, y: options.target.y - at.y } }
+        : {}),
+      ...(typeof options.color === "string" && options.color ? { color: options.color } : {}),
+      ...(finite(options.intensity) ? { intensity: options.intensity } : {}),
+      ...(finite(options.sizeScale) ? { sizeScale: options.sizeScale } : {}),
+      ...(finite(options.speedScale) ? { speedScale: options.speedScale } : {}),
+      ...(finite(options.delay) && options.delay > 0 ? { delay: options.delay } : {}),
+      ...(sounds.length ? { sounds } : {}),
     })
   }
 

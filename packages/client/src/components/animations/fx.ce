@@ -1,28 +1,40 @@
-<Fx
-  name={name}
-  preset={preset}
-  trigger={trigger}
-  autostart={autostart}
-  loop={loop}
-  enabled={enabled}
-  x={x}
-  y={y}
-  rotation={rotation}
-  scale={scale}
-  alpha={alpha}
-  timeScale={timeScale}
-  maxParticles={maxParticles}
-  preload={preload}
-  missingTexture={missingTexture}
-  zIndex={zIndex}
-  onStart={onStart}
-  onComplete={finish}
-  onParticleSpawn={onParticleSpawn}
-/>
+<Container>
+  @if (started) {
+    <Fx
+      name={name}
+      preset={preset}
+      trigger={trigger}
+      autostart={autostart}
+      loop={loop}
+      enabled={enabled}
+      x={x}
+      y={y}
+      rotation={rotation}
+      scale={scale}
+      alpha={alpha}
+      timeScale={timeScale}
+      maxParticles={maxParticles}
+      preload={preload}
+      missingTexture={missingTexture}
+      target={target}
+      color={color}
+      intensity={intensity}
+      sizeScale={sizeScale}
+      speedScale={speedScale}
+      zIndex={zIndex}
+      onStart={onStart}
+      onComplete={finish}
+      onParticleSpawn={onParticleSpawn}
+    />
+  }
+</Container>
 
 <script>
-  import { tick } from "canvasengine";
+  import { mount, signal, tick } from "canvasengine";
   import { Fx } from "@canvasengine/presets";
+  import { inject } from "../../core/inject";
+  import { RpgClientEngine } from "../../RpgClientEngine";
+  import { visualEffectTimeline } from "./fx-timeline";
 
   const {
     name,
@@ -46,6 +58,13 @@
     maxParticles,
     preload,
     missingTexture,
+    target,
+    color,
+    intensity,
+    sizeScale,
+    speedScale,
+    delay,
+    sounds,
     zIndex,
   } = defineProps({
     autostart: {
@@ -78,7 +97,19 @@
     missingTexture: {
       default: "shape",
     },
+    delay: {
+      default: 0,
+    },
+    sounds: {
+      default: () => [],
+    },
   });
+
+  const engine = inject(RpgClientEngine);
+  // The particles and the sounds start together after `delay`, where the effect is drawn: the network latency
+  // shifts both alike.
+  const timeline = visualEffectTimeline({ delay: delay?.() ?? 0, sounds: sounds?.() ?? [] });
+  const started = signal(timeline.startsAt === 0);
 
   let elapsedTime = 0;
   let finished = false;
@@ -90,11 +121,21 @@
     onFinish?.(instance);
   }
 
+  mount(() => {
+    const timers = timeline.events.map((event) =>
+      setTimeout(() => {
+        if (event.kind === "start") started.set(true);
+        else void engine.playSound(event.sound, { volume: event.volume });
+      }, event.at),
+    );
+    return () => timers.forEach((timer) => clearTimeout(timer));
+  });
+
   tick(({ deltaTime }) => {
     const maxDuration = displayDuration?.() ?? (loop() ? duration?.() : undefined);
     if (!maxDuration || finished) return;
     elapsedTime += deltaTime;
-    if (elapsedTime >= maxDuration) {
+    if (elapsedTime >= timeline.startsAt + maxDuration) {
       finish();
     }
   });
