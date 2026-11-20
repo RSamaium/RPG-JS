@@ -523,6 +523,43 @@ not exist gives `undefined` and `[]`.
 | `inSight(from, to, options?)` | whether `to` is in sight of `from`: within `range` pixels (200 by default), within `angle` degrees of where `from` faces (90 by default when `from` has a `direction`, a full circle otherwise), and with `walls: true`, with no wall between them. `from` is often an event: `inSight($map.getEvent("guard"), { x: $player.x, y: $player.y })` |
 | `$hook` | the payload of the signal, as `$hook.map` (`e` is the same data) |
 
+### The API of RpgPlayer and RpgMap
+
+Most of the public API of the engine is given to scripts with its own names: a name that **mirrors** a method or a property of
+`RpgPlayer` or `RpgMap`. Its arguments are checked against its signature (a wrong one is refused with the name of the parameter:
+`options.type must be "alpha" or "tint" or "both"`), then given to the engine as they are, and what the engine gives back is copied
+as plain data. `describeGameApi()` lists them all with their signatures.
+
+| On | Names |
+| --- | --- |
+| physics of the player | `through`, `throughEvent`, `throughOtherPlayer`, `pushable`, `speed`, `frequency`, `z`, `directionFixed`, `animationFixed` (read and assign); `hitbox`, `mass` (read); `setHitbox`, `setMass`, `setSizes`, `knockbackActive` |
+| look | `tint`, `graphics`, `animationName`; `setGraphic`, `setGraphicAnimation`, `setAnimation`, `flash`, `showHit`, `showComponentAnimation`, `setComponentsTop` / `Bottom` / `Left` / `Right` / `Center`, `removeComponents`, `showAttachedGui`, `hideAttachedGui` |
+| parameters and battle | `parameters`, `paramsModifier`, `atk`, `pdef`, `sdef`, `effects`, `elements`, `elementsEfficiency`, `statesEfficiency`, `expCurve`, `initialLevel`, `finalLevel`, `expForNextlevel`; `addParameter`, `setParameter`, `getParamValue`, `getParamItem`, `hasEffect`, `applyDamage(attackerId, skillId?)`, `setClass`, `setActor`, `changeActor` |
+| moves | `dash`, `knockback`, `followPath`, `oscillate`, `applyIceMovement`, `shootProjectile`, `clearMovements`, `hasActiveMovements`, `moveRoutes`, `infiniteMoveRoute`, `breakRoutes`, `replayRoutes`, `autoChangeMap` |
+| sounds, loot, items, hotbar | `playSound`, `stopSound`, `stopAllSounds`, `dropLoot`, `buyItem`, `sellItem`, `getHotbar`, `getHotbarCapacity`, `configureHotbar`, `selectHotbarSlot`, `clearHotbarSlot`, `useHotbarSlot`, `useActiveHotbarSlot`, `placeHotbarItem`, `showHotbar`, `hideHotbar`, `refreshHotbar` |
+| GUIs of the game | `callShop`, `callMainMenu`, `callGameover`, `showInput`, `showSave`, `showLoad`, `showSaveLoad`, `showCharacterSelect` |
+| the rest | `changeRoom`, `getVariableKeys`, `clearVariables`, `setLocale`, `getLocale`, `t(key, params?)`, `getShapes`, `getInShapes` |
+| the map | `widthPx`, `heightPx`; `getPlayer`, `getTick`, `queryArea`, `queryHitbox`, `findSpawnPosition`, `getInteractableObjectIds`, `isMoving`, `movePlayer`, `getBodyPosition`, `setBodyPosition`, `updateHitbox`, `suspendEvents`, `resumeEvents`, `getSuspendedEvents`, `isEventSuspended`, `addInDatabase`, `removeInDatabase`, `dropLoot`, `broadcast`, `getVariableKeys`, `clearVariables` |
+
+What the engine takes in another form than data is given as data, and translated:
+
+- **A route** is a list of steps: a name of `Move` (`up`, `tileLeft`, `random`, `towardPlayer`, `turnTowardPlayer`…), `{ name: repeat }`,
+  or `{ wait: seconds }`: `["up", { tileRight: 2 }, "turnTowardPlayer", { wait: 0.5 }]`. "Player" is the player of the script.
+- **A component** is `{ type: "text", value: "{name}" }`, `{ type: "hpBar" }`, `{ type: "image", value: "icon" }`… as `Components` makes them.
+- **An attacker** (`applyDamage`) is the id of a player or an event of the map; **an area** (`queryArea`) is `{ x, y, radius }` or
+  `{ x, y, width, height }`; **events to hide** (`suspendEvents`) are a list of ids.
+
+**An event has the same.** `$map.eventCall(id, method, ...args)` calls on an event a method a character has, `$map.eventGet(id, property)`
+reads a property and `$map.eventSet(id, property, value)` changes it, checked the same way:
+
+```js
+on("event.action", { where: { "event.name": "guard" } }, () => {
+  $map.eventSet("guard", "speed", 6);
+  $map.eventCall("guard", "flash", { type: "tint", tint: "#ff0000" });
+  $map.eventCall("guard", "moveRoutes", ["left", "left", { wait: 0.5 }, "turnTowardPlayer"]);
+});
+```
+
 ### Battles
 
 `$player.startBattle(troopId, { kind })` asks the battle systems of the game to play a troop, through the hooks a battle module
@@ -542,8 +579,8 @@ on("player.inShape", { where: { "shape.name": "trap" } }, () => {
 
 Every public method and property of `RpgPlayer`, `RpgEvent`, `RpgMap`, the GUIs (`Gui`) and the projectiles of the server, and every
 export of `@rpgjs/action-battle`, is either given to scripts (by a name, or by the signal that tells it) or left out on purpose, with
-the reason (internal to the engine, physics set by the game, a GUI of the engine, the rules of the battle system, the bricks of an
-AI…):
+the reason. What is left out is only what is not gameplay (the life cycle, the synchronization, the hooks of the engine), the private
+methods of the engine, and what takes or gives what is not data (a class, a function, a body of the physics engine):
 `ENGINE_COVERAGE` of `@rpgjs/script/testing` lists the decisions. A test of `@rpgjs/script` fails when a method of the engine has
 none, so a new method gets a decision instead of being forgotten.
 

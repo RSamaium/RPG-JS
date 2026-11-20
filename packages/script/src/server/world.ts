@@ -4,8 +4,9 @@
  * simulation.
  */
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
-import { MAXHP, MAXSP, Vector2 } from "@rpgjs/common";
-import { type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { AreaShape, MAXHP, MAXSP, Vector2 } from "@rpgjs/common";
+import { Components, Move } from "@rpgjs/server";
+import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -117,6 +118,154 @@ const attempt = (action: () => unknown): boolean => {
 };
 const idsOf = (list: unknown): string[] =>
   (Array.isArray(list) ? list : []).map((entry: any) => String(read(entry?.id) ?? "")).filter(Boolean);
+
+/** The most a value the engine gives back holds once copied: levels, and entries in all. */
+const MAX_DATA_DEPTH = 6, MAX_DATA_ENTRIES = 2000;
+
+/**
+ * What the engine gives back, as plain data a script can hold: signals are read, lists and objects are copied, functions and
+ * internal fields (`_…`) are left out, and a value too deep or too large is cut.
+ */
+export function toData(value: unknown): unknown {
+  let entries = 0;
+  const copy = (v: unknown, depth: number): unknown => {
+    if (v === null || v === undefined || typeof v === "boolean" || typeof v === "string") return v;
+    if (typeof v === "number") return Number.isFinite(v) ? v : null;
+    if (typeof v === "function") return undefined;
+    if (depth > MAX_DATA_DEPTH || ++entries > MAX_DATA_ENTRIES) return undefined;
+    if (Array.isArray(v) || v instanceof Set) return [...v].map((x) => copy(x, depth + 1)).filter((x) => x !== undefined);
+    if (v instanceof Map) return Object.fromEntries([...v].map(([k, x]) => [String(k), copy(x, depth + 1)]));
+    if (typeof v === "object") {
+      const out: Record<string, unknown> = {};
+      for (const key of Object.keys(v)) {
+        if (key.startsWith("_")) continue;
+        const raw = (v as Record<string, unknown>)[key];
+        const x = copy(typeof raw === "function" && typeof (raw as { set?: unknown }).set === "function" ? (raw as () => unknown)() : raw, depth + 1);
+        if (x !== undefined) out[key] = x;
+      }
+      return out;
+    }
+    return undefined;
+  };
+  return copy(typeof value === "function" && typeof (value as { set?: unknown }).set === "function" ? (value as () => unknown)() : value, 0);
+}
+
+/** The steps of a route as data, with the names of `Move`: the ones that take the player are given the player of the script. */
+const ROUTE_STEPS = ["up", "down", "left", "right", "random", "tileUp", "tileDown", "tileLeft", "tileRight", "tileRandom", "turnUp", "turnDown", "turnLeft", "turnRight", "turnRandom"];
+const ROUTE_PLAYER_STEPS = ["towardPlayer", "awayFromPlayer", "tileTowardPlayer", "tileAwayFromPlayer", "turnTowardPlayer", "turnAwayFromPlayer"];
+const MAX_ROUTE_STEPS = 100, MAX_ROUTE_REPEAT = 100, MAX_ROUTE_WAIT = 60;
+function routeOf(steps: unknown, player: RpgPlayer): unknown[] {
+  if (!Array.isArray(steps) || steps.length > MAX_ROUTE_STEPS) throw new Error(`a route is a list of ${MAX_ROUTE_STEPS} steps at most`);
+  const move = Move as unknown as Record<string, (...args: unknown[]) => unknown>;
+  return steps.flatMap((step): unknown[] => {
+    const [name, amount] = typeof step === "string" ? [step, 1] : Object.entries(step as Record<string, number>)[0] ?? ["", 0];
+    if (name === "wait") {
+      if (!(typeof amount === "number" && amount >= 0 && amount <= MAX_ROUTE_WAIT)) throw new Error(`a wait of a route is 0 to ${MAX_ROUTE_WAIT} seconds`);
+      return [move.wait(amount)];
+    }
+    const repeat = typeof amount === "number" && Number.isInteger(amount) && amount >= 1 && amount <= MAX_ROUTE_REPEAT ? amount : NaN;
+    if (Number.isNaN(repeat)) throw new Error(`the repeat of "${name}" is a whole number from 1 to ${MAX_ROUTE_REPEAT}`);
+    if (ROUTE_STEPS.includes(name)) return [name.startsWith("turn") ? move[name]() : move[name](repeat)];
+    if (ROUTE_PLAYER_STEPS.includes(name)) return [name.startsWith("turn") ? move[name](player) : move[name](player, repeat)];
+    throw new Error(`"${name}" is not a step of a route. Available: ${[...ROUTE_STEPS, ...ROUTE_PLAYER_STEPS].join(", ")}, wait`);
+  });
+}
+
+/** A component described as data, made with the factory of RPGJS. */
+function componentOf(data: any): unknown {
+  const c = Components as unknown as Record<string, (...args: unknown[]) => unknown>;
+  switch (data?.type) {
+    case "text": return c.text(data.value, data.style);
+    case "hpBar": return c.hpBar(data.style, data.text);
+    case "spBar": return c.spBar(data.style, data.text);
+    case "bar": return c.bar(data.current, data.max, data.style, data.text);
+    case "image": return c.image(data.value);
+    case "tile": return c.tile(data.value);
+    case "shape": return c.shape(data.value);
+    case "custom": return c.custom(data.id, data.props ?? {});
+    default: throw new Error(`a component is { type: "text" | "hpBar" | "spBar" | "bar" | "image" | "tile" | "shape" | "custom", ... }`);
+  }
+}
+const componentsOf = (input: unknown): unknown =>
+  Array.isArray(input) ? input.map((row) => (Array.isArray(row) ? row.map(componentOf) : componentOf(row))) : componentOf(input);
+
+const snapshotOf = (character: any) => ({
+  id: String(character.id ?? ""), name: String(read(character.name) ?? ""), x: number(read(character.x)), y: number(read(character.y)),
+  direction: String(read(character.direction) ?? "down"),
+});
+
+/**
+ * The engine of a world: the names of the API that mirror RPGJS are done on the player, the map, or an event of the map (its id
+ * first). A few take data a script can give and RPGJS takes in another form (a route, components, an attacker by id, an area):
+ * they are translated here.
+ */
+function enginePortOf(player: RpgPlayer, map: RpgMap | null): EnginePort {
+  const m = map as any;
+  const ownerOf = (target: string, args: unknown[] = []): { object: any; method: string; rest: unknown[] } => {
+    const [owner, method] = target.split(".");
+    if (owner === "player") return { object: player, method, rest: args };
+    if (!m) throw new Error("this script does not run in a map but in a room that is not a map: $room.kind says where it runs");
+    if (owner === "map") return { object: m, method, rest: args };
+    const event = m.getEvent(String(args[0]));
+    if (!event) throw new Error(`there is no event "${String(args[0])}" on the map`);
+    return { object: event, method, rest: args.slice(1) };
+  };
+  const characterCall = (object: any, method: string, args: unknown[]): unknown => {
+    if (method === "moveRoutes") return object.moveRoutes(routeOf(args[0], player));
+    if (method === "infiniteMoveRoute") return object.infiniteMoveRoute(routeOf(args[0], player));
+    if (method.startsWith("setComponents")) return object[method](componentsOf(args[0]), args[1]);
+    if (method === "getShapes" || method === "getInShapes") {
+      return (object[method]() as any[]).map((shape) => ({ name: String(shape.name), x: number(shape.x), y: number(shape.y), width: number(shape.width), height: number(shape.height) }));
+    }
+    if (method === "autoChangeMap") { const p = args[0] as { x: number; y: number }; return object.autoChangeMap(new Vector2(p.x, p.y)); }
+    if (method === "applyDamage") {
+      const attacker = m?.getEvent?.(String(args[0])) ?? m?.getPlayer?.(String(args[0]));
+      if (!attacker) throw new Error(`there is no event or player "${String(args[0])}" on the map`);
+      const skill = args[1] === undefined ? undefined : object.databaseById(String(args[1]));
+      return object.applyDamage(attacker, skill);
+    }
+    return object[method](...args);
+  };
+  const mapCall = (method: string, args: unknown[]): unknown => {
+    if (method === "getPlayer") { const found = m.getPlayer(String(args[0])); return found ? snapshotOf(found) : undefined; }
+    if (method === "movePlayer") return m.movePlayer(player, args[0]);
+    if (method === "queryHitbox") return (m.queryHitbox(args[0], args[1] ?? {}) as any[]).map(snapshotOf);
+    if (method === "setBodyPosition") { m.setBodyPosition(...args); return undefined; }
+    if (method === "getSuspendedEvents") return (m.getSuspendedEvents() as any[]).map((e) => String(e.id));
+    if (method === "suspendEvents" || method === "resumeEvents") {
+      const ids = args[0] as string[] | undefined;
+      return m[method](ids ? (event: any) => ids.includes(String(event.id)) : undefined);
+    }
+    if (method === "queryArea") {
+      const area = args[0] as { x: number; y: number; radius?: number; width?: number; height?: number };
+      const options = (args[1] ?? {}) as { targets?: string; exclude?: string[] };
+      const shape = area.radius !== undefined ? AreaShape.circle({ radius: area.radius })
+        : area.width !== undefined && area.height !== undefined ? AreaShape.rect({ width: area.width, height: area.height })
+        : undefined;
+      if (!shape) throw new Error("an area is { x, y, radius } or { x, y, width, height }");
+      const hits = m.queryArea({ center: { x: area.x, y: area.y }, shape, targets: options.targets && options.targets !== "all" ? options.targets : "all", excludeIds: options.exclude });
+      return (hits as any[]).sort((a, b) => a.distance - b.distance).map((hit) => ({ id: String(hit.id), kind: String(hit.kind), x: number(hit.x), y: number(hit.y), distance: number(hit.distance) }));
+    }
+    return m[method](...args);
+  };
+  return {
+    call(target, args) {
+      const { object, method, rest } = ownerOf(target, args);
+      if (typeof object[method] !== "function") throw new Error(`the game has no ${target}`);
+      const result = target.startsWith("map.") ? mapCall(method, rest) : characterCall(object, method, rest);
+      // a method that answers at once stays synchronous: a listener that replies may call it
+      return result && typeof (result as { then?: unknown }).then === "function" ? (result as Promise<unknown>).then(toData) : toData(result);
+    },
+    read(target, args = []) {
+      const { object, method } = ownerOf(target, args);
+      return toData(read(object[method]));
+    },
+    write(target, value, args = []) {
+      const { object, method } = ownerOf(target, args);
+      object[method] = value;
+    },
+  };
+}
 
 /** Emits a signal of the game, for the world that walks an event (`event.arrived`). */
 export type WorldEmit = (signal: string, payload: Record<string, unknown>, context: { player: RpgPlayer; map?: RpgMap | null; event?: RpgEvent | null }) => void;
@@ -698,6 +847,7 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
       get y() { return number(read((event as any)?.y)); },
       get direction() { return String(read((event as any)?.direction) ?? "down"); },
     },
+    engine: enginePortOf(player, map),
     log: options.log ?? ((message) => console.log(`[script] ${message}`)),
     wait: (seconds) => new Promise<void>((resolve) => setTimeout(resolve, Math.min(Math.max(seconds, 0), MAX_WAIT_SECONDS) * 1000)),
     rand: options.rand ?? ((min, max) => min + Math.floor(Math.random() * (max - min + 1))),

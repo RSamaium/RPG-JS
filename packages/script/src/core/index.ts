@@ -29,6 +29,8 @@ export {
   type ItemSnapshot,
   type NotificationOptions,
   type PlayerPort,
+  type EnginePort,
   type ScriptWorld,
   type VariableValue,
 } from "../game/impl";
+export * from "./types";

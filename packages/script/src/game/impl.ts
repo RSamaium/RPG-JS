@@ -8,7 +8,9 @@
  * does it with the API of RPGJS, a simulation does it in memory, a host with its own vocabulary (a block editor, say) maps each
  * operation to it.
  */
-import type { ApiImpl } from "../core/api";
+import type { ApiDescription, ApiImpl, HandleImpl } from "../core/api";
+import { checkArguments, checkValue, parseType } from "../core/types";
+import { GAME_API_DESCRIPTION } from "./description";
 
 /** What a script gets of an item of the inventory: a copy, whose changes change nothing. */
 export interface ItemSnapshot { id: string; name: string; quantity: number }
@@ -332,8 +334,24 @@ export interface PlayerPort {
   useSkill(skillId: string, options?: SkillUseOptions): boolean | Promise<boolean>;
 }
 
+/**
+ * What the environment does for the names of the API that mirror the engine (`engine` in the description): `target` is the name of
+ * the engine (`player.flash`, `map.getTick`, `event.flash`), the arguments are already checked against the signature. For an
+ * `event.` target the first argument is the id of the event.
+ */
+export interface EnginePort {
+  /** Calls the method; gives what it returns as plain data. */
+  call(target: string, args: unknown[]): unknown | Promise<unknown>;
+  /** Reads the property, as plain data. */
+  read(target: string, args?: unknown[]): unknown;
+  /** Writes the property. */
+  write(target: string, value: unknown, args?: unknown[]): void | Promise<void>;
+}
+
 /** What a script run needs from its environment. */
 export interface ScriptWorld {
+  /** The names of the API that mirror the engine. */
+  engine: EnginePort;
   player: PlayerPort;
   /** The room the script runs in: `kind` is "map" for a map, otherwise the kind of the gameplay room. */
   room: { id: string; kind: string };
@@ -712,11 +730,70 @@ const pointsWrite = (what: "hp" | "sp", max: "maxHp" | "maxSp") => (w: ScriptWor
   w.player[what] = Math.round(Math.min(cap, Math.max(0, next)));
 };
 
+const NUMBER_OPS: Record<string, (current: number, value: number) => number> = { "+=": (c, v) => c + v, "-=": (c, v) => c - v, "*=": (c, v) => c * v };
+
+/** What a mirrored property does: read it from the engine, write it after checking the value against its type. */
+function mirroredMember(target: string, type: string, writable: boolean, prefix: unknown[] = []): NonNullable<HandleImpl<ScriptWorld>["members"]>[string] {
+  const node = parseType(type);
+  return {
+    read: (w) => w.engine.read(target, prefix),
+    ...(writable ? {
+      write: (w: ScriptWorld, op: string, v: unknown) => {
+        let value = v;
+        if (op !== "=") {
+          const apply = NUMBER_OPS[op];
+          const current = w.engine.read(target, prefix);
+          if (!apply || typeof current !== "number") throw new Error(`${target.split(".")[1]} accepts only =`);
+          value = apply(current, Number(v));
+        }
+        checkValue(value, node, target.split(".")[1]);
+        return w.engine.write(target, value, prefix);
+      },
+    } : {}),
+  };
+}
+/** What a mirrored method does: check the arguments against its signature, then call the engine. */
+const mirroredMethod = (label: string, target: string, sig: string) => (w: ScriptWorld, args: unknown[]) => {
+  checkArguments(label, sig, args);
+  return w.engine.call(target, args);
+};
+
+/**
+ * Adds to an implementation the names of the description that mirror the engine (`engine`): each is checked against its signature
+ * or its type and done by the `engine` of the world. A name the implementation already has keeps its own.
+ */
+export function withMirrors(desc: ApiDescription, impl: ApiImpl<ScriptWorld>): ApiImpl<ScriptWorld> {
+  const handles = { ...impl.handles };
+  for (const [name, handle] of Object.entries(desc.handles)) {
+    const own = handles[name] ?? {};
+    const members = { ...(own.members ?? {}) }, methods = { ...(own.methods ?? {}) };
+    for (const [key, member] of Object.entries(handle.members ?? {})) {
+      if (member.engine && !members[key]) members[key] = mirroredMember(member.engine, member.type, !!member.writable);
+    }
+    for (const [key, method] of Object.entries(handle.methods ?? {})) {
+      if (method.engine && !methods[key]) methods[key] = mirroredMethod(`${name}.${key}`, method.engine, method.sig);
+    }
+    handles[name] = { ...own, ...(Object.keys(members).length ? { members } : {}), ...(Object.keys(methods).length ? { methods } : {}) };
+  }
+  return { ...impl, handles };
+}
+
+/** The names of `$player` that mirror a method or a property of a character: an event has them too (`$map.eventCall`). */
+function characterMirror(kind: "methods" | "members", name: string) {
+  const handle = GAME_API_DESCRIPTION.handles.$player;
+  const entry = kind === "methods" ? handle.methods?.[name] : handle.members?.[name];
+  if (!entry?.engine?.startsWith("player.")) {
+    const available = Object.entries((kind === "methods" ? handle.methods : handle.members) ?? {}).filter(([, d]) => d.engine?.startsWith("player.")).map(([k]) => k);
+    throw new Error(`"${name}" is not a ${kind === "methods" ? "method" : "property"} of a character. Available: ${available.join(", ")}`);
+  }
+  return { target: `event.${entry.engine.slice("player.".length)}`, entry };
+}
+
 /**
  * What each name of `GAME_API_DESCRIPTION` does, over a `ScriptWorld`. Written once: the game and a simulation provide a world, and the
  * behavior (checks, limits, what is refused) is the same in both.
  */
-export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
+const BASE_API_IMPL: ApiImpl<ScriptWorld> = {
   handles: {
     $player: {
       members: {
@@ -867,6 +944,24 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
           mapOf(w).playEventAnimation(text(id, "an event id"), text(name, "an animation name"), times === undefined ? 1 : Math.floor(range(times, 1, MAX_ANIMATION_TIMES, "times"))),
         showEmotionBubble: (w, [id, e]) => mapOf(w).showEmotionBubble(text(id, "an event id"), emotion(e)),
         spawnEnemy: (w, [o]) => mapOf(w).spawnEnemy(spawnOptions(o)),
+        eventCall: (w, [id, method, ...args]) => {
+          const eventId = text(id, "an event id");
+          const { target, entry } = characterMirror("methods", text(method, "a method name"));
+          checkArguments(`${String(method)}`, (entry as { sig: string }).sig, args);
+          return w.engine.call(target, [eventId, ...args]);
+        },
+        eventGet: (w, [id, member]) => {
+          const eventId = text(id, "an event id");
+          const { target } = characterMirror("members", text(member, "a property name"));
+          return w.engine.read(target, [eventId]);
+        },
+        eventSet: (w, [id, member, value]) => {
+          const eventId = text(id, "an event id");
+          const { target, entry } = characterMirror("members", text(member, "a property name"));
+          if (!(entry as { writable?: boolean }).writable) throw new Error(`"${String(member)}" of an event cannot be assigned`);
+          checkValue(value, parseType((entry as { type: string }).type), String(member));
+          return w.engine.write(target, value, [eventId]);
+        },
         getTile: (w, [x, y]) => {
           const tile = mapOf(w).getTile(finite(x, "x"), finite(y, "y"));
           return tile ? copyOf(tile) : undefined;
@@ -932,3 +1027,10 @@ export const GAME_API_IMPL: ApiImpl<ScriptWorld> = {
     Graphic: (_w, [id]) => String(id),
   },
 };
+
+/**
+ * What each name of `GAME_API_DESCRIPTION` does, over a `ScriptWorld`: written once for the names that need it, and generated from the
+ * signature for the names that mirror the engine. The game and a simulation provide a world, and the behavior (checks, limits, what is
+ * refused) is the same in both.
+ */
+export const GAME_API_IMPL: ApiImpl<ScriptWorld> = withMirrors(GAME_API_DESCRIPTION, BASE_API_IMPL);

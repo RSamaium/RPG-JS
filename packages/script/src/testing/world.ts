@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -433,6 +433,12 @@ export interface WorldInit {
   };
   /** What the player has of its character sheet: experience, states, skills, the items that can be equipped and the ones that are, the items that can be used (every item when not given). */
   sheet?: { exp?: number; states?: string[]; skills?: string[]; equipment?: string[]; equipped?: string[]; usable?: string[] };
+  /**
+   * What the engine gives the names of the API that mirror it, by target: the value of a property (`"player.speed": 4`), what a
+   * method gives back (`"player.getParamValue": 120`). An event: `"event.speed#guard"`. A call or a change is recorded in the effects
+   * under its target (`player.flash`).
+   */
+  engine?: Record<string, unknown>;
   /** The enemies the game has, for $map.spawnEnemy (any when not given). */
   enemies?: string[];
   /** How the battles the script starts end, in order ("victory" when not given); null when the game has no battle system. */
@@ -501,6 +507,7 @@ export class SimWorld implements ScriptWorld {
     });
     this.player.startPoints(init.player?.hp ?? this.player.maxHp, init.player?.sp ?? this.player.maxSp);
     this.player.battles = [...(init.battles ?? [])];
+    for (const [key, value] of Object.entries(init.engine ?? {})) this.engineValues.set(key, clone(value));
     const sheet = init.sheet ?? {};
     this.player.startExp(sheet.exp ?? 0);
     this.player.states = new Set(sheet.states ?? []);
@@ -530,6 +537,29 @@ export class SimWorld implements ScriptWorld {
       this.map.enemies = new Set(init.enemies ?? []);
     }
   }
+
+  /** The values of the engine for the names that mirror it (see `WorldInit.engine`). */
+  engineValues = new Map<string, unknown>();
+
+  /** The engine of a simulation: calls and changes are recorded under their target, values come from `WorldInit.engine`. */
+  readonly engine: EnginePort = {
+    call: (target, args) => {
+      const [own, rest] = target.startsWith("event.") ? [`${target}#${String(args[0])}`, args.slice(1)] : [target, args];
+      this.effects.push({ name: target, params: target.startsWith("event.") ? { id: args[0], args: rest } : { args } });
+      const value = this.engineValues.has(own) ? this.engineValues.get(own) : this.engineValues.get(target);
+      return value === undefined ? undefined : clone(value);
+    },
+    read: (target, args = []) => {
+      const key = target.startsWith("event.") ? `${target}#${String(args[0])}` : target;
+      const value = this.engineValues.has(key) ? this.engineValues.get(key) : this.engineValues.get(target);
+      return value === undefined ? undefined : clone(value);
+    },
+    write: (target, value, args = []) => {
+      const key = target.startsWith("event.") ? `${target}#${String(args[0])}` : target;
+      this.effects.push({ name: target, params: target.startsWith("event.") ? { id: args[0], value } : { value } });
+      this.engineValues.set(key, clone(value));
+    },
+  };
 
   /** The properties shared by the players, as the game API sees them: every change is recorded as a `sync` effect. */
   readonly sharedProps: ScriptWorld["sharedProps"] = {

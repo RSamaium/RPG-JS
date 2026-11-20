@@ -11,9 +11,23 @@ import type { PayloadField, SignalDesc } from "./filter";
 import type { ApiInfo, Host } from "./interpreter";
 
 /** A member of a handle (`$player.gold`): its TypeScript type, its documentation, and whether a script may assign it. */
-export interface MemberDesc { type: string; doc?: string; writable?: boolean }
+export interface MemberDesc {
+  type: string; doc?: string; writable?: boolean;
+  /**
+   * The property of the engine it mirrors (`player.through`, `map.widthPx`): the value is read from it, and written to it after it
+   * is checked against `type`. The environment does it; nothing else is written for it.
+   */
+  engine?: string;
+}
 /** A method of a handle (`$player.addItem(...)`): its signature as TypeScript, e.g. `(item: string): void`. A method that returns `void` cannot be used as a value. */
-export interface MethodDesc { sig: string; doc?: string; /** It answers at once (it reads): a listener that calls only such methods can reply to its signal. */ sync?: boolean }
+export interface MethodDesc {
+  sig: string; doc?: string; /** It answers at once (it reads): a listener that calls only such methods can reply to its signal. */ sync?: boolean;
+  /**
+   * The method of the engine it mirrors (`player.flash`, `map.getTick`): the arguments are checked against `sig`, then given to it
+   * as they are; what it returns is given back as plain data (nothing for a `void` signature). The environment does it.
+   */
+  engine?: string;
+}
 /** Members a handle takes by name (`$switch.door_open`, `$var.visits`): the description of the key, the type of the value, and whether a script may assign it. */
 export interface DynamicDesc { keyDoc: string; type: string; doc?: string; writable?: boolean }
 /** A `$name` a script can use: what it has (members, methods, a dynamic part), and whether its properties are declared by the script itself (`shared({ ... })`). */

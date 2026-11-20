@@ -4,10 +4,100 @@
  * options that exist there. What each of these does is not here: the game (a player, a map) and the simulation each implement it
  * (`ApiImpl`), and `missingImplementations` checks that they cover exactly this list.
  */
-import type { ApiDescription } from "../core/api";
+import type { ApiDescription, MemberDesc, MethodDesc } from "../core/api";
 import { GAME_SIGNALS } from "./signals";
 
 const VALUE = "string | number | boolean | null | object";
+
+/** A method that mirrors one of the engine: checked against its signature and called as it is (see `MethodDesc.engine`). */
+const engine = (target: string, sig: string, doc?: string, sync?: boolean): MethodDesc => ({ engine: target, sig, ...(doc ? { doc } : {}), ...(sync ? { sync } : {}) });
+/** A property that mirrors one of the engine (see `MemberDesc.engine`). */
+const prop = (target: string, type: string, writable: boolean, doc?: string): MemberDesc => ({ engine: target, type, writable, ...(doc ? { doc } : {}) });
+
+const DIRECTION_VECTOR = "{ x: number; y: number }";
+/** A component above, below or beside a character, as data: what `Components.text()`, `Components.hpBar()`… make in a game. */
+const COMPONENT = '{ type: "text"; value: string; style?: object } | { type: "hpBar"; style?: object; text?: string | null } | { type: "spBar"; style?: object; text?: string | null } | { type: "bar"; current: string; max: string; style?: object; text?: string | null } | { type: "image"; value: string } | { type: "tile"; value: number | string } | { type: "shape"; value: object } | { type: "custom"; id: string; props?: object }';
+const COMPONENT_LAYOUT = "{ width?: number; height?: number; marginTop?: number; marginBottom?: number; marginLeft?: number; marginRight?: number }";
+/** A step of a route, as data: a name of `Move` ("up", "tileLeft", "turnTowardPlayer"…), `{ name: repeat }`, or `{ wait: seconds }`. */
+const ROUTE = "(string | Record<string, number>)[]";
+const LOOT_REWARDS = "{ gold?: number; items?: (string | { itemId: string; amount?: number; chance?: number })[]; showNotification?: boolean }";
+const LOOT_OPTIONS = '{ pickup?: "magnet" | "touch" | "action"; ownership?: "shared" | "player" }';
+
+/**
+ * What a character has (the player, and an event through $map.eventGet / eventSet / eventCall), mirrored from RpgPlayer: its
+ * physics, its look, its parameters, its sounds, its moves and routes.
+ */
+const CHARACTER_MEMBERS: Record<string, MemberDesc> = {
+  through: prop("player.through", "boolean", true, "Walks through everything (walls, events, players)."),
+  throughEvent: prop("player.throughEvent", "boolean", true, "Walks through the events."),
+  throughOtherPlayer: prop("player.throughOtherPlayer", "boolean", true, "Walks through the other players."),
+  pushable: prop("player.pushable", "boolean", true, "Other characters can push it."),
+  speed: prop("player.speed", "number", true, "Speed of its moves (4 by default)."),
+  frequency: prop("player.frequency", "number", true, "How often it moves along a route."),
+  z: prop("player.z", "number", true, "Height on the map, for layers and bridges."),
+  directionFixed: prop("player.directionFixed", "boolean", true, "Keeps its direction while it moves."),
+  animationFixed: prop("player.animationFixed", "boolean", true, "Keeps its animation while it moves."),
+  tint: prop("player.tint", "string", true, 'Colour the graphic is tinted with ("white" for none, "#rrggbb").'),
+  hitbox: prop("player.hitbox", "{ w: number; h: number }", false, "Size of its hitbox. Change it with setHitbox."),
+  mass: prop("player.mass", "number", false, "Its mass when it pushes or is pushed. Change it with setMass."),
+  graphics: prop("player.graphics", "string[]", false, "The ids of its graphics."),
+  animationName: prop("player.animationName", "string", false, "The animation it plays."),
+  parameters: prop("player.parameters", "Record<string, { start: number; end: number }>", false, "The curves of its parameters."),
+  paramsModifier: prop("player.paramsModifier", "Record<string, { value?: number; rate?: number }>", true, "What changes its parameters, besides its curves."),
+  atk: prop("player.atk", "number", false), pdef: prop("player.pdef", "number", false), sdef: prop("player.sdef", "number", false),
+  expForNextlevel: prop("player.expForNextlevel", "number", false, "Experience needed for the next level."),
+  initialLevel: prop("player.initialLevel", "number", true), finalLevel: prop("player.finalLevel", "number", true),
+  expCurve: prop("player.expCurve", "{ basis: number; extra: number; accelerationA: number; accelerationB: number }", true, "How the experience to level up grows."),
+  effects: prop("player.effects", "string[]", true, 'Its effects ("CAN_NOT_SKILL", "GUARD"…).'),
+  knockbackActive: prop("player.knockbackActive", "boolean", false, "It is being knocked back."),
+  elements: prop("player.elements", "object[]", false, "The elements of its attacks, from its equipment."),
+  elementsEfficiency: prop("player.elementsEfficiency", "object[]", false), elementsDefense: prop("player.elementsDefense", "object[]", false),
+  statesEfficiency: prop("player.statesEfficiency", "object[]", false), statesDefense: prop("player.statesDefense", "object[]", false),
+};
+const CHARACTER_METHODS: Record<string, MethodDesc> = {
+  setHitbox: engine("player.setHitbox", "(width: number, height: number): void"),
+  setMass: engine("player.setMass", "(mass: number): void"),
+  setSizes: engine("player.setSizes", "(sizes: { width: number; height: number; hitbox?: { width: number; height: number } }): void", "Size of the graphic and of the hitbox."),
+  setGraphic: engine("player.setGraphic", "(graphic: string | string[]): void"),
+  setGraphicAnimation: engine("player.setGraphicAnimation", "(animationName: string, graphicOrTimes?: string | string[] | number, nbTimes?: number): void", "Plays an animation, with another graphic if given, nbTimes times."),
+  setAnimation: engine("player.setAnimation", "(animationName: string, nbTimes?: number): void"),
+  flash: engine("player.flash", '(options?: { type?: "alpha" | "tint" | "both"; duration?: number; cycles?: number; alpha?: number; tint?: number | string }): void', "Makes the graphic flash, for every player of the map."),
+  showHit: engine("player.showHit", "(text: string): void", "Shows a text that pops above the character (damage, \"Miss\")."),
+  showComponentAnimation: engine("player.showComponentAnimation", "(id: string, params?: object): void"),
+  setComponentsTop: engine("player.setComponentsTop", `(components: ${COMPONENT} | (${COMPONENT})[] | (${COMPONENT})[][], layout?: ${COMPONENT_LAYOUT}): void`, "Shows components above the character: a name, a bar of hp, an image…"),
+  setComponentsBottom: engine("player.setComponentsBottom", `(components: ${COMPONENT} | (${COMPONENT})[] | (${COMPONENT})[][], layout?: ${COMPONENT_LAYOUT}): void`),
+  setComponentsLeft: engine("player.setComponentsLeft", `(components: ${COMPONENT} | (${COMPONENT})[] | (${COMPONENT})[][], layout?: ${COMPONENT_LAYOUT}): void`),
+  setComponentsRight: engine("player.setComponentsRight", `(components: ${COMPONENT} | (${COMPONENT})[] | (${COMPONENT})[][], layout?: ${COMPONENT_LAYOUT}): void`),
+  setComponentsCenter: engine("player.setComponentsCenter", `(components: ${COMPONENT} | (${COMPONENT})[] | (${COMPONENT})[][], layout?: ${COMPONENT_LAYOUT}): void`),
+  removeComponents: engine("player.removeComponents", '(position: "top" | "center" | "bottom" | "left" | "right"): void'),
+  addParameter: engine("player.addParameter", "(name: string, curve: { start: number; end: number }): void"),
+  setParameter: engine("player.setParameter", "(name: string, value: number | { start: number; end: number }): void"),
+  getParamValue: engine("player.getParamValue", "(name: string): number", "The value of a parameter (maxHp, atk, str…) at the level of the character.", true),
+  hasEffect: engine("player.hasEffect", "(effect: string): boolean", undefined, true),
+  applyDamage: engine("player.applyDamage", "(attackerId: string, skillId?: string): { damage: number; critical: boolean; elementVulnerable: boolean; guard: boolean; superGuard: boolean }", "Takes the damage of an attack of a player or an event of the map (its id), with a skill of the database or none, as the battle formulas say."),
+  playSound: engine("player.playSound", "(id: string, options?: { volume?: number; loop?: boolean }): void", "Plays a sound for this player only."),
+  stopSound: engine("player.stopSound", "(id: string): void"),
+  stopAllSounds: engine("player.stopAllSounds", "(): void"),
+  dropLoot: engine("player.dropLoot", `(rewards: ${LOOT_REWARDS}, options?: ${LOOT_OPTIONS}): string[]`, "Pops collectable loot out of the character: gold piles and items. Gives the ids of the pickups."),
+  dash: engine("player.dash", `(direction: ${DIRECTION_VECTOR}, additionalSpeed?: number, duration?: number): void`),
+  knockback: engine("player.knockback", `(direction: ${DIRECTION_VECTOR}, force?: number, duration?: number): void`),
+  followPath: engine("player.followPath", `(waypoints: ${DIRECTION_VECTOR}[], speedMultiplier?: number, loop?: boolean): void`),
+  oscillate: engine("player.oscillate", `(direction: ${DIRECTION_VECTOR}, amplitude?: number, period?: number): void`),
+  applyIceMovement: engine("player.applyIceMovement", `(direction: ${DIRECTION_VECTOR}, speedFactor?: number): void`),
+  clearMovements: engine("player.clearMovements", "(): void"),
+  hasActiveMovements: engine("player.hasActiveMovements", "(): boolean", undefined, true),
+  moveRoutes: engine("player.moveRoutes", `(routes: ${ROUTE}): boolean`, 'Follows a route and waits for its end: ["up", { tileRight: 2 }, "turnTowardPlayer", { wait: 0.5 }]. A step is a name of Move (up, down, left, right, random, tileUp, tileDown, tileLeft, tileRight, tileRandom, towardPlayer, awayFromPlayer, tileTowardPlayer, tileAwayFromPlayer, turnUp, turnDown, turnLeft, turnRight, turnRandom, turnTowardPlayer, turnAwayFromPlayer), { name: repeat }, or { wait: seconds }. "Player" is the player of the script. 100 steps at most.'),
+  infiniteMoveRoute: engine("player.infiniteMoveRoute", `(routes: ${ROUTE}): void`, "Follows a route again and again, until breakRoutes."),
+  breakRoutes: engine("player.breakRoutes", "(force?: boolean): void"),
+  shootProjectile: engine("player.shootProjectile", '(type: "straight" | "arc" | "bounce", direction: { x: number; y: number }, speedFactor?: number): void', "Moves the character like a projectile, in a direction."),
+  autoChangeMap: engine("player.autoChangeMap", "(nextPosition: { x: number; y: number }): boolean", "In a world of maps, moves the character to the map next to it when the position is beyond the edge."),
+  getShapes: engine("player.getShapes", "(): { name: string; x: number; y: number; width: number; height: number }[]", "The zones attached to the character.", true),
+  getInShapes: engine("player.getInShapes", "(): { name: string; x: number; y: number; width: number; height: number }[]", "The zones the character is in.", true),
+  showAttachedGui: engine("player.showAttachedGui", "(): void", "Shows the GUIs attached to the sprite of the character, to every player."),
+  hideAttachedGui: engine("player.hideAttachedGui", "(): void"),
+  getParamItem: engine("player.getParamItem", "(name: string): number", "What the equipment adds to a parameter.", true),
+  replayRoutes: engine("player.replayRoutes", "(): void"),
+};
 
 /**
  * The API of scripts in a game, as data: `$player`, `$map`, `$room`, `$event`, `$shared`, `$data`, `$hook`, `$state`, the functions `wait`, `random`,
@@ -56,6 +146,16 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
       example: 'on("player.touchTile", (e) => { if (e.properties.kind === "poison") { $player.startTimer("poison", 1, { repeat: true }); } });\non("timer.fire", { where: { name: "poison" } }, () => { $player.hp -= 5; });',
     },
     {
+      name: "Characters, as RpgPlayer", doc: "the API of RpgPlayer as the game uses it: physics, look, components, parameters, sounds, routes, loot, hotbar, shop and menus; an event has the same through $map.eventCall / eventGet / eventSet",
+      names: ["$player.through", "$player.speed", "$player.setHitbox", "$player.flash", "$player.setComponentsTop", "$player.addParameter", "$player.getParamValue", "$player.playSound", "$player.moveRoutes", "$player.dropLoot", "$player.callShop", "$player.buyItem", "$player.getHotbar", "$map.eventCall", "$map.eventGet", "$map.eventSet"],
+      example: '$map.eventSet("guard", "speed", 6); $map.eventCall("guard", "moveRoutes", ["left", { tileUp: 2 }, "turnTowardPlayer"]); $map.eventCall("guard", "flash", { type: "tint", tint: "#ff0000" });',
+    },
+    {
+      name: "The map, as RpgMap", doc: "who is where, free positions, hidden events, the database, messages to the clients",
+      names: ["$map.queryArea", "$map.queryHitbox", "$map.findSpawnPosition", "$map.getInteractableObjectIds", "$map.suspendEvents", "$map.resumeEvents", "$map.addInDatabase", "$map.dropLoot", "$map.broadcast"],
+      example: 'const near = $map.queryArea({ x: $player.x, y: $player.y, radius: 96 }, { targets: "events" }); for (const hit of near) { $map.eventCall(hit.id, "flash"); }',
+    },
+    {
       name: "Debugging", doc: "write what the script does where its author reads it",
       names: ["log"],
     },
@@ -74,6 +174,7 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         sp: { type: "number", writable: true, doc: "Skill points, between 0 and maxSp." },
         maxHp: { type: "number", doc: "0 when the game gives the player no maximum (no parameters): hp is then not capped." },
         maxSp: { type: "number", doc: "0 when the game gives the player no maximum." },
+        ...CHARACTER_MEMBERS,
         canMove: { type: "boolean", writable: true, doc: "Whether the player moves with its inputs. Set it to false during a cutscene, and back to true after: nothing gives it back by itself." },
         exp: { type: "number", writable: true, doc: "Experience points. Assign them with = or +=: they never go below 0, and the player levels up as they grow (player.levelUp)." },
       },
@@ -106,6 +207,37 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
           sig: '(slot: number, entry: { type: "skill" | "item" | string; id: string }): void',
           doc: "Puts a skill the player knows, a usable item or the entry of a plugin in a slot of the hotbar (0 to 9), as player.assignHotbarSlot does. The entry that was elsewhere in the hotbar moves. Listen to player.hotbarChange for the changes.",
         },
+        ...CHARACTER_METHODS,
+        setClass: engine("player.setClass", "(id: string): void", "Gives the player a class of the database."),
+        setActor: engine("player.setActor", "(id: string): void", "Makes the player an actor of the database (its class, level, parameters, equipment)."),
+        changeActor: engine("player.changeActor", "(id: string): void"),
+        buyItem: engine("player.buyItem", "(id: string, nb?: number): void", "Buys items at their price: the gold goes down. Fails without the gold."),
+        sellItem: engine("player.sellItem", "(id: string, nb?: number): void", "Sells items at half their price."),
+        getHotbar: engine("player.getHotbar", "(): { slots: ({ type: string; id: string } | null)[]; activeSlot?: number | null }", undefined, true),
+        selectHotbarSlot: engine("player.selectHotbarSlot", "(slot: number): void"),
+        clearHotbarSlot: engine("player.clearHotbarSlot", "(slot: number): void"),
+        useHotbarSlot: engine("player.useHotbarSlot", "(slot: number): void"),
+        useActiveHotbarSlot: engine("player.useActiveHotbarSlot", "(): void"),
+        getHotbarCapacity: engine("player.getHotbarCapacity", "(): number", undefined, true),
+        configureHotbar: engine("player.configureHotbar", "(options: { capacity?: number; autoAssignItems?: boolean; autoAssignSkills?: boolean }): void", "Changes how the hotbar of the player works."),
+        placeHotbarItem: engine("player.placeHotbarItem", "(id: string): void", "Puts an item of the inventory in the first free slot of the hotbar."),
+        showCharacterSelect: engine("player.showCharacterSelect", "(actors: string[], options?: object): object | null", "Asks the player to pick one of actors of the database, and waits: what was picked, or null."),
+        showHotbar: engine("player.showHotbar", "(): void"),
+        hideHotbar: engine("player.hideHotbar", "(): void"),
+        refreshHotbar: engine("player.refreshHotbar", "(): void"),
+        callShop: engine("player.callShop", "(items: (string | { id: string; price?: number; name?: string; description?: string })[]): void", "Opens the shop of the game with items of the database (or with a price of their own) and waits until the player leaves it."),
+        callMainMenu: engine("player.callMainMenu", "(options?: { disabled?: string[] }): void", "Opens the main menu of the game."),
+        callGameover: engine("player.callGameover", "(options?: { title?: string; subtitle?: string }): { id?: string; index?: number } | null", "Shows the game over screen and waits for the choice of the player."),
+        showInput: engine("player.showInput", '(message: string, options?: { type?: "text" | "number"; control?: "input" | "textarea"; defaultValue?: string | number; min?: number; max?: number; step?: number; maxLength?: number; placeholder?: string }): string | number | null', "Asks the player to type a text or a number, and waits. null when the player closes it."),
+        showSave: engine("player.showSave", "(): number | null", "Opens the save screen of the game and waits: the slot saved, or null."),
+        showLoad: engine("player.showLoad", "(): number | null", "Opens the load screen of the game and waits: the slot loaded, or null."),
+        showSaveLoad: engine("player.showSaveLoad", "(): number | null"),
+        changeRoom: engine("player.changeRoom", "(target: { kind: string; params?: Record<string, string | number> }): boolean", "Moves the player to a gameplay room that is not a map (a battle room, a lobby), by its kind."),
+        getVariableKeys: engine("player.getVariableKeys", "(): string[]", "The names of all the variables of the player.", true),
+        clearVariables: engine("player.clearVariables", "(): void", "Removes every variable of the player, the ones of other systems too."),
+        setLocale: engine("player.setLocale", "(locale: string): void"),
+        getLocale: engine("player.getLocale", "(): string", undefined, true),
+        t: engine("player.t", "(key: string, params?: Record<string, string | number>): string", "A text of the translations of the game, in the language of the player.", true),
         cameraFollow: { sig: '(target: string, options?: { smoothMove?: boolean; time?: number }): void', doc: 'Points the camera of the player at an event (its id), or back at the player with "player". smoothMove glides to it in time milliseconds (10 000 at most). Only this player sees it.' },
         startTimer: {
           sig: "(name: string, seconds: number, options?: { repeat?: boolean }): void",
@@ -137,7 +269,11 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
     },
     $map: {
       doc: "The map the script runs in, with the names of RpgMap. It is not there in a room that is not a map: $room.kind says where the script runs.",
-      members: { id: { type: "string" } },
+      members: {
+        id: { type: "string" },
+        widthPx: prop("map.widthPx", "number", false, "Width of the map in pixels."),
+        heightPx: prop("map.heightPx", "number", false, "Height of the map in pixels."),
+      },
       methods: {
         createDynamicEvent: {
           sig: "(event: { id?: string; x: number; y: number; name?: string; graphic?: string; hitbox?: { width: number; height: number }; through?: boolean; forPlayer?: boolean }): string",
@@ -207,6 +343,30 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
           sig: "(x: number, y: number): { x: number; y: number; collision: boolean; properties: object; layers: { properties: object }[] } | undefined",
           doc: "The tile at a position in pixels: its cell (x, y in tiles), whether it blocks, and the properties of its tiles (properties merges them, the top layer wins). undefined when the map has no tiles (a map that is not a Tiled map) or outside of it. A tile whose properties have interactive: true fires player.touchTile.",
         },
+        eventCall: { sig: "(id: string, method: string, ...args: any[]): any", doc: 'Calls on an event a method a character has (the ones of $player that RpgEvent has too): $map.eventCall("guard", "flash", { duration: 300 }), $map.eventCall("guard", "moveRoutes", ["left", "left", "turnDown"]). The arguments are checked as for $player.' },
+        eventGet: { sync: true, sig: "(id: string, property: string): any", doc: 'Reads a property a character has, on an event: $map.eventGet("guard", "speed").' },
+        eventSet: { sig: "(id: string, property: string, value: any): void", doc: 'Changes a property a character has, on an event: $map.eventSet("guard", "through", true).' },
+        getPlayer: engine("map.getPlayer", '(id: string): { id: string; name: string; x: number; y: number; direction: string } | undefined', "A copy of a player of the map, or undefined.", true),
+        getTick: engine("map.getTick", "(): number", "The number of the tick of the map.", true),
+        getVariableKeys: engine("map.getVariableKeys", "(): string[]", undefined, true),
+        clearVariables: engine("map.clearVariables", "(): void", "Removes every variable of the map."),
+        findSpawnPosition: engine("map.findSpawnPosition", "(options: { preferred: { x: number; y: number }; hitbox?: { width: number; height: number }; maxDistance?: number; step?: number; z?: number }): { x: number; y: number } | null", "The free position nearest to preferred where a hitbox fits, or null.", true),
+        queryArea: engine("map.queryArea", '(area: { x: number; y: number; radius?: number; width?: number; height?: number }, options?: { targets?: "players" | "events" | "all"; exclude?: string[] }): { id: string; kind: string; x: number; y: number; distance: number }[]', "The players and events in a circle (radius) or a rectangle (width, height) around a point, nearest first.", true),
+        suspendEvents: engine("map.suspendEvents", "(ids?: string[]): string[]", "Hides events, all of them without ids, as setEventVisible(id, false) does. Gives the ids hidden."),
+        resumeEvents: engine("map.resumeEvents", "(ids?: string[]): string[]", "Shows hidden events again, all of them without ids. Gives the ids shown."),
+        getSuspendedEvents: engine("map.getSuspendedEvents", "(): string[]", "The ids of the hidden events.", true),
+        isEventSuspended: engine("map.isEventSuspended", "(id: string): boolean", undefined, true),
+        getInteractableObjectIds: engine("map.getInteractableObjectIds", '(id: string, direction?: "up" | "down" | "left" | "right"): string[]', "The ids of what a player or an event can act on, in front of it.", true),
+        isMoving: engine("map.isMoving", "(id: string): boolean", "Whether a player or an event is moving.", true),
+        movePlayer: engine("map.movePlayer", '(direction: "up" | "down" | "left" | "right"): void', "Moves the player of the script one step, as its input would."),
+        getBodyPosition: engine("map.getBodyPosition", '(id: string, mode?: "center" | "top-left"): { x: number; y: number } | undefined', "Where the physics body of a player or an event is.", true),
+        setBodyPosition: engine("map.setBodyPosition", '(id: string, x: number, y: number, mode?: "center" | "top-left"): void', "Puts the physics body of a player or an event at a position at once."),
+        queryHitbox: engine("map.queryHitbox", '(rect: { x: number; y: number; width: number; height: number }, options?: { excludeIds?: string[]; kinds?: ("players" | "events")[] }): { id: string; name: string; x: number; y: number; direction: string }[]', "The players and events whose hitbox is in a rectangle.", true),
+        updateHitbox: engine("map.updateHitbox", "(id: string, x: number, y: number, width?: number, height?: number): boolean", "Moves and resizes the hitbox of a player or an event."),
+        addInDatabase: engine("map.addInDatabase", "(id: string, data: object, options?: { force?: boolean }): boolean", "Adds a record to the database of the map (an item, a skill, a state… with its _type); force replaces one that is there. $data reads it."),
+        removeInDatabase: engine("map.removeInDatabase", "(id: string): boolean", "Removes a record from the database of the map."),
+        broadcast: engine("map.broadcast", "(type: string, value?: object): void", "Sends a custom message to the clients of the map: a component of the game listens to it."),
+        dropLoot: engine("map.dropLoot", `(options: { x: number; y: number; rewards: ${LOOT_REWARDS}; pickup?: "magnet" | "touch" | "action" }): string[]`, "Pops collectable loot at a point of the map. Gives the ids of the pickups."),
         shakeMap: { sig: '(options?: { intensity?: number; duration?: number; frequency?: number; direction?: "x" | "y" | "both" }): void', doc: "Shakes the screen of the players of the map." },
       },
     },
