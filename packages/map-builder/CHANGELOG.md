@@ -1,5 +1,12 @@
 # @rpgjs/map-builder
 
+## 5.0.1
+
+### Patch Changes
+
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+- 08be559: The `@rpgjs/common`, `@rpgjs/server`, `@rpgjs/client` and `@rpgjs/render-map2d` peer dependencies accept any compatible version (`^5.x`) instead of the exact version released with the package, like the other RPGJS packages. A minor release of those packages no longer forces a new major version of `@rpgjs/map-builder`.
+
 ## 2.0.0
 
 ### Patch Changes

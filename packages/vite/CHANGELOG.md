@@ -1,5 +1,25 @@
 # @rpgjs/vite
 
+## 5.0.5
+
+### Patch Changes
+
+- d9a4e1b: Modules built with `rpgjsModuleViteConfig` now publish declarations for every source file their entries reach, including type-only modules the bundler erases (`types.ts`, contracts). The published types of `@rpgjs/action-battle`, `@rpgjs/calendar` and `@rpgjs/chat` no longer import missing declarations, so types such as the Action Battle contracts, the calendar config and event types, and the chat channels are no longer lost as `any`.
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+- Updated dependencies [5a21bac]
+- Updated dependencies [f0ee243]
+- Updated dependencies [561e68c]
+- Updated dependencies [e05bfa1]
+- Updated dependencies [4a3affe]
+- Updated dependencies [e3bbe79]
+- Updated dependencies [66d1866]
+- Updated dependencies [5f6665a]
+- Updated dependencies [c7cde92]
+- Updated dependencies [98d480d]
+- Updated dependencies [f2a2530]
+- Updated dependencies [a8ea400]
+  - @rpgjs/server@5.4.0
+
 ## 5.0.4
 
 ### Patch Changes

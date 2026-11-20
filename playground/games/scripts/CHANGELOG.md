@@ -1,5 +1,36 @@
 # @rpgjs/playground-scripts
 
+## 1.0.3
+
+### Patch Changes
+
+- Updated dependencies [5a21bac]
+- Updated dependencies [4a3affe]
+- Updated dependencies [f0ee243]
+- Updated dependencies [d9a4e1b]
+- Updated dependencies [561e68c]
+- Updated dependencies [bb3f5d3]
+- Updated dependencies [e05bfa1]
+- Updated dependencies [4a3affe]
+- Updated dependencies [e3bbe79]
+- Updated dependencies [53a7ec6]
+- Updated dependencies [66d1866]
+- Updated dependencies [5f6665a]
+- Updated dependencies [6e779bd]
+- Updated dependencies [e69f909]
+- Updated dependencies [9428ccc]
+- Updated dependencies [22ee124]
+- Updated dependencies [c7cde92]
+- Updated dependencies [98d480d]
+- Updated dependencies [f2a2530]
+- Updated dependencies [a8ea400]
+- Updated dependencies [b72be55]
+  - @rpgjs/server@5.4.0
+  - @rpgjs/client@5.5.0
+  - @rpgjs/vite@5.0.5
+  - @rpgjs/common@5.3.0
+  - @rpgjs/script@5.3.0
+
 ## 1.0.2
 
 ### Patch Changes

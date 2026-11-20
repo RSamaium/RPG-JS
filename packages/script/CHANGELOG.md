@@ -1,5 +1,57 @@
 # @rpgjs/script
 
+## 5.3.0
+
+### Minor Changes
+
+- 66d1866: Module hooks `event.onProjectileHit` and `player.onProjectileHit` can reply `"pass"`, `"stick"` or `"stop"` (returned at once, not from a promise) to decide what the projectile does; the first module that replies wins and the event's own `onProjectileHit` has the last word.
+
+  Scripts: `event.projectileHit` and `player.projectileHit` take the same replies. Only a listener that answers at once can reply: it reads the payload and the handles and calls only the methods that read, now marked `sync` in the API description (`getVariable`, `hasItem`, `getEvent`...). A listener that waits still runs as an observer. Script core: `SignalDesc.reply`, `MethodDesc.sync`, `SignalRegistry.emitSync`, `Program.runSync` and `ScriptService.emitSync`; a binding declares `reply: true` for a hook that asks before acting.
+
+- 6e779bd: Scripts listen to the battles and to the modules: `battle.start`, `battle.command`, `battle.end`, `combat.hit` (`actionBattleHooks`), `player.skillChange`, `player.connect` and `player.disconnect`. A module binds its own hook scope, and `checkScript`, `simulate`, `runTests` and `describeGameApi` take the `signals` of the modules.
+- e69f909: `checkScript` checks the arguments of the calls of the game API against their declarations: a call with fewer arguments than the required parameters (`$player.closeGui()`), more than the function takes, or a literal of another kind than a `string`, `number` or `boolean` parameter (`$player.closeGui(42)`) is refused with the line and the signature, e.g. `"$player.closeGui" needs at least 1 argument (id: string, data?: object), got 0`, instead of failing in the game when the call runs. A call with a spread argument is checked only for the kinds of its literals. A script already installed in a game is not refused for its arguments when the game starts. `signatureParams(sig)` reads the parameters of a signature, and `apiInfo(description, catalog, { checkArguments: true })` turns the check on for `compileProgram`.
+- 9428ccc: Scripts get five families of gameplay, each with the guards of the sandbox (checked arguments, plain data, limits per map):
+
+  - **Positions and sight**: `$player.x`, `$player.y`, `$player.direction`, `$event.direction`, the `direction` of `$map.getEvent(s)`, and the functions `distance(a, b)` and `inSight(from, to, { range, angle, walls })` (a cone around where `from` faces; `walls` uses the physics of the map).
+  - **Zones attached to an event**: `$map.attachShape(eventId, { radius | width/height, angle, direction, limitedByWalls, positioning, follow: "position" | "direction", properties })`. Players entering and leaving it fire `player.inShape` / `player.outShape`, whose `shape` now has `eventId`. `removeShape` removes it.
+  - **Movement**: `$map.moveEvent(id, { x, y } | "player", { speed, wait })` (the new signal `event.arrived` fires when it arrives), `followPlayer`, `fleePlayer`, `stopEvent`, `turnEvent`, `teleportEvent`, `setEventVisible`, and `$player.teleport({ x, y })`. 50 events of a map at most follow or flee at once.
+  - **Scenery**: `$map.getTile(x, y)` (cell, collision, properties) and the signal `player.touchTile` for the tiles whose properties have `interactive: true`.
+  - **Battle and stats**: `$player.hp` and `$player.sp` (writable, kept between 0 and their maximum), `$player.maxHp`, `$player.maxSp`, and `$player.startBattle(troopId, { kind })`, which plays the troop through the `studioBattle` hooks of the battle modules and gives `"victory"`, `"defeat"`, `"escape"` or `null`.
+
+  - **How events look**: `$map.setEventGraphic(id, graphic)`, `$map.playEventAnimation(id, name, times)`, `$map.showEmotionBubble(id, emotion)` and `$player.showEmotionBubble(emotion)`.
+  - **States**: `$player.addState`, `removeState`, `hasState`, `getStates`.
+  - **Experience, skills, equipment and items**: `$player.exp` (`=` and `+=`), `learnSkill`, `forgetSkill`, `hasSkill`, `getSkills`, `equip(id, equipped?)`, `isEquipped`, `useItem`.
+  - **Enemies**: `$map.spawnEnemy({ enemy, x, y, id?, name? })` makes an event and asks the game to turn it into an enemy through the `scriptEnemy.create(event, enemyId)` hooks of its modules (with Action Battle, `createActionEnemy`); an enemy the game does not have is refused.
+
+  - **Time**: the filter option `every` (`on("map.tick", { every: 0.5 }, ...)`) runs a listener at most once every so many seconds for each player, skipped before the script starts; `$player.startTimer(name, seconds, { repeat })` and `stopTimer(name)` emit the new signal `timer.fire` for the player.
+  - **Cutscenes**: `$player.canMove` (writable) and `$player.cameraFollow(eventId | "player", { smoothMove, time })`.
+  - **For one player**: `forPlayer: true` on `$map.createDynamicEvent` and `$map.spawnEnemy` makes a scenario event of that player only.
+  - **Defeated enemies**: `actionBattleHooks` emits the new signal `enemy.defeated` (`event`, `enemy`) when a player defeats an event.
+  - **Persistent `$state`**: `ScriptService({ stateStore: { load, save } })` reads the state of a script when it is installed and saves it after each turn of changes; `flushState()` saves what is left.
+  - **Debugging**: `log(...values)` writes to the console (or `onLog`) and `ScriptService.logs`; `checkScript` gives `warnings` (map.tick without every, waiting in map.tick, making in a loop, a follow nothing stops, moves never given back); `describeGameApi` starts with the API by family, with an example each.
+
+  - **The public API of the engine**: a name of the description can mirror a method or a property of the engine (`engine: "player.flash"`): its arguments are checked against its signature (a type checker of the TypeScript of the signatures, `checkValue` / `checkArguments`), then given to the engine, and what it gives back is copied as plain data; the simulation records it without code of its own. Most of the public API of `RpgPlayer` and `RpgMap` is given this way: physics (`through`, `speed`, `setHitbox`, `setMass`…), look (`flash`, `tint`, `setComponentsTop`…, components as data), parameters (`addParameter`, `getParamValue`, `applyDamage`…), moves (`dash`, `knockback`, `moveRoutes` with routes as data…), sounds, loot, shop, hotbar, GUIs of the game, `queryArea`, `findSpawnPosition`, `suspendEvents`, `addInDatabase`… An event has the same through `$map.eventCall`, `eventGet` and `eventSet`. What `ENGINE_COVERAGE` leaves out is only what is not gameplay, private, or not data.
+
+  `simulate` and `runTests` run all of them in memory (`world: { player: { x, y, hp }, sheet: { exp, states, skills, equipment, equipped, usable }, events, tiles, walls, battles, enemies }`, and expectations such as `"events.guard.x"`). `ENGINE_COVERAGE` (`@rpgjs/script/testing`) gives, for every public method of `RpgPlayer`, `RpgEvent`, `RpgMap`, `Gui`, the projectiles of the server and every export of `@rpgjs/action-battle`, the name scripts use or the reason they do not have it; a test fails when a method of the engine has no decision.
+
+- 22ee124: Scripts can use the projectiles and the hotbar: the signals `player.hotbarChange`, `player.projectileHit`, `event.projectileHit` and `projectile.end`, and the methods `$map.launchProjectile` and `$player.assignHotbarSlot`.
+- c7cde92: The `onDestroy` hook of the projectiles receives `x`, `y` (where the projectile ended: the impact, where it landed, or the end of its range) and `surface` (`target`, `wall` or `ground`).
+
+  Scripts: `projectile.end` gives that point instead of the origin of the projectile, which it gave for a bomb that landed or a shot that reached its range, and adds `surface`. `$map.launchProjectile` takes `arc` (lob it onto `toward`), `landingRadius` (hit what stands where it lands) and `delay` (a wind-up in ms).
+
+- 98d480d: Scripts can react to kinds of things, marked by tags, rather than to names. An event has `tags` (`event.tags`, empty by default), taken from the `tags` of its definition (`createDynamicEvent({ event: { name, tags } })`) or of `@EventData({ tags })`. The signals about a thing of the game give its tags as a list, empty when it has none: `event.action` and `event.touch` give `event.tags`, `player.joinMap`, `player.leaveMap`, `player.joinRoom` and `player.leaveRoom` give `mapTags` (the `tags` of the map data), the item signals give `itemTags` and `player.skillChange` gives `skillTags` (the `tags` of the record in the database). Filter with `where: { "event.tags": { has: "help" } }`; the descriptions of the signals name the new fields. A Studio game gives an event the tags of its Studio event (a new optional `tags` field) and a map the tags of its Studio map.
+- f2a2530: `registerSkillUseHandler(handler)` lets a battle system run `player.useSkill`. Action Battle uses it: on a map where it is enabled, `player.useSkill(id, target?)` runs a skill that has an `action` with the battle rules (projectile, damage formula, factions, states, SP cost, cooldown, soft targeting without a target). Hotbar skills, server code and scripts now hit the same way.
+
+  Scripts: `$player.useSkill(skillId, { target? })` uses a skill (target: id of an event or a player of the map) and gives `false` when it cannot be used now. The `damage` of `$map.launchProjectile` is now really removed from what the projectile hits (it was only stored in the payload); it is fixed damage, without the battle rules. The script docs no longer say `projectile` can be a Studio projectile record: it is the type the clients draw.
+
+- a8ea400: `map.playVisualEffect(position, effect, options?)` plays a one-shot particle effect for the players of the map: a built-in preset by name, or a resolved particle preset (the payload of a Studio Visual Effect) with `options.preset`. The client registers the `rpg:visual-effect` component animation (the CanvasEngine `Fx` preset) by default.
+
+  Scripts: `$map.playVisualEffect({ effect, at, preset?, duration?, scale? })`, and `$map.launchProjectile` takes `owner: "player"` so the player of the script launches the projectile: it flies through them, and `projectile.end` and `event.projectileHit` fire for them.
+
+### Patch Changes
+
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+
 ## 5.2.0
 
 ### Minor Changes

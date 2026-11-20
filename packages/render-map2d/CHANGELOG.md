@@ -1,5 +1,15 @@
 # @rpgjs/render-map2d
 
+## 5.1.0
+
+### Minor Changes
+
+- c403fe7: The `carpet` and `carpet-border` terrain presets draw a real carpet border instead of two lines: a dark outline, a binding, a darker band with a motif repeated along the edge (whole motifs only, none in the corners), an inner line, a soft inner shadow and a thin shadow on the floor around the carpet. The colours come from the texture of the carpet (`source`): the binding and the motif take the colour of its patterns. It still follows any outline and scales with the tile size. `params`: `motif` (`"diamond"`, `"dot"`, `"none"`), `trimColor` (`"#rrggbb"`), `scale` (0.5 to 1.1), `shadow` (`false` to draw none). `createTerrainCarpetBorderOverlayPixels` accepts `source`, `params`, `originX` and `originY`. The Studio chunk painter gives the presets the world origin of the chunk, so the motif continues from one chunk to the next.
+
+### Patch Changes
+
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+
 ## 5.0.1
 
 ### Patch Changes

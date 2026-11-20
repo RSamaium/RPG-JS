@@ -1,5 +1,19 @@
 # @rpgjs/common
 
+## 5.3.0
+
+### Minor Changes
+
+- a8ea400: `map.playVisualEffect(position, effect, options?)` plays a one-shot particle effect for the players of the map: a built-in preset by name, or a resolved particle preset (the payload of a Studio Visual Effect) with `options.preset`. The client registers the `rpg:visual-effect` component animation (the CanvasEngine `Fx` preset) by default.
+
+  Scripts: `$map.playVisualEffect({ effect, at, preset?, duration?, scale? })`, and `$map.launchProjectile` takes `owner: "player"` so the player of the script launches the projectile: it flies through them, and `projectile.end` and `event.projectileHit` fire for them.
+
+### Patch Changes
+
+- 561e68c: The published type declarations resolve under `moduleResolution: "node16"` and `"nodenext"`. Their relative imports now name the file (`./core/math/Vector2.js` instead of `./core/math/Vector2`), as TypeScript requires for the declarations of a `"type": "module"` package. Before, a project compiled with `tsc` in that mode (a standalone Node server, for example) lost the names re-exported with `export *` (such as `clamp` from `@rpgjs/physic` or `RpgPlayer` from `@rpgjs/server`) and got `any` for the others. Projects that resolve with `"bundler"` (Vite) see no change. `rpgjsModuleViteConfig` from `@rpgjs/vite` applies the same fix to the modules it builds.
+- Updated dependencies [561e68c]
+  - @rpgjs/physic@5.1.1
+
 ## 5.2.0
 
 ### Minor Changes
