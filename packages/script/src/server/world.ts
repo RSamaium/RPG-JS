@@ -598,7 +598,9 @@ export function describeRoom(room: RpgPlayerRoom | RpgMap | null | undefined): {
  * in the `state` of the room, under the same prefix, which RPGJS synchronizes with the clients. Either way every player of the room
  * reads and changes the same value. A room with neither (a lobby) has nowhere to keep them: using them says so.
  */
-export function sharedPropsOf(place: RpgMap | RpgPlayerRoom | null | undefined, declared: readonly SharedDecl[]): ScriptWorld["sharedProps"] {
+export function sharedPropsOf(place: RpgMap | RpgPlayerRoom | null | undefined, declarations: readonly SharedDecl[]): ScriptWorld["sharedProps"] {
+  // the properties of each player live on the player (`playerSharedPropsOf`)
+  const declared = declarations.filter((d) => d.scope !== "player");
   const names = new Set(declared.map((d) => d.name));
   const has = (name: string) => names.has(name);
 
@@ -627,6 +629,42 @@ export function sharedPropsOf(place: RpgMap | RpgPlayerRoom | null | undefined, 
 
   const nowhere = () => { throw new Error("shared properties need a map or a gameplay room with a state: this room has neither"); };
   return { has, get: nowhere, set: nowhere };
+}
+
+/**
+ * Gives a player the properties scripts declare for each player (`shared({ name: { scope: "player" } })`), as synchronized
+ * properties of the player: `player.setSync({ script_<name>: { $default, $syncWithClient, $permanent } })`. A property the player
+ * already has is kept, with its value: one loaded from a save or brought from another map is not reset.
+ *
+ * @param player - The player.
+ * @param declarations - The declarations of the scripts; the ones of the room are ignored.
+ */
+export function applyPlayerShared(player: RpgPlayer, declarations: readonly SharedDecl[]): void {
+  const target = player as unknown as Record<string, unknown> & { setSync?: (schema: Record<string, unknown>) => void };
+  if (typeof target.setSync !== "function") return;
+  for (const d of declarations) {
+    if (d.scope !== "player") continue;
+    const key = SHARED_PREFIX + d.name;
+    const current: unknown = target[key];
+    if (typeof current === "function" && typeof (current as { set?: unknown }).set === "function") continue;
+    target.setSync({ [key]: { $default: d.initial, $syncWithClient: d.client, $permanent: d.persist } });
+  }
+}
+
+/**
+ * The properties of the player a script acts for (`scope: "player"`), as a script sees them: `$player.shared.<name>` reads and
+ * changes `player.script_<name>`, which `applyPlayerShared` declares when the player does not have it yet.
+ */
+export function playerSharedPropsOf(player: RpgPlayer, declarations: readonly SharedDecl[]): ScriptWorld["playerSharedProps"] {
+  const declared = declarations.filter((d) => d.scope === "player");
+  const names = new Set(declared.map((d) => d.name));
+  if (declared.length > 0) applyPlayerShared(player, declared);
+  const signalOf = (name: string) => (player as unknown as Record<string, { (): unknown; set(value: unknown): void }>)[SHARED_PREFIX + name];
+  return {
+    has: (name) => names.has(name),
+    get: (name) => signalOf(name)(),
+    set: (name, value) => signalOf(name).set(value),
+  };
 }
 
 /**
@@ -852,6 +890,7 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     wait: (seconds) => new Promise<void>((resolve) => setTimeout(resolve, Math.min(Math.max(seconds, 0), MAX_WAIT_SECONDS) * 1000)),
     rand: options.rand ?? ((min, max) => min + Math.floor(Math.random() * (max - min + 1))),
     sharedProps: sharedPropsOf(room, options.shared ?? []),
+    playerSharedProps: playerSharedPropsOf(player, options.shared ?? []),
     data: dataPortOf(room),
     stateProps: options.state ?? { get: (key) => data.get(key), set: (key, value) => void data.set(key, value) },
     hook: options.hook ?? {},

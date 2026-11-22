@@ -14,6 +14,11 @@ import type { ApiInfo, ApiParam, Host } from "./interpreter";
 export interface MemberDesc {
   type: string; doc?: string; writable?: boolean;
   /**
+   * The member is another handle of the description, reached through this one (`$player.shared` is `$playerShared`): its
+   * members, methods and dynamic part are the ones of that handle. Such a member is read-only and has no implementation of its own.
+   */
+  handle?: string;
+  /**
    * The property of the engine it mirrors (`player.through`, `map.widthPx`): the value is read from it, and written to it after it
    * is checked against `type`. The environment does it; nothing else is written for it.
    */
@@ -30,11 +35,18 @@ export interface MethodDesc {
 }
 /** Members a handle takes by name (`$switch.door_open`, `$var.visits`): the description of the key, the type of the value, and whether a script may assign it. */
 export interface DynamicDesc { keyDoc: string; type: string; doc?: string; writable?: boolean }
+/** Where a property declared with `shared({ ... })` lives: one value for the room, or one value for each player. */
+export type SharedScope = "room" | "player";
 /** A `$name` a script can use: what it has (members, methods, a dynamic part), and whether its properties are declared by the script itself (`shared({ ... })`). */
 export interface HandleDesc {
   doc?: string;
-  /** Properties are declared by the script itself (`shared({ ... })`): `$shared.x` is checked against them. */
-  declared?: boolean;
+  /**
+   * Properties are declared by the script itself (`shared({ ... })`), with this scope: `$shared.x` is checked against the
+   * declarations of the room (`true` is `"room"`), `$player.shared.x` against the ones of each player.
+   */
+  declared?: boolean | SharedScope;
+  /** The handle is only reached through a member of another one (`MemberDesc.handle`): it is not a global name of the scripts. */
+  nested?: boolean;
   members?: Record<string, MemberDesc>;
   methods?: Record<string, MethodDesc>;
   dynamic?: DynamicDesc;
@@ -120,8 +132,9 @@ export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>
   return {
     handles: Object.fromEntries(Object.entries(desc.handles).map(([name, h]) => [name, {
       dynamic: !!h.dynamic,
-      declared: !!h.declared,
+      declared: h.declared === true ? "room" : h.declared || undefined,
       members: Object.keys(h.members ?? {}),
+      subHandles: Object.fromEntries(Object.entries(h.members ?? {}).flatMap(([k, m]) => (m.handle ? [[k, m.handle]] : []))),
       methods: Object.keys(h.methods ?? {}),
       voidMethods: Object.entries(h.methods ?? {}).filter(([, m]) => returnsNothing(m.sig)).map(([k]) => k),
       syncMethods: Object.entries(h.methods ?? {}).filter(([, m]) => m.sync).map(([k]) => k),
@@ -143,7 +156,7 @@ export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>
  * @param desc - The description of the API.
  * @returns The global names, to give to `compileProgram`.
  */
-export const globalNames = (desc: ApiDescription) => [...Object.keys(desc.handles), ...Object.keys(desc.functions)];
+export const globalNames = (desc: ApiDescription) => [...Object.keys(desc.handles).filter((name) => !desc.handles[name].nested), ...Object.keys(desc.functions)];
 
 const payloadType = (f: PayloadField): string =>
   f.type === "object" && f.fields ? `{ ${Object.entries(f.fields).map(([k, v]) => `${k}: ${payloadType(v)}`).join("; ")} }` : f.type === "object" ? "object" : f.type;
@@ -169,16 +182,27 @@ export function describeApi(desc: ApiDescription): string {
     }
     out.push("");
   }
-  for (const [name, h] of Object.entries(desc.handles)) {
-    out.push(`${h.doc ? `/** ${h.doc} */\n` : ""}declare const ${name}: {`);
-    for (const [k, m] of Object.entries(h.members ?? {})) out.push(`  ${m.doc ? `/** ${m.doc} */ ` : ""}${m.writable ? "" : "readonly "}${k}: ${m.type};`);
+  // The body of a handle; a member that is another handle (`$player.shared`) is written in place, one level deeper
+  const body = (h: HandleDesc, indent: string): string[] => {
+    const lines: string[] = [];
+    for (const [k, m] of Object.entries(h.members ?? {})) {
+      const doc = m.doc ? `/** ${m.doc} */ ` : "";
+      const inner = m.handle ? desc.handles[m.handle] : undefined;
+      if (inner) lines.push(`${indent}${doc}readonly ${k}: {`, ...body(inner, `${indent}  `), `${indent}};`);
+      else lines.push(`${indent}${doc}${m.writable ? "" : "readonly "}${k}: ${m.type};`);
+    }
     for (const [k, m] of Object.entries(h.methods ?? {})) {
       const doc = [m.doc, m.sync ? "Answers at once: a listener that replies may call it." : ""].filter(Boolean).join(" ");
-      out.push(`  ${doc ? `/** ${doc} */ ` : ""}${k}${m.sig};`);
+      lines.push(`${indent}${doc ? `/** ${doc} */ ` : ""}${k}${m.sig};`);
     }
-    if (h.declared) out.push("  // properties declared at the top of the script with shared({ name: { initial, client, persist } })");
-    if (h.dynamic) out.push(`  ${h.dynamic.writable ? "" : "readonly "}[${h.dynamic.keyDoc}]: ${h.dynamic.type};`);
-    out.push("};", "");
+    if (h.declared === "player") lines.push(`${indent}// properties declared at the top of the script with shared({ name: { initial, scope: "player", client, persist } })`);
+    else if (h.declared) lines.push(`${indent}// properties declared at the top of the script with shared({ name: { initial, client, persist } })`);
+    if (h.dynamic) lines.push(`${indent}${h.dynamic.writable ? "" : "readonly "}[${h.dynamic.keyDoc}]: ${h.dynamic.type};`);
+    return lines;
+  };
+  for (const [name, h] of Object.entries(desc.handles)) {
+    if (h.nested) continue;
+    out.push(`${h.doc ? `/** ${h.doc} */\n` : ""}declare const ${name}: {`, ...body(h, "  "), "};", "");
   }
   for (const [name, f] of Object.entries(desc.functions)) out.push(`${f.doc ? `/** ${f.doc} */\n` : ""}declare function ${name}${f.sig};`);
   if (desc.signals) {
@@ -219,6 +243,12 @@ export function missingImplementations<W>(desc: ApiDescription, impl: ApiImpl<W>
     const i = impl.handles[name];
     if (!i) { problems.push(`handle ${name} is not implemented`); continue; }
     for (const k of Object.keys(h.members ?? {})) {
+      if (h.members![k].handle) {
+        if (!desc.handles[h.members![k].handle!]) problems.push(`${name}.${k} names the handle ${h.members![k].handle}, which is not described`);
+        if (h.members![k].writable) problems.push(`${name}.${k} is a handle: it cannot be writable`);
+        if (i.members?.[k]) problems.push(`${name}.${k} is a handle: it is implemented by ${h.members![k].handle}`);
+        continue;
+      }
       if (!i.members?.[k]?.read) problems.push(`${name}.${k} has no read`);
       if (h.members![k].writable && !i.members?.[k]?.write) problems.push(`${name}.${k} is writable but has no write`);
       if (!h.members![k].writable && i.members?.[k]?.write) problems.push(`${name}.${k} has a write but is not writable`);
@@ -249,15 +279,17 @@ export function missingImplementations<W>(desc: ApiDescription, impl: ApiImpl<W>
 export function hostFromApi<W>(desc: ApiDescription, impl: ApiImpl<W>, world: W): Host {
   const handles: Record<string, unknown> = {};
   for (const name of Object.keys(desc.handles)) handles[name] = { [HANDLE]: name };
+  const globalHandles = Object.fromEntries(Object.entries(handles).filter(([name]) => !desc.handles[name].nested));
   const fns: Record<string, unknown> = {};
   for (const name of Object.keys(desc.functions)) fns[name] = { [HOSTFN]: name };
   const nameOf = (o: unknown) => (o as any)[HANDLE] as string;
   return {
-    globals: { ...handles, ...fns },
+    globals: { ...globalHandles, ...fns },
     isHandle: (v) => !!v && typeof v === "object" && HANDLE in (v as object),
     isHostFn: (v) => !!v && typeof v === "object" && HOSTFN in (v as object),
     read(obj, key) {
       const name = nameOf(obj), d = desc.handles[name], i = impl.handles[name];
+      if (d.members?.[key]?.handle) return handles[d.members[key].handle!];
       if (d.members?.[key]) return i.members![key].read!(world);
       if (d.dynamic) return i.dynamic!.read(world, key);
       throw new Error(`"${name}.${key}" cannot be read`);

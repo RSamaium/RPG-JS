@@ -355,9 +355,9 @@ const runShared = async (fn: string, store: SharedStore, init: any = {}) => {
 test("shared properties: declared once, read and written by the script, flags reported", async () => {
   const c = checkScript(SHOP);
   expect(c.shared).toEqual([
-    { name: "stock", initial: 3, client: true, persist: false },
-    { name: "prix", initial: 20, client: true, persist: true },
-    { name: "annonce", initial: "Bienvenue", client: true, persist: false },
+    { name: "stock", initial: 3, client: true, persist: false, scope: "room" },
+    { name: "prix", initial: 20, client: true, persist: true, scope: "room" },
+    { name: "annonce", initial: "Bienvenue", client: true, persist: false, scope: "room" },
   ]);
   const store = new SharedStore();
   const a = await runShared("acheter", store, { player: { gold: 100 } });
