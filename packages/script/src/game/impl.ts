@@ -11,6 +11,7 @@
 import type { ApiDescription, ApiImpl, HandleImpl } from "../core/api";
 import { checkArguments, checkValue, parseType } from "../core/types";
 import { GAME_API_DESCRIPTION } from "./description";
+import type { HttpPort } from "./http";
 
 /** What a script gets of an item of the inventory: a copy, whose changes change nothing. */
 export interface ItemSnapshot { id: string; name: string; quantity: number }
@@ -352,6 +353,8 @@ export interface EnginePort {
 export interface ScriptWorld {
   /** The names of the API that mirror the engine. */
   engine: EnginePort;
+  /** The connections of the host for `$http`, when it gives some (see `game/http.ts`). */
+  http?: HttpPort;
   player: PlayerPort;
   /** The room the script runs in: `kind` is "map" for a map, otherwise the kind of the gameplay room. */
   room: { id: string; kind: string };

@@ -8,6 +8,7 @@ import { AreaShape, MAXHP, MAXSP, Vector2 } from "@rpgjs/common";
 import { Components, Move } from "@rpgjs/server";
 import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
+import type { HttpPort } from "../game/http";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
 const read = <T>(value: unknown): T => (typeof value === "function" ? (value as () => T)() : (value as T));
@@ -673,6 +674,8 @@ export interface RpgjsWorldOptions {
   emit?: WorldEmit;
   /** Where `log(...)` writes. The console of the server when not given. */
   log?: (message: string) => void;
+  /** The connections of the host for `$http`, already bound to this run (`ScriptService` builds it from its `HttpTransport`). */
+  http?: HttpPort;
 }
 
 /**
@@ -855,5 +858,6 @@ export function createRpgjsWorld(options: RpgjsWorldOptions): ScriptWorld {
     data: dataPortOf(room),
     stateProps: options.state ?? { get: (key) => data.get(key), set: (key, value) => void data.set(key, value) },
     hook: options.hook ?? {},
+    ...(options.http ? { http: options.http } : {}),
   };
 }

@@ -9,6 +9,7 @@ import { SignalRegistry, type ListenerReport } from "../core/signals";
 import { apiInfo, describeApi, globalNames, hostFromApi } from "../core/api";
 import { GAME_API_DESCRIPTION } from "../game/description";
 import { GAME_API_IMPL } from "../game/impl";
+import { httpCatalog, withHttpDescription, withHttpImpl, type HttpConnectionOptions, type HttpHostAnswer, type HttpMethod, type HttpPort } from "../game/http";
 import { SharedStore, SimWorld, type WorldInit } from "./world";
 import { parseScript } from "../parse";
 
@@ -36,9 +37,36 @@ export type SimulatedWorld = Omit<WorldInit, "shared"> & { shared?: SharedStore 
 /** The signals a module adds to the ones of the game (the `signals` option of `ScriptService`), by name. */
 export type ModuleSignals = Record<string, SignalDesc>;
 
-/** The API of the game, with the signals of the modules a game uses: a script is checked and simulated against these too. */
-const descriptionWith = (signals?: ModuleSignals): ApiDescription =>
-  signals ? { ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...signals } } : GAME_API_DESCRIPTION;
+/** The API of the game, with the signals of the modules a game uses, and `$http` when the host declares connections. */
+const descriptionWith = (signals?: ModuleSignals, connections?: Record<string, HttpConnectionOptions>): ApiDescription =>
+  withHttpDescription(signals ? { ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...signals } } : GAME_API_DESCRIPTION, connections);
+
+/**
+ * A fake answer of a connection, for `simulate` and `runTests`: nothing touches the network. `methods` are the methods the connection
+ * allows (`["GET"]` when not given); `json` is answered as JSON, `text` as text, `error` as an error code of the host.
+ */
+export interface SimHttpAnswer { status?: number; json?: unknown; text?: string; error?: string; methods?: HttpMethod[] }
+/** The connections of a simulation, by name, with what each answers. */
+export type SimHttp = Record<string, SimHttpAnswer>;
+
+const connectionsOf = (http?: SimHttp): Record<string, HttpConnectionOptions> | undefined =>
+  http ? Object.fromEntries(Object.entries(http).map(([name, fake]) => [name, fake.methods ? { methods: fake.methods } : {}])) : undefined;
+
+/** The network of a simulation: each request that reaches it is an `http` effect, and gets the fake answer of its connection. */
+function simHttpPort(http: SimHttp, world: SimWorld, signal: string | undefined, limits: Limits): HttpPort {
+  return {
+    connections: connectionsOf(http)!,
+    signal,
+    limits,
+    async send(request): Promise<HttpHostAnswer> {
+      world.effects.push({ name: "http", params: JSON.parse(JSON.stringify(request)) });
+      const fake = http[request.connection] ?? {};
+      if (fake.error !== undefined) return { status: fake.status ?? 0, error: fake.error };
+      if (fake.json !== undefined) return { status: fake.status ?? 200, body: JSON.stringify(fake.json), contentType: "application/json" };
+      return { status: fake.status ?? 200, body: fake.text ?? "", contentType: "text/plain" };
+    },
+  };
+}
 
 const strip = (m: string) => m.replace(/^line \S+: /, "");
 
@@ -106,7 +134,11 @@ export function scriptWarnings(ast: any): Diagnostic[] {
  * Options of `checkScript`: the exported functions the request requires, which make the check fail when missing, and the signals
  * of the modules a game uses (a signal of a module is accepted only when it is given here).
  */
-export interface CheckOptions { requiredExports?: string[]; signals?: ModuleSignals }
+export interface CheckOptions {
+  requiredExports?: string[]; signals?: ModuleSignals;
+  /** The connections the host declares for `$http`: without them, `$http` does not exist. */
+  http?: { connections: Record<string, HttpConnectionOptions> };
+}
 /**
  * Checks a script without running it: parses it, compiles it against the API, and reports what it declares. Free to call, so it can
  * be called after every edit.
@@ -129,8 +161,9 @@ export function checkScript(source: string, catalog?: Record<string, string[]>, 
     return { ok: false, diagnostics: [{ line: e.loc?.line ?? 0, message: `syntax error: ${strip(String(e.message))}` }], ...empty };
   }
   try {
-    const description = descriptionWith(options.signals);
-    const program = compileProgram(ast, globalNames(description), apiInfo(description, catalog, { checkArguments: true }));
+    const description = descriptionWith(options.signals, options.http?.connections);
+    const http = httpCatalog(options.http?.connections);
+    const program = compileProgram(ast, globalNames(description), apiInfo(description, catalog || Object.keys(http).length ? { ...catalog, ...http } : undefined, { checkArguments: true }));
     const missing = (options.requiredExports ?? []).filter((n) => !program.exported.has(n));
     if (missing.length) return { ok: false, diagnostics: missing.map((n) => ({ line: 0, message: `missing exported function "${n}": the request requires it, write export function ${n}(...) { ... }` })), ...empty };
     return {
@@ -158,6 +191,8 @@ export interface RunSpec {
   limits?: Limits;
   /** The signals of the modules the game uses, for `emit` and for the check of the script. */
   signals?: ModuleSignals;
+  /** The connections of `$http`, with their fake answers: `{ meteo_api: { status: 200, json: { summary: "sunny" } } }`. */
+  http?: SimHttp;
 }
 /** A simulation: the script, and what to run. */
 export interface SimulateInput extends RunSpec { source: string; catalog?: Record<string, string[]>; requiredExports?: string[] }
@@ -188,16 +223,18 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
   const world = new SimWorld(init);
   world.shared.declare(program.shared);
   Object.assign(world.shared.values, presets ?? {});
-  const description = descriptionWith(spec.signals);
-  const host = hostFromApi(description, GAME_API_IMPL, world);
+  const description = descriptionWith(spec.signals, connectionsOf(spec.http));
+  const impl = spec.http ? withHttpImpl(GAME_API_IMPL) : GAME_API_IMPL;
+  const host = hostFromApi(description, impl, world);
   const limits = spec.limits ?? { steps: 20000, iterations: 100 };
+  if (spec.http) world.http = simHttpPort(spec.http, world, spec.emit?.signal ?? spec.fire, limits);
   try {
     let value: unknown, page: number | undefined, steps: number | undefined;
     if (spec.call) ({ value, steps } = await program.call(spec.call.fn, spec.call.args ?? [], host, limits, cover));
     else if (spec.event !== undefined) ({ page, steps } = await program.runEvent(spec.event, host, limits, cover));
     else if (spec.fire) await program.fire(spec.fire, host, limits, cover);
     else if (spec.emit) {
-      const registry = new SignalRegistry({ description, impl: GAME_API_IMPL, limits });
+      const registry = new SignalRegistry({ description, impl, limits });
       registry.install("script", program);
       world.hook = (spec.emit.payload && typeof spec.emit.payload === "object" ? spec.emit.payload : {}) as Record<string, unknown>;
       const report = await registry.emit(spec.emit.signal, spec.emit.payload ?? {}, () => world);
@@ -226,7 +263,8 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
  * ```
  */
 export async function simulate(input: SimulateInput): Promise<SimulateResult> {
-  const check = checkScript(input.source, input.catalog, { requiredExports: input.requiredExports, signals: input.signals });
+  const connections = connectionsOf(input.http);
+  const check = checkScript(input.source, input.catalog, { requiredExports: input.requiredExports, signals: input.signals, http: connections ? { connections } : undefined });
   if (!check.ok || !check.program) return { ok: false, diagnostics: check.diagnostics, effects: [] };
   const cover = new Set<number>();
   const r = await execute(check.program, input, cover);
@@ -304,7 +342,9 @@ function judge(t: TestCase, r: SimulateResult): string[] {
  * ```
  */
 export async function runTests(source: string, tests: TestCase[], catalog?: Record<string, string[]>, signals?: ModuleSignals): Promise<TestsReport> {
-  const check = checkScript(source, catalog, { signals });
+  // the connections of every test: a script is checked once, against all of them
+  const connections = connectionsOf(Object.assign({}, ...tests.map((t) => t.http ?? {})));
+  const check = checkScript(source, catalog, { signals, http: tests.some((t) => t.http) && connections ? { connections } : undefined });
   if (!check.ok || !check.program) return { ok: false, diagnostics: check.diagnostics, results: [], uncovered: {} };
   const cover = new Set<number>();
   const results: TestResult[] = [];
@@ -320,6 +360,8 @@ export async function runTests(source: string, tests: TestCase[], catalog?: Reco
  * The API of scripts in a game as TypeScript declarations, with its signals: what an agent reads before writing a script.
  *
  * @param signals - The signals of the modules the game uses, listed with the ones of the game.
+ * @param options - `http`: the connections the host declares; `$http` is described only with them.
  * @returns Declarations, as text.
  */
-export const describeGameApi = (signals?: ModuleSignals) => describeApi(descriptionWith(signals));
+export const describeGameApi = (signals?: ModuleSignals, options: { http?: { connections: Record<string, HttpConnectionOptions> } } = {}) =>
+  describeApi(descriptionWith(signals, options.http?.connections));
