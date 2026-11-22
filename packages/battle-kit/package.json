@@ -1,0 +1,43 @@
+{
+  "name": "@rpgjs/battle-kit",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "5.2.0",
+  "description": "Presentation pieces shared by the RPGJS battle systems: effect presets, screen impacts, floating numbers, element colours and a presentation clock",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./pure": {
+      "import": "./dist/pure.js",
+      "types": "./dist/pure.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite build --watch",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "@canvasengine/presets": "^2.5.0",
+    "canvasengine": "^2.5.1",
+    "pixi-filters": "^6.1.5",
+    "pixi.js": "^8.9.2"
+  },
+  "devDependencies": {
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "^5.0.2"
+  }
+}

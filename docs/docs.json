@@ -87,6 +87,7 @@
               "guide/items",
               "guide/loot",
               "guide/hotbar",
+              "guide/battle-kit",
               "guide/save-load",
               "guide/i18n",
               "guide/synchronization",
