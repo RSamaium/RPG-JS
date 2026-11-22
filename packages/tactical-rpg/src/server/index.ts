@@ -2,7 +2,23 @@ import { nativeDamageHook } from "../core/formulas";
 import { createModule } from "@rpgjs/common";
 import { defineModule, type RpgPlayer, type RpgServer } from "@rpgjs/server";
 import {
+  BattleServerHooks,
+  BattleSessions,
+  sameBattleMap,
+  battleParticipants,
+  battlePlayerName,
+  databaseRecord,
+  isBattleGroup,
+  plainValue,
+  readBattlePlayer,
+  writeBattlePlayer,
+  type BattleGroupOptions,
+  type BattleHandleBase,
+  type BattleSession,
+} from "@rpgjs/battle-kit/server";
+import {
   TACTICAL_GUI,
+  TACTICAL_I18N,
   TACTICAL_HIDDEN_GRAPHIC,
   chooseAction,
   createTacticalBattle,
@@ -24,6 +40,8 @@ import {
   type Unit,
   chooseFor,
   type TacticalUnitRecord,
+  type TacticalUnitData,
+  type Placement,
   eventDuration,
   hold,
   type BattleEvent,
@@ -31,17 +49,11 @@ import {
 
 export * from "../core";
 
-/** A running tactical battle, as seen by hooks. */
-export interface TacticalHandle {
-  id: string;
-  /** The leader (first player). */
-  player: RpgPlayer;
-  /** Players of the allied side (coop: several), including those who left. */
-  players: RpgPlayer[];
-  /** PvP: players of the enemy side. */
-  versus: RpgPlayer[];
-  /** Players watching the battle right now. */
-  spectators(): RpgPlayer[];
+/**
+ * A running tactical battle, as the hooks and `getTacticalBattle` see it.
+ * `players` keeps the players who left. Server only: the server owns the state.
+ */
+export interface TacticalBattleHandle extends BattleHandleBase {
   /** Current authoritative state (read-only for hooks). */
   state(): BattleState;
 }
@@ -70,7 +82,7 @@ export interface TacticalHandle {
 /** What a rule hook of a game also gets: the leader of the battle and the battle. */
 export interface TacticalRuleContext {
   player: RpgPlayer;
-  battle: TacticalHandle;
+  battle: TacticalBattleHandle;
 }
 type WithBattle<K extends keyof RulesHooks> = NonNullable<RulesHooks[K]> extends (ctx: infer C) => infer R ? (ctx: C & TacticalRuleContext) => R : never;
 
@@ -82,11 +94,11 @@ export interface TacticalServerHooks extends Omit<RulesHooks, (typeof RULE_HOOKS
   onDefeat?: WithBattle<"onDefeat">;
   onPhase?: WithBattle<"onPhase">;
   /** The battle is created and not shown yet: change `state` (units, rules, objective) before the first display. Called once, for the leader. */
-  onSetup?(player: RpgPlayer, battle: TacticalHandle, state: BattleState): void | Promise<void>;
-  onStart?(player: RpgPlayer, battle: TacticalHandle): void | Promise<void>;
+  onSetup?(player: RpgPlayer, battle: TacticalBattleHandle, state: BattleState): void | Promise<void>;
+  onStart?(player: RpgPlayer, battle: TacticalBattleHandle): void | Promise<void>;
   /** Return `false` to refuse a player command. */
-  onCommand?(player: RpgPlayer, battle: TacticalHandle, env: CommandEnvelope): boolean | void | Promise<boolean | void>;
-  onEnd?(player: RpgPlayer, battle: TacticalHandle, result: TacticalResult): void | Promise<void>;
+  onCommand?(player: RpgPlayer, battle: TacticalBattleHandle, env: CommandEnvelope): boolean | void | Promise<boolean | void>;
+  onEnd?(player: RpgPlayer, battle: TacticalBattleHandle, result: TacticalResult): void | Promise<void>;
   /**
    * AI, for each action of an AI-controlled unit: return a command to play
    * instead of `suggested` (the default AI's), or nothing to keep it. A
@@ -97,14 +109,15 @@ export interface TacticalServerHooks extends Omit<RulesHooks, (typeof RULE_HOOKS
     /** The unit about to act. */
     unit: Unit;
     suggested: Command;
-    battle: TacticalHandle;
+    battle: TacticalBattleHandle;
   }): Command | null | void | Promise<Command | null | void>;
   /** Return `false` to refuse a spectator (private battle, distance, friends only…). */
-  onSpectate?(spectator: RpgPlayer, battle: TacticalHandle): boolean | void | Promise<boolean | void>;
+  onSpectate?(spectator: RpgPlayer, battle: TacticalBattleHandle): boolean | void | Promise<boolean | void>;
 }
 
 declare module "@rpgjs/server" {
   interface RpgServer {
+    /** Server hooks of the tactical battle (`@rpgjs/tactical-rpg`). */
     tactical?: TacticalServerHooks;
   }
 }
@@ -127,41 +140,37 @@ export interface TacticalServerOptions {
   turnSeconds?: number;
   /** Hide the player's map sprite during the battle (restored after). Default true. */
   hidePlayer?: boolean;
+  /**
+   * How the hero of a player fights (a `hero: true` placement): its role, battler, range, move… Its HP, SP, parameters, skills and
+   * items are read from the player. By default the role is the `tactical.role` of the class of the player (`warrior` otherwise) and
+   * the battler is the graphic of the player.
+   */
+  hero?: (player: RpgPlayer, ctx: { side: Team; seat: number }) => Partial<TacticalUnitData>;
   /** Hooks declared without a module. */
   hooks?: TacticalServerHooks;
 }
 
-export interface StartTacticalOptions {
+/** Options of a tactical battle, solo or in a group. */
+export interface StartTacticalBattleOptions {
   /** World position of the grid's top-left corner (map pixels), if the encounter gives none. */
   origin?: Cell;
 }
 
-/** Coop: several players against the encounter's enemies, each commanding their own allies. */
-export interface TacticalGroupOptions extends StartTacticalOptions {
-  players: RpgPlayer[];
+/**
+ * Several players: coop against the encounter's enemies (`players`), each
+ * commanding their own allies, or PvP (`versus` commands the enemies, no AI).
+ * `spectators` watch from the start (see `watchTacticalBattle` to join later).
+ */
+export interface TacticalBattleGroupOptions extends StartTacticalBattleOptions, BattleGroupOptions {
   encounter: string | TacticalEncounterRecord;
-  /** Players watching from the start (see `watchTactical` to join later). */
-  spectators?: RpgPlayer[];
-  /** PvP: the opposing side, commanding the encounter's enemies (no AI). */
-  versus?: RpgPlayer[];
 }
 
-interface Session {
-  handle?: TacticalHandle;
-  /** Take this player (or spectator) out of the battle (disconnection, `stopTactical`). */
-  leave(player: RpgPlayer): void;
-  /** Resolves once this player's HUD is closed. */
-  closed(player: RpgPlayer): Promise<void>;
-  /** Watch the battle until the spectator leaves; `false` when refused. */
-  watch(spectator: RpgPlayer): Promise<boolean>;
-  /** Is this player one of the battle's players (not a spectator)? */
-  plays(player: RpgPlayer): boolean;
-}
+type Session = BattleSession<TacticalBattleHandle>;
 
 let options: TacticalServerOptions = {};
-const sessions = new Map<string, Session>();
-/** Running battles by id. */
-const battles = new Map<string, Session>();
+/** The running tactical battles and the players they hold (fighters and spectators). */
+const battles = new BattleSessions<TacticalBattleHandle>("Tactical");
+let hooks = new BattleServerHooks<TacticalServerHooks>("tactical");
 /** Graphics hidden by a battle, waiting to be restored (per player). */
 const stashed = new Map<string, string[]>();
 
@@ -172,49 +181,127 @@ const read = <T>(fn: () => T): T | undefined => {
     return undefined;
   }
 };
-const val = (v: unknown) => (typeof v === "function" ? (v as () => unknown)() : v);
-
-/** A record of the RPGJS database (plain object or decorated class). */
-function dbRecord<T>(player: RpgPlayer, id: string): T | undefined {
-  const raw = read(() => (player as any).databaseById(id));
-  if (!raw) return undefined;
-  return (typeof raw === "function" ? { ...raw.prototype, ...raw.prototype?.options } : raw) as T;
-}
+const val = plainValue;
+const dbRecord = <T>(player: RpgPlayer, id: string): T | undefined => databaseRecord<T>(player, id);
 
 /** Resolve an encounter and everything it needs (options first, then the database). */
 export function resolveEncounter(player: RpgPlayer, encounter: string | TacticalEncounterRecord): EncounterSetup {
   const record =
     typeof encounter === "string" ? options.encounters?.[encounter] ?? dbRecord<TacticalEncounterRecord>(player, encounter) : encounter;
-  if (!record?.battle) throw new Error(`[Tactical] Unknown encounter "${String(encounter)}"`);
+  if (!record?.tactical) throw new Error(`[Tactical] Unknown encounter "${String(encounter)}"`);
   const units: Record<string, TacticalUnitRecord> = {};
   const skills: Record<string, TacticalSkillRecord> = {};
   const roles: Record<string, TacticalRoleRecord> = {};
   const items: Record<string, TacticalItemRecord> = {};
-  for (const p of [...record.battle.allies, ...record.battle.enemies]) {
-    if (units[p.unit]) continue;
+  for (const p of [...record.tactical.allies, ...record.tactical.enemies]) {
+    // A hero is read from its player when the battle starts (see `withHeroes`).
+    if (p.hero || !p.unit || units[p.unit]) continue;
     const unit = options.units?.[p.unit] ?? dbRecord<TacticalUnitRecord>(player, p.unit);
-    if (!unit?.battle) throw new Error(`[Tactical] Unknown unit "${p.unit}"`);
+    if (!unit?.tactical) throw new Error(`[Tactical] Unknown unit "${p.unit}"`);
     units[p.unit] = { ...unit, name: String(val(unit.name) ?? p.unit) };
     // Custom roles come from the options or the database; the built-in ones need nothing.
-    const roleId = unit.battle.role;
+    const roleId = unit.tactical.role;
     const role = roles[roleId] ?? options.roles?.[roleId] ?? dbRecord<TacticalRoleRecord>(player, roleId);
-    if (role?.battle) roles[roleId] = { ...role, name: String(val(role.name) ?? roleId) };
-    for (const id of unit.battle.skills ?? []) {
-      const skill = options.skills?.[id] ?? dbRecord<TacticalSkillRecord>(player, id);
-      if (skill?.battle) skills[id] = { ...skill, name: String(val(skill.name) ?? id) };
+    if (role?.tactical) roles[roleId] = { ...role, name: String(val(role.name) ?? roleId) };
+    for (const id of unit.tactical.skills ?? []) {
+      const skill = skillRecord(player, id);
+      if (skill) skills[id] = skill;
     }
-    for (const id of Object.keys(unit.battle.items ?? {})) {
-      const item = options.items?.[id] ?? dbRecord<TacticalItemRecord>(player, id);
-      if (item?.battle) items[id] = { ...item, name: String(val(item.name) ?? id) };
+    for (const id of Object.keys(unit.tactical.items ?? {})) {
+      const item = itemRecord(player, id);
+      if (item) items[id] = item;
     }
   }
-  return { name: record.name ? String(val(record.name)) : undefined, data: record.battle, units, skills, items, roles };
+  return { name: record.name ? String(val(record.name)) : undefined, data: record.tactical, units, skills, items, roles };
+}
+
+/** A skill a tactical battle can use (it has a `tactical` field), from the options or the database. */
+function skillRecord(player: RpgPlayer, id: string): TacticalSkillRecord | undefined {
+  const skill = options.skills?.[id] ?? dbRecord<TacticalSkillRecord>(player, id);
+  return skill?.tactical ? { ...skill, name: String(val(skill.name) ?? id) } : undefined;
+}
+
+/** An item a tactical battle can use (it restores HP or SP), from the options or the database. */
+function itemRecord(player: RpgPlayer, id: string): TacticalItemRecord | undefined {
+  const item = options.items?.[id] ?? dbRecord<TacticalItemRecord>(player, id);
+  if (!item || !(Number(item.hpValue) > 0 || Number(item.spValue) > 0)) return undefined;
+  return { ...item, name: String(val(item.name) ?? id) };
+}
+
+/** Id of the unit record of the hero of a player. */
+const heroUnitId = (player: RpgPlayer) => `hero:${player.id}`;
+
+/**
+ * The hero of a player as a unit: HP, SP and parameters of the player (equipment and states included), the skills it knows and the
+ * items it carries that a tactical battle can use. `hero` option and the class of the player give its role, battler, range and move.
+ */
+function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterSetup): TacticalUnitRecord {
+  const me = readBattlePlayer(player);
+  const own = options.hero?.(player, { side, seat }) ?? {};
+  const classId = String(val((read(() => (player as unknown as { _class?: () => { id?: unknown } })._class?.()) as { id?: unknown } | undefined)?.id) ?? "");
+  const classRole = classId ? dbRecord<{ tactical?: { role?: string } }>(player, classId)?.tactical?.role : undefined;
+  const maxHp = me.params.maxHp || own.stats?.hp || 100;
+  const maxSp = me.params.maxSp || own.stats?.sp || 20;
+  const skills = [...new Set([...(own.skills ?? []), ...me.skills])].filter((id) => {
+    const skill = skillRecord(player, id);
+    if (skill) setup.skills[id] = skill;
+    return !!skill;
+  });
+  const items: Record<string, number> = {};
+  for (const [id, quantity] of Object.entries(me.items)) {
+    const item = itemRecord(player, id);
+    if (!item) continue;
+    setup.items = { ...setup.items, [id]: item };
+    items[id] = quantity;
+  }
+  const role = own.role ?? classRole ?? "warrior";
+  const roleRecord = setup.roles?.[role] ?? options.roles?.[role] ?? dbRecord<TacticalRoleRecord>(player, role);
+  if (roleRecord?.tactical) setup.roles = { ...setup.roles, [role]: { ...roleRecord, name: String(val(roleRecord.name) ?? role) } };
+  return {
+    name: me.name ?? battlePlayerName(player, seat),
+    tactical: {
+      role,
+      battler: own.battler ?? me.graphic ?? "hero",
+      ...(own.portrait ? { portrait: own.portrait } : {}),
+      ...(own.tint !== undefined ? { tint: own.tint } : {}),
+      stats: {
+        hp: maxHp,
+        sp: maxSp,
+        power: own.stats?.power ?? (me.params.str || me.params.atk || 20),
+        range: own.stats?.range ?? 1,
+        move: own.stats?.move ?? 3,
+      },
+      skills,
+      items,
+      params: { ...me.params, ...own.params },
+      current: { hp: me.hp > 0 ? me.hp : maxHp, sp: Math.max(0, me.sp) },
+      player: player.id,
+    },
+  };
+}
+
+/**
+ * Replaces the `hero: true` placements of an encounter by the heroes of the players of the battle: `seat` is the index of the player
+ * in its side (the first one by default). A hero without a player (a seat nobody takes) is left out.
+ */
+function withHeroes(setup: EncounterSetup, players: RpgPlayer[], versus: RpgPlayer[]): EncounterSetup {
+  const place = (side: Team, list: Placement[], sidePlayers: RpgPlayer[]) =>
+    list.flatMap((p) => {
+      if (!p.hero) return [p];
+      const seat = p.seat ?? 0;
+      const player = sidePlayers[seat];
+      if (!player) return [];
+      setup.units[heroUnitId(player)] = heroUnit(player, side, seat, setup);
+      return [{ ...p, unit: heroUnitId(player) }];
+    });
+  const data = { ...setup.data, allies: place("ally", setup.data.allies, players), enemies: place("enemy", setup.data.enemies, versus) };
+  return { ...setup, data };
 }
 
 const RULE_HOOKS = ["onDamage", "onJudge", "onAction", "onMove", "onDefeat", "onPhase"] as const;
 
 /** Rule hooks of the plugin option and of game modules (`tactical: { onDamage }`). */
-function ruleHooks(player: RpgPlayer, battle: () => TacticalHandle): RulesHooks[] {
+function ruleHooks(player: RpgPlayer, battle: () => TacticalBattleHandle): RulesHooks[] {
   // The damage is the one of the formulas of the map (as in the turn-based battle); the hooks of the game adjust it
   const list: RulesHooks[] = [nativeDamageHook((name) => {
     try {
@@ -224,31 +311,14 @@ function ruleHooks(player: RpgPlayer, battle: () => TacticalHandle): RulesHooks[
     }
   })];
   // The rule hooks of a game also get the leader and the battle (`TacticalRuleContext`)
-  const withBattle = (fn: (ctx: any) => unknown) => (ctx: object) => fn({ ...ctx, player, battle: battle() });
-  if (options.hooks) list.push(...RULE_HOOKS.flatMap((name) => (options.hooks![name] ? [{ [name]: withBattle(options.hooks![name] as never) }] : [])));
-  const hooks = (player as any).hooks;
-  if (hooks?.getHookFunctions)
-    for (const name of RULE_HOOKS)
-      for (const fn of hooks.getHookFunctions(`server-tactical-${name}`) as ((...a: any[]) => any)[]) list.push({ [name]: withBattle(fn) });
+  const withBattle = (fn: (ctx: never) => unknown) => (ctx: object) => fn({ ...ctx, player, battle: battle() } as never);
+  for (const name of RULE_HOOKS)
+    for (const fn of hooks.functions(player, name)) list.push({ [name]: withBattle(fn as (ctx: never) => unknown) } as RulesHooks);
   return list;
 }
 
-/** Async hooks (plugin option + game modules); resolves with their results. */
-async function callHooks(player: RpgPlayer, name: string, ...args: unknown[]): Promise<unknown[]> {
-  const results: unknown[] = [];
-  const own = (options.hooks as Record<string, any> | undefined)?.[name];
-  if (own) results.push(await own(...args));
-  const hooks = (player as any).hooks;
-  if (!hooks?.callHooks) return results;
-  await new Promise<void>((resolve, reject) =>
-    hooks.callHooks(`server-tactical-${name}`, ...args).subscribe({
-      next: (v: unknown) => results.push(...(Array.isArray(v) ? v : [v])),
-      error: reject,
-      complete: () => resolve(),
-    }),
-  );
-  return results;
-}
+/** Async hooks (option, then game modules): their results. */
+const callHooks = (player: RpgPlayer, name: keyof TacticalServerHooks & string, ...args: unknown[]) => hooks.call(player, name, ...args);
 
 /** The grid centred on the player when the encounter does not place it. */
 function aroundPlayer(player: RpgPlayer, setup: EncounterSetup): Cell {
@@ -261,57 +331,71 @@ function aroundPlayer(player: RpgPlayer, setup: EncounterSetup): Cell {
 }
 
 /**
- * Start a tactical battle and wait for its outcome. The map stays loaded: the
- * grid is drawn on it (component animation) and the HUD is a GUI.
+ * Starts a tactical battle and waits for its outcome. The map stays loaded:
+ * the grid is drawn on it (component animation) and the HUD is a GUI. The
+ * server owns the battle; the heroes of the players (`hero: true` placements)
+ * are read from them and their HP, SP and spent items are written back before
+ * `tactical.onEnd` runs. Standalone RPG and MMORPG; in MMORPG every player must
+ * be on the leader's map.
  *
+ * @title startTacticalBattle
+ * @method startTacticalBattle(player, encounter, options?)
+ * @param {RpgPlayer} player - The player who fights (solo), or the group options
+ * @param {string | TacticalEncounterRecord} encounter - An encounter of the database (id) or an encounter object
+ * @param {StartTacticalBattleOptions} [options] - Where the grid goes
+ * @returns {Promise<TacticalResult>} The outcome as the first side lives it
+ * @example
  * ```ts
- * const result = await startTactical(player, "sanctuary");
+ * import { startTacticalBattle } from "@rpgjs/tactical-rpg/server";
+ *
+ * const result = await startTacticalBattle(player, "sanctuary");
  * // Coop: each player commands their own allies (placement `seat`, dealt in turn otherwise).
- * const result = await startTactical({ players: [alice, bob], encounter: "sanctuary" });
+ * await startTacticalBattle({ players: [alice, bob], encounter: "sanctuary" });
+ * // PvP: the opposing side commands the enemies of the encounter.
+ * await startTacticalBattle({ players: [alice], versus: [bob], encounter: "arena" });
  * ```
  */
-export function startTactical(player: RpgPlayer, encounter: string | TacticalEncounterRecord, start?: StartTacticalOptions): Promise<TacticalResult>;
-export function startTactical(group: TacticalGroupOptions): Promise<TacticalResult>;
-export async function startTactical(
-  a: RpgPlayer | TacticalGroupOptions,
+export function startTacticalBattle(player: RpgPlayer, encounter: string | TacticalEncounterRecord, options?: StartTacticalBattleOptions): Promise<TacticalResult>;
+export function startTacticalBattle(group: TacticalBattleGroupOptions): Promise<TacticalResult>;
+export async function startTacticalBattle(
+  a: RpgPlayer | TacticalBattleGroupOptions,
   encounterArg?: string | TacticalEncounterRecord,
-  startArg: StartTacticalOptions = {},
+  startArg: StartTacticalBattleOptions = {},
 ): Promise<TacticalResult> {
-  const group = "players" in a && Array.isArray(a.players) ? a : null;
-  const unique = (list: RpgPlayer[]) => [...new Map(list.map((p) => [p.id, p])).values()];
-  const players = group ? unique(group.players) : [a as RpgPlayer];
-  const versus = group?.versus ? unique(group.versus).filter((p) => !players.some((q) => q.id === p.id)) : [];
+  const group = isBattleGroup(a) ? a : null;
+  const { players, versus, everyone, spectators } = battleParticipants("Tactical", group ?? { players: [a as RpgPlayer] });
   const encounter = group ? group.encounter : encounterArg!;
   const start = group ?? startArg;
-  if (!players.length) throw new Error("[Tactical] No player");
-  const everyone = [...players, ...versus];
-  // The battle lives in the room of the leader's map.
-  const map = read(() => players[0].getCurrentMap());
-  const away = everyone.find((p) => read(() => p.getCurrentMap()) !== map);
-  if (away) throw new Error(`[Tactical] Player ${away.id} is not on the same map as ${players[0].id}`);
-  const busy = everyone.find((p) => sessions.has(p.id));
-  if (busy) throw new Error(`[Tactical] Player ${busy.id} already in a battle`);
-  // Reserve the slots before any await: a double trigger must not open two battles.
-  const pending: Session = { leave: () => {}, closed: async () => {}, watch: async () => false, plays: () => true };
-  for (const p of everyone) sessions.set(p.id, pending);
+  // Reserve the players before any await: a double trigger must not open two battles.
+  const release = battles.reserve(everyone);
   try {
-    return await run(players, versus, encounter, start, group?.spectators ?? []);
+    return await run(players, versus, encounter, start, spectators);
   } finally {
-    // Seats free their own slot when their HUD closes; this only covers a failed start.
-    for (const p of everyone) if (sessions.get(p.id) === pending) sessions.delete(p.id);
+    // Seats free their own player when their HUD closes; this only covers a failed start.
+    release();
   }
 }
 
-/** Take a player out of their battle (like a disconnection) and wait until their HUD is closed. */
-export async function stopTactical(player: RpgPlayer): Promise<void> {
-  const session = sessions.get(player.id);
-  if (!session) return;
-  session.leave(player);
-  await session.closed(player);
+/**
+ * Takes a player out of their battle (as a disconnection does: their units go
+ * to a partner, a side left without players loses) and waits until their HUD
+ * is closed. Server only.
+ *
+ * @title stopTacticalBattle
+ * @method stopTacticalBattle(player)
+ * @param {RpgPlayer} player - A fighter or a spectator
+ * @returns {Promise<void>} Resolves once the HUD of the player is closed
+ * @example
+ * ```ts
+ * await stopTacticalBattle(player);
+ * ```
+ */
+export function stopTacticalBattle(player: RpgPlayer): Promise<void> {
+  return battles.stop(player);
 }
 
 /** The name of a player: a guest of an online game has none, and is not called by their id. */
-const nameOf = (player: RpgPlayer, index = 0) => String(read(() => val((player as any).name)) || `Player ${index + 1}`);
+const nameOf = (player: RpgPlayer, index = 0) => battlePlayerName(player, index, player.t?.("tactical.player", { index: "{index}" }) ?? "Player {index}");
 
 /**
  * Hide the player's map sprite during the battle. Kept hidden: a map module may
@@ -340,7 +424,7 @@ function hidePlayer(player: RpgPlayer): () => void {
     const restore = graphics;
     stashed.set(player.id, restore);
     setTimeout(() => {
-      if (sessions.has(player.id)) return;
+      if (battles.isIn(player)) return;
       stashed.delete(player.id);
       read(() => player.setGraphic(restore));
     }, 0);
@@ -371,11 +455,11 @@ async function run(
   players: RpgPlayer[],
   versus: RpgPlayer[],
   encounter: string | TacticalEncounterRecord,
-  start: StartTacticalOptions,
+  start: StartTacticalBattleOptions,
   spectators: RpgPlayer[],
 ) {
   const leader = players[0];
-  const setup = resolveEncounter(leader, encounter);
+  const setup = withHeroes(resolveEncounter(leader, encounter), players, versus);
   let state = createTacticalBattle(setup, {
     id: `${leader.id}:${Date.now().toString(36)}`,
     origin: start.origin ?? aroundPlayer(leader, setup),
@@ -383,7 +467,7 @@ async function run(
     versus: versus.map((p, index) => ({ id: p.id, name: nameOf(p, players.length + index) })),
   });
   const watchers = new Map<string, Watcher>();
-  const handle: TacticalHandle = {
+  const handle: TacticalBattleHandle = {
     id: state.id,
     player: leader,
     players,
@@ -432,11 +516,28 @@ async function run(
     for (const seat of present()) seat.gui.update({ ...packet, state: shown(seat) });
     for (const watcher of watchers.values()) watcher.gui.update({ ...packet, state: shown() });
   };
+  /** Items each hero carried when the battle began: what is missing at the end was spent. */
+  const heroItems = new Map(state.units.filter((u) => u.player).map((u) => [u.player!, { ...u.items }]));
+  /**
+   * Writes the outcome of their hero on each player still in the battle: HP, SP and spent items. Nothing between players (PvP), and
+   * nothing for a player who left.
+   */
+  const commit = () => {
+    if (versus.length) return;
+    for (const seat of present()) {
+      const hero = state.units.find((u) => u.player === seat.player.id);
+      if (!hero) continue;
+      const before = heroItems.get(seat.player.id) ?? {};
+      const usedItems = Object.fromEntries(Object.entries(before).map(([id, n]) => [id, n - (hero.items[id] ?? 0)]).filter(([, n]) => (n as number) > 0));
+      writeBattlePlayer(seat.player, { hp: hero.hp, sp: hero.sp, usedItems }, "Tactical");
+    }
+  };
   const finish = async () => {
     if (ended || !state.winner) return;
     ended = true;
     clearTimeout(timer);
     clearTimeout(clock);
+    commit();
     for (const seat of present()) await callHooks(seat.player, "onEnd", seat.player, handle, result(seat.team));
   };
   // Enemy phase: one AI action every `enemyDelay` ms (the clients play each one).
@@ -519,21 +620,21 @@ async function run(
     (queue = queue.then(async () => {
       if (!seat.present) return;
       try {
-        if (!env?.command) throw new Error("t.error.action");
+        if (!env?.command) throw new Error("tactical.error.action");
         // Coop: a partner may have acted meanwhile. Their order still goes
         // through if the rules accept it, once the current animation is over.
         const coop = seats.size > 1;
-        if (env.revision !== state.revision && !coop) throw new Error("t.error.stale");
+        if (env.revision !== state.revision && !coop) throw new Error("tactical.error.stale");
         if (Date.now() < busyUntil) {
-          if (!coop) throw new Error("t.error.busy");
+          if (!coop) throw new Error("tactical.error.busy");
           await new Promise((resolve) => setTimeout(resolve, busyUntil - Date.now()));
           if (!seat.present || state.winner) return;
         }
         const vetoed = (await callHooks(seat.player, "onCommand", seat.player, handle, env)).includes(false);
-        if (vetoed) throw new Error("t.error.refused");
+        if (vetoed) throw new Error("tactical.error.refused");
         if (env.command.type === "start") {
           // Coop: the battle starts once every player is ready.
-          if (state.started) throw new Error("t.error.started");
+          if (state.started) throw new Error("tactical.error.started");
           state = { ...state, ready: [...new Set([...state.ready, seat.player.id])] };
           if (present().some((s) => !state.ready.includes(s.player.id))) return send({});
         }
@@ -546,7 +647,7 @@ async function run(
         // packet behind the move animation.
         if (env.then && !state.winner) {
           const next = { revision: state.revision, command: env.then };
-          if ((await callHooks(seat.player, "onCommand", seat.player, handle, next)).includes(false)) throw new Error("t.error.refused");
+          if ((await callHooks(seat.player, "onCommand", seat.player, handle, next)).includes(false)) throw new Error("tactical.error.refused");
           const after = transition(state, env.then, seat.team, hooks, seat.player.id);
           state = { ...after.state, ready: [] };
           wait(after.event, 1200, 300);
@@ -556,7 +657,7 @@ async function run(
         if (state.winner) await finish();
         else schedule();
       } catch (error) {
-        seat.gui.update({ state: shown(seat), error: error instanceof Error ? error.message : "t.error.action" });
+        seat.gui.update({ state: shown(seat), error: error instanceof Error ? error.message : "tactical.error.action" });
       }
     }));
 
@@ -570,12 +671,12 @@ async function run(
         send({});
       } catch (error) {
         // Letting go of a cell that is no longer held (the phase ended meanwhile) is nothing to tell
-        if (cell) seat.gui.update({ state: shown(seat), error: error instanceof Error ? error.message : "t.error.move" });
+        if (cell) seat.gui.update({ state: shown(seat), error: error instanceof Error ? error.message : "tactical.error.move" });
       }
     }));
 
   /**
-   * A player leaves (disconnection, stopTactical): their units go to a partner
+   * A player leaves (disconnection, stopTacticalBattle): their units go to a partner
    * of their side. PvP: a side left without players loses by forfeit.
    */
   const leave = (player: RpgPlayer) => {
@@ -584,7 +685,7 @@ async function run(
     const seat = seats.get(player.id);
     if (!seat?.present) return;
     seat.present = false;
-    sessions.delete(player.id);
+    battles.release(player, session);
     seat.gui.close(null);
     if (!present().length) {
       clearTimeout(timer);
@@ -626,10 +727,10 @@ async function run(
     closed: (player) => watchers.get(player.id)?.done ?? seats.get(player.id)?.done ?? Promise.resolve(),
     plays: (player) => !!seats.get(player.id)?.present,
     watch: async (spectator) => {
-      if (sessions.has(spectator.id) || !present().length) return false;
-      if (read(() => spectator.getCurrentMap()) !== read(() => leader.getCurrentMap())) return false;
-      // Reserve before the (async) veto: no double watch.
-      sessions.set(spectator.id, session);
+      if (battles.isIn(spectator) || !present().length) return false;
+      if (!sameBattleMap(spectator, leader)) return false;
+      // Seated before the (async) veto: no double watch.
+      if (!battles.seat(spectator, session)) return false;
       let done: () => void = () => {};
       const watcher: Watcher = { player: spectator, gui: spectator.gui(TACTICAL_GUI), done: new Promise<void>((r) => (done = r)) };
       try {
@@ -651,18 +752,17 @@ async function run(
         }
         return true;
       } finally {
-        if (sessions.get(spectator.id) === session) sessions.delete(spectator.id);
+        battles.release(spectator, session);
         done();
       }
     },
   };
-  battles.set(state.id, session);
+  battles.open(session, [...players, ...versus]);
 
   for (const player of [...players, ...versus]) {
     const gui = player.gui(TACTICAL_GUI);
     const seat: Seat = { player, team: versus.includes(player) ? "enemy" : "ally", gui, present: true, pace: 1, done: Promise.resolve(), restore: () => {} };
     seats.set(player.id, seat);
-    sessions.set(player.id, session);
     gui.on<CommandEnvelope>("command", (env) => void order(seat, env));
     gui.on<{ unitId?: unknown; cell?: Cell | null }>("hold", (data) => void reserve(seat, data));
     // Speed (1, 2, or 3 while fast-forwarding the enemy turn): shared by everyone, but in a duel, where each player has their own.
@@ -693,7 +793,7 @@ async function run(
           await seat.gui.open({ state: shown(seat) } satisfies BattlePacket, { waitingAction: true, blockPlayerInput: true });
       } finally {
         seat.present = false;
-        if (sessions.get(seat.player.id) === session) sessions.delete(seat.player.id);
+        battles.release(seat.player, session);
         seat.restore();
       }
     })();
@@ -703,51 +803,98 @@ async function run(
   } finally {
     clearTimeout(timer);
     clearTimeout(clock);
-    battles.delete(state.id);
+    battles.close(session);
     // Every player has left: the spectators go back to the map.
     for (const watcher of watchers.values()) watcher.gui.close(null);
   }
   return result();
 }
 
-/** Is the player in a battle, playing or watching? */
-export function isInTactical(player: RpgPlayer) {
-  return sessions.has(player.id);
-}
-
-/** The battle a player is playing in (not watching), or a battle by id. */
-export function getTactical(target: RpgPlayer | string): TacticalHandle | undefined {
-  if (typeof target === "string") return battles.get(target)?.handle;
-  const session = sessions.get(target.id);
-  return session?.plays(target) ? session.handle : undefined;
-}
-
 /**
- * Watch a running battle: the spectator sees every action live (even joining
- * mid-fight) but commands nothing, and leaves with Escape / "Quitter".
- * `target` is a player of the battle or a battle id. Resolves when the
- * spectator leaves; `false` when there is nothing to watch, the spectator is
- * already in a battle or on another map, or `onSpectate` refused.
+ * Does the player fight or watch a tactical battle (or is one being prepared
+ * for them)? Server only.
+ *
+ * @title isInTacticalBattle
+ * @method isInTacticalBattle(player)
+ * @param {RpgPlayer} player - The player
+ * @returns {boolean} True while the player is in a battle
+ * @example
+ * ```ts
+ * if (isInTacticalBattle(player)) return;
+ * ```
  */
-export async function watchTactical(spectator: RpgPlayer, target: RpgPlayer | string): Promise<boolean> {
-  const handle = getTactical(target);
-  const session = handle && battles.get(handle.id);
-  if (!session) return false;
-  return session.watch(spectator);
+export function isInTacticalBattle(player: RpgPlayer): boolean {
+  return battles.isIn(player);
 }
 
 /**
- * Server side of the tactical plugin. Install before `provideServerModules([])`.
+ * The battle a player plays in (not one they watch), or a battle by id.
+ * Server only.
+ *
+ * @title getTacticalBattle
+ * @method getTacticalBattle(target)
+ * @param {RpgPlayer | string} target - A fighting player or a battle id
+ * @returns {TacticalBattleHandle | undefined} The running battle
+ * @example
+ * ```ts
+ * getTacticalBattle(player)?.state().round;
+ * ```
+ */
+export function getTacticalBattle(target: RpgPlayer | string): TacticalBattleHandle | undefined {
+  return battles.get(target);
+}
+
+/**
+ * Watches a running battle: the spectator sees every action live (even
+ * joining mid-fight) but commands nothing, and leaves with the back control.
+ * Resolves when the spectator leaves; `false` when there is nothing to watch,
+ * the spectator is busy or on another map, or `tactical.onSpectate` refused.
+ * Server only.
+ *
+ * @title watchTacticalBattle
+ * @method watchTacticalBattle(spectator, target)
+ * @param {RpgPlayer} spectator - The player who watches
+ * @param {RpgPlayer | string} target - A fighting player or a battle id
+ * @returns {Promise<boolean>} Whether the spectator watched
+ * @example
+ * ```ts
+ * await watchTacticalBattle(player, fighter);
+ * ```
+ */
+export function watchTacticalBattle(spectator: RpgPlayer, target: RpgPlayer | string): Promise<boolean> {
+  return battles.watch(spectator, target);
+}
+
+/**
+ * Server side of the tactical battle: the rules and the AI, the sessions
+ * (solo, coop, PvP, spectators), the battle data read from the RPGJS database
+ * (the `tactical` field of skills, units, roles and encounters; the native
+ * fields of skills and items), the heroes read from the players and the
+ * hooks. Pair it with `provideTacticalClient`. Standalone RPG and MMORPG.
+ *
+ * @title provideTacticalServer
+ * @method provideTacticalServer(options?)
+ * @param {TacticalServerOptions} [options] - Data, AI, timing, hero, hooks
+ * @returns {RpgProvider[]} The providers of the server module
+ * @example
+ * ```ts
+ * import { provideTacticalServer } from "@rpgjs/tactical-rpg/server";
+ *
+ * export default createServer({
+ *   providers: [provideTacticalServer({ turnSeconds: 45 }), provideServerModules([])],
+ * });
+ * ```
  */
 export function provideTacticalServer(opts: TacticalServerOptions = {}) {
   options = opts;
+  hooks = new BattleServerHooks<TacticalServerHooks>("tactical", opts.hooks);
   return createModule("Tactical", [
     {
       server: defineModule<RpgServer>({
+        i18n: TACTICAL_I18N,
         player: {
           onDisconnected(player: RpgPlayer) {
-            sessions.get(player.id)?.leave(player);
-            sessions.delete(player.id);
+            battles.disconnect(player);
           },
         },
       } as RpgServer),

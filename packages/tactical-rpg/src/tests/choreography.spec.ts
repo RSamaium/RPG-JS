@@ -25,7 +25,7 @@ function fakeStage() {
       update: () => {},
       play: (name) => (calls.push({ t: now, kind: "play", name }), () => {}),
       aimed: (name) => (calls.push({ t: now, kind: "aimed", name }), () => {}),
-      playEffect: (effect, from, to) => (calls.push({ t: now, kind: "effect", name: effect.base ?? "", from, to }), () => {}),
+      playEffect: (effect, from, to) => (calls.push({ t: now, kind: "effect", name: effect.effect ?? "", from, to }), () => {}),
     },
     screen,
     popup: (text) => calls.push({ t: now, kind: "popup", name: text }),
@@ -106,7 +106,7 @@ describe("tactical choreography", () => {
       const event: BattleEvent = { kind: "skill", unitId: mage.id, targetId: foe.id, skillId: "ember-nova", hits: [{ unitId: foe.id, damage: 30, killed: false }] };
       return { ...run(event, before, before, false, seconds), mage, foe };
     };
-    const bolt = { base: "fireball", duration: 1400, hitAt: 1000, sounds: [{ sound: "whoosh", start: 0, volume: 50 }, { sound: "boom", start: 1000 }] };
+    const bolt = { effect: "fireball", duration: 1400, hitAt: 1000, sounds: [{ sound: "whoosh", start: 0, volume: 0.5 }, { sound: "boom", start: 1000, volume: 0.8 }] };
 
     it("plays the effect from the caster to the target instead of the look of the skill, and the hits land at its hitAt", () => {
       const { calls } = cast({ effect: bolt });
@@ -133,7 +133,7 @@ describe("tactical choreography", () => {
     });
 
     it("split: the effect of the cast on the caster, then the effect of the impact on each unit hit, the hits at its hitAt", () => {
-      const { calls } = cast({ castEffect: { base: "chargeOrb", duration: 600, hitAt: 400 }, impactEffect: { base: "explosionSmall", duration: 500, hitAt: 200 } });
+      const { calls } = cast({ castEffect: { effect: "chargeOrb", duration: 600, hitAt: 400 }, impactEffect: { effect: "explosionSmall", duration: 500, hitAt: 200 } });
       const charge = calls.find((c) => c.kind === "effect" && c.name === "chargeOrb")!;
       const blast = calls.find((c) => c.kind === "effect" && c.name === "explosionSmall")!;
       const number = calls.find((c) => c.kind === "popup" && c.name === "30")!;
@@ -146,7 +146,7 @@ describe("tactical choreography", () => {
     });
 
     it("split: the part without an effect shows nothing more", () => {
-      const { calls } = cast({ castEffect: { base: "chargeOrb", duration: 600, hitAt: 300 } });
+      const { calls } = cast({ castEffect: { effect: "chargeOrb", duration: 600, hitAt: 300 } });
 
       expect(calls.filter((c) => c.kind === "effect").map((c) => c.name)).toEqual(["chargeOrb"]);
       expect(calls.some((c) => c.kind === "play" || c.kind === "aimed")).toBe(false);
@@ -158,7 +158,7 @@ describe("tactical choreography", () => {
       const plain = before.skills["ember-nova"];
       expect(actionTiming(plain)).toEqual({ release: 0.5, impact: 0.55, end: 1.5 });
       expect(actionTiming({ ...plain, effect: { ...bolt, duration: 2400 } })).toMatchObject({ impact: 1.08, end: 2.48 });
-      expect(actionTiming({ ...plain, castEffect: { base: "a", duration: 600, hitAt: 400 }, impactEffect: { base: "b", duration: 500, hitAt: 200 } }).impact).toBeCloseTo(0.8);
+      expect(actionTiming({ ...plain, castEffect: { effect: "a", duration: 600, hitAt: 400 }, impactEffect: { effect: "b", duration: 500, hitAt: 200 } }).impact).toBeCloseTo(0.8);
     });
   });
 
@@ -166,13 +166,13 @@ describe("tactical choreography", () => {
     /** The warrior uses `herb` on the mage, the item carrying the given effect. */
     const use = (effect?: Record<string, unknown>, seconds = 2.5) => {
       const before = started();
-      before.items = { ...before.items, herb: { id: "herb", name: "Herb", hp: 40, mp: 0, ...(effect ? { effect } : {}) } as BattleState["items"][string] };
+      before.items = { ...before.items, herb: { id: "herb", name: "Herb", hp: 40, sp: 0, ...(effect ? { effect } : {}) } as BattleState["items"][string] };
       const warrior = before.units.find((u) => u.id === "ally-warrior")!;
       const mage = before.units.find((u) => u.role === "mage" && u.team === "ally")!;
-      const event: BattleEvent = { kind: "item", unitId: warrior.id, targetId: mage.id, itemId: "herb", heals: [{ unitId: mage.id, hp: 40, mp: 0 }] };
+      const event: BattleEvent = { kind: "item", unitId: warrior.id, targetId: mage.id, itemId: "herb", heals: [{ unitId: mage.id, hp: 40, sp: 0 }] };
       return run(event, before, before, false, seconds);
     };
-    const sparkle = { base: "healPulse", duration: 1200, hitAt: 800, sounds: [{ sound: "chime", start: 0, volume: 50 }] };
+    const sparkle = { effect: "healPulse", duration: 1200, hitAt: 800, sounds: [{ sound: "chime", start: 0, volume: 0.5 }] };
 
     it("plays the effect from the user to the unit it heals instead of the green burst, the numbers at its hitAt, with its sounds", () => {
       const { calls } = use(sparkle);

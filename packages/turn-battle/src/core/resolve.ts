@@ -56,7 +56,7 @@ export interface RulesContext {
   ai: Record<string, AiFn>;
   weights: Record<CommandType, number>;
   hooks: HookLists;
-  /** Custom commands by id (`battleCommand`). */
+  /** Custom commands by id (`turnBattleCommand`). */
   commands: Record<string, CustomCommand>;
 }
 
@@ -290,55 +290,55 @@ export function validate(
   ownerId?: string,
   rules?: RulesContext,
 ): string | null {
-  if (state.result) return "tb.error.ended";
-  if (!env || typeof env !== "object" || !env.command) return "tb.error.invalid";
-  if (env.revision !== state.revision) return "tb.error.stale";
-  if (env.actor !== state.actor) return "tb.error.notYourTurn";
+  if (state.result) return "turnBattle.error.ended";
+  if (!env || typeof env !== "object" || !env.command) return "turnBattle.error.invalid";
+  if (env.revision !== state.revision) return "turnBattle.error.stale";
+  if (env.actor !== state.actor) return "turnBattle.error.notYourTurn";
   const actor = state.combatants.find((c) => c.id === env.actor);
-  if (!actor || !controlled(actor) || !alive(actor)) return "tb.error.notYourTurn";
-  if (ownerId && actor.owner && actor.owner !== ownerId) return "tb.error.notYourTurn";
+  if (!actor || !controlled(actor) || !alive(actor)) return "turnBattle.error.notYourTurn";
+  if (ownerId && actor.owner && actor.owner !== ownerId) return "turnBattle.error.notYourTurn";
   const cmd = env.command;
   // What the troop forbids concerns the heroes: the enemies are not asked.
-  if (actor.side === "ally" && forbids(state, cmd.type)) return "tb.error.forbidden";
+  if (actor.side === "ally" && forbids(state, cmd.type)) return "turnBattle.error.forbidden";
   switch (cmd.type) {
     case "attack":
       return targetError(state, actor, "enemy", cmd.target);
     case "skill": {
       const skill = state.catalog.skills[cmd.skill];
-      if (!skill || !actor.skills.includes(cmd.skill)) return "tb.error.unknownSkill";
-      if ((skill.spCost ?? 0) > actor.sp) return "tb.error.noSp";
+      if (!skill || !actor.skills.includes(cmd.skill)) return "turnBattle.error.unknownSkill";
+      if ((skill.spCost ?? 0) > actor.sp) return "turnBattle.error.noSp";
       return targetError(state, actor, skill.scope, cmd.target);
     }
     case "limit": {
-      if (!actor.limit || actor.limit.value < actor.limit.max) return "tb.error.limitNotReady";
+      if (!actor.limit || actor.limit.value < actor.limit.max) return "turnBattle.error.limitNotReady";
       const skill = state.catalog.skills[actor.limit.skill];
       return targetError(state, actor, skill.scope, cmd.target);
     }
     case "item": {
       const item = state.catalog.items[cmd.item];
-      if (!item || (bagOf(state, actor)[cmd.item] ?? 0) <= 0) return "tb.error.noItem";
+      if (!item || (bagOf(state, actor)[cmd.item] ?? 0) <= 0) return "turnBattle.error.noItem";
       return targetError(state, actor, item.scope, cmd.target);
     }
     case "guard":
       return null;
     case "escape":
-      return state.canEscape ? null : "tb.error.cannotEscape";
+      return state.canEscape ? null : "turnBattle.error.cannotEscape";
     case "custom": {
       const info = state.catalog.commands?.[cmd.command];
-      if (!info || !actor.commands.includes(cmd.command)) return "tb.error.unknownCommand";
+      if (!info || !actor.commands.includes(cmd.command)) return "turnBattle.error.unknownCommand";
       const option = info.options?.find((o) => o.id === cmd.option);
-      if (info.options && !option) return "tb.error.unknownCommand";
-      if ((option?.spCost ?? info.spCost ?? 0) > actor.sp) return "tb.error.noSp";
+      if (info.options && !option) return "turnBattle.error.unknownCommand";
+      if ((option?.spCost ?? info.spCost ?? 0) > actor.sp) return "turnBattle.error.noSp";
       if (state.blocked?.includes(cmd.command) || (option && state.blocked?.includes(`${cmd.command}:${option.id}`)))
-        return "tb.error.unavailable";
+        return "turnBattle.error.unavailable";
       const def = rules?.commands[cmd.command];
-      if (rules && !def) return "tb.error.unknownCommand";
+      if (rules && !def) return "turnBattle.error.unknownCommand";
       if (def?.available && !def.available({ state: state as BattleState, actor, option: option?.id }))
-        return "tb.error.unavailable";
+        return "turnBattle.error.unavailable";
       return targetError(state, actor, option?.scope ?? info.scope, cmd.target);
     }
     default:
-      return "tb.error.invalid";
+      return "turnBattle.error.invalid";
   }
 }
 
@@ -457,9 +457,9 @@ function targetError(
   target?: string,
 ): string | null {
   const list = candidates(state, actor, scope);
-  if (!list.length) return "tb.error.noTarget";
+  if (!list.length) return "turnBattle.error.noTarget";
   if (isMultiTarget(scope) || scope === "self") return null;
-  if (!target || !list.some((c) => c.id === target)) return "tb.error.noTarget";
+  if (!target || !list.some((c) => c.id === target)) return "turnBattle.error.noTarget";
   return null;
 }
 
@@ -692,8 +692,8 @@ function commandActions(
       target.sp = clamp(target.sp + Math.round(amount), 0, target.stats.maxSp);
       return push({ target: target.id, amount: target.sp - before, kind: "sp" });
     },
-    text(target, text) {
-      return push({ target: target.id, amount: 0, kind: "text", text });
+    text(target, text, params) {
+      return push({ target: target.id, amount: 0, kind: "text", text, ...(params ? { textParams: params } : {}) });
     },
     reveal(target) {
       target.revealed = true;

@@ -71,17 +71,17 @@ function advance(state: BattleState, hooks: RulesHooks[] = []) {
 
 /**
  * A player holds the cell their unit is about to move to (`cell`), or lets it go (`null`): the move is walked on their screen before it is
- * sent, and the others must not aim at the same cell meanwhile. Refused like a move (`t.error.held` when another unit holds the cell).
+ * sent, and the others must not aim at the same cell meanwhile. Refused like a move (`tactical.error.held` when another unit holds the cell).
  */
 export function hold(previous: BattleState, unitId: string, cell: Cell | null, team: Team, actor: string): BattleState {
-  if (!previous.started || previous.winner || previous.phase !== team) throw new Error("t.error.turn");
+  if (!previous.started || previous.winner || previous.phase !== team) throw new Error("tactical.error.turn");
   const unit = previous.units.find((u) => u.id === unitId);
-  if (!unit || unit.team !== team || unit.hp <= 0 || unit.acted) throw new Error("t.error.unit");
-  if (unit.owner && unit.owner !== actor) throw new Error("t.error.owner");
+  if (!unit || unit.team !== team || unit.hp <= 0 || unit.acted) throw new Error("tactical.error.unit");
+  if (unit.owner && unit.owner !== actor) throw new Error("tactical.error.owner");
   const others = (previous.holds ?? []).filter((h) => h.unitId !== unitId);
   if (!cell) return { ...previous, holds: others };
-  if (heldByOther(previous, unit, cell)) throw new Error("t.error.held");
-  if (unit.moved || !inside(previous.board, cell) || !reachable(previous, unit).get(key(cell))?.length) throw new Error("t.error.move");
+  if (heldByOther(previous, unit, cell)) throw new Error("tactical.error.held");
+  if (unit.moved || !inside(previous.board, cell) || !reachable(previous, unit).get(key(cell))?.length) throw new Error("tactical.error.move");
   return { ...previous, holds: [...others, { unitId, x: cell.x, y: cell.y, owner: actor }] };
 }
 
@@ -103,27 +103,27 @@ export function transition(
     return { state, event };
   };
   if (command.type === "start") {
-    if (state.started) throw new Error("t.error.started");
+    if (state.started) throw new Error("tactical.error.started");
     state.started = true;
     state.revision++;
     return done({ kind: "start" });
   }
   if (command.type === "surrender") {
     // PvP: a side gives up at any time.
-    if (!state.started || state.winner) throw new Error("t.error.turn");
+    if (!state.started || state.winner) throw new Error("tactical.error.turn");
     state.winner = team === "ally" ? "enemy" : "ally";
     state.revision++;
     return done({ kind: "surrender", team });
   }
-  if (!state.started || state.winner || state.phase !== team) throw new Error("t.error.turn");
+  if (!state.started || state.winner || state.phase !== team) throw new Error("tactical.error.turn");
   // What the troop forbids is forbidden to the heroes; the AI of the enemies plays what it wants.
   const forbidden = (rule: keyof NonNullable<BattleState["rules"]>) => {
-    if (team === "ally" && state.rules?.[rule] === false) throw new Error("t.error.forbidden");
+    if (team === "ally" && state.rules?.[rule] === false) throw new Error("tactical.error.forbidden");
   };
   if (command.type === "escape") {
     forbidden("canEscape");
     // A duel is left by surrendering: there is no one to flee from but a player
-    if (state.versus.length) throw new Error("t.error.forbidden");
+    if (state.versus.length) throw new Error("tactical.error.forbidden");
     state.winner = team === "ally" ? "enemy" : "ally";
     state.escaped = true;
     state.revision++;
@@ -136,22 +136,22 @@ export function transition(
     state.revision++;
     return done({ kind: "phase" });
   }
-  if (!("unitId" in command)) throw new Error("t.error.action");
+  if (!("unitId" in command)) throw new Error("tactical.error.action");
   const unit = state.units.find((u) => u.id === command.unitId);
-  if (!unit || unit.team !== team || unit.hp <= 0 || unit.acted) throw new Error("t.error.unit");
-  if (!commands(unit)) throw new Error("t.error.owner");
+  if (!unit || unit.team !== team || unit.hp <= 0 || unit.acted) throw new Error("tactical.error.unit");
+  if (!commands(unit)) throw new Error("tactical.error.owner");
   // Whatever the unit does now, the cell held for the move it was preparing is free again
   if (state.holds) state.holds = state.holds.filter((hold) => hold.unitId !== unit.id);
   let event: BattleEvent = { kind: "wait", unitId: unit.id };
   if (command.type === "move") {
-    if (!inside(state.board, command.cell)) throw new Error("t.error.move");
-    if (heldByOther(state, unit, command.cell)) throw new Error("t.error.held");
+    if (!inside(state.board, command.cell)) throw new Error("tactical.error.move");
+    if (heldByOther(state, unit, command.cell)) throw new Error("tactical.error.held");
     // A chosen route must be valid and end on the cell; otherwise the shortest path.
     const chosen = command.path;
     const path = chosen
       ? validPath(state, unit, chosen) && key(chosen.at(-1)!) === key(command.cell) ? chosen.map((c) => ({ x: c.x, y: c.y })) : undefined
       : command.cell && reachable(state, unit).get(key(command.cell));
-    if (unit.moved || !path?.length) throw new Error("t.error.move");
+    if (unit.moved || !path?.length) throw new Error("tactical.error.move");
     const from = { x: unit.x, y: unit.y };
     unit.x = command.cell.x;
     unit.y = command.cell.y;
@@ -168,13 +168,13 @@ export function transition(
   } else if (command.type === "item") {
     forbidden("canUseItems");
     const item = state.items?.[command.itemId];
-    if (!item || !(unit.items?.[command.itemId] > 0)) throw new Error("t.error.item");
+    if (!item || !(unit.items?.[command.itemId] > 0)) throw new Error("tactical.error.item");
     const target = state.units.find((u) => u.id === command.targetId);
     // An item goes to a standing ally, the unit itself or next to it
-    if (!target || target.hp <= 0 || target.team !== unit.team || distance(unit, target) > 1) throw new Error("t.error.target");
-    const heal = { unitId: target.id, hp: Math.min(item.hp, target.maxHp - target.hp), mp: Math.min(item.mp, target.maxMp - target.mp) };
+    if (!target || target.hp <= 0 || target.team !== unit.team || distance(unit, target) > 1) throw new Error("tactical.error.target");
+    const heal = { unitId: target.id, hp: Math.min(item.hp, target.maxHp - target.hp), sp: Math.min(item.sp, target.maxSp - target.sp) };
     target.hp += heal.hp;
-    target.mp += heal.mp;
+    target.sp += heal.sp;
     unit.items[command.itemId] -= 1;
     if (unit.items[command.itemId] <= 0) delete unit.items[command.itemId];
     unit.acted = true;
@@ -184,12 +184,12 @@ export function transition(
     forbidden(special ? "canUseSkills" : "canAttack");
     const target = state.units.find((u) => u.id === command.targetId);
     const skill = special ? skillFor(state, unit, command.skillId) : undefined;
-    if (special && !skill) throw new Error("t.error.action");
+    if (special && !skill) throw new Error("tactical.error.action");
     if (skill) {
       const error = skillUnavailable(unit, skill);
       if (error) throw new Error(error);
     }
-    if (!target || !targetable(state, unit, target, skill?.id ?? false)) throw new Error("t.error.target");
+    if (!target || !targetable(state, unit, target, skill?.id ?? false)) throw new Error("tactical.error.target");
     event = {
       kind: command.type,
       unitId: unit.id,
@@ -212,9 +212,9 @@ export function transition(
     unit.acted = true;
     if (skill) {
       unit.usedSkills.push(skill.id);
-      unit.mp -= skill.cost;
+      unit.sp -= skill.spCost;
     }
-  } else throw new Error("t.error.action");
+  } else throw new Error("tactical.error.action");
   advance(state, hooks);
   state.revision++;
   return done(event);

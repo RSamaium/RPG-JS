@@ -122,9 +122,15 @@ export const packages = (type: "build" | "dev") => {
     {
       name: "battle-kit",
       buildScript,
+      dependencies: createDependencies(packagesPath, ['common', 'client', 'server']),
     },
     {
       name: "turn-battle",
+      buildScript,
+      dependencies: createDependencies(packagesPath, ['battle-kit', 'client', 'server', 'vite']),
+    },
+    {
+      name: "tactical-rpg",
       buildScript,
       dependencies: createDependencies(packagesPath, ['battle-kit', 'client', 'server', 'vite']),
     },

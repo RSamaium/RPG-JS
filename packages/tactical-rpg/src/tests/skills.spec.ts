@@ -15,20 +15,20 @@ describe('selectable local skills',()=>{
     const state=start(),unit=state.units[2];unit.y=3;
     const base={type:'skill' as const,unitId:unit.id,targetId:'enemy-mage'};
     const copy=structuredClone(state);
-    expect(()=>transition(state,{...base,skillId:'astral-arrow'},'ally')).toThrow('t.error.action');
+    expect(()=>transition(state,{...base,skillId:'astral-arrow'},'ally')).toThrow('tactical.error.action');
     expect(state).toEqual(copy);
-    unit.mp=0;expect(()=>transition(state,{...base,skillId:'ember-nova'},'ally')).toThrow('t.error.mp');
-    expect(unit.mp).toBe(0);
+    unit.sp=0;expect(()=>transition(state,{...base,skillId:'ember-nova'},'ally')).toThrow('tactical.error.sp');
+    expect(unit.sp).toBe(0);
   });
   it('consumes only the chosen technique, preserving other choices next round',()=>{
     let state=start();state.units[2].y=3;
     const result=transition(state,{type:'skill',unitId:'ally-mage',targetId:'enemy-mage',skillId:'ember-nova'},'ally');
-    expect(result.state.units[2].mp).toBe(10);expect(result.event.skillId).toBe('ember-nova');
+    expect(result.state.units[2].sp).toBe(10);expect(result.event.skillId).toBe('ember-nova');
     state=transition(result.state,{type:'endPhase'},'ally').state;
     state=transition(state,{type:'endPhase'},'enemy').state;
-    expect(()=>transition(state,{type:'skill',unitId:'ally-mage',targetId:'enemy-mage',skillId:'ember-nova'},'ally')).toThrow('t.error.skill');
+    expect(()=>transition(state,{type:'skill',unitId:'ally-mage',targetId:'enemy-mage',skillId:'ember-nova'},'ally')).toThrow('tactical.error.skill');
     state=transition(state,{type:'skill',unitId:'ally-mage',targetId:'enemy-mage',skillId:'frost-lance'},'ally').state;
-    expect(state.units[2].mp).toBe(2);expect(state.units[2].usedSkills).toHaveLength(2);
+    expect(state.units[2].sp).toBe(2);expect(state.units[2].usedSkills).toHaveLength(2);
   });
   it('uses exactly the previewed cells for AoE, excludes allies and clips board edges',()=>{
     const state=start(),mage=state.units[2];mage.x=1;mage.y=2;

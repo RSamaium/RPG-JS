@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  battleCommand,
+  turnBattleCommand,
   beginBattle,
   commandInfo,
   createRules,
@@ -12,7 +12,7 @@ import {
 import { battle, catalog, goblin, hero, stats } from "./fixtures";
 
 const commands: Record<string, CustomCommand> = {
-  steal: battleCommand({
+  steal: turnBattleCommand({
     label: "Voler",
     icon: "✋",
     scope: "enemy",
@@ -24,8 +24,8 @@ const commands: Record<string, CustomCommand> = {
       act.text(target!, `${loot.name} volé !`);
     },
   }),
-  scan: battleCommand({ label: "Analyse", scope: "enemy", weight: 0.5, resolve: ({ target, act }) => void act.reveal(target!) }),
-  drain: battleCommand({
+  scan: turnBattleCommand({ label: "Analyse", scope: "enemy", weight: 0.5, resolve: ({ target, act }) => void act.reveal(target!) }),
+  drain: turnBattleCommand({
     label: "Drain",
     scope: "enemy",
     spCost: 5,
@@ -61,9 +61,9 @@ describe("custom commands", () => {
     expect(me.commands).toEqual(["steal", "scan", "drain"]);
     expect(s.actor).toBe("hero");
     expect(s.blocked).toEqual(["drain"]); // full HP
-    expect(act(s, { type: "custom", command: "drain", target: "g1" }).error).toBe("tb.error.unavailable");
-    expect(act(s, { type: "custom", command: "unknown", target: "g1" }).error).toBe("tb.error.unknownCommand");
-    expect(act(s, { type: "custom", command: "steal", target: "hero" }).error).toBe("tb.error.noTarget");
+    expect(act(s, { type: "custom", command: "drain", target: "g1" }).error).toBe("turnBattle.error.unavailable");
+    expect(act(s, { type: "custom", command: "unknown", target: "g1" }).error).toBe("turnBattle.error.unknownCommand");
+    expect(act(s, { type: "custom", command: "steal", target: "hero" }).error).toBe("turnBattle.error.noTarget");
   });
 
   it("steals once per enemy, and the item is gained whatever the outcome", () => {
@@ -123,7 +123,7 @@ describe("custom commands", () => {
 });
 
 describe("summons and sub-menus", () => {
-  const summonCmd = battleCommand({
+  const summonCmd = turnBattleCommand({
     label: "Invoquer",
     icon: "✨",
     scope: "self",
@@ -157,8 +157,8 @@ describe("summons and sub-menus", () => {
   it("greys out options the actor cannot use and requires a valid option", () => {
     const s = begin();
     expect(s.blocked).toEqual(["summon:golem"]); // not enough SP
-    expect(run(s, { type: "custom", command: "summon" }).error).toBe("tb.error.unknownCommand");
-    expect(run(s, { type: "custom", command: "summon", option: "golem" }).error).toBe("tb.error.noSp");
+    expect(run(s, { type: "custom", command: "summon" }).error).toBe("turnBattle.error.unknownCommand");
+    expect(run(s, { type: "custom", command: "summon", option: "golem" }).error).toBe("turnBattle.error.noSp");
   });
 
   it("summons a creature on the actor's side, fights with the AI, then leaves", () => {

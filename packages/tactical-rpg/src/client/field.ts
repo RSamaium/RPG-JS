@@ -266,7 +266,7 @@ class Field {
       })()
         .catch((error) => {
           console.warn(error);
-          notice.set(t("t.error.load"));
+          notice.set(t("tactical.error.load"));
         })
         .finally(() => this.loading.delete(id));
     }
@@ -648,4 +648,3 @@ class Field {
 export const field = new Field();
 
 // Debug handle for automated playtests: screen position (CSS px) of a grid cell.
-Object.assign(((globalThis as any).__tactical ??= {}), { screenOf: (cell: Cell) => field.screenOf(cell) });

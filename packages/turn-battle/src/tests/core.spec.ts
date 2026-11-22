@@ -77,16 +77,16 @@ describe("commands", () => {
   it("rejects stale revisions and out-of-turn actors", () => {
     const { state } = started();
     const target = firstEnemy(state).id;
-    expect(runCommand(state, { revision: state.revision - 1, actor: state.actor!, command: { type: "attack", target } }, rules).error).toBe("tb.error.stale");
+    expect(runCommand(state, { revision: state.revision - 1, actor: state.actor!, command: { type: "attack", target } }, rules).error).toBe("turnBattle.error.stale");
     const other = state.combatants.find((c) => c.side === "ally" && c.id !== state.actor)!;
-    expect(runCommand(state, { revision: state.revision, actor: other.id, command: { type: "attack", target } }, rules).error).toBe("tb.error.notYourTurn");
+    expect(runCommand(state, { revision: state.revision, actor: other.id, command: { type: "attack", target } }, rules).error).toBe("turnBattle.error.notYourTurn");
   });
 
   it("rejects commands of another owner", () => {
     const s = createBattle(setup({ allies: [hero({ owner: "p1" })] }));
     const { state } = beginBattle(s, rules);
     const out = runCommand(state, { revision: state.revision, actor: state.actor!, command: { type: "guard" } }, rules, "p2");
-    expect(out.error).toBe("tb.error.notYourTurn");
+    expect(out.error).toBe("turnBattle.error.notYourTurn");
   });
 
   it("attacks produce a melee action with damage and a new hero turn", () => {
@@ -182,7 +182,7 @@ describe("commands", () => {
     const { state } = started();
     const s = structuredClone(state);
     s.combatants.find((c) => c.id === s.actor)!.sp = 0;
-    expect(act(s, { type: "skill", skill: "slash", target: firstEnemy(s).id }).error).toBe("tb.error.noSp");
+    expect(act(s, { type: "skill", skill: "slash", target: firstEnemy(s).id }).error).toBe("turnBattle.error.noSp");
   });
 
   it("weakness hits are flagged, amplified and break stagger", () => {
@@ -249,7 +249,7 @@ describe("commands", () => {
 
   it("limit requires a full gauge and plays a cut-in", () => {
     const { state } = started();
-    expect(act(state, { type: "limit" }).error).toBe("tb.error.limitNotReady");
+    expect(act(state, { type: "limit" }).error).toBe("turnBattle.error.limitNotReady");
     const s = structuredClone(state);
     const actor = s.combatants.find((c) => c.id === s.actor)!;
     actor.limit!.value = 100;
@@ -343,17 +343,17 @@ describe("rules of a troop", () => {
     const state = fight(["attack", "skill", "item", "guard"]);
     const target = firstEnemy(state).id;
 
-    expect(attempt(state, { type: "attack", target })).toBe("tb.error.forbidden");
-    expect(attempt(state, { type: "skill", skill: "slash", target })).toBe("tb.error.forbidden");
-    expect(attempt(state, { type: "item", item: "potion", target: "hero" })).toBe("tb.error.forbidden");
-    expect(attempt(state, { type: "guard" })).toBe("tb.error.forbidden");
+    expect(attempt(state, { type: "attack", target })).toBe("turnBattle.error.forbidden");
+    expect(attempt(state, { type: "skill", skill: "slash", target })).toBe("turnBattle.error.forbidden");
+    expect(attempt(state, { type: "item", item: "potion", target: "hero" })).toBe("turnBattle.error.forbidden");
+    expect(attempt(state, { type: "guard" })).toBe("turnBattle.error.forbidden");
   });
 
   it("forbidding the skills forbids the limit burst too", () => {
     const state = fight(["skill"]);
     state.combatants.find((c) => c.id === state.actor)!.limit!.value = 100;
 
-    expect(attempt(state, { type: "limit" })).toBe("tb.error.forbidden");
+    expect(attempt(state, { type: "limit" })).toBe("turnBattle.error.forbidden");
   });
 
   it("keeps allowed what it does not forbid", () => {
@@ -366,7 +366,7 @@ describe("rules of a troop", () => {
     const state = fight(["escape"]);
 
     expect(state.canEscape).toBe(false);
-    expect(attempt(state, { type: "escape" })).toBe("tb.error.cannotEscape");
+    expect(attempt(state, { type: "escape" })).toBe("turnBattle.error.cannotEscape");
   });
 
   it("is not seen by the enemies, which keep acting", () => {

@@ -1,20 +1,34 @@
 import { Container } from "pixi.js";
 import { FxRuntime, customizeFx, getFxPreset } from "@canvasengine/presets";
-import { resolveTargetSpace, type Point } from "./target-space";
-import { aim } from "./aim";
+import { aim, type Point } from "./aim";
 import type { PresetOptions } from "./types";
 import type { PlayableVisualEffect } from "./visual-effect";
 
 type Preset = Parameters<FxRuntime["preload"]>[0];
 
 /**
- * Plays CanvasEngine effect presets (`@canvasengine/presets`, the engine
- * behind `<Fx>`) into one Pixi layer, from code: any battle event can spawn
- * `swordSlash`, `fireball`, `limitBurst`… recoloured and aimed. Add `layer`
- * to a scene (as a raw child or through a component's `pixiChildren`) and call
- * `update(dt)` every frame.
+ * Plays the CanvasEngine effect presets (`@canvasengine/presets`, the engine
+ * behind the `<Fx>` component and `map.playVisualEffect`) inside a battle scene,
+ * from code: any battle event can spawn `swordSlash`, `fireball`, `limitBurst`…
+ * recoloured and aimed.
+ *
+ * A battle scene is not made of map objects, so it cannot use
+ * `map.playVisualEffect`: add `layer` to the scene (as a child, or through a
+ * component's `pixiChildren`) and call `update(dt)` every frame.
+ *
+ * Client only.
+ *
+ * @example
+ * ```ts
+ * const fx = new FxPlayer({ maxParticles: 2000 });
+ * scene.addChild(fx.layer);
+ * fx.play("fireball", 120, 80, { color: "#ff6600" });
+ * fx.playEffect(effect, caster, target);   // a PlayableVisualEffect
+ * ticker.add(({ deltaMS }) => fx.update(deltaMS));
+ * ```
  */
 export class FxPlayer {
+  /** The layer the effects are drawn in. */
   readonly layer = new Container();
   private readonly runtime: FxRuntime;
 
@@ -22,12 +36,12 @@ export class FxPlayer {
     this.runtime = new FxRuntime({ maxParticles: options.maxParticles ?? 3000 });
   }
 
-  /** True when a preset of that name exists. */
-  static has(name?: string) {
+  /** True when a built-in preset of that name exists. */
+  static has(name?: string): boolean {
     return !!name && !!getFxPreset(name);
   }
 
-  /** A preset recoloured / resized with `customizeFx`. */
+  /** A built-in preset recoloured / resized with `customizeFx`. */
   static preset(name: string, o: PresetOptions = {}): Preset | undefined {
     const base = getFxPreset(name);
     if (!base) return undefined;
@@ -41,32 +55,37 @@ export class FxPlayer {
   }
 
   /**
-   * The preset of a Visual Effect, ready to spawn on the caster: its own preset (or its base preset), the emitters that go to
-   * the target mapped to `target` (the target seen from the caster, see `resolveTargetSpace`), then its settings applied.
-   * `scale` multiplies its size and speed (the screen scale of a battle).
+   * The preset of a Visual Effect, tuned and aimed: its own `preset` (or the
+   * built-in `effect`), with the emitters that go to the target
+   * (`pathSpace: "target"`, `at: "target"`) aimed at `target`, the target seen
+   * from the caster. `scale` multiplies its size and speed (the screen scale of
+   * a battle).
    */
   static visualEffect(effect: PlayableVisualEffect, target: Point, scale = 1): Preset | undefined {
-    const source = (effect.preset?.emitters?.length ? effect.preset : effect.base ? getFxPreset(effect.base) : undefined) as Preset | undefined;
+    const own = effect.preset as Preset | undefined;
+    const source = own?.emitters?.length ? own : effect.effect ? getFxPreset(effect.effect) : undefined;
     if (!source) return undefined;
-    // Mapped first: `customizeFx` expands the recipes, which would lose the target keys of their items.
-    const aimed = resolveTargetSpace(source as Parameters<typeof resolveTargetSpace>[0], target) as Preset;
-    const s = effect.settings ?? {};
-    return customizeFx(aimed, {
-      color: s.color,
-      intensity: s.intensity,
-      sizeScale: (s.sizeScale ?? 1) * scale,
-      speedScale: (s.speedScale ?? 1) * scale,
-    }) as Preset;
+    return customizeFx(
+      source as Preset,
+      {
+        color: effect.color,
+        intensity: effect.intensity,
+        sizeScale: (effect.sizeScale ?? 1) * scale,
+        speedScale: (effect.speedScale ?? 1) * scale,
+      },
+      target,
+    ) as Preset;
   }
 
-  /** Play a Visual Effect from `from` toward `to` (layer positions); returns a stop function (loops). */
+  /** Plays a Visual Effect from `from` toward `to` (layer positions); returns a stop function (loops). */
   playEffect(effect: PlayableVisualEffect, from: Point, to: Point, o: { scale?: number; loop?: boolean } = {}): () => void {
-    const preset = FxPlayer.visualEffect(effect, { x: to.x - from.x, y: to.y - from.y }, o.scale);
-    return preset ? this.play(preset, from.x, from.y, { loop: o.loop }) : () => {};
+    const target = { x: to.x - from.x, y: to.y - from.y };
+    const preset = FxPlayer.visualEffect(effect, target, o.scale);
+    return preset ? this.play(preset, from.x, from.y, { loop: o.loop, target }) : () => {};
   }
 
-  /** Play a preset (by name or ready-made) at a layer position; returns a stop function (loops). */
-  play(preset: string | Preset, x: number, y: number, o: PresetOptions = {}): () => void {
+  /** Plays a preset (by name or ready-made) at a layer position; returns a stop function (loops). */
+  play(preset: string | Preset, x: number, y: number, o: PresetOptions & { target?: Point } = {}): () => void {
     const resolved = typeof preset === "string" ? FxPlayer.preset(preset, o) : preset;
     if (!resolved) return () => {};
     const host = new Container();
@@ -80,6 +99,7 @@ export class FxPlayer {
       if (stopped) return host.destroy({ children: true });
       instance = this.runtime.spawn(host, resolved, {
         loop: !!o.loop,
+        ...(o.target ? { target: o.target } : {}),
         onComplete: () => host.destroy({ children: true }),
       });
     });
@@ -89,16 +109,17 @@ export class FxPlayer {
     };
   }
 
-  /** Play a directional preset at `to`, pointing from `from` (attack presets strike to the right). */
-  aimed(name: string, from: { x: number; y: number }, to: { x: number; y: number }, o: PresetOptions = {}) {
+  /** Plays a directional preset at `to`, pointing from `from` (attack presets strike to the right). */
+  aimed(name: string, from: Point, to: Point, o: PresetOptions = {}): () => void {
     return this.play(name, to.x, to.y, { ...o, ...aim(from, to) });
   }
 
-  update(dt: number) {
+  /** Advances the particles by `dt` ms. */
+  update(dt: number): void {
     this.runtime.update(dt);
   }
 
-  destroy() {
+  destroy(): void {
     this.layer.destroy({ children: true });
   }
 }

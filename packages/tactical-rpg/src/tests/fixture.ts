@@ -9,10 +9,10 @@ export function createEncounter(): BattleState {
   const skills: Record<string, TacticalSkillRecord> = {};
   for (const [id, record] of Object.entries(db)) {
     if (record._type === "tactical-unit") units[id] = record;
-    if (record._type === "tactical-skill") skills[id] = record;
+    if (record._type === "skill") skills[id] = record;
   }
   const state = createTacticalBattle(
-    { name: db.sanctuary.name, data: db.sanctuary.battle, units, skills },
+    { name: db.sanctuary.name, data: db.sanctuary.tactical, units, skills },
     { id: "test" },
   );
   for (const unit of state.units) unit.id = `${unit.team}-${unit.role}`;

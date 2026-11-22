@@ -2,7 +2,9 @@
  * Motion of floating battle numbers, as pure functions of their age (ms), so
  * any renderer (CanvasEngine component, raw Pixi text) animates them the same.
  */
-export const backOut = (t: number) => 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2;
+import { ease } from "./clock";
+
+const backOut = ease.outBack;
 
 export interface PopupMotion {
   /** Vertical offset (px, negative = up). */

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   actionCommand,
-  battleAction,
+  turnBattleAction,
   beginBattle,
   commandInfo,
   createRules,
@@ -39,7 +39,7 @@ function rig(actions: Record<string, BattleActionRecord>, over: Parameters<typeo
 
 describe("an action of the database, as data", () => {
   it("is a record of the battle: its type is `command`", () => {
-    expect(battleAction({ name: "Voler", effects: [] })).toEqual({ _type: "command", name: "Voler", effects: [] });
+    expect(turnBattleAction({ name: "Voler", effects: [] })).toEqual({ _type: "command", name: "Voler", effects: [] });
   });
 
   it("shows in the menu with what the record says: label, icon, scope, melee, cost", () => {
@@ -111,7 +111,7 @@ describe("an action of the database, as data", () => {
       never: { name: "Rater", effects: [{ type: "steal", chance: 0, failText: "Raté !" }] },
     });
 
-    expect(waves(run(state, { type: "custom", command: "sure", target: "g1" }))[0]![0]).toMatchObject({ kind: "text", text: "Potion volé !" });
+    expect(waves(run(state, { type: "custom", command: "sure", target: "g1" }))[0]![0]).toMatchObject({ kind: "text", text: "{item} volé !", textParams: { item: "Potion" } });
     expect(waves(run(state, { type: "custom", command: "never", target: "g1" }))[0]![0]).toMatchObject({ kind: "text", text: "Raté !" });
   });
 
@@ -153,7 +153,7 @@ describe("an action of the database, as data", () => {
       { enemies: [goblin("g1", { rewards: { exp: 1, gold: 1 }, stats: stats({ maxHp: 5000, atk: 1, agi: 1 }) })] },
     );
 
-    expect(waves(run(state, { type: "custom", command: "steal", target: "g1" }))[0]![0]).toMatchObject({ kind: "text", text: "Nothing to steal" });
+    expect(waves(run(state, { type: "custom", command: "steal", target: "g1" }))[0]![0]).toMatchObject({ kind: "text", text: "turnBattle.steal.empty" });
   });
 
   it("does one thing or another by chance", () => {
@@ -212,7 +212,7 @@ describe("a summoning action", () => {
     const out = run(state, { type: "custom", command: "call", target: "hero" });
     const again = run(out.state, { type: "custom", command: "call", target: "hero" });
 
-    expect(again.error).toBe("tb.error.unavailable");
+    expect(again.error).toBe("turnBattle.error.unavailable");
   });
 });
 
@@ -220,7 +220,7 @@ describe("the troop forbidding the actions", () => {
   it("refuses them to the heroes with the error of the other forbidden commands", () => {
     const { state, run } = rig({ strike: { name: "Frappe", effects: [{ type: "damage" }] } }, { forbid: ["action"] });
 
-    expect(run(state, { type: "custom", command: "strike", target: "g1" }).error).toBe("tb.error.forbidden");
+    expect(run(state, { type: "custom", command: "strike", target: "g1" }).error).toBe("turnBattle.error.forbidden");
     expect(run(state, { type: "attack", target: "g1" }).error).toBeUndefined();
   });
 });
@@ -242,7 +242,7 @@ describe("an action that has to recharge", () => {
     // The next turns of the hero: the action is blocked for two of them
     expect(used.state.actor).toBe("hero");
     expect(used.state.blocked).toContain("burst");
-    expect(useAction(run, used.state).error).toBe("tb.error.unavailable");
+    expect(useAction(run, used.state).error).toBe("turnBattle.error.unavailable");
 
     const second = run(used.state, { type: "guard" }).state;
     expect(second.blocked).toContain("burst");
@@ -268,7 +268,7 @@ describe("an action that has to recharge", () => {
     const later = waitTurns(run, used.state, 12);
 
     expect(later.blocked).toContain("burst");
-    expect(useAction(run, later).error).toBe("tb.error.unavailable");
+    expect(useAction(run, later).error).toBe("turnBattle.error.unavailable");
   });
 
   it("recharges for each fighter by itself: its own turns count", () => {

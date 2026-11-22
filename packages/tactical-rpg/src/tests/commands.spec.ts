@@ -3,7 +3,7 @@ import { createEncounter } from "./fixture";
 import { transition } from "../core/rules";
 import type { BattleState } from "../core";
 
-const potion = { id: "potion", name: "Potion", hp: 50, mp: 0 };
+const potion = { id: "potion", name: "Potion", hp: 50, sp: 0 };
 /** The demo battle, started, where the allies carry two potions and may do what they want. */
 const started = (patch: (state: BattleState) => void = () => undefined) => {
   const state = transition(createEncounter(), { type: "start" }, "ally").state;
@@ -28,40 +28,40 @@ describe("using an item", () => {
     expect(ally(next, "warrior").items.potion).toBe(1);
     expect(ally(next, "warrior").acted).toBe(true);
     expect(event).toMatchObject({ kind: "item", unitId: "ally-warrior", targetId: "ally-archer", itemId: "potion" });
-    expect(event.heals).toEqual([{ unitId: "ally-archer", hp: Math.min(50, ally(state, "archer").maxHp - 10), mp: 0 }]);
+    expect(event.heals).toEqual([{ unitId: "ally-archer", hp: Math.min(50, ally(state, "archer").maxHp - 10), sp: 0 }]);
   });
 
   it("restores the MP of the unit too, up to its maximum", () => {
     const state = started((s) => {
-      s.items = { ether: { id: "ether", name: "Ether", hp: 0, mp: 30 } };
+      s.items = { ether: { id: "ether", name: "Ether", hp: 0, sp: 30 } };
       ally(s, "mage").items = { ether: 1 };
-      ally(s, "mage").mp = ally(s, "mage").maxMp - 5;
+      ally(s, "mage").sp = ally(s, "mage").maxSp - 5;
     });
 
     const { state: next } = transition(state, { type: "item", unitId: "ally-mage", targetId: "ally-mage", itemId: "ether" }, "ally");
 
-    expect(ally(next, "mage").mp).toBe(ally(next, "mage").maxMp);
+    expect(ally(next, "mage").sp).toBe(ally(next, "mage").maxSp);
   });
 
   it("is refused without the item, on a unit out of reach, on an enemy, or on a fallen ally", () => {
     const far = started((s) => { ally(s, "warrior").x = 0; ally(s, "warrior").y = 6; ally(s, "archer").x = 8; ally(s, "archer").y = 0; });
-    expect(() => transition(far, { type: "item", unitId: "ally-warrior", targetId: "ally-archer", itemId: "potion" }, "ally")).toThrow("t.error.target");
+    expect(() => transition(far, { type: "item", unitId: "ally-warrior", targetId: "ally-archer", itemId: "potion" }, "ally")).toThrow("tactical.error.target");
 
     const none = started((s) => { ally(s, "warrior").items = {}; });
-    expect(() => transition(none, { type: "item", unitId: "ally-warrior", targetId: "ally-warrior", itemId: "potion" }, "ally")).toThrow("t.error.item");
+    expect(() => transition(none, { type: "item", unitId: "ally-warrior", targetId: "ally-warrior", itemId: "potion" }, "ally")).toThrow("tactical.error.item");
 
     const enemy = started((s) => { const e = s.units.find((u) => u.team === "enemy")!; ally(s, "warrior").x = e.x; ally(s, "warrior").y = e.y + 1; });
-    expect(() => transition(enemy, { type: "item", unitId: "ally-warrior", targetId: "enemy-warrior", itemId: "potion" }, "ally")).toThrow("t.error.target");
+    expect(() => transition(enemy, { type: "item", unitId: "ally-warrior", targetId: "enemy-warrior", itemId: "potion" }, "ally")).toThrow("tactical.error.target");
 
     const down = started((s) => { ally(s, "archer").hp = 0; ally(s, "warrior").x = ally(s, "archer").x; ally(s, "warrior").y = ally(s, "archer").y + 1; });
-    expect(() => transition(down, { type: "item", unitId: "ally-warrior", targetId: "ally-archer", itemId: "potion" }, "ally")).toThrow("t.error.target");
+    expect(() => transition(down, { type: "item", unitId: "ally-warrior", targetId: "ally-archer", itemId: "potion" }, "ally")).toThrow("tactical.error.target");
   });
 
   it("never changes the state when it is refused", () => {
     const state = started();
     const copy = structuredClone(state);
 
-    expect(() => transition(state, { type: "item", unitId: "ally-warrior", targetId: "ally-warrior", itemId: "nothing" }, "ally")).toThrow("t.error.item");
+    expect(() => transition(state, { type: "item", unitId: "ally-warrior", targetId: "ally-warrior", itemId: "nothing" }, "ally")).toThrow("tactical.error.item");
     expect(state).toEqual(copy);
   });
 });
@@ -105,7 +105,7 @@ describe("fleeing", () => {
   it("is not for a duel: the players surrender there", () => {
     const duel = started((s) => { s.versus = [{ id: "b", name: "Bo" }]; });
 
-    expect(() => transition(duel, { type: "escape" }, "ally")).toThrow("t.error.forbidden");
+    expect(() => transition(duel, { type: "escape" }, "ally")).toThrow("tactical.error.forbidden");
   });
 });
 
@@ -113,11 +113,11 @@ describe("the rules of the troop", () => {
   const forbid = (rule: string) => started((s) => { s.rules = { canAttack: true, canUseSkills: true, canUseItems: true, canGuard: true, canEscape: true, [rule]: false }; });
 
   it("forbid to the heroes what they say, and the refusal is a text", () => {
-    expect(() => transition(forbid("canAttack"), { type: "attack", unitId: "ally-warrior", targetId: "enemy-warrior" }, "ally")).toThrow("t.error.forbidden");
-    expect(() => transition(forbid("canUseSkills"), { type: "skill", unitId: "ally-mage", targetId: "enemy-mage", skillId: "ember-nova" }, "ally")).toThrow("t.error.forbidden");
-    expect(() => transition(forbid("canUseItems"), { type: "item", unitId: "ally-warrior", targetId: "ally-warrior", itemId: "potion" }, "ally")).toThrow("t.error.forbidden");
-    expect(() => transition(forbid("canGuard"), { type: "guard", unitId: "ally-warrior" }, "ally")).toThrow("t.error.forbidden");
-    expect(() => transition(forbid("canEscape"), { type: "escape" }, "ally")).toThrow("t.error.forbidden");
+    expect(() => transition(forbid("canAttack"), { type: "attack", unitId: "ally-warrior", targetId: "enemy-warrior" }, "ally")).toThrow("tactical.error.forbidden");
+    expect(() => transition(forbid("canUseSkills"), { type: "skill", unitId: "ally-mage", targetId: "enemy-mage", skillId: "ember-nova" }, "ally")).toThrow("tactical.error.forbidden");
+    expect(() => transition(forbid("canUseItems"), { type: "item", unitId: "ally-warrior", targetId: "ally-warrior", itemId: "potion" }, "ally")).toThrow("tactical.error.forbidden");
+    expect(() => transition(forbid("canGuard"), { type: "guard", unitId: "ally-warrior" }, "ally")).toThrow("tactical.error.forbidden");
+    expect(() => transition(forbid("canEscape"), { type: "escape" }, "ally")).toThrow("tactical.error.forbidden");
   });
 
   it("do not bind the enemies, whose AI plays what it wants", () => {

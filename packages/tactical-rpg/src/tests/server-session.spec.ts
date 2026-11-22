@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
-import { provideTacticalServer, startTactical, isInTactical, type TacticalServerHooks } from "../server";
+import { provideTacticalServer, startTacticalBattle, isInTacticalBattle, type TacticalServerHooks } from "../server";
 import type { BattlePacket, TacticalResult } from "../core/types";
 import { emberDatabase } from "../demo/database";
 
@@ -14,7 +14,7 @@ function session(hooks?: TacticalServerHooks) {
   vi.useFakeTimers();
   const module = provideTacticalServer({
     units: pick("tactical-unit"),
-    skills: pick("tactical-skill"),
+    skills: pick("skill"),
     encounters: pick("tactical-encounter"),
     hooks,
   }) as unknown as { server: { player: { onDisconnected(p: unknown): void } } }[];
@@ -31,7 +31,7 @@ function session(hooks?: TacticalServerHooks) {
     close: vi.fn((result: unknown) => resolveOpen(result)),
   };
   const player = { id: `p${++players}`, x: 960, y: 704, graphics: ["hero"], setGraphic: vi.fn(), gui: () => gui };
-  const done = startTactical(player as never, "sanctuary");
+  const done = startTacticalBattle(player as never, "sanctuary");
   const state = () => packets.at(-1)!.state;
   const flush = () => vi.advanceTimersByTimeAsync(0);
   const command = async (value: unknown, revision = state().revision) => {
@@ -42,7 +42,7 @@ function session(hooks?: TacticalServerHooks) {
 }
 afterEach(() => vi.useRealTimers());
 
-describe("startTactical (GUI transport)", () => {
+describe("startTacticalBattle (GUI transport)", () => {
   it("opens the HUD with the encounter from the data and hides the player", async () => {
     const s = session();
     await s.flush();
@@ -50,13 +50,13 @@ describe("startTactical (GUI transport)", () => {
     expect(s.state().units.map((u) => u.name)).toEqual(["Kaël", "Éryn", "Lior", "Cendre", "Braise", "Silex"]);
     expect(s.state().meta.name).toBe("Le Sanctuaire des Cendres");
     expect(s.player.setGraphic).toHaveBeenCalledWith("tactical-hidden");
-    expect(isInTactical(s.player as never)).toBe(true);
+    expect(isInTacticalBattle(s.player as never)).toBe(true);
   });
   it("rejects stale and malformed commands without mutation", async () => {
     const s = session();
     await s.flush();
     await s.command({ type: "start" }, -1);
-    expect(s.packets.at(-1)?.error).toBe("t.error.stale");
+    expect(s.packets.at(-1)?.error).toBe("tactical.error.stale");
     expect(s.state().revision).toBe(0);
     await s.command({ type: "unknown" });
     expect(s.state().started).toBe(false);
@@ -66,7 +66,7 @@ describe("startTactical (GUI transport)", () => {
     await s.flush();
     await s.command({ type: "start" });
     await s.command({ type: "endPhase" });
-    expect(s.packets.at(-1)?.error).toBe("t.error.busy");
+    expect(s.packets.at(-1)?.error).toBe("tactical.error.busy");
     await vi.advanceTimersByTimeAsync(1500);
     await s.command({ type: "endPhase" });
     expect(s.state().phase).toBe("enemy");
@@ -85,7 +85,7 @@ describe("startTactical (GUI transport)", () => {
     await s.command({ type: "start" });
     await vi.advanceTimersByTimeAsync(1500);
     await s.command({ type: "wait", unitId: "ally-kael-0" });
-    expect(s.packets.at(-1)?.error).toBe("t.error.refused");
+    expect(s.packets.at(-1)?.error).toBe("tactical.error.refused");
     // Every allied unit one-shots an enemy in range once they are close: move the enemies next to them.
     const st = s.state();
     for (const [i, enemy] of st.units.filter((u) => u.team === "enemy").entries()) {
@@ -104,7 +104,7 @@ describe("startTactical (GUI transport)", () => {
     expect(result).toMatchObject({ outcome: "victory", rounds: 1, survivors: 3 });
     await s.flush();
     expect(s.player.setGraphic).toHaveBeenLastCalledWith(["hero"]);
-    expect(isInTactical(s.player as never)).toBe(false);
+    expect(isInTacticalBattle(s.player as never)).toBe(false);
   });
   it("onSetup: lets a game change the battle before it is shown for the first time", async () => {
     const s = session({
@@ -170,7 +170,7 @@ describe("startTactical (GUI transport)", () => {
       then: { type: "attack", unitId: eryn.id, targetId: "nobody" },
     });
     await s.flush();
-    expect(s.packets.at(-1)?.error).toBe("t.error.target");
+    expect(s.packets.at(-1)?.error).toBe("tactical.error.target");
     expect(s.state().units.find((u) => u.id === eryn.id)).toMatchObject({ moved: true, acted: false });
   });
   it("shares the speed: a pace request changes the state and the AI pacing", async () => {

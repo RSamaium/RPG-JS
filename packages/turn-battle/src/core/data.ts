@@ -3,16 +3,16 @@ import type { AttackStyle, Rewards, SkillKind, Stats, TargetScope } from "./type
 /**
  * Typed helpers for battle data in the RPGJS database. They return the record
  * unchanged (plus `_type`), so RPGJS keeps reading its native fields while the
- * editor autocompletes and checks the `battle` part:
+ * editor autocompletes and checks the `turnBattle` part:
  *
  * ```ts
  * database: {
- *   fire: battleSkill({ name: "Brasier", spCost: 18, power: 105,
- *     battle: { kind: "magical", scope: "allEnemies", element: "fire", fx: "fireball" } }),
- *   potion: battleItem({ name: "Potion", hpValue: 150, consumable: true }),
- *   "iron-sword": battleWeapon({ name: "Épée de fer", atk: 6, battle: { type: "sword" } }),
- *   goblin: battleEnemy({ name: "Gobelin", gain: { exp: 24 }, battle: { battler: "enemy-goblin", stats } }),
- *   goblins: battleTroop({ battle: { enemies: ["goblin", "goblin"], background: "meadow" } }),
+ *   fire: turnBattleSkill({ name: "Brasier", spCost: 18, power: 105,
+ *     turnBattle: { kind: "magical", scope: "allEnemies", element: "fire", fx: "fireball" } }),
+ *   potion: turnBattleItem({ name: "Potion", hpValue: 150, consumable: true }),
+ *   "iron-sword": turnBattleWeapon({ name: "Épée de fer", atk: 6, turnBattle: { type: "sword" } }),
+ *   goblin: turnBattleEnemy({ name: "Gobelin", gain: { exp: 24 }, turnBattle: { battler: "enemy-goblin", stats } }),
+ *   goblins: turnBattleTroop({ turnBattle: { enemies: ["goblin", "goblin"], background: "meadow" } }),
  * }
  * ```
  */
@@ -96,7 +96,7 @@ export interface SkillBattleData {
   video?: string;
 }
 
-export interface BattleSkillRecord extends NativeFields {
+export interface TurnBattleSkillRecord extends NativeFields {
   name: string;
   description?: string;
   spCost?: number;
@@ -105,7 +105,7 @@ export interface BattleSkillRecord extends NativeFields {
   element?: ElementName;
   /** Native RPGJS multipliers of the damage formula (`damageSkill`). */
   coefficient?: Record<string, number>;
-  battle?: SkillBattleData;
+  turnBattle?: SkillBattleData;
 }
 
 export interface ItemBattleData {
@@ -121,14 +121,14 @@ export interface ItemBattleData {
   fx?: FxName;
 }
 
-export interface BattleItemRecord extends NativeFields {
+export interface TurnBattleItemRecord extends NativeFields {
   name: string;
   description?: string;
   hpValue?: number;
   spValue?: number;
   consumable?: boolean;
   price?: number;
-  battle?: ItemBattleData;
+  turnBattle?: ItemBattleData;
 }
 
 export interface WeaponBattleData {
@@ -145,7 +145,7 @@ export interface WeaponBattleData {
   melee?: boolean;
 }
 
-export interface BattleWeaponRecord extends NativeFields {
+export interface TurnBattleWeaponRecord extends NativeFields {
   name: string;
   description?: string;
   /** Added to the attack (native RPGJS parameter). */
@@ -153,7 +153,7 @@ export interface BattleWeaponRecord extends NativeFields {
   /** Native RPGJS elements of the weapon: the first one colours its attack. */
   elements?: { rate: number; element: ElementName }[];
   price?: number;
-  battle?: WeaponBattleData;
+  turnBattle?: WeaponBattleData;
 }
 
 /** Value of a parameter at the first and at the last level, like the parameters of an RPGJS actor. */
@@ -183,7 +183,7 @@ export interface EnemyReward {
 }
 
 /** An enemy, shaped like an RPGJS actor: its parameters are read at `initialLevel`. */
-export interface BattleEnemyRecord extends NativeFields {
+export interface TurnBattleEnemyRecord extends NativeFields {
   name: string;
   parameters: BattleParameters;
   initialLevel?: number;
@@ -227,12 +227,12 @@ export interface EnemyBattleData {
   rewards?: Rewards;
 }
 
-/** Previous shape of an enemy, with flat `stats` in `battle`. */
-export interface BattleEnemyBattleRecord extends NativeFields {
+/** Previous shape of an enemy, with flat `stats` in `turnBattle`. */
+export interface TurnBattleEnemyBattleRecord extends NativeFields {
   name: string;
   /** Native RPGJS rewards: EXP, gold, drops. */
   gain?: Rewards;
-  battle: EnemyBattleData;
+  turnBattle: EnemyBattleData;
 }
 
 export interface SummonBattleData {
@@ -253,10 +253,10 @@ export interface SummonBattleData {
   controlled?: boolean;
 }
 
-export interface BattleSummonRecord extends NativeFields {
+export interface TurnBattleSummonRecord extends NativeFields {
   name: string;
   description?: string;
-  battle: SummonBattleData;
+  turnBattle: SummonBattleData;
 }
 
 export interface TroopBattleData {
@@ -273,19 +273,19 @@ export interface TroopBattleData {
 }
 
 /** A troop: the enemies that fight together. */
-export interface BattleTroopRecord extends NativeFields, TroopBattleData {
+export interface TurnBattleTroopRecord extends NativeFields, TroopBattleData {
   name?: string;
 }
 
-/** Previous shape of a troop, with its data in `battle`. */
-export interface BattleTroopBattleRecord extends NativeFields {
+/** Previous shape of a troop, with its data in `turnBattle`. */
+export interface TurnBattleTroopBattleRecord extends NativeFields {
   name?: string;
-  battle: TroopBattleData;
+  turnBattle: TroopBattleData;
 }
 
-export const battleSkill = <T extends BattleSkillRecord>(record: T): T => record;
-export const battleItem = <T extends BattleItemRecord>(record: T) => ({ _type: "item" as const, ...record });
-export const battleWeapon = <T extends BattleWeaponRecord>(record: T) => ({ _type: "weapon" as const, ...record });
-export const battleEnemy = <T extends BattleEnemyRecord | BattleEnemyBattleRecord>(record: T) => ({ _type: "enemy" as const, ...record });
-export const battleTroop = <T extends BattleTroopRecord | BattleTroopBattleRecord>(record: T) => ({ _type: "troop" as const, ...record });
-export const battleSummon = <T extends BattleSummonRecord>(record: T) => ({ _type: "summon" as const, ...record });
+export const turnBattleSkill = <T extends TurnBattleSkillRecord>(record: T): T => record;
+export const turnBattleItem = <T extends TurnBattleItemRecord>(record: T) => ({ _type: "item" as const, ...record });
+export const turnBattleWeapon = <T extends TurnBattleWeaponRecord>(record: T) => ({ _type: "weapon" as const, ...record });
+export const turnBattleEnemy = <T extends TurnBattleEnemyRecord | TurnBattleEnemyBattleRecord>(record: T) => ({ _type: "enemy" as const, ...record });
+export const turnBattleTroop = <T extends TurnBattleTroopRecord | TurnBattleTroopBattleRecord>(record: T) => ({ _type: "troop" as const, ...record });
+export const turnBattleSummon = <T extends TurnBattleSummonRecord>(record: T) => ({ _type: "summon" as const, ...record });

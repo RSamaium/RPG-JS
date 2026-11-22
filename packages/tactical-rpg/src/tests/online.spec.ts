@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
-import { provideTacticalServer, startTactical } from "../server";
+import { provideTacticalServer, startTacticalBattle } from "../server";
 import { createTacticalBattle, eventDuration, hold, reachable, transition, type BattlePacket, type BattleState, type TacticalSkillRecord, type TacticalUnitRecord } from "../core";
 import { emberDatabase } from "../demo/database";
 
@@ -10,7 +10,7 @@ const pick = (type: string) => Object.fromEntries(Object.entries(db).filter(([, 
 
 function coopState(): BattleState {
   const state = createTacticalBattle(
-    { data: db.sanctuary.battle, units: pick("tactical-unit") as Record<string, TacticalUnitRecord>, skills: pick("tactical-skill") as Record<string, TacticalSkillRecord> },
+    { data: db.sanctuary.tactical, units: pick("tactical-unit") as Record<string, TacticalUnitRecord>, skills: pick("skill") as Record<string, TacticalSkillRecord> },
     { id: "c", players: [{ id: "a", name: "Alice" }, { id: "b", name: "Bob" }] },
   );
   return transition(state, { type: "start" }, "ally").state;
@@ -33,8 +33,8 @@ describe("a cell held for the move a player prepares", () => {
     expect(held.holds).toEqual([{ unitId: alice.id, x: cell.x, y: cell.y, owner: "a" }]);
     expect(reachable(held, bob).has(`${cell.x},${cell.y}`)).toBe(false);
     expect(reachable(held, alice).has(`${cell.x},${cell.y}`)).toBe(true);
-    expect(() => transition(held, { type: "move", unitId: bob.id, cell }, "ally", [], "b")).toThrow("t.error.held");
-    expect(() => hold(held, bob.id, cell, "ally", "b")).toThrow("t.error.held");
+    expect(() => transition(held, { type: "move", unitId: bob.id, cell }, "ally", [], "b")).toThrow("tactical.error.held");
+    expect(() => hold(held, bob.id, cell, "ally", "b")).toThrow("tactical.error.held");
   });
   it("is free again when the player lets it go, when the unit acts and when the phase ends", () => {
     const state = coopState();
@@ -54,8 +54,8 @@ describe("a cell held for the move a player prepares", () => {
   it("is refused on the unit of a partner and outside the reach of the unit", () => {
     const state = coopState();
     const { alice } = sharedCell(state);
-    expect(() => hold(state, alice.id, { x: alice.x, y: alice.y }, "ally", "a")).toThrow("t.error.move");
-    expect(() => hold(state, alice.id, { x: 0, y: 0 }, "ally", "b")).toThrow("t.error.owner");
+    expect(() => hold(state, alice.id, { x: alice.x, y: alice.y }, "ally", "a")).toThrow("tactical.error.move");
+    expect(() => hold(state, alice.id, { x: 0, y: 0 }, "ally", "b")).toThrow("tactical.error.owner");
   });
 });
 
@@ -75,7 +75,7 @@ describe("how long an event plays", () => {
 /** Two fake players on the same map, each with a GUI recording packets: partners, or the two sides of a duel. */
 function session(o: { duel?: boolean; turnSeconds?: number } = {}) {
   vi.useFakeTimers();
-  provideTacticalServer({ units: pick("tactical-unit"), skills: pick("tactical-skill"), encounters: pick("tactical-encounter"), ...(o.turnSeconds !== undefined ? { turnSeconds: o.turnSeconds } : {}) });
+  provideTacticalServer({ units: pick("tactical-unit"), skills: pick("skill"), encounters: pick("tactical-encounter"), ...(o.turnSeconds !== undefined ? { turnSeconds: o.turnSeconds } : {}) });
   const map = {};
   const make = (id: string, name: string) => {
     const packets: BattlePacket[] = [];
@@ -98,7 +98,7 @@ function session(o: { duel?: boolean; turnSeconds?: number } = {}) {
   };
   const a = make(`a${Math.random()}`, "Alice");
   const b = make(`b${Math.random()}`, "Bob");
-  void startTactical({ players: [a.player as never], ...(o.duel ? { versus: [b.player as never] } : {}), ...(o.duel ? {} : { players: [a.player as never, b.player as never] }), encounter: "sanctuary" });
+  void startTacticalBattle({ players: [a.player as never], ...(o.duel ? { versus: [b.player as never] } : {}), ...(o.duel ? {} : { players: [a.player as never, b.player as never] }), encounter: "sanctuary" });
   const begin = async () => {
     await vi.advanceTimersByTimeAsync(0);
     await a.command({ type: "start" });
@@ -175,7 +175,7 @@ describe("a cell held during a co-op battle", () => {
     expect(b.state().holds).toEqual([{ unitId: alice.id, x: cell.x, y: cell.y, owner: a.id }]);
 
     await b.emit("hold", { unitId: bob.id, cell });
-    expect(b.packets.at(-1)?.error).toBe("t.error.held");
+    expect(b.packets.at(-1)?.error).toBe("tactical.error.held");
     expect(a.packets.at(-1)?.error).toBeUndefined();
 
     await a.emit("hold", { unitId: alice.id, cell: null });

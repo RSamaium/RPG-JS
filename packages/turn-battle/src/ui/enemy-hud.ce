@@ -48,8 +48,8 @@
   const hpColor = computed(() => (hp() < maxHp * 0.3 ? '#ff5b5b' : '#ff8a5b'))
   const staggerValue = computed(() => (m.broken() ? staggerMax : m.stagger()))
   const staggerColor = computed(() => (m.broken() ? '#9fb6ff' : '#ffd45c'))
-  const hpLabel = computed(() => t('tb.hp'))
-  const guardLabel = computed(() => t('tb.guardGauge'))
+  const hpLabel = computed(() => t('turnBattle.hp'))
+  const guardLabel = computed(() => t('turnBattle.guardGauge'))
   const labelStyle = { fontFamily: 'Trebuchet MS, sans-serif', fontSize: 10, fontWeight: '900', fill: '#d8d2c4', stroke: { color: '#120d18', width: 3, join: 'round' } }
   const nameStyle = { fontFamily: 'Trebuchet MS, sans-serif', fontSize: 13, fontWeight: '800', fill: '#fff4e0', stroke: { color: '#120d18', width: 4, join: 'round' } }
 </script>

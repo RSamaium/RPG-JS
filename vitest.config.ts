@@ -21,6 +21,7 @@ export default defineConfig({
       ),
       "@rpgjs/action-battle": path.resolve(__dirname, "packages/action-battle/src"),
       "@rpgjs/battle-kit/pure": path.resolve(__dirname, "packages/battle-kit/src/pure.ts"),
+      "@rpgjs/battle-kit/server": path.resolve(__dirname, "packages/battle-kit/src/server.ts"),
       "@rpgjs/battle-kit": path.resolve(__dirname, "packages/battle-kit/src/index.ts"),
       "@rpgjs/map-builder": path.resolve(__dirname, "packages/map-builder/src"),
       "@rpgjs/script/server": path.resolve(__dirname, "packages/script/src/server/index.ts"),

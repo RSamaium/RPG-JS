@@ -26,6 +26,8 @@
 @import "./primitives/shop.css";
 @import "./primitives/chat.css";
 @import "./primitives/calendar.css";
+@import "./primitives/turn-battle.css";
+@import "./primitives/tactical.css";
 @import "./primitives/account.css";
 @import "./primitives/form.css";
 @import "./primitives/clock.css";

@@ -1,7 +1,20 @@
 import { createModule } from "@rpgjs/common";
 import { defineModule, type RpgPlayer, type RpgServer } from "@rpgjs/server";
 import {
+  BattleServerHooks,
+  BattleSessions,
+  sameBattleMap,
+  battleParticipants,
+  battlePlayerName,
+  isBattleGroup,
+  plainValue,
+  type BattleGroupOptions,
+  type BattleHandleBase,
+  type BattleSession,
+} from "@rpgjs/battle-kit/server";
+import {
   TURN_BATTLE_GUI,
+  TURN_BATTLE_I18N,
   beginBattle,
   createBattle,
   createRng,
@@ -43,32 +56,29 @@ import { commandFromDb, skillCommandFromDb, dbRecord, enemyFromDb, heroFromDb, i
 import { nativeFormulas } from "./native-formulas";
 import { commitPlayer, heroIdOf, readInventory, readPlayer } from "./snapshot";
 
-export { readPlayer, readInventory, commitPlayer, DEFAULT_HERO_STATS } from "./snapshot";
-export { dbRecord, skillFromDb, itemFromDb, enemyFromDb, heroFromDb, troopFromDb, weaponFromDb, summonFromDb, summonFromEnemy, commandFromDb, skillCommandFromDb, WEAPON_STYLES, type EnemyDef, type HeroDef, type WeaponInfo } from "./database";
+export { DEFAULT_HERO_STATS } from "./snapshot";
+export { WEAPON_STYLES, type EnemyDef, type HeroDef, type WeaponInfo } from "./database";
 export * from "../core";
 
-/** A running battle, as seen by hooks. */
-export interface BattleHandle {
-  id: string;
-  /** Player who started the battle. */
-  player: RpgPlayer;
+/**
+ * A running turn-based battle, as the hooks and `getTurnBattle` see it.
+ * Server only: the server owns the state of the battle.
+ */
+export interface TurnBattleHandle extends BattleHandleBase {
   /** Every player fighting (coop, PvP), leader first. */
   players: RpgPlayer[];
-  /** PvP: the players of the opposing side. */
-  versus: RpgPlayer[];
-  /** Players currently watching the battle. */
-  spectators(): RpgPlayer[];
   troop: TroopDef;
   /** Current authoritative state (read-only for hooks). */
   state(): BattleView;
 }
 
 /**
- * Hooks any game module can implement:
+ * Server hooks of the turn-based battle. A game module declares them under
+ * the `turnBattle` key; `provideTurnBattleServer({ hooks })` takes them too.
  *
  * ```ts
  * defineModule<RpgServer>({
- *   battle: {
+ *   turnBattle: {
  *     onStart(player, battle) {},
  *     onCommand(player, battle, env) { return false }, // veto
  *     onDamage({ target, amount }) { return amount * 2 },
@@ -80,17 +90,20 @@ export interface BattleHandle {
  * Rule hooks (`onDamage`, `onTurnStart`, `onChooseAction`, `onAction`) are synchronous.
  */
 export interface TurnBattleServerHooks extends RulesHooks {
-  onStart?(player: RpgPlayer, battle: BattleHandle): void | Promise<void>;
+  /** The battle starts, for each fighting player. */
+  onStart?(player: RpgPlayer, battle: TurnBattleHandle): void | Promise<void>;
   /** Return `false` to refuse a hero command. */
-  onCommand?(player: RpgPlayer, battle: BattleHandle, env: CommandEnvelope): boolean | void | Promise<boolean | void>;
-  onEnd?(player: RpgPlayer, battle: BattleHandle, result: BattleResult): void | Promise<void>;
+  onCommand?(player: RpgPlayer, battle: TurnBattleHandle, env: CommandEnvelope): boolean | void | Promise<boolean | void>;
+  /** The battle is over, for each fighting player (after the result is written on the player). */
+  onEnd?(player: RpgPlayer, battle: TurnBattleHandle, result: BattleResult): void | Promise<void>;
   /** A player wants to watch the battle: return `false` to refuse (private fight, distance…). */
-  onSpectate?(spectator: RpgPlayer, battle: BattleHandle): boolean | void | Promise<boolean | void>;
+  onSpectate?(spectator: RpgPlayer, battle: TurnBattleHandle): boolean | void | Promise<boolean | void>;
 }
 
 declare module "@rpgjs/server" {
   interface RpgServer {
-    battle?: TurnBattleServerHooks;
+    /** Server hooks of the turn-based battle (`@rpgjs/turn-battle`). */
+    turnBattle?: TurnBattleServerHooks;
   }
 }
 
@@ -127,14 +140,14 @@ export interface TurnBattleServerOptions {
    * RPGJS actor, a troop with `enemies`, a skill with the native fields…). Called with the raw record, its id and
    * `lookup`, which reads another record of the database by id (the Visual Effect a skill names).
    */
-  adapt?: Partial<Record<"enemy" | "troop" | "skill" | "item" | "weapon" | "summon" | "command", (raw: Record<string, any>, id: string, lookup?: (id: string) => Record<string, any> | undefined) => Record<string, any> | undefined>>;
+  adapt?: Partial<Record<"enemy" | "troop" | "skill" | "item" | "weapon" | "summon" | "command", (raw: Record<string, unknown>, id: string, lookup?: (id: string) => Record<string, unknown> | undefined) => Record<string, unknown> | undefined>>;
   ai?: Record<string, AiFn>;
   weights?: Partial<Record<CommandType, number>>;
   /** Hooks declared by the plugin user without a module. */
   hooks?: TurnBattleServerHooks;
   /**
    * Custom commands ("Voler", "Analyse"…), given to units with `commands: [...]`
-   * (hero, companions, enemies). See `battleCommand`.
+   * (hero, companions, enemies). See `turnBattleCommand`.
    */
   commands?: Record<string, CustomCommand>;
   /**
@@ -149,12 +162,10 @@ export interface TurnBattleServerOptions {
    */
   enemyCondition?: (player: RpgPlayer, condition: unknown) => boolean;
   /**
-   * Creatures for `act.summon(id)`. Database records (`battleSummon`) are
+   * Creatures for `act.summon(id)`. Database records (`turnBattleSummon`) are
    * found too when their id is an option of a command.
    */
   summons?: Record<string, SummonDef>;
-  /** Coop: label of a player without a name ("Joueur 2"). */
-  playerLabel?: string;
 }
 
 /** Who is fighting, given to `hero` / `party` (e.g. fewer companions in coop). */
@@ -169,7 +180,8 @@ export interface PartyContext {
   pvp: boolean;
 }
 
-export interface StartBattleOptions {
+/** Options of a turn-based battle, solo or in a group. */
+export interface StartTurnBattleOptions {
   seed?: number;
   /** Music of the battle when the troop has none (`troop.bgm` wins). */
   bgm?: string;
@@ -198,17 +210,13 @@ export interface StartBattleOptions {
 /**
  * Several players: coop against a troop (`players` + `troop`), or PvP
  * (`players` against `versus`, optionally with monsters from `troop`).
+ * `spectators` watch from the start (see `watchTurnBattle` to join later).
  */
-export interface GroupBattleOptions extends StartBattleOptions {
-  players: RpgPlayer[];
+export interface TurnBattleGroupOptions extends StartTurnBattleOptions, BattleGroupOptions {
   troop?: TroopDef | string;
-  /** PvP: the opposing side, each player commanding their own units. */
-  versus?: RpgPlayer[];
   /** Backdrop / music of a PvP battle without troop. */
   background?: string;
   bgm?: string;
-  /** Players watching from the start (see `watchBattle` to join later). */
-  spectators?: RpgPlayer[];
 }
 
 /** One connected player in a battle: their GUI, and whether they are still there. */
@@ -226,54 +234,31 @@ interface Seat {
   left: boolean;
 }
 
-interface Session {
-  handle?: BattleHandle;
+interface Session extends BattleSession<TurnBattleHandle> {
   seats: Map<string, Seat>;
-  /** A player disconnected (fighter: the AI takes over their units) or a spectator left. */
-  leave(playerId: string): void;
-  /** Add a spectator; resolves when they stop watching, false if refused. */
-  watch(spectator: RpgPlayer): Promise<boolean>;
 }
 
 let options: TurnBattleServerOptions = {};
 let rules: RulesContext = createRules();
-/** Battle of each player (fighter or spectator). */
-const sessions = new Map<string, Session>();
-/** Running battles by id. */
-const battles = new Map<string, Session>();
+/** The running turn-based battles and the players they hold (fighters and spectators). */
+const battles = new BattleSessions<TurnBattleHandle>("TurnBattle");
+let hooks = new BattleServerHooks<TurnBattleServerHooks>("turnBattle");
 
 const RULE_HOOKS = ["onTurnStart", "onChooseAction", "onDamage", "onAction"] as const;
 
-/** Rule hooks declared in game modules (`battle: { onDamage }`), read synchronously. */
+/** Rule hooks declared in game modules (`turnBattle: { onDamage }`), read synchronously. The option's are in `rules`. */
 function moduleRuleHooks(player: RpgPlayer): RulesHooks[] {
-  const hooks = (player as any).hooks;
-  if (!hooks?.getHookFunctions) return [];
-  return RULE_HOOKS.flatMap((name) =>
-    (hooks.getHookFunctions(`server-battle-${name}`) as ((...a: any[]) => any)[]).map((fn) => ({ [name]: fn })),
-  );
+  const modules = new BattleServerHooks<TurnBattleServerHooks>("turnBattle");
+  return RULE_HOOKS.flatMap((name) => modules.functions(player, name).map((fn) => ({ [name]: fn }) as RulesHooks));
 }
 
-/** Run async hooks (plugin option + `server-battle-<name>` modules) and collect their results. */
-async function callHooks(player: RpgPlayer, name: string, ...args: unknown[]): Promise<unknown[]> {
-  const results: unknown[] = [];
-  const own = (options.hooks as Record<string, any> | undefined)?.[name];
-  if (own) results.push(await own(...args));
-  const hooks = (player as any).hooks;
-  if (!hooks?.callHooks) return results;
-  await new Promise<void>((resolve, reject) =>
-    hooks.callHooks(`server-battle-${name}`, ...args).subscribe({
-      next: (v: unknown) => results.push(...(Array.isArray(v) ? v : [v])),
-      error: reject,
-      complete: () => resolve(),
-    }),
-  );
-  return results;
-}
+/** Async hooks (option, then game modules): their results. */
+const callHooks = (player: RpgPlayer, name: keyof TurnBattleServerHooks & string, ...args: unknown[]) => hooks.call(player, name, ...args);
 
 /** A record of the RPGJS database, converted by the `adapt` option of its kind when there is one. */
 function record(player: RpgPlayer, kind: keyof NonNullable<TurnBattleServerOptions["adapt"]>, id: string) {
   const raw = dbRecord(player, id);
-  return raw ? options.adapt?.[kind]?.(raw, id, (other) => dbRecord(player, other)) ?? raw : raw;
+  return raw ? (options.adapt?.[kind]?.(raw, id, (other) => dbRecord(player, other)) as Record<string, any> | undefined) ?? raw : raw;
 }
 
 /**
@@ -375,7 +360,7 @@ const read = (fn: () => unknown) => {
     return undefined;
   }
 };
-const val = (v: unknown) => (typeof v === "function" ? (v as () => unknown)() : v);
+const val = plainValue;
 
 /** Skills and items used by this battle, resolved from options then the RPGJS database. */
 function buildCatalog(player: RpgPlayer, combatants: CombatantDef[], dbCommands: Record<string, CustomCommand> = {}): Catalog {
@@ -496,57 +481,54 @@ export function clearLimits(player: RpgPlayer): void {
 }
 
 /**
- * Start a battle and wait for its outcome. The map stays loaded underneath:
- * the battle is a full-screen GUI rendered above it, for every player.
+ * Starts a turn-based battle and waits for its outcome. The map stays loaded
+ * underneath: the battle is a full-screen GUI rendered above it, for every
+ * player. The server owns the battle; the result (HP, SP, EXP, gold, items) is
+ * written on the players before `turnBattle.onEnd` runs. Standalone RPG and
+ * MMORPG; in MMORPG every player must be on the leader's map.
  *
+ * In a group battle the promise resolves once every player has left the result
+ * screen; each player gets the full rewards and `onStart` / `onEnd` run per
+ * player.
+ *
+ * @title startTurnBattle
+ * @method startTurnBattle(player, troop, options?)
+ * @param {RpgPlayer} player - The player who fights (solo), or the group options
+ * @param {TroopDef | string} troop - A troop of the database (id) or a troop object
+ * @param {StartTurnBattleOptions} [options] - Seed, music, background, party, heroes, turn timer
+ * @returns {Promise<BattleResult>} The outcome as the leader lives it (`winners` in PvP)
+ * @example
  * ```ts
- * const result = await startBattle(player, "goblins");
- * if (result.outcome === "victory") await player.showText("Bravo !");
+ * import { startTurnBattle } from "@rpgjs/turn-battle/server";
+ *
+ * const result = await startTurnBattle(player, "goblins");
+ * if (result.outcome === "victory") await player.showText("Bravo!");
  *
  * // Coop: each player commands their own hero (and companions).
- * await startBattle({ players: [alice, bob], troop: "ambush" });
+ * await startTurnBattle({ players: [alice, bob], troop: "ambush" });
+ * // PvP, with a spectator
+ * await startTurnBattle({ players: [alice], versus: [bob], spectators: [carol] });
  * ```
- *
- * In coop the promise resolves once every player has left the result screen.
- * Each player gets the full rewards; `battle.onStart` / `onEnd` run per player.
  */
-export function startBattle(player: RpgPlayer, troop: TroopDef | string, start?: StartBattleOptions): Promise<BattleResult>;
-export function startBattle(group: GroupBattleOptions): Promise<BattleResult>;
-export async function startBattle(
-  a: RpgPlayer | GroupBattleOptions,
+export function startTurnBattle(player: RpgPlayer, troop: TroopDef | string, options?: StartTurnBattleOptions): Promise<BattleResult>;
+export function startTurnBattle(group: TurnBattleGroupOptions): Promise<BattleResult>;
+export async function startTurnBattle(
+  a: RpgPlayer | TurnBattleGroupOptions,
   troopArg?: TroopDef | string,
-  startArg: StartBattleOptions = {},
+  startArg: StartTurnBattleOptions = {},
 ): Promise<BattleResult> {
-  const group = "players" in a && Array.isArray(a.players) ? a : null;
-  const unique = (list: RpgPlayer[]) => [...new Map(list.map((p) => [p.id, p])).values()];
-  const players = group ? unique(group.players) : [a as RpgPlayer];
-  const versus = group?.versus ? unique(group.versus).filter((p) => !players.some((q) => q.id === p.id)) : [];
+  const group = isBattleGroup(a) ? a : null;
+  const { players, versus, everyone, spectators } = battleParticipants("TurnBattle", group ?? { players: [a as RpgPlayer] });
   const troop = group ? group.troop : troopArg;
   const start = group ?? startArg;
-  if (!players.length) throw new Error("[TurnBattle] No player");
   if (!troop && !versus.length) throw new Error("[TurnBattle] A troop or opponents (versus) are required");
-  const everyone = [...players, ...versus];
-  // A battle lives in the room of its map (one Durable Object per room on Cloudflare):
-  // every player must be on the leader's map.
-  const map = mapOf(players[0]);
-  const away = everyone.find((p) => mapOf(p) !== map);
-  if (away) throw new Error(`[TurnBattle] Player ${away.id} is not on the same map as ${players[0].id}`);
-  const busy = everyone.find((p) => sessions.has(p.id));
-  if (busy) throw new Error(`[TurnBattle] Player ${busy.id} already in battle`);
-  // Reserve the slots before any await: a double trigger must not open two battles.
-  const pending: Session = { seats: new Map(), leave: () => {}, watch: async () => false };
-  for (const p of everyone) sessions.set(p.id, pending);
+  // Reserve the players before any await: a double trigger must not open two battles.
+  const release = battles.reserve(everyone);
   try {
-    return await runBattle(players, versus, troop, start, group?.spectators ?? []);
+    return await runBattle(players, versus, troop, start, spectators);
   } finally {
-    for (const p of everyone) if (sessions.get(p.id) === pending) sessions.delete(p.id);
+    release();
   }
-}
-
-/** Id of the room (map) a player is in; undefined outside a map (tests, custom rooms). */
-function mapOf(player: RpgPlayer): string | undefined {
-  const map = read(() => (player as any).getCurrentMap?.()) as { id?: unknown } | null | undefined;
-  return map?.id !== undefined ? String(val(map.id)) : undefined;
 }
 
 const noResult = (turns: number): BattleResult => ({ outcome: "escape", exp: 0, gold: 0, items: [], bonuses: [], turns });
@@ -566,7 +548,7 @@ async function runBattle(
   players: RpgPlayer[],
   versus: RpgPlayer[],
   troopInput: TroopDef | string | undefined,
-  start: StartBattleOptions & { background?: string; bgm?: string },
+  start: StartTurnBattleOptions & { background?: string; bgm?: string },
   spectators: RpgPlayer[],
 ) {
   const leader = players[0];
@@ -631,7 +613,7 @@ async function runBattle(
     victoryBgm: troop.victoryBgm ?? start.victoryBgm,
   });
   const battleRules = withHooks({ ...rulesFor(leader), commands: { ...dbCommands, ...rulesFor(leader).commands } }, moduleRuleHooks(leader));
-  const handle: BattleHandle = {
+  const handle: TurnBattleHandle = {
     id: battleId,
     player: leader,
     players: everyone,
@@ -641,7 +623,7 @@ async function runBattle(
     spectators: () => watchers().map((s) => s.player),
   };
   const names = Object.fromEntries(
-    everyone.map((p, i) => [p.id, String(val((p as any).name) || `${options.playerLabel ?? "Joueur"} ${i + 1}`)]),
+    everyone.map((p, i) => [p.id, battlePlayerName(p, i, p.t?.("turnBattle.player", { index: "{index}" }) ?? "Player {index}")]),
   );
 
   const sideOf = (p: RpgPlayer): Side => (players.includes(p) ? "ally" : "enemy");
@@ -763,72 +745,76 @@ async function runBattle(
       if (seat.left) return;
       const vetoed = (await callHooks(seat.player, "onCommand", seat.player, handle, env)).includes(false);
       const out = vetoed
-        ? { state, beats: [], error: "tb.error.refused" }
+        ? { state, beats: [], error: "turnBattle.error.refused" }
         : runCommand(state, env, battleRules, seat.player.id);
       if (out.error) return void seat.gui.update(packet(seat, [], out.error));
       apply(out);
     }).catch((error) => console.error("[TurnBattle] command failed", error)));
 
+  const leave = (playerId: string) => {
+    const seat = seats.get(playerId);
+    if (!seat || seat.left) return;
+    seat.left = true;
+    battles.release(seat.player, session);
+    seat.gui.close(null);
+    if (seat.role === "spectator") return refreshAudience();
+    // Nothing is committed for a player who left; their units fight on with the AI.
+    if (!fighters().length) {
+      // No fighter left: the battle is over for everyone watching too.
+      clearTimeout(timer);
+      watchers().forEach((w) => leave(w.player.id));
+      return;
+    }
+    if (state.result) return;
+    // PvP: a side with nobody left forfeits; otherwise the AI plays for the missing player.
+    const mates = fighters().filter((f) => f.side === seat.side);
+    if (pvp && mates.every((f) => f.surrendered)) return apply(forfeit(state, seat.side));
+    state = setAuto(state, playerId, true);
+    const actor = state.combatants.find((c) => c.id === state.actor);
+    if (actor?.owner === playerId) apply(runAuto(state, battleRules));
+  };
+
   const session: Session = {
     handle,
     seats,
-    watch: async () => false, // set below
-    leave(playerId) {
-      const seat = seats.get(playerId);
-      if (!seat || seat.left) return;
-      seat.left = true;
-      if (sessions.get(playerId) === session) sessions.delete(playerId);
-      seat.gui.close(null);
-      if (seat.role === "spectator") return refreshAudience();
-      // Nothing is committed for a player who left; their units fight on with the AI.
-      if (!fighters().length) {
-        // No fighter left: the battle is over for everyone watching too.
-        clearTimeout(timer);
-        watchers().forEach((w) => session.leave(w.player.id));
-        return;
-      }
-      if (state.result) return;
-      // PvP: a side with nobody left forfeits; otherwise the AI plays for the missing player.
-      const mates = fighters().filter((f) => f.side === seat.side);
-      if (pvp && mates.every((f) => f.surrendered)) return apply(forfeit(state, seat.side));
-      state = setAuto(state, playerId, true);
-      const actor = state.combatants.find((c) => c.id === state.actor);
-      if (actor?.owner === playerId) apply(runAuto(state, battleRules));
+    plays: (player) => {
+      const seat = seats.get(player.id);
+      return !!seat && seat.role === "fighter" && !seat.left;
     },
-  };
-
-  session.watch = async (spectator) => {
-    const known = seats.get(spectator.id);
-    if (state.result || (known && !known.left) || (sessions.has(spectator.id) && sessions.get(spectator.id) !== session))
-      return false;
-    if (!fighters().length) return false;
-    // Spectators watch from the same map (same room / Durable Object).
-    if (mapOf(spectator) !== mapOf(leader)) return false;
-    // Reserve before the async hook: a double request must not open two GUIs.
-    sessions.set(spectator.id, session);
-    const refused = (await callHooks(spectator, "onSpectate", spectator, handle)).includes(false);
-    if (refused || state.result || !fighters().length) {
-      if (sessions.get(spectator.id) === session) sessions.delete(spectator.id);
-      return false;
-    }
-    const seat: Seat = { player: spectator, side: "ally", role: "spectator", gui: spectator.gui(TURN_BATTLE_GUI), left: false };
-    seats.set(spectator.id, seat);
-    // Spectators may leave at any time (Escape / "Quitter").
-    seat.gui.on("close", () => session.leave(spectator.id));
-    // They join mid-battle: the client builds the scene from the state alone.
-    seat.done = seat.gui.open(packet(seat, []), { waitingAction: true, blockPlayerInput: true });
-    refreshAudience();
-    await seat.done;
-    seat.left = true;
-    if (sessions.get(spectator.id) === session) sessions.delete(spectator.id);
-    return true;
+    leave: (player) => leave(player.id),
+    closed: async (player) => {
+      await seats.get(player.id)?.done;
+    },
+    async watch(spectator) {
+      const known = seats.get(spectator.id);
+      if (state.result || (known && !known.left) || !fighters().length) return false;
+      // Spectators watch from the same map (same room / Durable Object).
+      if (!sameBattleMap(spectator, leader)) return false;
+      // Seated before the async hook: a double request must not open two GUIs.
+      if (!battles.seat(spectator, session)) return false;
+      const refused = (await callHooks(spectator, "onSpectate", spectator, handle)).includes(false);
+      if (refused || state.result || !fighters().length) {
+        battles.release(spectator, session);
+        return false;
+      }
+      const seat: Seat = { player: spectator, side: "ally", role: "spectator", gui: spectator.gui(TURN_BATTLE_GUI), left: false };
+      seats.set(spectator.id, seat);
+      // Spectators may leave at any time (Escape / the leave button).
+      seat.gui.on("close", () => leave(spectator.id));
+      // They join mid-battle: the client builds the scene from the state alone.
+      seat.done = seat.gui.open(packet(seat, []), { waitingAction: true, blockPlayerInput: true });
+      refreshAudience();
+      await seat.done;
+      seat.left = true;
+      battles.release(spectator, session);
+      return true;
+    },
   };
 
   for (const seat of seats.values()) await callHooks(seat.player, "onStart", seat.player, handle);
   const opening = beginBattle(state, battleRules);
   state = opening.state;
-  for (const p of everyone) sessions.set(p.id, session);
-  battles.set(battleId, session);
+  battles.open(session, everyone);
 
   // Packets travel through the GUI data (gui.open / gui.update): the client
   // component receives them as its `data` signal, in both runtimes.
@@ -842,14 +828,14 @@ async function runBattle(
         seat.surrendered = true;
         const mates = fighters().filter((f) => f.side === seat.side);
         if (mates.every((f) => f.surrendered)) apply(forfeit(state, seat.side));
-        else for (const f of mates) f.gui.update(packet(f, [], "tb.surrenderVote"));
+        else for (const f of mates) f.gui.update(packet(f, [], "turnBattle.surrenderVote"));
       })),
     );
     seat.gui.on("close", () => {
       if (!state.result) return;
       seat.gui.close(resultFor(seat.side));
       // Free this player on the map without waiting for the others.
-      if (sessions.get(seat.player.id) === session) sessions.delete(seat.player.id);
+      battles.release(seat.player, session);
     });
     seat.done = seat.gui.open(packet(seat, opening.beats), { waitingAction: true, blockPlayerInput: true });
   }
@@ -861,7 +847,8 @@ async function runBattle(
     return state.result ? resultFor("ally") : noResult(state.turns);
   } finally {
     clearTimeout(timer);
-    battles.delete(battleId);
+    for (const p of everyone) battles.release(p, session);
+    battles.close(session);
   }
 }
 
@@ -874,52 +861,117 @@ function mergeCatalogs(list: Catalog[]): Catalog {
   };
 }
 
-/** The player fights or watches a battle. */
-export function isInBattle(player: RpgPlayer) {
-  return sessions.has(player.id);
-}
-
-/** The battle a player fights in (not the one they watch), by player or battle id. */
-export function getBattle(target: RpgPlayer | string): BattleHandle | undefined {
-  const session = typeof target === "string" ? battles.get(target) : sessions.get(target.id);
-  if (!session?.handle) return undefined;
-  if (typeof target !== "string" && session.seats.get(target.id)?.role !== "fighter") return undefined;
-  return session.handle;
+/**
+ * Does the player fight or watch a turn-based battle (or is one being
+ * prepared for them)? Server only.
+ *
+ * @title isInTurnBattle
+ * @method isInTurnBattle(player)
+ * @param {RpgPlayer} player - The player
+ * @returns {boolean} True while the player is in a battle
+ * @example
+ * ```ts
+ * if (isInTurnBattle(player)) return; // no encounter while fighting
+ * ```
+ */
+export function isInTurnBattle(player: RpgPlayer): boolean {
+  return battles.isIn(player);
 }
 
 /**
- * Watch a running battle: the spectator sees every action live (joining
- * mid-fight) but cannot command anything, and leaves with Escape / "Quitter".
- * `target` is a fighting player or a battle id. Resolves when the spectator
- * leaves; `false` when there is nothing to watch or `battle.onSpectate` refused.
+ * The battle a player fights in (not one they watch), or a battle by id.
+ * Server only.
  *
+ * @title getTurnBattle
+ * @method getTurnBattle(target)
+ * @param {RpgPlayer | string} target - A fighting player or a battle id
+ * @returns {TurnBattleHandle | undefined} The running battle
+ * @example
  * ```ts
- * const fighter = map.getPlayers().find((p) => getBattle(p));
- * if (fighter) await watchBattle(player, fighter);
+ * const battle = getTurnBattle(player);
+ * battle?.state().turns;
  * ```
  */
-export async function watchBattle(spectator: RpgPlayer, target: RpgPlayer | string): Promise<boolean> {
-  const handle = getBattle(target);
-  const session = handle && battles.get(handle.id);
-  if (!session) return false;
-  return session.watch(spectator);
+export function getTurnBattle(target: RpgPlayer | string): TurnBattleHandle | undefined {
+  return battles.get(target);
 }
 
+/**
+ * Watches a running battle: the spectator sees every action live (joining
+ * mid-fight) but cannot command anything, and leaves with the back control.
+ * Resolves when the spectator leaves; `false` when there is nothing to watch,
+ * the spectator is busy or on another map, or `turnBattle.onSpectate` refused.
+ * Server only.
+ *
+ * @title watchTurnBattle
+ * @method watchTurnBattle(spectator, target)
+ * @param {RpgPlayer} spectator - The player who watches
+ * @param {RpgPlayer | string} target - A fighting player or a battle id
+ * @returns {Promise<boolean>} Whether the spectator watched
+ * @example
+ * ```ts
+ * const fighter = map.getPlayers().find((p) => getTurnBattle(p));
+ * if (fighter) await watchTurnBattle(player, fighter);
+ * ```
+ */
+export function watchTurnBattle(spectator: RpgPlayer, target: RpgPlayer | string): Promise<boolean> {
+  return battles.watch(spectator, target);
+}
+
+/**
+ * Takes a player out of their battle (as a disconnection does: their units
+ * fight on with the AI, nothing is written on the player) and waits until
+ * their battle screen is closed. Server only.
+ *
+ * @title stopTurnBattle
+ * @method stopTurnBattle(player)
+ * @param {RpgPlayer} player - A fighter or a spectator
+ * @returns {Promise<void>} Resolves once the battle screen of the player is closed
+ * @example
+ * ```ts
+ * await stopTurnBattle(player);
+ * player.changeMap("town");
+ * ```
+ */
+export function stopTurnBattle(player: RpgPlayer): Promise<void> {
+  return battles.stop(player);
+}
+
+/**
+ * Server side of the turn-based battle: the battle rules, the sessions (solo,
+ * coop, PvP, spectators), the battle data read from the RPGJS database (the
+ * `turnBattle` field of skills, items, enemies, troops…) and the hooks. Pair
+ * it with `provideTurnBattleClient`. Standalone RPG and MMORPG.
+ *
+ * @title provideTurnBattleServer
+ * @method provideTurnBattleServer(options?)
+ * @param {TurnBattleServerOptions} [options] - Data, party, formulas, AI, commands, hooks
+ * @returns {RpgProvider[]} The providers of the server module
+ * @example
+ * ```ts
+ * import { provideTurnBattleServer } from "@rpgjs/turn-battle/server";
+ *
+ * export default createServer({
+ *   providers: [provideTurnBattleServer({ turnTimer: 20 }), provideServerModules([])],
+ * });
+ * ```
+ */
 export function provideTurnBattleServer(opts: TurnBattleServerOptions = {}) {
   options = opts;
   unrun = new Set();
+  hooks = new BattleServerHooks<TurnBattleServerHooks>("turnBattle", opts.hooks);
   rules = createRules({ ...opts, formulas: typeof opts.formulas === "object" ? opts.formulas : undefined, hooks: opts.hooks });
   return createModule("TurnBattle", [
     {
       server: defineModule<RpgServer>({
+        i18n: TURN_BATTLE_I18N,
         player: {
           // Limit gauges survive between battles, map changes and saves.
           // Stored as JSON text: object props do not survive the sync packets.
           props: { turnBattle: { $default: "", $permanent: true, $syncWithClient: false } },
           onDisconnected(player: RpgPlayer) {
             // Nothing is committed for the player who left; in coop the others fight on.
-            sessions.get(player.id)?.leave(player.id);
-            sessions.delete(player.id);
+            battles.disconnect(player);
           },
         },
       } as RpgServer),

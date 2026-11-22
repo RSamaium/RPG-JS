@@ -2,7 +2,7 @@ import { signal, type WritableSignal } from "canvasengine";
 import type { BattleResult, Side } from "../core";
 import type { TargetInfo } from "./target-info";
 
-export { followLocale, t, TEXTS } from "./texts";
+export { connectI18n, t } from "./texts";
 
 /** UI-facing signals. The director writes them, the .ce components read them. */
 

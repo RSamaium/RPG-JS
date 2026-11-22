@@ -10,3 +10,4 @@ export * from "./actions";
 
 /** GUI id and socket events shared by both sides. */
 export const TURN_BATTLE_GUI = "turn-battle";
+export { TURN_BATTLE_I18N } from "./i18n";

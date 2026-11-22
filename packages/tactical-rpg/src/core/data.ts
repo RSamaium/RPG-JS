@@ -5,13 +5,17 @@ import type { Objective, AttackStyle, BattlePlayer, BattleRules, BattleState, Bo
 
 /**
  * Tactical data in the RPGJS database, typed. The helpers return the record
- * (plus `_type`), so the database stays the single source of game data:
+ * (plus `_type`), so the database stays the single source of game data. The
+ * native RPGJS fields are shared with the other battle systems (`name`,
+ * `description`, `spCost` and `power` of a skill, `hpValue` and `spValue` of an
+ * item); the `tactical` field carries what only a tactical battle needs:
  *
  * ```ts
  * database: {
- *   "ember-nova": tacticalSkill({ name: "Nova du brasier", battle: { cost: 14, power: 30, range: 3, shape: "square", visual: "fire", color: 0xff995d } }),
- *   kael: tacticalUnit({ name: "Kael", battle: { role: "warrior", battler: "hero", stats: { hp: 120, mp: 20, power: 24, range: 1, move: 3 }, skills: ["oath-breaker"] } }),
- *   sanctuary: tacticalEncounter({ name: "Le Sanctuaire", battle: { allies: [{ unit: "kael", x: 4, y: 5 }], enemies: [{ unit: "sentinel", x: 4, y: 1 }] } }),
+ *   "ember-nova": tacticalSkill({ name: "Ember nova", spCost: 14, power: 30, tactical: { range: 3, shape: "square", visual: "fire", color: 0xff995d } }),
+ *   potion: tacticalItem({ name: "Potion", hpValue: 40 }),
+ *   kael: tacticalUnit({ name: "Kael", tactical: { role: "warrior", battler: "hero", stats: { hp: 120, sp: 20, power: 24, range: 1, move: 3 }, skills: ["ember-nova"] } }),
+ *   sanctuary: tacticalEncounter({ name: "Sanctuary", tactical: { allies: [{ hero: true, x: 4, y: 5 }, { unit: "kael", x: 5, y: 5 }], enemies: [{ unit: "sentinel", x: 4, y: 1 }] } }),
  * }
  * ```
  */
@@ -22,9 +26,6 @@ interface NativeFields {
 
 /** `effect` / `castEffect` / `impactEffect`: the Visual Effects of the Studio, which replace the look of `visual` (see `SkillDef`). */
 export interface TacticalSkillData extends VisualEffects {
-  /** MP cost. */
-  cost: number;
-  power: number;
   range: number;
   shape: SkillShape;
   /** Area drawn in Studio (`targeting.aoeMask`): rows, a character other than `.`, ` ` or `0` is a hit tile, the target is the middle. */
@@ -38,7 +39,11 @@ export interface TacticalSkillData extends VisualEffects {
 export interface TacticalSkillRecord extends NativeFields {
   name: string;
   description?: string;
-  battle: TacticalSkillData;
+  /** Native SP cost of the skill. */
+  spCost?: number;
+  /** Native power of the skill. */
+  power?: number;
+  tactical: TacticalSkillData;
 }
 
 export interface TacticalRoleData {
@@ -52,13 +57,17 @@ export interface TacticalRoleData {
 export interface TacticalItemRecord extends NativeFields {
   name: string;
   description?: string;
-  /** `effect`: a Visual Effect of the Studio played from the user to the unit it heals (see `ItemDef`). */
-  battle: { hp?: number; mp?: number } & Pick<VisualEffects, "effect">;
+  /** Native HP restored. */
+  hpValue?: number;
+  /** Native SP restored. */
+  spValue?: number;
+  /** `effect`: a Visual Effect played from the user to the unit it heals (see `ItemDef`). */
+  tactical?: Pick<VisualEffects, "effect">;
 }
 
 export interface TacticalRoleRecord extends NativeFields {
   name: string;
-  battle: TacticalRoleData;
+  tactical: TacticalRoleData;
 }
 
 export interface TacticalUnitData {
@@ -68,22 +77,33 @@ export interface TacticalUnitData {
   battler: string;
   portrait?: string;
   tint?: number;
-  stats: { hp: number; mp: number; power: number; range: number; move: number };
+  stats: { hp: number; sp: number; power: number; range: number; move: number };
   skills?: string[];
   /** Items carried: id → how many. */
   items?: Record<string, number>;
   /** Parameters under the names of RPGJS: the damage is the one of the formulas of the map when the units have them. */
   params?: Record<string, number>;
+  /** HP and SP the unit starts with, when lower than its `stats` (a hero read from a player). */
+  current?: { hp: number; sp: number };
+  /** Id of the player this unit is (a hero read from an `RpgPlayer`): it is theirs, and its outcome is written back on them. */
+  player?: string;
 }
 export interface TacticalUnitRecord extends NativeFields {
   name: string;
   description?: string;
-  battle: TacticalUnitData;
+  tactical: TacticalUnitData;
 }
 
 export interface Placement extends Cell {
-  /** Unit id of the database (or of the `units` option). */
-  unit: string;
+  /**
+   * Unit id of the database (or of the `units` option). The server fills it for a `hero` placement.
+   */
+  unit?: string;
+  /**
+   * The hero of a player: a unit read from the `RpgPlayer` (HP, SP, parameters with the equipment, the skills it knows, the items
+   * of its inventory), whose outcome is written back on the player. `seat` says which player of the side (the first by default).
+   */
+  hero?: boolean;
   /** Index of the player commanding this unit in its side (coop, PvP; default: dealt in turn). */
   seat?: number;
   /** It keeps one hit point whatever the blow (an enemy the troop makes invincible). */
@@ -107,12 +127,14 @@ export interface TacticalEncounterData {
 }
 export interface TacticalEncounterRecord extends NativeFields {
   name?: string;
-  battle: TacticalEncounterData;
+  tactical: TacticalEncounterData;
 }
 
 export const tacticalRole = <T extends TacticalRoleRecord>(record: T) => ({ _type: "tactical-role" as const, ...record });
-export const tacticalItem = <T extends TacticalItemRecord>(record: T) => ({ _type: "tactical-item" as const, ...record });
-export const tacticalSkill = <T extends TacticalSkillRecord>(record: T) => ({ _type: "tactical-skill" as const, ...record });
+/** An item usable in a tactical battle: an ordinary RPGJS item (`_type: "item"`), so players carry it. */
+export const tacticalItem = <T extends TacticalItemRecord>(record: T) => ({ _type: "item" as const, ...record });
+/** A skill usable in a tactical battle: an ordinary RPGJS skill (`_type: "skill"`), so players learn it. */
+export const tacticalSkill = <T extends TacticalSkillRecord>(record: T) => ({ _type: "skill" as const, ...record });
 export const tacticalUnit = <T extends TacticalUnitRecord>(record: T) => ({ _type: "tactical-unit" as const, ...record });
 export const tacticalEncounter = <T extends TacticalEncounterRecord>(record: T) => ({ _type: "tactical-encounter" as const, ...record });
 
@@ -151,23 +173,23 @@ export function createTacticalBattle(
   const players = o.players ?? [];
   const versus = o.versus ?? [];
   const unit = (team: "ally" | "enemy", p: Placement, i: number): Unit => {
-    const record = setup.units[p.unit];
-    if (!record) throw new Error(`[Tactical] Unknown unit "${p.unit}"`);
-    const b = record.battle;
+    const record = p.unit ? setup.units[p.unit] : undefined;
+    if (!record) throw new Error(`[Tactical] Unknown unit "${p.unit ?? "(hero without a player)"}"`);
+    const b = record.tactical;
     if (!roles[b.role]) {
       const declared = setup.roles?.[b.role];
       const role = declared
-        ? { id: b.role, name: declared.name, glyph: declared.battle.glyph ?? "◆", color: declared.battle.color ?? 0xdbbb7d, attack: declared.battle.attack }
+        ? { id: b.role, name: declared.name, glyph: declared.tactical.glyph ?? "◆", color: declared.tactical.color ?? 0xdbbb7d, attack: declared.tactical.attack }
         : DEFAULT_ROLES[b.role];
       if (!role) throw new Error(`[Tactical] Unknown role "${b.role}" (unit "${p.unit}")`);
       roles[b.role] = role;
     }
     for (const id of b.skills ?? []) {
       const s = setup.skills[id];
-      if (s) skills[id] = { id, name: s.name, description: s.description, ...s.battle };
+      if (s) skills[id] = { id, name: s.name, description: s.description, spCost: Number(s.spCost) || 0, power: Number(s.power) || 0, ...s.tactical };
     }
     return {
-      id: `${team}-${p.unit}-${i}`,
+      id: b.player ? `hero-${b.player}` : `${team}-${p.unit}-${i}`,
       team,
       role: b.role,
       name: record.name,
@@ -178,10 +200,11 @@ export function createTacticalBattle(
       ...(b.params ? { params: b.params } : {}),
       x: p.x,
       y: p.y,
-      hp: b.stats.hp,
+      hp: Math.min(b.current?.hp ?? b.stats.hp, b.stats.hp),
       maxHp: b.stats.hp,
-      mp: b.stats.mp,
-      maxMp: b.stats.mp,
+      sp: Math.min(b.current?.sp ?? b.stats.sp, b.stats.sp),
+      maxSp: b.stats.sp,
+      ...(b.player ? { player: b.player } : {}),
       power: b.stats.power,
       range: b.stats.range,
       move: b.stats.move,
@@ -192,7 +215,7 @@ export function createTacticalBattle(
       guarding: false,
       moved: false,
       acted: false,
-      owner: ownerOf(team === "ally" ? players : versus, p.seat ?? i),
+      owner: b.player ?? ownerOf(team === "ally" ? players : versus, p.seat ?? i),
     };
   };
   return {
@@ -203,7 +226,7 @@ export function createTacticalBattle(
     board,
     skills,
     roles,
-    items: Object.fromEntries(Object.entries(setup.items ?? {}).map(([id, item]) => [id, { id, name: String(item.name), ...(item.description ? { description: item.description } : {}), hp: item.battle.hp ?? 0, mp: item.battle.mp ?? 0, ...(item.battle.effect ? { effect: item.battle.effect } : {}) }])),
+    items: Object.fromEntries(Object.entries(setup.items ?? {}).map(([id, item]) => [id, { id, name: String(item.name), ...(item.description ? { description: item.description } : {}), hp: Number(item.hpValue) || 0, sp: Number(item.spValue) || 0, ...(item.tactical?.effect ? { effect: item.tactical.effect } : {}) }])),
     ...(data.rules ? { rules: { canAttack: true, canUseSkills: true, canUseItems: true, canGuard: true, canEscape: true, ...data.rules } } : {}),
     ...(data.goal && !versus.length ? { objective: goalOf(data.goal, data.enemies, (i) => `enemy-${data.enemies[i].unit}-${i}`) } : {}),
     meta: { name: setup.name, chapter: data.chapter, objective: data.objective, intro: data.intro },

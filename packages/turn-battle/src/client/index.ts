@@ -1,37 +1,39 @@
-import { createModule, ModulesToken } from "@rpgjs/common";
+import { createModule } from "@rpgjs/common";
 import { defineModule, inject, RpgClientEngine, RpgGui, type RpgClient } from "@rpgjs/client";
+import { BattleClientHooks, hideGuisDuringBattle, type BattleCueSound, type BattleScreenOptions } from "@rpgjs/battle-kit";
 import { TURN_BATTLE_GUI, type Beat, type BattleResult, type BattleView } from "../core";
 import BattleGui from "../ui/battle.ce";
-import { injectBattleStyles } from "../ui/styles";
 import type { FxFn } from "./fx";
 import type { ActionSteps, BeatSteps } from "./director";
-import { installInput } from "./input";
 import type { Backdrop, Scene } from "./scene";
 import { configureSession } from "./session";
-import { configureSfx, sfxPlayers, type SfxId, type SfxSound } from "./sfx";
+import { cues, type TurnBattleCue } from "./sfx";
 import { toSpritesheet, type BattleSpritesheet, type BattlerHints, type BattlerInfo } from "./sheets";
-import { followLocale, muted, TEXTS } from "./state";
+import { connectI18n, muted } from "./state";
+import { TURN_BATTLE_I18N } from "../core";
 
 export type { BattleSpritesheet, BattlerHints, BattleAnimName, BattlerInfo, RpgFrame } from "./sheets";
 export { battlerAnims, readTexture } from "./sheets";
 export type { FxFn } from "./fx";
 export type { Backdrop, Scene, BattlerModel, EffectSpec, FxPreset } from "./scene";
 export type { ActionSteps, BeatSteps } from "./director";
-export type { SfxId, SfxSound } from "./sfx";
-export { builtinFx, ELEMENT_COLORS, burst, playPreset, hasPreset, elementColor } from "./fx";
-export { scene } from "./scene";
-export { TEXTS } from "./state";
-export { TEXTS_BY_LOCALE } from "./texts";
+export type { TurnBattleCue } from "./sfx";
+export { builtinFx, burst } from "./fx";
 export * from "../core";
 
 /**
- * Client hooks any module can implement:
+ * Client hooks of the turn-based battle. A game module declares them under
+ * the `turnBattle` key; `provideTurnBattleClient({ hooks })` takes them too.
  *
+ * Client side: they change how the battle is shown, never its outcome (the
+ * server owns the rules). Standalone RPG and MMORPG.
+ *
+ * @example
  * ```ts
  * defineModule<RpgClient>({
- *   battle: {
+ *   turnBattle: {
  *     onStart(scene, view) {},
- *     async onBeat(beat, scene, steps) {
+ *     async onPlay(beat, scene, steps) {
  *       if (steps.t !== "action" || steps.beat.ref !== "meteor") return; // default choreography
  *       steps.announce();
  *       await steps.charge({ fx: "summonSigil" });
@@ -39,6 +41,7 @@ export * from "../core";
  *       await steps.strike({ fx: "meteorImpact" });
  *       await steps.fall();
  *       await steps.returnHome();
+ *       return false; // played here
  *     },
  *     onEnd(result) {},
  *   },
@@ -46,24 +49,31 @@ export * from "../core";
  * ```
  */
 export interface TurnBattleClientHooks {
+  /** The battle scene is shown. */
   onStart?(scene: Scene, view: BattleView): void | Promise<void>;
   /**
    * Every beat, before it is played. Use `steps` (the default choreography cut
-   * into steps) to play it your way, or return `false` to play it entirely
-   * yourself; otherwise the default choreography runs. The numbers always
-   * converge on the server's afterwards.
+   * into steps) to play it your way and return `false`; otherwise the default
+   * choreography runs. The numbers always converge on the server's afterwards.
    */
-  onBeat?(beat: Beat, scene: Scene, steps: BeatSteps | ActionSteps): boolean | void | Promise<boolean | void>;
+  onPlay?(beat: Beat, scene: Scene, steps: BeatSteps | ActionSteps): boolean | void | Promise<boolean | void>;
+  /** The player closed the result screen. */
   onEnd?(result: BattleResult): void | Promise<void>;
 }
 
 declare module "@rpgjs/client" {
   interface RpgClient {
-    battle?: TurnBattleClientHooks;
+    /** Client hooks of the turn-based battle (`@rpgjs/turn-battle`). */
+    turnBattle?: TurnBattleClientHooks;
   }
 }
 
-export interface TurnBattleClientOptions {
+/**
+ * Options of the client side of the turn-based battle. The screen options
+ * (`hideGuis`, `keepGuis`, `onBattleShown`) are the ones of every RPGJS battle
+ * system (`BattleScreenOptions` of `@rpgjs/battle-kit`).
+ */
+export interface TurnBattleClientOptions extends BattleScreenOptions {
   /**
    * Battle hints per battler id, overriding the `battle` field of the RPGJS
    * spritesheet (facing, scale, impact frames, animation names, portrait).
@@ -81,51 +91,55 @@ export interface TurnBattleClientOptions {
   resolveBackdrop?: (id: string) => Backdrop | undefined | Promise<Backdrop | undefined>;
   /** Extra VFX recipes, by skill `fx` id. */
   fx?: Record<string, FxFn>;
-  /** Override UI texts (keys of `TEXTS_BY_LOCALE`) over the catalog of the language of the game (`en`, `fr`). */
-  texts?: Record<string, string>;
-  /** Map GUIs hidden while a battle is shown (restored afterwards). */
-  hideGuis?: string[];
   /**
-   * Sounds: map battle cues to RPGJS sound ids (registered with `sounds: [...]`), to `false` (silence) or to a
-   * function `(engine, volume) => void` that plays it, otherwise small synthesized sounds are used. The cues are
-   * `cursor`, `confirm`, `back` (the menu), `attack`, `cast` (the wind-up of an action), `hit`, `crit`, `hurt` (an
-   * impact), `break`, `heal`, `ko`, `limit`, `victory` and `dash`.
+   * Sounds of the cues of the battle: a sound id of the game (registered with `sounds: [...]`), `false` (silence) or
+   * a function `(engine, volume) => void`. A cue without one plays a small synthesized sound. The cues are `cursor`,
+   * `confirm`, `back` (the menu), `attack`, `cast` (the wind-up of an action), `hit`, `crit`, `hurt` (an impact),
+   * `break`, `heal`, `ko`, `limit`, `victory` and `dash`.
    */
-  sounds?: Partial<Record<SfxId, SfxSound>>;
+  sounds?: Partial<Record<TurnBattleCue, BattleCueSound>>;
+  /** Start muted (the player can turn the sound on in the battle). */
   muted?: boolean;
-  /**
-   * Called when a battle is shown, to adapt the rest of the interface (a chat reduced to its pill, for instance). Return what
-   * restores it: it is called when the battle ends.
-   */
-  onBattleShown?: () => () => void;
+  /** Client hooks declared without a module (see `TurnBattleClientHooks`). */
+  hooks?: TurnBattleClientHooks;
 }
 
-const DEFAULT_HIDDEN_GUIS = ["hud", "rpg-hotbar", "rpg-notification"];
-
 /**
- * Client side of the turn battle plugin: the battle GUI (CanvasEngine
+ * Client side of the turn-based battle: the battle GUI (CanvasEngine
  * components rendered above the map), battlers registered as RPGJS
- * spritesheets, keyboard/gamepad input, music and client hooks.
+ * spritesheets, keyboard and gamepad controls, texts (i18n keys
+ * `turnBattle.*`), music and client hooks. Pair it with
+ * `provideTurnBattleServer` on the server. Standalone RPG and MMORPG.
+ *
+ * @title provideTurnBattleClient
+ * @method provideTurnBattleClient(options?)
+ * @param {TurnBattleClientOptions} [options] - Battlers, backgrounds, sounds, screen options and hooks
+ * @returns {RpgProvider[]} The providers of the client module
+ * @example
+ * ```ts
+ * import { provideTurnBattleClient } from "@rpgjs/turn-battle/client";
+ *
+ * export default createClient({
+ *   providers: [
+ *     provideTurnBattleClient({ sounds: { hit: "sword-hit" }, keepGuis: ["chat"] }),
+ *     provideClientModules([]),
+ *   ],
+ * });
+ * ```
  */
-export function provideTurnBattleClient(options: TurnBattleClientOptions) {
-  Object.assign(TEXTS, options.texts);
-  injectBattleStyles();
-  let removeInput: (() => void) | undefined;
+export function provideTurnBattleClient(options: TurnBattleClientOptions = {}) {
+  const hooks = new BattleClientHooks<TurnBattleClientHooks>("turnBattle", options.hooks);
   const registered = new Set<string>();
 
   return createModule("TurnBattle", [
     {
       client: defineModule<RpgClient>({
+        i18n: TURN_BATTLE_I18N,
         gui: [{ name: TURN_BATTLE_GUI, component: BattleGui }],
         engine: {
           onStart(engine: RpgClientEngine) {
-            const e = engine as any;
-            followLocale(() => e.getLocale?.() ?? "en");
-            configureSfx({
-              muted: options.muted,
-              sounds: sfxPlayers(options.sounds, e),
-              engine: e,
-            });
+            connectI18n(engine);
+            cues.configure(engine, { sounds: options.sounds, muted: options.muted });
             muted.set(!!options.muted);
             configureSession(
               {
@@ -140,57 +154,22 @@ export function provideTurnBattleClient(options: TurnBattleClientOptions) {
                   if (custom) return custom;
                   // The RPGJS spritesheet as registered (object form; a class is read from its prototype).
                   const read = (sheet: unknown) =>
-                    typeof sheet === "function" ? ({ ...(sheet as any).prototype } as BattleSpritesheet) : (sheet as BattleSpritesheet | undefined);
-                  const found = e.getSpriteSheet?.(id);
+                    typeof sheet === "function"
+                      ? ({ ...(sheet as { prototype: object }).prototype } as BattleSpritesheet)
+                      : (sheet as BattleSpritesheet | undefined);
+                  const found = engine.getSpriteSheet(id) as unknown;
                   return found instanceof Promise ? found.then(read) : read(found);
                 },
-                hideOtherGuis: () => {
-                  // Keep map HUDs hidden for the whole battle, even if the map
-                  // shows them again (streaming, level up…); restore them after.
-                  const hidden = new Set<{ display: { (): boolean; set(v: boolean): void } }>();
-                  const hide = () => {
-                    const guis = inject(RpgGui).gui() as Record<string, any>;
-                    for (const id of options.hideGuis ?? DEFAULT_HIDDEN_GUIS) {
-                      const g = guis[id];
-                      if (!g?.display?.()) continue;
-                      g.display.set(false);
-                      hidden.add(g);
-                    }
-                  };
-                  hide();
-                  const timer = setInterval(hide, 200);
-                  const restore = options.onBattleShown?.();
-                  return () => {
-                    clearInterval(timer);
-                    hidden.forEach((g) => g.display.set(true));
-                    restore?.();
-                  };
-                },
+                hideOtherGuis: () => hideGuisDuringBattle(TURN_BATTLE_GUI, options),
                 music: (bgm) => {
-                  if (!bgm || !e.music) return () => {};
-                  void e.music.enter(bgm, { fadeInMs: 500, fadeOutMs: 400 });
-                  return () => e.music.leave({ exitDelayMs: 0, fadeOutMs: 600 });
+                  if (!bgm) return () => {};
+                  void engine.music.enter(bgm, { fadeInMs: 500, fadeOutMs: 400 });
+                  return () => void engine.music.leave({ exitDelayMs: 0, fadeOutMs: 600 });
                 },
-                callHooks: (name, ...args) => {
-                  const hooks = inject<any>(ModulesToken);
-                  const out: unknown[] = [];
-                  if (!hooks?.callHooks) return Promise.resolve(out);
-                  return new Promise((resolve) =>
-                    hooks.callHooks(`client-battle-${name}`, ...args).subscribe({
-                      next: (v: unknown) => out.push(...(Array.isArray(v) ? v : [v])),
-                      error: (error: unknown) => {
-                        console.warn(`[TurnBattle] battle.${name} hook failed`, error);
-                        resolve(out);
-                      },
-                      complete: () => resolve(out),
-                    }),
-                  );
-                },
+                callHooks: (name, ...args) => hooks.call(name as keyof TurnBattleClientHooks & string, ...args),
               },
               options,
             );
-            removeInput?.();
-            removeInput = installInput();
           },
         },
       }),

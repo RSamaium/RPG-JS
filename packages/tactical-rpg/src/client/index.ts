@@ -1,22 +1,20 @@
 /// <reference path="../types/canvas-engine.d.ts" />
-import { createModule, ModulesToken } from "@rpgjs/common";
+import { createModule } from "@rpgjs/common";
 import { defineModule, inject, RpgClientEngine, RpgGui, type RpgClient } from "@rpgjs/client";
-import { TACTICAL_GUI, TACTICAL_HIDDEN_GRAPHIC, messages, type BattleEvent, type BattleState, type Cell } from "../core";
+import { BattleClientHooks, hideGuisDuringBattle, type BattleCueSound, type BattleScreenOptions } from "@rpgjs/battle-kit";
+import { TACTICAL_GUI, TACTICAL_HIDDEN_GRAPHIC, TACTICAL_I18N, type BattleEvent, type BattleState, type Cell } from "../core";
 import { world } from "../core/board";
 import TacticalHud from "../ui/tactical-hud.ce";
 import Battlefield from "../ui/battlefield.ce";
 import { field, type UnitView } from "./field";
-import { installInput } from "./input-controller";
-import { branding, CUE_SOUNDS, connectEngine, connectEventHook, connectHost, notice, reduced, sound, t, TEXTS } from "./state";
-import { installTacticalStyles } from "./styles";
-
-installTacticalStyles();
+import { connectEngine, connectEventHook, connectHost, cues, notice, reduced, sound, t, type TacticalCue } from "./state";
 
 export * from "../core";
 export type { Stage } from "./choreography";
 export type { UnitView } from "./field";
+export type { TacticalCue } from "./state";
 
-/** What an `onEvent` hook can drive: the battle kit's presets and screen effects, popups, unit views. */
+/** What an `onPlay` hook can drive: the effect presets and screen impacts of `@rpgjs/battle-kit`, popups, unit views. */
 export interface TacticalStage {
   /** CanvasEngine presets (`fx.play("fireball", x, y)`), in map world coordinates. */
   fx: typeof field.fx;
@@ -30,13 +28,18 @@ export interface TacticalStage {
 }
 
 /**
- * Client hooks any module can implement:
+ * Client hooks of the tactical battle. A game module declares them under the
+ * `tactical` key; `provideTacticalClient({ hooks })` takes them too.
  *
+ * Client side: they change how the battle is shown, never its outcome (the
+ * server owns the rules). Standalone RPG and MMORPG.
+ *
+ * @example
  * ```ts
  * defineModule<RpgClient>({
  *   tactical: {
  *     onStart(state) {},
- *     onEvent(event, state, stage) {
+ *     onPlay(event, state, stage) {
  *       if (event.kind !== "skill" || event.skillId !== "meteor") return; // default choreography
  *       const target = state.units.find((u) => u.id === event.targetId)!;
  *       const at = stage.world(target);
@@ -50,38 +53,40 @@ export interface TacticalStage {
  * ```
  */
 export interface TacticalClientHooks {
+  /** The first state of a battle is shown. */
   onStart?(state: BattleState): void | Promise<void>;
-  onEvent?(event: BattleEvent, state: BattleState, stage: TacticalStage): boolean | void | Promise<boolean | void>;
+  /** Every event, before it is played: return `false` to play its effects yourself (the units still move). */
+  onPlay?(event: BattleEvent, state: BattleState, stage: TacticalStage): boolean | void | Promise<boolean | void>;
+  /** The HUD closes on a battle. */
   onEnd?(state: BattleState): void | Promise<void>;
 }
 
 declare module "@rpgjs/client" {
   interface RpgClient {
+    /** Client hooks of the tactical battle (`@rpgjs/tactical-rpg`). */
     tactical?: TacticalClientHooks;
   }
 }
 
-export interface TacticalClientOptions {
-  /** HUD branding (defaults to the `t.title` / `t.subtitle` texts). */
-  title?: string;
-  subtitle?: string;
-  /** Override texts by key (`t.victory`, `t.enemyTurn`… see `messages`). */
-  texts?: Record<string, string>;
-  /** Map GUIs hidden during a battle (restored afterwards). By default every GUI of the game but the battle's and the ones that take the keyboard over it. */
-  hideGuis?: string[];
-  /** Sounds of the game for the cues of the interface: `select` (a cell, a menu entry), `confirm` (an order given), `hit` (a blow lands), `back` (a cancel). Without one, a short tone is synthesized. */
-  sounds?: Partial<Record<"select" | "confirm" | "hit" | "back", string>>;
-  /** GUIs that stay visible during a battle (a chat panel, for example); every other GUI of the game is hidden. Ignored when `hideGuis` is set. */
-  keepGuis?: string[];
+/**
+ * Options of the client side of the tactical battle. The screen options
+ * (`hideGuis`, `keepGuis`, `onBattleShown`) are the ones of every RPGJS battle
+ * system (`BattleScreenOptions` of `@rpgjs/battle-kit`). The texts are the
+ * `tactical.*` keys of the i18n service: a game overrides them in its own
+ * module.
+ */
+export interface TacticalClientOptions extends BattleScreenOptions {
   /**
-   * Called when a battle scene starts; return a function that is called when it ends. Use it to reduce or move a GUI of your own
-   * (a chat, a quest tracker) while the battle is shown.
+   * Sounds of the cues of the HUD: `select` (a cell, a menu entry), `confirm` (an order given), `hit` (a blow lands), `back` (a
+   * cancel). A sound id of the game, `false` (silence) or a function `(engine, volume) => void`; without one, a short tone is
+   * synthesized. The cues play once the player turns the sound on (♪), at once when the game gives sounds.
    */
-  onBattleScene?: () => (() => void) | void;
-  /** Start muted / with reduced motion. */
+  sounds?: Partial<Record<TacticalCue, BattleCueSound>>;
+  /** Start muted. */
   muted?: boolean;
+  /** Start with reduced motion (no screen impacts). */
   reducedMotion?: boolean;
-  /** Hooks declared without a module. */
+  /** Client hooks declared without a module (see `TacticalClientHooks`). */
   hooks?: TacticalClientHooks;
 }
 
@@ -96,9 +101,6 @@ const hiddenSheet = {
   framesHeight: 1,
   textures: { default: still, stand: still, walk: still },
 };
-/** RPGJS GUIs that take the keyboard over the battle (a dialog or choices shown during it…). */
-const MODAL_GUIS = ["rpg-dialog", "rpg-main-menu", "rpg-shop", "rpg-save", "rpg-input", "rpg-gameover", "rpg-disconnect"];
-
 const stage: TacticalStage = {
   fx: field.fx,
   screen: field.screen,
@@ -110,71 +112,55 @@ const stage: TacticalStage = {
   unit: (id) => field.unit(id),
 };
 
-/** Hooks of the option and of game modules (`client-tactical-<name>`); resolves with their results. */
-function callHooks(options: TacticalClientOptions, name: keyof TacticalClientHooks, ...args: unknown[]): Promise<unknown[]> {
-  const out: unknown[] = [];
-  const run = async () => {
-    const own = options.hooks?.[name] as ((...a: unknown[]) => unknown) | undefined;
-    if (own) out.push(await own(...args));
-    const hooks = inject<any>(ModulesToken);
-    if (!hooks?.callHooks) return out;
-    await new Promise<void>((resolve) =>
-      hooks.callHooks(`client-tactical-${name}`, ...args).subscribe({
-        next: (v: unknown) => out.push(...(Array.isArray(v) ? v : [v])),
-        error: (error: unknown) => {
-          console.warn(`[Tactical] tactical.${name} hook failed`, error);
-          resolve();
-        },
-        complete: () => resolve(),
-      }),
-    );
-    return out;
-  };
-  return run().catch((error) => {
-    console.warn(`[Tactical] tactical.${name} hook failed`, error);
-    return out;
-  });
-}
-
 /**
- * Client side of the tactical plugin: the HUD (GUI opened by `startTactical`),
- * the battlefield drawn on the map (component animation), input and hooks.
- * Install before `provideClientModules([])`.
+ * Client side of the tactical battle: the HUD (the GUI opened by
+ * `startTacticalBattle`), the battlefield drawn on the map (component
+ * animation), keyboard and gamepad controls, texts (i18n keys `tactical.*`),
+ * sound cues and client hooks. Pair it with `provideTacticalServer`.
+ * Standalone RPG and MMORPG.
+ *
+ * @title provideTacticalClient
+ * @method provideTacticalClient(options?)
+ * @param {TacticalClientOptions} [options] - Sounds, screen options, motion and hooks
+ * @returns {RpgProvider[]} The providers of the client module
+ * @example
+ * ```ts
+ * import { provideTacticalClient } from "@rpgjs/tactical-rpg/client";
+ *
+ * export default createClient({
+ *   providers: [provideTacticalClient({ keepGuis: ["chat"], sounds: { confirm: "ui-ok" } }), provideClientModules([])],
+ * });
+ * ```
  */
 export function provideTacticalClient(options: TacticalClientOptions = {}) {
-  branding.set({ title: options.title, subtitle: options.subtitle });
-  Object.assign(TEXTS, options.texts);
-  Object.assign(CUE_SOUNDS, options.sounds);
-  // The cues are off until the player turns them on (♪), unless the game gave them sounds of its own.
-  if (options.sounds) sound.set(true);
-  if (options.muted) sound.set(false);
-  if (options.reducedMotion) reduced.set(true);
-  let removeInput: (() => void) | undefined;
+  const hooks = new BattleClientHooks<TacticalClientHooks>("tactical", options.hooks);
 
   return createModule("Tactical", [
     {
       client: defineModule<RpgClient>({
-        i18n: messages,
+        i18n: TACTICAL_I18N,
         gui: [{ name: TACTICAL_GUI, component: TacticalHud }],
         spritesheets: [hiddenSheet],
         engine: {
           onStart(engine: RpgClientEngine) {
             connectEngine(engine);
+            cues.configure(engine, { sounds: options.sounds });
+            // The cues are off until the player turns them on (♪), unless the game gave them sounds of its own.
+            sound.set(!!options.sounds && !options.muted);
+            reduced.set(!!options.reducedMotion);
             try {
               engine.getComponentAnimation(BATTLEFIELD);
             } catch {
               engine.addComponentAnimation({ id: BATTLEFIELD, component: Battlefield });
             }
-            connectEventHook(async (event, state) =>
-              (await callHooks(options, "onEvent", event, state, stage)).includes(false),
-            );
+            connectEventHook((event, state) => hooks.replaced("onPlay", event, state, stage));
             connectHost({
               command: (env) => inject(RpgGui).guiInteraction(TACTICAL_GUI, "command", env),
               pace: (value) => inject(RpgGui).guiInteraction(TACTICAL_GUI, "pace", { pace: value }),
               hold: (unitId, cell) => inject(RpgGui).guiInteraction(TACTICAL_GUI, "hold", { unitId, cell }),
               close: () => inject(RpgGui).guiInteraction(TACTICAL_GUI, "close", {}),
-              started: (state) => void callHooks(options, "onStart", state),
-              ended: (state) => void callHooks(options, "onEnd", state),
+              started: (state) => void hooks.call("onStart", state),
+              ended: (state) => void hooks.call("onEnd", state),
               enter: () => {
                 // The battlefield: a CanvasEngine component in the map world.
                 const battlefield = engine.getComponentAnimation(BATTLEFIELD);
@@ -182,32 +168,10 @@ export function provideTacticalClient(options: TacticalClientOptions = {}) {
                 void battlefield.displayEffect({}, { x: 0, y: 0 });
                 // The field drives the camera: stop following the player.
                 engine.setCameraFollow("tactical-camera");
-                // Keep map HUDs hidden for the whole battle, even if the map shows them again.
-                const hidden = new Set<{ display: { (): boolean; set(v: boolean): void } }>();
-                const hide = () => {
-                  const guis = inject(RpgGui).gui() as Record<string, any>;
-                  // Every GUI of the game but the ones that take the keyboard over the battle (a dialog…) and the battle itself.
-                  for (const id of options.hideGuis ?? Object.keys(guis).filter((name) => name !== TACTICAL_GUI && !options.keepGuis?.includes(name) && !MODAL_GUIS.includes(name))) {
-                    const g = guis[id];
-                    if (!g?.display?.()) continue;
-                    g.display.set(false);
-                    hidden.add(g);
-                  }
-                };
-                hide();
-                const timer = setInterval(hide, 200);
-                const leaveScene = options.onBattleScene?.();
-                removeInput?.();
-                removeInput = installInput(() => {
-                  const guis = inject(RpgGui).gui() as Record<string, any>;
-                  return MODAL_GUIS.some((id) => guis[id]?.display?.());
-                });
+                // Keep the GUIs of the game hidden for the whole battle, even if the map shows them again.
+                const restore = hideGuisDuringBattle(TACTICAL_GUI, options);
                 return () => {
-                  clearInterval(timer);
-                  hidden.forEach((g) => g.display.set(true));
-                  leaveScene?.();
-                  removeInput?.();
-                  removeInput = undefined;
+                  restore();
                   battlefield.clear();
                   engine.setCameraFollow(null);
                 };
@@ -215,7 +179,7 @@ export function provideTacticalClient(options: TacticalClientOptions = {}) {
             });
           },
           onDisconnect() {
-            notice.set(t("t.error.connection"));
+            notice.set(t("tactical.error.connection"));
           },
         },
       }),

@@ -1,4 +1,4 @@
-<Container>
+<Container controls={controls}>
   <Stage />
   <Hud />
   <Graphics draw={drawEntering} />
@@ -8,13 +8,17 @@
 </Container>
 
 <script>
-  import { effect, mount } from 'canvasengine'
-  import { CinematicComponent } from '@rpgjs/client'
+  import { effect, mount, signal } from 'canvasengine'
+  import { CinematicComponent, inject, RpgClientEngine } from '@rpgjs/client'
   import Stage from './stage.ce'
   import Hud from './hud.ce'
   import { receive, onCinematicEnd, teardown } from '../client/session'
   import { cinematic, entering } from '../client/state'
   import { scene } from '../client/scene'
+  import { turnBattleControls } from '../client/input'
+
+  // Keyboard and gamepad: the controls of the game, the gamepad mapping of the RPGJS GUIs.
+  const controls = signal(turnBattleControls(inject(RpgClientEngine)))
 
   // Battle packets arrive as the GUI data (server gui.open / gui.update).
   const { data } = defineProps()

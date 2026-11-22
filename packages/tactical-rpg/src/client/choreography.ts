@@ -4,7 +4,7 @@ import { skillFor } from "../core/skills";
 import { EFFECT_START, actionTiming, itemTiming } from "../core/timing";
 
 export { actionTiming, itemTiming };
-import { visualEffectTimeline, type PlayableVisualEffect, type PresetOptions } from "@rpgjs/battle-kit/pure";
+import { effectCues, type PlayableVisualEffect, type PresetOptions } from "@rpgjs/battle-kit/pure";
 
 /**
  * What the choreography drives: the shared kit's preset player and screen
@@ -127,7 +127,7 @@ export class Choreography {
     /** Plays a Visual Effect at `start` (seconds) and its sounds at their start on the event clock. */
     const effectAt = (start: number, effect: PlayableVisualEffect, aims: { from: { x: number; y: number }; to: { x: number; y: number } }[]) => {
       at(start, () => aims.forEach(({ from: a, to: b }) => this.fx.playEffect(effect, a, b, { scale: 0.6 })));
-      for (const cue of visualEffectTimeline(effect))
+      for (const cue of effectCues(effect))
         if (cue.type === "sound") at(start + cue.at / 1000, () => this.stage.sound?.(cue.sound, cue.volume));
     };
 
@@ -144,7 +144,7 @@ export class Choreography {
         const c = chest(healed);
         at(timing.impact, () => {
           if (heal.hp) this.stage.popup(`+${heal.hp}`, c.x, c.y - 40, { color: 0x8dffb4, big: true });
-          if (heal.mp) this.stage.popup(`+${heal.mp}`, c.x, c.y - (heal.hp ? 62 : 40), { color: 0x8fd0ff });
+          if (heal.sp) this.stage.popup(`+${heal.sp}`, c.x, c.y - (heal.hp ? 62 : 40), { color: 0x8fd0ff });
         });
       }
       return cues;

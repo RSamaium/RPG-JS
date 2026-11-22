@@ -268,7 +268,7 @@ export interface CommandOptionInfo {
   scope?: TargetScope;
 }
 
-/** What a client needs to show a custom command (see `battleCommand`). */
+/** What a client needs to show a custom command (see `turnBattleCommand`). */
 export interface CommandInfo {
   id: string;
   /** The phases whose triggers the command has (your game runs them). */
@@ -389,7 +389,9 @@ export interface Hit {
   amount: number;
   /** `text`: a line over the target; `reveal`: the target was scanned; `summon`: `unit` enters. */
   kind: "damage" | "heal" | "sp" | "miss" | "text" | "reveal" | "summon";
+  /** `text`: an i18n key (translated by the client with `textParams`) or a text shown as it is. */
   text?: string;
+  textParams?: Record<string, string | number>;
   /** The summoned combatant (kind `summon`). */
   unit?: Combatant;
   crit?: boolean;

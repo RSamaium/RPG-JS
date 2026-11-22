@@ -1,6 +1,6 @@
 import { ATTACK_FX_PRESETS } from "@canvasengine/presets";
 import { FxPlayer } from "@rpgjs/battle-kit";
-import { ELEMENT_COLORS, elementColor } from "@rpgjs/battle-kit/pure";
+import { elementColor } from "@rpgjs/battle-kit/pure";
 import type { FxPreset, Scene } from "./scene";
 
 /**
@@ -24,9 +24,6 @@ export interface FxOptions {
 }
 
 export type FxFn = (scene: Scene, x: number, y: number, o: { color: string; scale: number; crit?: boolean; flip?: boolean }) => void;
-
-// Element colours are shared with the tactical game (battle kit).
-export { ELEMENT_COLORS, elementColor };
 
 /** Play a CanvasEngine preset by name; returns a stop function (for loops). */
 export function playPreset(scene: Scene, name: string, x: number, y: number, o: FxOptions = {}): () => void {

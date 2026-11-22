@@ -1,18 +1,18 @@
-<aside class={['t-dock-card', {enemy: unit() && !friendly(unit()), predicting: Boolean(preview()), empty: !unit()}]} aria-label={t('t.unitInfo')}>
+<aside class={['rpg-ui-tactical-dock-card', {enemy: unit() && !friendly(unit()), predicting: Boolean(preview()), empty: !unit()}]} aria-label={t('tactical.unitInfo')}>
   @if (unit()) {
-    <div class="t-dock-portrait"><div class="t-portrait" style={portraitStyle(u())} role="img" aria-label={u().name}></div></div>
-    <div class="t-dock-copy">
-      <span class="t-eyebrow">{{ eyebrow() }}</span>
+    <div class="rpg-ui-tactical-dock-portrait"><div class="rpg-ui-tactical-portrait" style={portraitStyle(u())} role="img" aria-label={u().name}></div></div>
+    <div class="rpg-ui-tactical-dock-copy">
+      <span class="rpg-ui-tactical-eyebrow">{{ eyebrow() }}</span>
       <h3>{{ u().name }} <small>{{ roleInfo(u()).name }}</small></h3>
-      <div class="t-dock-stat"><span>{{ t('t.hp') }}</span><div class="t-detail-track" role="img" aria-label={t('t.hp') + ' ' + u().hp + ' / ' + u().maxHp}>
+      <div class="rpg-ui-tactical-dock-stat"><span>{{ t('tactical.hp') }}</span><div class="rpg-ui-tactical-detail-track" role="img" aria-label={t('tactical.hp') + ' ' + u().hp + ' / ' + u().maxHp}>
         <span style={'width:' + ((preview()?.remaining ?? u().hp) / u().maxHp * 100) + '%'}></span>
-        @if (preview()) { <i class="t-hp-loss" style={'left:' + ((preview()?.remaining ?? u().hp) / u().maxHp * 100) + '%;width:' + ((u().hp - (preview()?.remaining ?? u().hp)) / u().maxHp * 100) + '%'}></i> }
+        @if (preview()) { <i class="rpg-ui-tactical-hp-loss" style={'left:' + ((preview()?.remaining ?? u().hp) / u().maxHp * 100) + '%;width:' + ((u().hp - (preview()?.remaining ?? u().hp)) / u().maxHp * 100) + '%'}></i> }
       </div><strong>{{ (preview()?.remaining ?? u().hp) + ' / ' + u().maxHp }}</strong></div>
-      <div class="t-dock-stat"><span>{{ t('t.mp') }}</span><div class="t-detail-track mana"><span style={'width:' + (u().mp / Math.max(1, u().maxMp) * 100) + '%'}></span></div><strong>{{ u().mp + ' / ' + u().maxMp }}</strong></div>
-      @if (preview()) { <em class="t-dock-forecast">{{ '−' + Math.min(u().hp, preview()?.amount ?? 0) + ' ' + t('t.hp') + ' · ' + t(preview()?.remaining === 0 ? 't.lethal' : 't.noCounter') }}</em> }
+      <div class="rpg-ui-tactical-dock-stat"><span>{{ t('tactical.sp') }}</span><div class="rpg-ui-tactical-detail-track mana"><span style={'width:' + (u().sp / Math.max(1, u().maxSp) * 100) + '%'}></span></div><strong>{{ u().sp + ' / ' + u().maxSp }}</strong></div>
+      @if (preview()) { <em class="rpg-ui-tactical-dock-forecast">{{ '−' + Math.min(u().hp, preview()?.amount ?? 0) + ' ' + t('tactical.hp') + ' · ' + t(preview()?.remaining === 0 ? 'tactical.lethal' : 'tactical.noCounter') }}</em> }
     </div>
   } @else {
-    <p class="t-dock-empty">{{ t('t.selectHint') }}</p>
+    <p class="rpg-ui-tactical-dock-empty">{{ t('tactical.selectHint') }}</p>
   }
 </aside>
 <script>
@@ -22,17 +22,17 @@
   // The unit the card shows: the one the pointer is on, else the one that is selected. The card is always there, so the dock never moves.
   const unit = computed(() => details()[0])
   // Read by the card while it shows a unit: the template runs once more as the battle ends, when there is none left
-  const none = { name: '', hp: 0, maxHp: 1, mp: 0, maxMp: 1, role: '' }
+  const none = { name: '', hp: 0, maxHp: 1, sp: 0, maxSp: 1, role: '' }
   const u = computed(() => unit() ?? none)
   const preview = computed(() => { const value = forecast(), shown = unit(); return value && shown && value.target.id === shown.id ? value : null })
   // Coop: a partner's unit shows who commands it.
   const eyebrow = () => {
     const u = unit()
     if (!u) return ''
-    if (preview()) return t('t.forecast')
-    if (!friendly(u)) return t('t.enemy')
-    if (isMine(u)) return t('t.ally')
+    if (preview()) return t('tactical.forecast')
+    if (!friendly(u)) return t('tactical.enemy')
+    if (isMine(u)) return t('tactical.ally')
     const s = battle()
-    return t('t.allyOf') + ' ' + ([...(s?.players ?? []), ...(s?.versus ?? [])].find((p) => p.id === u.owner)?.name ?? '')
+    return t('tactical.allyOf') + ' ' + ([...(s?.players ?? []), ...(s?.versus ?? [])].find((p) => p.id === u.owner)?.name ?? '')
   }
 </script>

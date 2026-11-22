@@ -8,7 +8,7 @@ export * from "./ai";
 export * from "./roles";
 export * from "./danger";
 export * from "./data";
-export { messages } from "./messages";
+export { TACTICAL_I18N } from "./messages";
 
 /** Spritesheet id (transparent, registered by the client module) that hides the player during a battle. */
 export const TACTICAL_HIDDEN_GRAPHIC = "tactical-hidden";

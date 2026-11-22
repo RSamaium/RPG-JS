@@ -1,71 +1,32 @@
+import { battleControls, modalGuiShown } from "@rpgjs/battle-kit";
+import type { RpgClientEngine } from "@rpgjs/client";
 import { back, confirm, cycleSpeed, inBattle, moveMenu, skipCutin } from "./session";
 import { cinematic, cutin, phase } from "./state";
 
-/**
- * Keyboard + gamepad while a battle is shown. Listens in the capture phase so
- * the map controls (and the RPGJS menu) never see battle key presses.
- */
-export function installInput(): () => void {
-  const onKey = (e: KeyboardEvent) => {
-    // The RPGJS cinematic player handles its own keys (Escape = skip).
-    if (!inBattle() || cinematic()) return;
-    const target = e.target as HTMLElement | null;
-    if (target && /input|textarea/i.test(target.tagName)) return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    if (e.type !== "keydown" || e.repeat && !/Arrow/.test(e.key)) return;
-    dispatch(e.key);
-  };
-  window.addEventListener("keydown", onKey, true);
-  window.addEventListener("keyup", onKey, true);
-
-  let raf = 0;
-  const held = new Set<number>();
-  const buttons: Record<number, string> = { 0: "Enter", 1: "Escape", 3: "Tab", 12: "ArrowUp", 13: "ArrowDown", 14: "ArrowLeft", 15: "ArrowRight" };
-  const poll = () => {
-    raf = requestAnimationFrame(poll);
-    if (!inBattle()) return;
-    const pad = navigator.getGamepads?.().find((p) => p);
-    if (!pad) return;
-    for (const [index, key] of Object.entries(buttons)) {
-      const pressed = pad.buttons[+index]?.pressed;
-      if (pressed && !held.has(+index)) dispatch(key);
-      if (pressed) held.add(+index);
-      else held.delete(+index);
-    }
-  };
-  raf = requestAnimationFrame(poll);
-
-  return () => {
-    window.removeEventListener("keydown", onKey, true);
-    window.removeEventListener("keyup", onKey, true);
-    cancelAnimationFrame(raf);
-  };
-}
-
-function dispatch(key: string) {
-  if (cutin()) {
-    if (key === "Enter" || key === " " || key === "Escape") skipCutin();
-    return;
-  }
-  if (key === "Tab") return cycleSpeed();
+/** Runs a menu command unless the choreography is playing; any command skips a cut-in. */
+const menu = (fn: () => void, skips = false) => () => {
+  if (cutin()) return void (skips && skipCutin());
   if (phase() === "playing") return;
-  switch (key) {
-    case "ArrowUp":
-    case "ArrowLeft":
-    case "w":
-    case "a":
-      return moveMenu(-1);
-    case "ArrowDown":
-    case "ArrowRight":
-    case "s":
-    case "d":
-      return moveMenu(1);
-    case "Enter":
-    case " ":
-      return confirm();
-    case "Escape":
-    case "Backspace":
-      return back();
-  }
+  fn();
+};
+
+/**
+ * The controls of the battle GUI: the keyboard controls of the game and the
+ * shared gamepad mapping of the RPGJS GUIs (A confirms, B or Start goes back,
+ * the d-pad or the stick moves through the menu, R changes the speed).
+ * A cinematic or a dialog shown over the battle keeps its own keys.
+ */
+export function turnBattleControls(engine: RpgClientEngine): Record<string, unknown> {
+  return battleControls(engine, {
+    up: menu(() => moveMenu(-1)),
+    left: menu(() => moveMenu(-1)),
+    down: menu(() => moveMenu(1)),
+    right: menu(() => moveMenu(1)),
+    action: menu(confirm, true),
+    escape: menu(back, true),
+    tabNext: () => {
+      if (!cutin()) cycleSpeed();
+    },
+    paused: () => !inBattle() || !!cinematic() || modalGuiShown(),
+  });
 }

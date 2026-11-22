@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
-import { provideTacticalServer, startTactical, watchTactical, getTactical, isInTactical, stopTactical, type TacticalServerHooks } from "../server";
+import { provideTacticalServer, startTacticalBattle, watchTacticalBattle, getTacticalBattle, isInTacticalBattle, stopTacticalBattle, type TacticalServerHooks } from "../server";
 import type { BattlePacket } from "../core";
 import { emberDatabase } from "../demo/database";
 
@@ -24,7 +24,7 @@ function fake(name: string, onMap: object = map) {
 }
 function setup(hooks?: TacticalServerHooks) {
   vi.useFakeTimers();
-  const module = provideTacticalServer({ units: pick("tactical-unit"), skills: pick("tactical-skill"), encounters: pick("tactical-encounter"), hooks }) as any;
+  const module = provideTacticalServer({ units: pick("tactical-unit"), skills: pick("skill"), encounters: pick("tactical-encounter"), hooks }) as any;
   return module[0].server;
 }
 afterEach(() => vi.useRealTimers());
@@ -34,52 +34,52 @@ describe("spectators", () => {
     setup();
     const alice = fake("Alice");
     const carol = fake("Carol");
-    const done = startTactical(alice.player, "sanctuary");
+    const done = startTacticalBattle(alice.player, "sanctuary");
     await vi.advanceTimersByTimeAsync(0);
     alice.listeners.get("command")!({ revision: 0, command: { type: "start" } });
     await vi.advanceTimersByTimeAsync(1500);
-    expect(getTactical(alice.player)?.players).toEqual([alice.player]);
-    const watching = watchTactical(carol.player, alice.player);
+    expect(getTacticalBattle(alice.player)?.players).toEqual([alice.player]);
+    const watching = watchTacticalBattle(carol.player, alice.player);
     await vi.advanceTimersByTimeAsync(0);
     expect(carol.gui.open).toHaveBeenCalledOnce();
     expect(carol.state().started).toBe(true);
     expect(alice.state().spectators).toBe(1);
-    expect(isInTactical(carol.player)).toBe(true);
-    expect(getTactical(carol.player)).toBeUndefined(); // watching, not playing
+    expect(isInTacticalBattle(carol.player)).toBe(true);
+    expect(getTacticalBattle(carol.player)).toBeUndefined(); // watching, not playing
     expect(carol.listeners.has("command")).toBe(false);
     alice.listeners.get("command")!({ revision: alice.state().revision, command: { type: "endPhase" } });
     await vi.advanceTimersByTimeAsync(0);
     expect(carol.packets.at(-1)?.event?.kind).toBe("phase");
     carol.listeners.get("close")!();
     expect(await watching).toBe(true);
-    expect(isInTactical(carol.player)).toBe(false);
+    expect(isInTacticalBattle(carol.player)).toBe(false);
     expect(alice.state().spectators).toBe(0);
-    await stopTactical(alice.player);
+    await stopTacticalBattle(alice.player);
     await done;
   });
   it("can be refused by onSpectate, or when on another map or already busy", async () => {
     setup({ onSpectate: (spectator) => spectator.name !== "Eve" });
     const alice = fake("Alice");
-    void startTactical(alice.player, "sanctuary");
+    void startTacticalBattle(alice.player, "sanctuary");
     await vi.advanceTimersByTimeAsync(0);
-    expect(await watchTactical(fake("Eve").player, alice.player)).toBe(false);
-    expect(await watchTactical(fake("Far", {}).player, alice.player)).toBe(false);
-    expect(await watchTactical(alice.player, alice.player)).toBe(false);
-    expect(await watchTactical(fake("Nobody").player, "no-battle")).toBe(false);
-    await stopTactical(alice.player);
+    expect(await watchTacticalBattle(fake("Eve").player, alice.player)).toBe(false);
+    expect(await watchTacticalBattle(fake("Far", {}).player, alice.player)).toBe(false);
+    expect(await watchTacticalBattle(alice.player, alice.player)).toBe(false);
+    expect(await watchTacticalBattle(fake("Nobody").player, "no-battle")).toBe(false);
+    await stopTacticalBattle(alice.player);
   });
   it("start with the battle and go back to the map when every player has left", async () => {
     setup();
     const alice = fake("Alice");
     const carol = fake("Carol");
-    const done = startTactical({ players: [alice.player], encounter: "sanctuary", spectators: [carol.player] });
+    const done = startTacticalBattle({ players: [alice.player], encounter: "sanctuary", spectators: [carol.player] });
     await vi.advanceTimersByTimeAsync(0);
     expect(carol.gui.open).toHaveBeenCalledOnce();
-    expect(getTactical(alice.state().id)?.spectators()).toEqual([carol.player]);
-    await stopTactical(alice.player);
+    expect(getTacticalBattle(alice.state().id)?.spectators()).toEqual([carol.player]);
+    await stopTacticalBattle(alice.player);
     await done;
     await vi.advanceTimersByTimeAsync(0);
     expect(carol.gui.close).toHaveBeenCalled();
-    expect(isInTactical(carol.player)).toBe(false);
+    expect(isInTacticalBattle(carol.player)).toBe(false);
   });
 });

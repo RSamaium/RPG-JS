@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { battleEnemy, battleItem, battleSkill, battleTroop, battleWeapon, type FxPresetName } from "../core";
-import { enemyFromDb, itemFromDb, skillCommandFromDb, skillFromDb, troopFromDb, weaponFromDb } from "../server";
+import { turnBattleEnemy, turnBattleItem, turnBattleSkill, turnBattleTroop, turnBattleWeapon, type FxPresetName } from "../core";
+import { enemyFromDb, itemFromDb, skillCommandFromDb, skillFromDb, troopFromDb, weaponFromDb } from "../server/database";
 import { stats } from "./fixtures";
 
 describe("typed database helpers", () => {
   it("keep native fields, add _type and read back as battle data", () => {
-    const fire = battleSkill({ name: "Brasier", spCost: 18, power: 105, battle: { kind: "magical", scope: "allEnemies", element: "fire", fx: "fireball" } });
-    const potion = battleItem({ name: "Potion", hpValue: 150, consumable: true, price: 50 });
-    const sword = battleWeapon({ name: "Épée", atk: 6, battle: { type: "dualblades", element: "ice" } });
-    const goblin = battleEnemy({ name: "Gobelin", gain: { exp: 24, gold: 18 }, battle: { battler: "goblin", stats: stats(), weaknesses: ["fire"] } });
-    const troop = battleTroop({ battle: { enemies: ["goblin", "goblin"], background: "meadow" } });
+    const fire = turnBattleSkill({ name: "Brasier", spCost: 18, power: 105, turnBattle: { kind: "magical", scope: "allEnemies", element: "fire", fx: "fireball" } });
+    const potion = turnBattleItem({ name: "Potion", hpValue: 150, consumable: true, price: 50 });
+    const sword = turnBattleWeapon({ name: "Épée", atk: 6, turnBattle: { type: "dualblades", element: "ice" } });
+    const goblin = turnBattleEnemy({ name: "Gobelin", gain: { exp: 24, gold: 18 }, turnBattle: { battler: "goblin", stats: stats(), weaknesses: ["fire"] } });
+    const troop = turnBattleTroop({ turnBattle: { enemies: ["goblin", "goblin"], background: "meadow" } });
 
     expect(potion).toMatchObject({ _type: "item", price: 50 });
     expect(sword._type).toBe("weapon");
@@ -21,7 +21,7 @@ describe("typed database helpers", () => {
   });
 
   it("read the triggers of a skill written in its battle data, for a skill and for a command", () => {
-    const raw = { name: "Feu", battle: { triggers: ["cast", "defeat"], pinned: true } };
+    const raw = { name: "Feu", turnBattle: { triggers: ["cast", "defeat"], pinned: true } };
 
     expect(skillFromDb("fire", raw)!.triggers).toEqual(["cast", "defeat"]);
     expect(skillFromDb("plain", { name: "Simple" })!.triggers).toBeUndefined();
@@ -30,15 +30,15 @@ describe("typed database helpers", () => {
 
   it("reject typos at compile time (checked by `bun run typecheck`)", () => {
     // @ts-expect-error unknown scope
-    battleSkill({ name: "x", battle: { scope: "enemies" } });
+    turnBattleSkill({ name: "x", turnBattle: { scope: "enemies" } });
     // @ts-expect-error unknown skill kind
-    battleSkill({ name: "x", battle: { kind: "fire" } });
+    turnBattleSkill({ name: "x", turnBattle: { kind: "fire" } });
     // @ts-expect-error an enemy needs a battler and stats
-    battleEnemy({ name: "x", battle: { battler: "goblin" } });
+    turnBattleEnemy({ name: "x", turnBattle: { battler: "goblin" } });
     // @ts-expect-error hits is a number
-    battleWeapon({ name: "x", battle: { hits: "2" } });
+    turnBattleWeapon({ name: "x", turnBattle: { hits: "2" } });
     // @ts-expect-error a troop lists its enemies
-    battleTroop({ battle: { background: "meadow" } });
+    turnBattleTroop({ turnBattle: { background: "meadow" } });
     // CanvasEngine presets are known names (autocompleted as `fx`).
     const presets: FxPresetName[] = ["swordSlash", "heavySlash", "fireball", "limitBurst", "statusStun"];
     // @ts-expect-error not a CanvasEngine preset

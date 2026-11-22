@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Clock, playableVisualEffect, runVisualEffect, visualEffectTimeline, type PlayableVisualEffect } from "./pure";
+import { Clock, effectCues, runVisualEffect, visualEffectsOf, type PlayableVisualEffect } from "./pure";
 
 const flush = async () => {
   for (let i = 0; i < 5; i++) await Promise.resolve();
@@ -33,57 +33,24 @@ function play(effect: PlayableVisualEffect, once = false) {
 }
 
 const fireball: PlayableVisualEffect = {
-  base: "fireball",
+  effect: "fireball",
   duration: 900,
   hitAt: 500,
   sounds: [
-    { sound: "whoosh", start: 0, volume: 50 },
-    { sound: "boom", start: 500 },
-    { sound: "crackle", start: 700, volume: 100 },
+    { sound: "whoosh", volume: 0.5 },
+    { sound: "boom", start: 500, volume: 0.8 },
+    { sound: "crackle", start: 700 },
   ],
 };
 
 describe("Visual Effects played by the battles", () => {
-  describe("playableVisualEffect", () => {
-    it("keeps what plays an effect and leaves out its name, category and prompt", () => {
-      const effect = playableVisualEffect({
-        _id: "fx1",
-        name: "Fireball",
-        category: "projectile",
-        prompt: "a fireball",
-        base: "fireball",
-        settings: { color: "#ff0000", intensity: 2, sizeScale: "big" },
-        duration: 1200,
-        hitAt: 600,
-        loop: false,
-        sounds: [{ sound: "s1", start: 100, volume: 40 }, { sound: { _id: "s2" }, start: -5 }, { start: 3 }],
-      });
-
-      expect(effect).toEqual({
-        base: "fireball",
-        settings: { color: "#ff0000", intensity: 2 },
-        duration: 1200,
-        hitAt: 600,
-        sounds: [{ sound: "s1", start: 100, volume: 40 }, { sound: "s2", start: 0 }],
-      });
-    });
-
-    it("shows nothing without a preset nor a base preset", () => {
-      expect(playableVisualEffect({ name: "Empty", preset: { emitters: [] } })).toBeUndefined();
-      expect(playableVisualEffect(undefined)).toBeUndefined();
-      expect(playableVisualEffect("fireball")).toBeUndefined();
-    });
-
-    it("keeps its own preset, a default length, and the hit within the effect", () => {
-      const preset = { duration: 400, emitters: [{ burst: 3 }] };
-
-      expect(playableVisualEffect({ preset, hitAt: 5000 })).toEqual({ preset, duration: 1000, hitAt: 1000 });
-      expect(playableVisualEffect({ base: "aura", duration: 800, loop: true })).toEqual({ base: "aura", duration: 800, hitAt: 0, loop: true });
-    });
+  it("keeps only the effects a source has", () => {
+    expect(visualEffectsOf({ effect: fireball, castEffect: undefined })).toEqual({ effect: fireball });
+    expect(visualEffectsOf(undefined)).toEqual({});
   });
 
   it("lists the sounds at their start, the hit and the end, in order", () => {
-    expect(visualEffectTimeline(fireball)).toEqual([
+    expect(effectCues(fireball)).toEqual([
       { at: 0, type: "sound", sound: "whoosh", volume: 0.5 },
       { at: 500, type: "sound", sound: "boom", volume: 0.8 },
       { at: 500, type: "hit" },
@@ -114,7 +81,7 @@ describe("Visual Effects played by the battles", () => {
   });
 
   it("follows the clock of the scene: a frozen clock (hit-stop) delays the hit", async () => {
-    const { clock, playback } = play({ base: "slash", duration: 300, hitAt: 100 });
+    const { clock, playback } = play({ effect: "slash", duration: 300, hitAt: 100 });
     let hit = false;
     void playback.hit.then(() => (hit = true));
     clock.freeze(200);
@@ -125,7 +92,7 @@ describe("Visual Effects played by the battles", () => {
   });
 
   it("loops an aura: its sounds come back at each turn, the hit once, until it is stopped", async () => {
-    const { clock, events, playback, spawned, stops } = play({ base: "aura", duration: 200, hitAt: 50, loop: true, sounds: [{ sound: "hum", start: 0 }] });
+    const { clock, events, playback, spawned, stops } = play({ effect: "aura", duration: 200, hitAt: 50, loop: true, sounds: [{ sound: "hum" }] });
     let done = false;
     void playback.done.then(() => (done = true));
     await advance(clock, 650);
@@ -143,7 +110,7 @@ describe("Visual Effects played by the battles", () => {
   });
 
   it("plays a looping effect once when asked (a skill)", async () => {
-    const { clock, events, playback, spawned } = play({ base: "aura", duration: 200, hitAt: 50, loop: true, sounds: [{ sound: "hum", start: 0 }] }, true);
+    const { clock, events, playback, spawned } = play({ effect: "aura", duration: 200, hitAt: 50, loop: true, sounds: [{ sound: "hum" }] }, true);
     let done = false;
     void playback.done.then(() => (done = true));
     await advance(clock, 450);

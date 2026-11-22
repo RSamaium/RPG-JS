@@ -1,0 +1,1903 @@
+/*
+ * Tactical battle (`@rpgjs/tactical-rpg`): the HUD over the battlefield, the
+ * cinematic banners and the surfaces of its panels. Built on the ui-css
+ * tokens: a game theme restyles the tactical HUD too.
+ */
+/* tactical */
+installTacticalStyles`). */
+export default `/* The sheet is loaded in the game of every project that plugs the module: it styles the HUD (\`.rpg-ui-tactical-shell\`) and nothing else. */
+.rpg-ui-tactical-shell {
+  color-scheme: dark;
+  /* Every colour and font of the HUD comes from the theme of the game (\`@rpgjs/ui-css\`, \`--rpg-ui-*\`); the second value is the fallback
+     when the theme sheet is not loaded. */
+  --gold: var(--rpg-ui-selection, #d9b779);
+  --cream: var(--rpg-ui-text, #f4e8cc);
+  --ink: var(--rpg-ui-bg, #101720);
+  --muted: var(--rpg-ui-text-muted, #8f9da7);
+  --line: color-mix(in srgb, var(--gold) 24%, transparent);
+  --rpg-ui-tactical-danger: var(--rpg-ui-danger, #f17b76);
+  --rpg-ui-tactical-accent: var(--rpg-ui-accent, #6bb6ff);
+  --rpg-ui-tactical-success: var(--rpg-ui-success, #60c69f);
+  font-family: var(--rpg-ui-font, system-ui, sans-serif);
+}
+.rpg-ui-tactical-shell,
+.rpg-ui-tactical-shell *,
+.rpg-ui-tactical-shell *::before,
+.rpg-ui-tactical-shell *::after {
+  box-sizing: border-box;
+}
+.rpg-ui-tactical-shell button {
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.rpg-ui-tactical-shell button[aria-disabled="true"] {
+  cursor: default;
+}
+.rpg-ui-tactical-shell button:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 4px;
+}
+.rpg-ui-tactical-shell kbd {
+  font-family: inherit;
+  font-size: 9px;
+  border: 1px solid #b9c0c13a;
+  border-radius: 3px;
+  padding: 2px 4px;
+  color: color-mix(in srgb, var(--muted), white 15%);
+}
+.rpg-ui-tactical-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  color: var(--cream);
+  pointer-events: none;
+  font-size: 12px;
+  font-family: var(--rpg-ui-font);
+  text-shadow: 0 1px 2px #0008;
+}
+.rpg-ui-tactical-shell button,
+.rpg-ui-tactical-panel,
+.rpg-ui-tactical-intro,
+.rpg-ui-tactical-modal {
+  pointer-events: auto;
+}
+.rpg-ui-tactical-shell h1,
+.rpg-ui-tactical-shell h2,
+.rpg-ui-tactical-shell h3,
+.rpg-ui-tactical-shell p {
+  margin: 0;
+}
+.rpg-ui-tactical-shell button {
+  color: inherit;
+}
+.rpg-ui-tactical-vignette {
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 160px color-mix(in srgb, color-mix(in srgb, var(--ink), black 70%) 60%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, color-mix(in srgb, var(--ink), black 50%) 87%, transparent),
+    transparent 22%,
+    transparent 70%,
+    color-mix(in srgb, color-mix(in srgb, var(--ink), black 50%) 87%, transparent)
+  );
+}
+.rpg-ui-tactical-topbar {
+  height: 82px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 38px;
+  border-bottom: 1px solid var(--line);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 96%, transparent), color-mix(in srgb, var(--ink) 61%, transparent));
+  position: relative;
+}
+.rpg-ui-tactical-brand {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+.rpg-ui-tactical-brand-mark {
+  font-size: 45px;
+  color: var(--gold);
+  line-height: 1;
+}
+.rpg-ui-tactical-brand h1 {
+  font-family: var(--rpg-ui-font-display);
+  font-size: 23px;
+  letter-spacing: 6px;
+  font-weight: normal;
+}
+.rpg-ui-tactical-brand div > span {
+  display: block;
+  color: var(--gold);
+  font-size: 8px;
+  letter-spacing: 3.4px;
+  margin-top: 5px;
+}
+.rpg-ui-tactical-location {
+  text-align: center;
+}
+.rpg-ui-tactical-location > span {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--gold);
+  margin-bottom: 7px;
+}
+.rpg-ui-tactical-location strong {
+  font-family: var(--rpg-ui-font-display);
+  font-weight: normal;
+  font-size: 17px;
+  letter-spacing: 1px;
+}
+.rpg-ui-tactical-options {
+  display: flex;
+  gap: 8px;
+}
+.rpg-ui-tactical-options button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  background: color-mix(in srgb, color-mix(in srgb, var(--ink), white 5%) 53%, transparent);
+  border-radius: 50%;
+  color: var(--gold);
+  font-size: 17px;
+}
+.rpg-ui-tactical-options button[aria-pressed="true"] {
+  background: color-mix(in srgb, color-mix(in srgb, var(--gold), black 30%) 38%, transparent);
+}
+.rpg-ui-tactical-intro {
+  position: absolute;
+  left: 8%;
+  top: 17%;
+  width: 370px;
+  animation: rpg-ui-tactical-kf-rise 0.8s ease both;
+}
+.rpg-ui-tactical-intro::before {
+  content: "";
+  position: absolute;
+  inset: -80px -65px;
+  z-index: -1;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--ink) 93%, transparent) 40%, color-mix(in srgb, var(--ink) 0%, transparent) 72%);
+}
+.rpg-ui-tactical-eyebrow {
+  font-size: 9px;
+  letter-spacing: 2.4px;
+  color: var(--gold);
+  text-transform: uppercase;
+  line-height: 1.8;
+}
+.rpg-ui-tactical-eyebrow span {
+  margin: 0 8px;
+}
+.rpg-ui-tactical-intro h2 {
+  font-family: var(--rpg-ui-font-display);
+  /* Encounter names run longer than a two-word title. */
+  font-size: clamp(40px, 5vw, 60px);
+  font-weight: normal;
+  line-height: 1;
+  letter-spacing: 5px;
+  margin-top: 18px;
+  color: var(--cream);
+  text-shadow: 0 6px 30px #000;
+}
+.rpg-ui-tactical-intro h2 em {
+  font-weight: normal;
+  font-style: normal;
+  font-size: 95px;
+  letter-spacing: 18px;
+  color: var(--gold);
+}
+.rpg-ui-tactical-rule {
+  height: 1px;
+  background: linear-gradient(90deg, var(--gold), transparent);
+  width: 240px;
+  margin: 28px 0 22px;
+}
+.rpg-ui-tactical-intro p {
+  color: color-mix(in srgb, var(--muted), white 35%);
+  font-size: 14px;
+  line-height: 1.8;
+  max-width: 320px;
+}
+.rpg-ui-tactical-intro-roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 19px;
+  margin: 24px 0;
+  color: var(--gold);
+  font-size: 11px;
+}
+.rpg-ui-tactical-intro > small {
+  display: block;
+  color: var(--muted);
+  font-size: 8px;
+  letter-spacing: 2px;
+  margin-top: 17px;
+}
+.rpg-ui-tactical-gold-button {
+  border: 1px solid color-mix(in srgb, var(--gold), white 30%);
+  min-height: 43px;
+  padding: 13px 20px;
+  background: linear-gradient(105deg, color-mix(in srgb, var(--gold), black 15%), color-mix(in srgb, var(--gold), white 25%));
+  color: var(--ink) !important;
+  font-weight: bold;
+  letter-spacing: 1px;
+  text-shadow: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  transition:
+    filter 0.15s,
+    transform 0.15s;
+  box-shadow: 0 4px 18px #0004;
+}
+.rpg-ui-tactical-gold-button:hover {
+  filter: brightness(1.14);
+  transform: translateY(-1px);
+}
+.rpg-ui-tactical-gold-button[aria-disabled="true"] {
+  opacity: 0.5;
+}
+.rpg-ui-tactical-loading {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--ink), white 10%), var(--ink));
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+}
+.rpg-ui-tactical-loading-ring {
+  border: 1px solid var(--gold);
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  font-size: 35px;
+  color: var(--gold);
+  animation: rpg-ui-tactical-kf-pulse 2s ease infinite;
+  transform: rotate(45deg);
+}
+.rpg-ui-tactical-loading h2 {
+  font-family: var(--rpg-ui-font-display);
+  font-weight: normal;
+  letter-spacing: 2px;
+}
+.rpg-ui-tactical-loading p {
+  color: var(--muted);
+}
+.rpg-ui-tactical-objective {
+  position: absolute;
+  left: 38px;
+  top: 116px;
+  max-width: 240px;
+  animation: rpg-ui-tactical-kf-rise 0.6s ease;
+}
+.rpg-ui-tactical-objective h2 {
+  font-family: var(--rpg-ui-font-display);
+  font-size: 22px;
+  line-height: 1.4;
+  font-weight: normal;
+  margin: 7px 0 12px;
+}
+.rpg-ui-tactical-objective p {
+  font-size: 11px;
+  line-height: 1.7;
+  color: color-mix(in srgb, var(--muted), white 40%);
+}
+.rpg-ui-tactical-objective p span {
+  color: var(--gold);
+  margin-right: 5px;
+}
+.rpg-ui-tactical-enemy-pips {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 260px;
+  gap: 10px;
+  margin-top: 17px;
+}
+.rpg-ui-tactical-enemy-pips span {
+  width: 28px;
+  height: 28px;
+  border: 1px solid color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 10%) 50%, transparent);
+  display: grid;
+  place-items: center;
+  transform: rotate(-4deg);
+  background: color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 80%) 72%, transparent);
+  color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 15%);
+  font-size: 17px;
+}
+.rpg-ui-tactical-enemy-pips .fallen {
+  opacity: 0.2;
+  text-decoration: line-through;
+}
+.rpg-ui-tactical-round {
+  position: absolute;
+  right: 40px;
+  top: 114px;
+  text-align: center;
+  width: 150px;
+  border-top: 1px solid var(--gold);
+  padding-top: 12px;
+}
+.rpg-ui-tactical-round > span {
+  font-size: 9px;
+  letter-spacing: 4px;
+  color: var(--gold);
+}
+.rpg-ui-tactical-round strong {
+  font-family: var(--rpg-ui-font-display);
+  display: block;
+  font-size: 54px;
+  font-weight: normal;
+  line-height: 1.2;
+}
+.rpg-ui-tactical-round small {
+  font-size: 8px;
+  letter-spacing: 1.6px;
+  color: color-mix(in srgb, var(--rpg-ui-tactical-success), white 45%);
+}
+.rpg-ui-tactical-round.enemy small {
+  color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 15%);
+}
+.rpg-ui-tactical-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 0 26px 10px;
+}
+.rpg-ui-tactical-hint {
+  width: fit-content;
+  max-width: 90%;
+  margin: 0 auto 14px;
+  background: color-mix(in srgb, var(--ink) 85%, transparent);
+  border: 1px solid var(--line);
+  padding: 10px 19px;
+  color: color-mix(in srgb, var(--muted), white 70%);
+  font-size: 11px;
+  line-height: 1.5;
+  backdrop-filter: blur(12px);
+}
+.rpg-ui-tactical-hint > span {
+  color: var(--gold);
+  margin-right: 10px;
+}
+.rpg-ui-tactical-command-deck {
+  display: grid;
+  grid-template-columns: minmax(350px, 1.12fr) minmax(345px, 1fr) 155px;
+  gap: 8px;
+}
+.rpg-ui-tactical-panel {
+  background: linear-gradient(135deg, color-mix(in srgb, color-mix(in srgb, var(--ink), white 5%) 96%, transparent), color-mix(in srgb, var(--ink) 97%, transparent));
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 40px #0006;
+  backdrop-filter: blur(12px);
+}
+.rpg-ui-tactical-roster,
+.rpg-ui-tactical-actions {
+  padding: 13px 14px 10px;
+}
+.rpg-ui-tactical-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: var(--gold);
+}
+.rpg-ui-tactical-section-title small {
+  font-size: 8px;
+  color: color-mix(in srgb, var(--muted), black 15%);
+  letter-spacing: 1px;
+}
+.rpg-ui-tactical-section-title em {
+  color: color-mix(in srgb, var(--muted), white 10%);
+  font-style: normal;
+  letter-spacing: 0.5px;
+}
+.rpg-ui-tactical-roster-cards {
+  display: flex;
+  gap: 7px;
+}
+.rpg-ui-tactical-unit-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  background: color-mix(in srgb, var(--ink) 33%, transparent);
+  border: 1px solid color-mix(in srgb, color-mix(in srgb, var(--muted), black 10%) 15%, transparent);
+  padding: 8px 7px;
+  flex: 1;
+  min-width: 0;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+.rpg-ui-tactical-unit-card.selected {
+  background: linear-gradient(100deg, color-mix(in srgb, color-mix(in srgb, var(--gold), black 15%) 14%, transparent), var(--ink));
+  border-color: color-mix(in srgb, color-mix(in srgb, var(--gold), black 10%) 69%, transparent);
+  box-shadow: inset 0 -2px var(--gold);
+}
+.rpg-ui-tactical-unit-card:hover:not([aria-disabled="true"]) {
+  transform: translateY(-3px);
+  background: color-mix(in srgb, color-mix(in srgb, var(--ink), white 20%) 40%, transparent);
+}
+.rpg-ui-tactical-unit-card.exhausted {
+  opacity: 0.48;
+}
+.rpg-ui-tactical-crest {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 33px;
+  height: 40px;
+  border: 1px solid color-mix(in srgb, color-mix(in srgb, var(--gold), black 10%) 53%, transparent);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--gold), black 50%), #242524);
+  clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
+  font-size: 23px;
+  color: color-mix(in srgb, var(--gold), white 30%);
+}
+.rpg-ui-tactical-crest.archer {
+  background: linear-gradient(150deg, color-mix(in srgb, var(--rpg-ui-tactical-success), black 50%), color-mix(in srgb, var(--ink), white 5%));
+  border-color: color-mix(in srgb, var(--rpg-ui-tactical-success), white 25%);
+  color: color-mix(in srgb, var(--rpg-ui-tactical-success), white 45%);
+}
+.rpg-ui-tactical-crest.mage {
+  background: linear-gradient(150deg, #594465, color-mix(in srgb, var(--ink), white 10%));
+  border-color: #c1a5db;
+  color: #d4baff;
+}
+.rpg-ui-tactical-card-info {
+  min-width: 0;
+  flex: 1;
+}
+.rpg-ui-tactical-card-name {
+  font-family: var(--rpg-ui-font-display);
+  font-size: 14px;
+  display: block;
+}
+.rpg-ui-tactical-card-name small {
+  font-family: var(--rpg-ui-font);
+  display: block;
+  font-size: 8px;
+  margin: 3px 0 6px;
+  color: color-mix(in srgb, var(--muted), white 10%);
+}
+.rpg-ui-tactical-hp-track {
+  display: block;
+  height: 3px;
+  background: #ffffff16;
+}
+.rpg-ui-tactical-hp-track > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--rpg-ui-tactical-success), black 15%), color-mix(in srgb, var(--rpg-ui-tactical-success), white 50%));
+  transition: width 0.5s;
+}
+.rpg-ui-tactical-card-status {
+  display: block;
+  font-size: 8px;
+  color: color-mix(in srgb, var(--muted), white 10%);
+  margin-top: 5px;
+  white-space: nowrap;
+}
+.rpg-ui-tactical-card-status b {
+  display: none;
+}
+.rpg-ui-tactical-action-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 5px;
+}
+.rpg-ui-tactical-action-buttons button {
+  position: relative;
+  min-height: 59px;
+  padding: 5px 4px;
+  border: 1px solid color-mix(in srgb, color-mix(in srgb, var(--muted), black 30%) 23%, transparent);
+  background: color-mix(in srgb, var(--ink), white 5%);
+  font-size: 10px;
+  transition: background 0.2s;
+}
+.rpg-ui-tactical-action-buttons button > span {
+  display: block;
+  font-size: 22px;
+  color: color-mix(in srgb, var(--muted), white 40%);
+  margin-bottom: 3px;
+}
+.rpg-ui-tactical-action-buttons button.active {
+  border-color: var(--gold);
+  background: color-mix(in srgb, color-mix(in srgb, var(--gold), black 55%) 29%, transparent);
+}
+.rpg-ui-tactical-action-buttons button.active > span {
+  color: var(--gold);
+}
+.rpg-ui-tactical-action-buttons button[aria-disabled="true"] {
+  opacity: 0.3;
+}
+.rpg-ui-tactical-action-buttons button:not([aria-disabled="true"]):hover {
+  background: color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-accent), black 55%) 40%, transparent);
+}
+.rpg-ui-tactical-action-buttons kbd {
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  font-size: 7px;
+  padding: 1px 3px;
+}
+.rpg-ui-tactical-action-buttons i {
+  position: absolute;
+  right: 6px;
+  top: 5px;
+  font-size: 9px;
+  color: var(--gold);
+  font-style: normal;
+}
+.rpg-ui-tactical-action-detail {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 8px;
+  min-height: 11px;
+}
+.rpg-ui-tactical-order {
+  padding: 15px 10px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 9px;
+}
+.rpg-ui-tactical-order .rpg-ui-tactical-gold-button {
+  padding: 12px 11px;
+  gap: 9px;
+  font-size: 11px;
+}
+.rpg-ui-tactical-phase-button {
+  border: 1px solid color-mix(in srgb, var(--gold), black 15%);
+  background: color-mix(in srgb, color-mix(in srgb, var(--gold), black 10%) 6%, transparent);
+  padding: 15px 9px;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+}
+.rpg-ui-tactical-phase-button > span {
+  margin-left: 10px;
+  color: var(--gold);
+}
+.rpg-ui-tactical-phase-button[aria-disabled="true"] {
+  opacity: 0.3;
+}
+.rpg-ui-tactical-order > small {
+  text-align: center;
+  font-size: 8px;
+  color: var(--muted);
+  letter-spacing: 1.5px;
+}
+.rpg-ui-tactical-text-button {
+  border: 0;
+  background: transparent;
+  color: color-mix(in srgb, var(--muted), white 25%) !important;
+  font-size: 10px;
+}
+.rpg-ui-tactical-text-button kbd {
+  margin-left: 7px;
+}
+.rpg-ui-tactical-footnote {
+  display: flex;
+  justify-content: space-between;
+  font-size: 8px;
+  color: var(--muted);
+  padding: 10px 0 0;
+  letter-spacing: 0.3px;
+}
+.rpg-ui-tactical-footnote > span:last-child {
+  color: var(--gold);
+  letter-spacing: 1.6px;
+}
+.rpg-ui-tactical-phase-banner {
+  position: absolute;
+  top: 39%;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 26px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--ink) 91%, transparent) 30%,
+    color-mix(in srgb, var(--ink) 91%, transparent) 70%,
+    transparent
+  );
+  border-top: 1px solid color-mix(in srgb, var(--gold) 33%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 33%, transparent);
+  animation: rpg-ui-tactical-kf-banner 1.8s ease both;
+}
+.rpg-ui-tactical-phase-banner h2 {
+  font-family: var(--rpg-ui-font-display);
+  font-size: 28px;
+  font-weight: normal;
+  letter-spacing: 7px;
+}
+.rpg-ui-tactical-phase-banner > span {
+  color: var(--gold);
+  font-size: 15px;
+}
+.rpg-ui-tactical-forecast {
+  position: absolute;
+  right: 38px;
+  top: 290px;
+  width: 235px;
+  padding: 18px;
+  animation: rpg-ui-tactical-kf-rise 0.2s ease;
+}
+.rpg-ui-tactical-forecast h3 {
+  font-family: var(--rpg-ui-font-display);
+  font-size: 18px;
+  font-weight: normal;
+  margin: 12px 0 16px;
+}
+.rpg-ui-tactical-forecast h3 span {
+  margin: 0 9px;
+  color: var(--gold);
+}
+.rpg-ui-tactical-forecast-body {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-top: 15px;
+}
+.rpg-ui-tactical-forecast-body > strong {
+  font-family: var(--rpg-ui-font-display);
+  font-size: 38px;
+  font-weight: normal;
+  color: color-mix(in srgb, var(--gold), white 35%);
+}
+.rpg-ui-tactical-forecast-body small {
+  display: block;
+  font-family: var(--rpg-ui-font);
+  font-size: 8px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.rpg-ui-tactical-forecast-body > div {
+  color: color-mix(in srgb, var(--muted), white 25%);
+  font-size: 12px;
+}
+.rpg-ui-tactical-forecast-body b {
+  color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 30%);
+  font-size: 19px;
+}
+.rpg-ui-tactical-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, color-mix(in srgb, var(--ink), black 50%) 79%, transparent);
+  backdrop-filter: blur(7px);
+  pointer-events: auto;
+}
+.rpg-ui-tactical-modal {
+  width: min(90vw, 530px);
+  padding: 42px;
+  border: 1px solid var(--gold);
+  background: linear-gradient(140deg, color-mix(in srgb, var(--ink), white 10%), var(--ink));
+  box-shadow: 0 20px 90px #0009;
+  animation: rpg-ui-tactical-kf-rise 0.5s ease;
+}
+.rpg-ui-tactical-modal h2 {
+  font-family: var(--rpg-ui-font-display);
+  font-weight: normal;
+  font-size: 30px;
+  letter-spacing: 2px;
+  margin: 12px 0 20px;
+}
+.rpg-ui-tactical-modal p {
+  font-size: 13px;
+  line-height: 1.9;
+  color: color-mix(in srgb, var(--muted), white 40%);
+  margin-bottom: 22px;
+}
+.rpg-ui-tactical-result {
+  text-align: center;
+}
+.rpg-ui-tactical-result-sigil {
+  font-size: 70px;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 20px;
+}
+.rpg-ui-tactical-result-stats {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin: 27px 0;
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: color-mix(in srgb, var(--muted), white 20%);
+}
+.rpg-ui-tactical-result-stats b {
+  display: block;
+  font-family: var(--rpg-ui-font-display);
+  font-size: 32px;
+  font-weight: normal;
+  letter-spacing: 0;
+  color: var(--cream);
+  margin-top: 8px;
+}
+.rpg-ui-tactical-result .rpg-ui-tactical-gold-button {
+  margin: auto;
+}
+@keyframes rpg-ui-tactical-kf-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes rpg-ui-tactical-kf-pulse {
+  50% {
+    opacity: 0.4;
+  }
+}
+@keyframes rpg-ui-tactical-kf-banner {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.88);
+  }
+  15%,
+  75% {
+    opacity: 1;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(1.04);
+  }
+}
+.rpg-ui-tactical-reduced * {
+  animation: none !important;
+  transition: none !important;
+}
+@media (min-width: 1500px) {
+  .rpg-ui-tactical-bottom {
+    padding: 0 45px 18px;
+  }
+  .rpg-ui-tactical-command-deck {
+    grid-template-columns: 1.2fr 1fr 190px;
+    gap: 12px;
+  }
+  .rpg-ui-tactical-unit-card {
+    padding: 13px 10px;
+  }
+  .rpg-ui-tactical-crest {
+    width: 43px;
+    height: 51px;
+  }
+  .rpg-ui-tactical-card-name small {
+    display: inline;
+    margin-left: 8px;
+  }
+  .rpg-ui-tactical-card-status b {
+    display: inline;
+    float: right;
+    font-weight: normal;
+    font-size: 7px;
+  }
+  .rpg-ui-tactical-intro {
+    left: 10%;
+    top: 26%;
+  }
+}
+@media (max-width: 1000px) {
+  .rpg-ui-tactical-command-deck {
+    grid-template-columns: 1fr 1fr 120px;
+  }
+  .rpg-ui-tactical-topbar {
+    padding: 0 20px;
+    height: 64px;
+  }
+  .rpg-ui-tactical-brand h1 {
+    font-size: 18px;
+  }
+  .rpg-ui-tactical-location {
+    display: none;
+  }
+  .rpg-ui-tactical-objective {
+    top: 88px;
+    left: 22px;
+    max-width: 175px;
+  }
+  .rpg-ui-tactical-objective h2 {
+    font-size: 18px;
+  }
+  .rpg-ui-tactical-round {
+    right: 20px;
+    top: 88px;
+    width: 110px;
+  }
+  .rpg-ui-tactical-round strong {
+    font-size: 42px;
+  }
+  .rpg-ui-tactical-bottom {
+    padding: 0 12px 8px;
+  }
+  .rpg-ui-tactical-card-name {
+    font-size: 12px;
+  }
+  .rpg-ui-tactical-unit-card {
+    padding: 6px 4px;
+    gap: 5px;
+  }
+  .rpg-ui-tactical-crest {
+    width: 23px;
+    height: 33px;
+    font-size: 19px;
+  }
+  .rpg-ui-tactical-section-title {
+    letter-spacing: 0.6px;
+    font-size: 9px;
+  }
+  .rpg-ui-tactical-section-title small {
+    display: none;
+  }
+  .rpg-ui-tactical-roster,
+  .rpg-ui-tactical-actions {
+    padding: 9px;
+  }
+  .rpg-ui-tactical-footnote > span:first-child {
+    max-width: 65%;
+    font-size: 7px;
+  }
+  .rpg-ui-tactical-forecast {
+    right: 20px;
+    top: 235px;
+    width: 190px;
+    padding: 13px;
+  }
+  .rpg-ui-tactical-intro {
+    left: 6%;
+    top: 19%;
+  }
+  .rpg-ui-tactical-intro h2 {
+    font-size: 55px;
+  }
+  .rpg-ui-tactical-intro h2 em {
+    font-size: 67px;
+  }
+}
+@media (max-width: 700px) {
+  .rpg-ui-tactical-topbar {
+    height: 53px;
+    padding: 0 14px;
+  }
+  .rpg-ui-tactical-brand-mark {
+    font-size: 29px;
+  }
+  .rpg-ui-tactical-brand {
+    gap: 9px;
+  }
+  .rpg-ui-tactical-brand h1 {
+    font-size: 15px;
+    letter-spacing: 4px;
+  }
+  .rpg-ui-tactical-brand div > span {
+    font-size: 6px;
+    letter-spacing: 2px;
+  }
+  .rpg-ui-tactical-options {
+    gap: 5px;
+  }
+  .rpg-ui-tactical-options button {
+    width: 28px;
+    height: 28px;
+  }
+  .rpg-ui-tactical-objective {
+    top: 74px;
+    left: 15px;
+    max-width: 195px;
+  }
+  .rpg-ui-tactical-objective h2 {
+    font-size: 16px;
+    margin: 3px 0;
+  }
+  .rpg-ui-tactical-objective p {
+    font-size: 10px;
+  }
+  .rpg-ui-tactical-enemy-pips {
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .rpg-ui-tactical-enemy-pips span {
+    width: 21px;
+    height: 21px;
+    font-size: 13px;
+  }
+  .rpg-ui-tactical-round {
+    top: 73px;
+    right: 15px;
+    width: 95px;
+    padding-top: 8px;
+  }
+  .rpg-ui-tactical-round strong {
+    font-size: 35px;
+  }
+  .rpg-ui-tactical-round small {
+    font-size: 6px;
+  }
+  .rpg-ui-tactical-command-deck {
+    grid-template-columns: 1fr 102px;
+    gap: 5px;
+  }
+  .rpg-ui-tactical-roster {
+    grid-column: 1/-1;
+    padding: 7px;
+  }
+  .rpg-ui-tactical-roster .rpg-ui-tactical-section-title {
+    display: none;
+  }
+  .rpg-ui-tactical-roster-cards {
+    gap: 5px;
+  }
+  .rpg-ui-tactical-unit-card {
+    padding: 5px 7px;
+  }
+  .rpg-ui-tactical-crest {
+    height: 28px;
+  }
+  .rpg-ui-tactical-card-name small {
+    display: inline;
+    font-size: 7px;
+    margin-left: 5px;
+  }
+  .rpg-ui-tactical-card-status {
+    font-size: 7px;
+  }
+  .rpg-ui-tactical-hp-track {
+    margin-top: 5px;
+  }
+  .rpg-ui-tactical-card-status b {
+    display: none;
+  }
+  .rpg-ui-tactical-actions {
+    padding: 7px;
+  }
+  .rpg-ui-tactical-actions .rpg-ui-tactical-section-title {
+    margin-bottom: 6px;
+  }
+  .rpg-ui-tactical-action-buttons button {
+    min-height: 44px;
+    font-size: 9px;
+  }
+  .rpg-ui-tactical-action-buttons button > span {
+    font-size: 16px;
+  }
+  .rpg-ui-tactical-action-buttons kbd {
+    display: none;
+  }
+  .rpg-ui-tactical-action-detail {
+    display: none;
+  }
+  .rpg-ui-tactical-order {
+    padding: 8px 6px;
+  }
+  .rpg-ui-tactical-phase-button {
+    padding: 12px 5px;
+    font-size: 9px;
+  }
+  .rpg-ui-tactical-order .rpg-ui-tactical-gold-button {
+    font-size: 9px;
+    padding: 10px 6px;
+    min-height: 35px;
+  }
+  .rpg-ui-tactical-footnote {
+    display: none;
+  }
+  .rpg-ui-tactical-hint {
+    font-size: 10px;
+    padding: 7px 10px;
+    margin-bottom: 7px;
+  }
+  .rpg-ui-tactical-bottom {
+    padding-bottom: max(10px, env(safe-area-inset-bottom));
+  }
+  .rpg-ui-tactical-phase-banner h2 {
+    font-size: 17px;
+    letter-spacing: 3px;
+  }
+  .rpg-ui-tactical-phase-banner {
+    gap: 15px;
+    padding: 20px;
+  }
+  .rpg-ui-tactical-forecast {
+    top: auto;
+    bottom: 235px;
+    right: 12px;
+    width: 180px;
+  }
+  .rpg-ui-tactical-forecast h3 {
+    font-size: 14px;
+    margin: 5px 0 9px;
+  }
+  .rpg-ui-tactical-forecast-body {
+    padding-top: 6px;
+    gap: 15px;
+  }
+  .rpg-ui-tactical-forecast-body > strong {
+    font-size: 26px;
+  }
+  .rpg-ui-tactical-intro {
+    top: 24%;
+    left: 8%;
+    width: 84%;
+  }
+  .rpg-ui-tactical-intro h2 {
+    font-size: 68px;
+  }
+  .rpg-ui-tactical-intro h2 em {
+    font-size: 83px;
+  }
+  .rpg-ui-tactical-intro p {
+    font-size: 12px;
+    max-width: 280px;
+  }
+  .rpg-ui-tactical-intro-roles {
+    font-size: 10px;
+  }
+  .rpg-ui-tactical-modal {
+    padding: 26px;
+  }
+  .rpg-ui-tactical-modal h2 {
+    font-size: 23px;
+  }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .rpg-ui-tactical-topbar {
+    height: 43px;
+  }
+  .rpg-ui-tactical-brand h1 {
+    font-size: 15px;
+  }
+  .rpg-ui-tactical-brand div > span {
+    display: none;
+  }
+  .rpg-ui-tactical-objective {
+    top: 59px;
+    left: 15px;
+    max-width: 165px;
+  }
+  .rpg-ui-tactical-objective h2 {
+    font-size: 14px;
+  }
+  .rpg-ui-tactical-objective p {
+    font-size: 9px;
+  }
+  .rpg-ui-tactical-enemy-pips {
+    margin-top: 6px;
+  }
+  .rpg-ui-tactical-round {
+    top: 56px;
+    right: 16px;
+  }
+  .rpg-ui-tactical-round strong {
+    font-size: 30px;
+  }
+  .rpg-ui-tactical-bottom {
+    padding-bottom: 5px;
+  }
+  .rpg-ui-tactical-roster,
+  .rpg-ui-tactical-actions {
+    padding: 6px;
+  }
+  .rpg-ui-tactical-section-title {
+    margin-bottom: 5px;
+  }
+  .rpg-ui-tactical-action-buttons button {
+    min-height: 43px;
+    font-size: 9px;
+  }
+  .rpg-ui-tactical-action-buttons button > span {
+    font-size: 17px;
+  }
+  .rpg-ui-tactical-action-detail,
+  .rpg-ui-tactical-footnote {
+    display: none;
+  }
+  .rpg-ui-tactical-unit-card {
+    padding: 4px;
+  }
+  .rpg-ui-tactical-hint {
+    padding: 5px 12px;
+    margin-bottom: 5px;
+    font-size: 9px;
+  }
+  .rpg-ui-tactical-order {
+    padding: 6px;
+  }
+  .rpg-ui-tactical-intro {
+    top: 18%;
+    width: 310px;
+  }
+  .rpg-ui-tactical-intro h2 {
+    font-size: 42px;
+    margin-top: 12px;
+  }
+  .rpg-ui-tactical-intro h2 em {
+    font-size: 51px;
+  }
+  .rpg-ui-tactical-rule {
+    margin: 13px 0;
+  }
+  .rpg-ui-tactical-intro p {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+  .rpg-ui-tactical-intro-roles {
+    margin: 12px 0;
+  }
+  .rpg-ui-tactical-intro > small {
+    display: none;
+  }
+  .rpg-ui-tactical-forecast {
+    top: 160px;
+    padding: 9px;
+    width: 170px;
+  }
+  .rpg-ui-tactical-forecast h3 {
+    font-size: 14px;
+    margin: 4px 0 6px;
+  }
+  .rpg-ui-tactical-forecast-body {
+    padding-top: 5px;
+  }
+  .rpg-ui-tactical-forecast-body > strong {
+    font-size: 26px;
+  }
+}
+/* Studio's exploration HUD is replaced by the squad command deck while a battle is on (and only then: the map keeps its HUD outside of it). */
+body:has(.rpg-ui-tactical-shell) .rpg-hud,
+body:has(.rpg-ui-tactical-shell) .rpg-ui-notifications {
+  display: none !important;
+}
+.rpg-ui-tactical-shell button[aria-disabled="true"] {
+  pointer-events: none;
+  cursor: default;
+}
+.rpg-ui-tactical-flourish {
+  position: absolute;
+  top: 22%;
+  left: 0;
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  padding: 20px 70px 20px 35px;
+  background: linear-gradient(100deg, color-mix(in srgb, var(--ink) 98%, transparent), #463851e8, color-mix(in srgb, var(--ink) 0%, transparent));
+  border-block: 1px solid color-mix(in srgb, color-mix(in srgb, var(--gold), white 20%) 53%, transparent);
+  animation: rpg-ui-tactical-kf-flourish-in 0.25s ease-out;
+  pointer-events: none;
+}
+.rpg-ui-tactical-flourish > span {
+  font-size: 55px;
+  color: color-mix(in srgb, var(--gold), white 55%);
+}
+.rpg-ui-tactical-flourish small {
+  display: block;
+  text-transform: uppercase;
+  letter-spacing: 4px;
+  color: var(--gold);
+  font-size: 9px;
+}
+.rpg-ui-tactical-flourish strong {
+  display: block;
+  font:
+    italic 27px var(--rpg-ui-font-display);
+  margin-top: 8px;
+  color: var(--cream);
+}
+@keyframes rpg-ui-tactical-kf-flourish-in {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+.rpg-ui-tactical-reduced .rpg-ui-tactical-flourish {
+  animation: none;
+}
+@media (max-width: 700px) {
+  .rpg-ui-tactical-flourish {
+    top: 24%;
+    padding: 12px 35px 12px 18px;
+  }
+  .rpg-ui-tactical-flourish > span {
+    font-size: 34px;
+  }
+  .rpg-ui-tactical-flourish strong {
+    font-size: 21px;
+  }
+}
+.rpg-ui-tactical-command-deck.is-idle{grid-template-columns:minmax(350px,600px) 160px;justify-content:center}
+.rpg-ui-tactical-unit-detail{position:absolute;left:28px;top:280px;width:260px;display:flex;align-items:stretch;overflow:hidden;animation:rpg-ui-tactical-kf-unit-reveal .32s cubic-bezier(.2,.8,.2,1);border-left:2px solid var(--gold)}
+.rpg-ui-tactical-detail-art{width:104px;flex-shrink:0;position:relative;background:radial-gradient(ellipse at 45% 35%,color-mix(in srgb, color-mix(in srgb, var(--gold), black 35%) 33%, transparent),var(--ink));overflow:hidden}
+.rpg-ui-tactical-portrait{position:absolute;left:0;top:14px;width:104px;height:116px;background-repeat:no-repeat;filter:drop-shadow(0 4px 8px #0007)}
+.rpg-ui-tactical-detail-art.archer .rpg-ui-tactical-portrait{filter:hue-rotate(22deg) drop-shadow(0 4px 8px #0007)}
+.rpg-ui-tactical-detail-art.mage .rpg-ui-tactical-portrait{filter:hue-rotate(-22deg) drop-shadow(0 4px 8px #0007)}
+.rpg-ui-tactical-detail-sigil{position:absolute;left:15px;bottom:13px;font-size:36px;color:color-mix(in srgb, color-mix(in srgb, var(--gold), white 20%) 27%, transparent)}
+.rpg-ui-tactical-detail-copy{padding:15px 12px;flex:1;min-width:0}.rpg-ui-tactical-detail-copy .rpg-ui-tactical-eyebrow{font-size:7px}.rpg-ui-tactical-detail-copy h3{font:23px var(--rpg-ui-font-display);margin:4px 0}.rpg-ui-tactical-detail-copy>small{color:color-mix(in srgb, var(--gold), black 10%);font-size:9px}.rpg-ui-tactical-detail-copy p{font-size:10px;line-height:1.5;color:color-mix(in srgb, var(--muted), white 15%);margin:9px 0 14px}.rpg-ui-tactical-detail-stat{display:flex;justify-content:space-between;font-size:9px;color:color-mix(in srgb, var(--muted), white 30%);margin:7px 0 4px}.rpg-ui-tactical-detail-stat strong{font-size:10px;font-weight:normal;color:var(--cream)}.rpg-ui-tactical-detail-track{height:3px;background:#ffffff15}.rpg-ui-tactical-detail-track>span{display:block;height:100%;background:color-mix(in srgb, var(--rpg-ui-tactical-success), white 25%);transition:width .4s}.rpg-ui-tactical-detail-track.mana>span{background:color-mix(in srgb, var(--rpg-ui-tactical-accent), white 35%)}.rpg-ui-tactical-detail-copy .rpg-ui-tactical-detail-note{display:block;line-height:1.4;margin-top:12px;font-size:8px;color:var(--muted)}.rpg-ui-tactical-unit-detail.enemy{border-left-color:var(--rpg-ui-tactical-danger)}.rpg-ui-tactical-unit-detail.enemy .rpg-ui-tactical-detail-art{background:radial-gradient(ellipse at 45% 35%,color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 45%) 33%, transparent),var(--ink))}
+.rpg-ui-tactical-skill-menu{position:absolute;right:190px;bottom:205px;width:470px;padding:20px;z-index:35;animation:rpg-ui-tactical-kf-unit-reveal .22s ease-out;box-shadow:0 15px 70px #000b}.rpg-ui-tactical-skill-menu>header{display:flex;justify-content:space-between;align-items:center}.rpg-ui-tactical-skill-menu h3{font:23px var(--rpg-ui-font-display);margin-top:5px}.rpg-ui-tactical-skill-menu>header>button{border:1px solid var(--line);background:transparent;width:32px;height:32px;font-size:23px}.rpg-ui-tactical-skill-menu>p{font-size:10px;line-height:1.5;margin:10px 0 14px;color:color-mix(in srgb, var(--muted), white 30%)}.rpg-ui-tactical-skill-list{display:flex;flex-direction:column;gap:8px}.rpg-ui-tactical-skill-choice{display:flex;align-items:center;gap:13px;border:1px solid color-mix(in srgb, color-mix(in srgb, var(--muted), white 20%) 20%, transparent);background:color-mix(in srgb, var(--ink), white 5%);text-align:left;padding:13px;width:100%;transition:background .15s}.rpg-ui-tactical-skill-choice.focused,.rpg-ui-tactical-skill-choice:hover{border-color:var(--gold);background:color-mix(in srgb, var(--ink), white 20%)}.rpg-ui-tactical-skill-choice[aria-disabled="true"]{opacity:.45}.rpg-ui-tactical-skill-copy{flex:1}.rpg-ui-tactical-skill-copy>strong{display:block;font:16px var(--rpg-ui-font-display);color:var(--cream)}.rpg-ui-tactical-skill-copy>span{display:block;font-size:10px;line-height:1.5;margin:6px 0;color:color-mix(in srgb, var(--muted), white 30%)}.rpg-ui-tactical-skill-copy>small{font-size:8px;color:var(--gold);letter-spacing:.5px}.rpg-ui-tactical-skill-cost{display:flex;flex-direction:column;align-items:center;font-size:9px;color:color-mix(in srgb, var(--rpg-ui-tactical-accent), white 30%);min-width:50px}.rpg-ui-tactical-skill-cost>b{font:25px var(--rpg-ui-font-display)}.rpg-ui-tactical-skill-cost>small{font-size:7px;color:color-mix(in srgb, var(--muted), white 10%);margin-top:8px}.rpg-ui-tactical-area-icon{display:grid;grid-template-columns:repeat(3,9px);gap:3px;flex-shrink:0}.rpg-ui-tactical-area-icon i{width:9px;height:9px;border:1px solid color-mix(in srgb, color-mix(in srgb, var(--muted), black 15%) 40%, transparent)}.rpg-ui-tactical-area-icon i.lit{background:var(--gold);box-shadow:0 0 7px color-mix(in srgb, color-mix(in srgb, var(--gold), black 10%) 33%, transparent)}.rpg-ui-tactical-area-icon.fire i.lit{background:#f6a06e}.rpg-ui-tactical-area-icon.frost i.lit{background:color-mix(in srgb, var(--rpg-ui-tactical-accent), white 30%)}.rpg-ui-tactical-skill-reason{color:color-mix(in srgb, var(--rpg-ui-tactical-danger), white 20%);font-size:9px}.rpg-ui-tactical-skill-menu>footer{display:flex;justify-content:space-between;gap:8px;margin-top:14px;font-size:8px;color:var(--muted)}.rpg-ui-tactical-skill-menu>footer>small{font-size:8px}
+@keyframes rpg-ui-tactical-kf-unit-reveal{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+.rpg-ui-tactical-reduced .rpg-ui-tactical-unit-detail,.rpg-ui-tactical-reduced .rpg-ui-tactical-skill-menu{animation:none}
+@media(min-width:1400px){.rpg-ui-tactical-unit-detail{top:300px;width:285px}.rpg-ui-tactical-detail-art{width:115px}.rpg-ui-tactical-portrait{width:115px;height:128px}}
+@media(max-width:1000px){.rpg-ui-tactical-unit-detail{top:210px;left:14px;width:205px}.rpg-ui-tactical-detail-art{width:75px}.rpg-ui-tactical-portrait{width:75px;height:85px}.rpg-ui-tactical-detail-copy{padding:10px}.rpg-ui-tactical-detail-copy p{font-size:9px}.rpg-ui-tactical-skill-menu{right:20px;width:420px}}
+@media(max-width:700px){.rpg-ui-tactical-command-deck.is-idle{grid-template-columns:1fr 100px}.rpg-ui-tactical-command-deck.is-idle .rpg-ui-tactical-roster{grid-column:auto}.rpg-ui-tactical-command-deck.is-idle .rpg-ui-tactical-crest{display:none}.rpg-ui-tactical-command-deck.is-idle .rpg-ui-tactical-card-name small{display:none}.rpg-ui-tactical-command-deck.is-idle .rpg-ui-tactical-unit-card{padding:6px 4px}.rpg-ui-tactical-unit-detail{top:162px;left:12px;width:188px}.rpg-ui-tactical-detail-art{width:67px}.rpg-ui-tactical-portrait{width:67px;height:76px;top:12px}.rpg-ui-tactical-detail-copy h3{font-size:19px}.rpg-ui-tactical-detail-copy p{display:none}.rpg-ui-tactical-detail-copy .rpg-ui-tactical-detail-note{font-size:7px;margin-top:7px}.rpg-ui-tactical-detail-sigil{font-size:25px;left:12px}.rpg-ui-tactical-skill-menu{bottom:205px;left:12px;right:12px;width:auto;padding:14px}.rpg-ui-tactical-skill-choice{padding:10px;gap:9px}.rpg-ui-tactical-skill-copy>strong{font-size:14px}.rpg-ui-tactical-skill-copy>span{font-size:9px}.rpg-ui-tactical-skill-menu>footer{font-size:7px}.rpg-ui-tactical-area-icon{grid-template-columns:repeat(3,7px);gap:2px}.rpg-ui-tactical-area-icon i{width:7px;height:7px}}
+@media(max-height:550px) and (min-width:701px){.rpg-ui-tactical-unit-detail{top:140px;width:200px}.rpg-ui-tactical-detail-copy p{display:none}.rpg-ui-tactical-skill-menu{bottom:150px;width:400px;padding:12px}.rpg-ui-tactical-skill-menu>p,.rpg-ui-tactical-skill-menu>footer{display:none}.rpg-ui-tactical-skill-choice{padding:8px}.rpg-ui-tactical-skill-menu h3{font-size:18px}.rpg-ui-tactical-skill-list{margin-top:8px}}
+.rpg-ui-tactical-command-deck>.rpg-ui-tactical-roster{order:0}.rpg-ui-tactical-command-deck>.rpg-ui-tactical-actions{order:1}.rpg-ui-tactical-command-deck>.rpg-ui-tactical-order{order:2}
+@media(max-width:700px){.rpg-ui-tactical-unit-detail{top:160px;width:210px}.rpg-ui-tactical-detail-copy>.rpg-ui-tactical-eyebrow,.rpg-ui-tactical-detail-copy .rpg-ui-tactical-detail-note{display:none}.rpg-ui-tactical-detail-copy{padding:8px 10px}.rpg-ui-tactical-detail-copy h3{font-size:17px;margin:0}.rpg-ui-tactical-detail-copy>small{font-size:8px}.rpg-ui-tactical-detail-stat{font-size:8px;margin:5px 0 3px}.rpg-ui-tactical-detail-stat strong{font-size:9px}.rpg-ui-tactical-portrait{top:10px}.rpg-ui-tactical-detail-sigil{display:none}}
+
+/* ------------------------------------------------ battle FX: skill cut-in, phase banner
+   The cut-in sits below the arena (the grid is framed in the upper part of the screen). */
+.rpg-ui-tactical-cutin {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 40;
+  animation: rpg-ui-tactical-kf-cutin-life 1.25s ease forwards;
+}
+.rpg-ui-tactical-cutin-band {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  top: 60%;
+  height: 118px;
+  transform: skewY(-4deg);
+  background:
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--cutin) 22%, color-mix(in srgb, var(--ink), black 40%)) 18%, color-mix(in srgb, color-mix(in srgb, var(--ink), black 40%) 93%, transparent) 50%, color-mix(in srgb, var(--cutin) 22%, color-mix(in srgb, var(--ink), black 40%)) 82%, transparent),
+    repeating-linear-gradient(90deg, transparent 0 38px, color-mix(in srgb, var(--cutin) 18%, transparent) 38px 40px);
+  border-top: 2px solid var(--cutin);
+  border-bottom: 2px solid var(--cutin);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--cutin) 45%, transparent);
+  animation: rpg-ui-tactical-kf-cutin-band 0.32s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.rpg-ui-tactical-cutin-portrait {
+  position: absolute;
+  left: 10%;
+  top: calc(60% - 70px);
+  width: 230px;
+  height: 230px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 25%, #000 70%, transparent), linear-gradient(0deg, transparent, #000 30%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent, #000 25%, #000 70%, transparent);
+  filter: drop-shadow(0 0 18px var(--cutin));
+  animation: rpg-ui-tactical-kf-cutin-portrait 1.25s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.rpg-ui-tactical-cutin-ally .rpg-ui-tactical-cutin-portrait { left: auto; right: 10%; }
+.rpg-ui-tactical-cutin-text {
+  position: absolute;
+  top: calc(60% + 26px);
+  left: 0;
+  right: 0;
+  text-align: center;
+  transform: skewY(-4deg);
+  animation: rpg-ui-tactical-kf-cutin-text 1.25s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+.rpg-ui-tactical-cutin-text small {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  color: var(--cutin);
+}
+.rpg-ui-tactical-cutin-text strong {
+  font-family: var(--rpg-ui-font-display);
+  font-size: 36px;
+  font-weight: normal;
+  letter-spacing: 4px;
+  color: color-mix(in srgb, var(--cream), white 45%);
+  text-shadow: 0 0 18px var(--cutin), 0 3px 0 #000;
+}
+@keyframes rpg-ui-tactical-kf-cutin-life { 0%, 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes rpg-ui-tactical-kf-cutin-band { from { transform: skewY(-4deg) scaleX(0); } to { transform: skewY(-4deg) scaleX(1); } }
+@keyframes rpg-ui-tactical-kf-cutin-portrait {
+  0% { opacity: 0; transform: translateX(-120px); }
+  25% { opacity: 1; transform: translateX(0); }
+  80% { opacity: 1; transform: translateX(18px); }
+  100% { opacity: 0; transform: translateX(60px); }
+}
+.rpg-ui-tactical-cutin-ally .rpg-ui-tactical-cutin-portrait { animation-name: rpg-ui-tactical-kf-cutin-portrait-right; }
+@keyframes rpg-ui-tactical-kf-cutin-portrait-right {
+  0% { opacity: 0; transform: translateX(120px); }
+  25% { opacity: 1; transform: translateX(0); }
+  80% { opacity: 1; transform: translateX(-18px); }
+  100% { opacity: 0; transform: translateX(-60px); }
+}
+@keyframes rpg-ui-tactical-kf-cutin-text {
+  0% { opacity: 0; letter-spacing: 30px; }
+  30% { opacity: 1; letter-spacing: 4px; }
+  100% { opacity: 1; letter-spacing: 6px; }
+}
+.rpg-ui-tactical-phase-banner { overflow: hidden; animation: rpg-ui-tactical-kf-banner-sweep-in 1.3s cubic-bezier(0.2, 0.9, 0.2, 1) both; }
+.rpg-ui-tactical-phase-banner h2 { text-shadow: 0 0 22px currentColor; }
+.rpg-ui-tactical-banner-enemy { color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 40%); border-color: var(--rpg-ui-tactical-danger); background: linear-gradient(90deg, transparent, color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 80%) 90%, transparent) 20%, color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 80%) 90%, transparent) 80%, transparent) !important; }
+.rpg-ui-tactical-banner-ally { color: var(--cream); }
+.rpg-ui-tactical-banner-sweep {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, transparent 35%, #ffffff55 50%, transparent 65%);
+  animation: rpg-ui-tactical-kf-banner-sweep 1.1s ease-out 0.15s both;
+}
+@keyframes rpg-ui-tactical-kf-banner-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+@keyframes rpg-ui-tactical-kf-banner-sweep-in {
+  0% { opacity: 0; transform: scaleY(0.1); }
+  12% { opacity: 1; transform: scaleY(1.15); }
+  20% { transform: scaleY(1); }
+  85% { opacity: 1; }
+  100% { opacity: 0; transform: scaleY(0.9); }
+}
+.rpg-ui-tactical-reduced .rpg-ui-tactical-cutin-band, .rpg-ui-tactical-reduced .rpg-ui-tactical-cutin-portrait, .rpg-ui-tactical-reduced .rpg-ui-tactical-cutin-text, .rpg-ui-tactical-reduced .rpg-ui-tactical-banner-sweep { animation: none; }
+@media (max-width: 850px) {
+  .rpg-ui-tactical-cutin-portrait { width: 150px; height: 150px; top: calc(60% - 30px); }
+  .rpg-ui-tactical-cutin-text strong { font-size: 28px; }
+}
+
+/* Coop */
+.rpg-ui-tactical-coop-roster {
+  display: grid;
+  gap: 4px;
+  margin: 14px 0 4px;
+  font-size: 13px;
+}
+.rpg-ui-tactical-coop-roster p {
+  margin: 0;
+  color: color-mix(in srgb, var(--rpg-ui-tactical-accent), white 50%);
+}
+.rpg-ui-tactical-coop-roster b {
+  color: color-mix(in srgb, var(--rpg-ui-tactical-accent), white 25%);
+  font-weight: 600;
+  margin-right: 6px;
+}
+.rpg-ui-tactical-coop-roster i {
+  font-style: normal;
+  margin-left: 8px;
+  color: color-mix(in srgb, var(--rpg-ui-tactical-success), white 30%);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+}
+.rpg-ui-tactical-coop-line span {
+  color: color-mix(in srgb, var(--rpg-ui-tactical-accent), white 25%) !important;
+}
+.rpg-ui-tactical-gold-button.waiting {
+  filter: saturate(0.4);
+  animation: rpg-ui-tactical-kf-waiting 1.6s ease-in-out infinite;
+}
+@keyframes rpg-ui-tactical-kf-waiting {
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* Spectators */
+.rpg-ui-tactical-watch-badge {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: auto;
+  padding: 5px 6px 5px 12px;
+  border: 1px solid color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-accent), white 25%) 40%, transparent);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--ink) 85%, transparent);
+  color: color-mix(in srgb, var(--rpg-ui-tactical-accent), white 45%);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+}
+.rpg-ui-tactical-options {
+  align-items: center;
+}
+.rpg-ui-tactical-options .rpg-ui-tactical-watch-badge button {
+  width: auto;
+  height: auto;
+  border: 1px solid color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-accent), white 25%) 53%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink), white 5%);
+  padding: 4px 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+.rpg-ui-tactical-watch-badge kbd {
+  font-size: 9px;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+.rpg-ui-tactical-watchers {
+  margin-right: 6px;
+  color: color-mix(in srgb, var(--rpg-ui-tactical-accent), white 45%);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  opacity: 0.85;
+}
+.rpg-ui-tactical-command-deck.spectating .rpg-ui-tactical-order {
+  display: none;
+}
+
+/* PvP */
+.rpg-ui-tactical-surrender {
+  margin-top: 6px;
+  font-size: 11px;
+  opacity: 0.75;
+}
+.rpg-ui-tactical-surrender.hidden {
+  display: none;
+}
+
+/* Action menu next to the unit (after its move) */
+.rpg-ui-tactical-unit-menu {
+  position: fixed;
+  z-index: 30;
+  display: grid;
+  gap: 3px;
+  min-width: 150px;
+  padding: 6px;
+  pointer-events: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--ink) 95%, transparent), color-mix(in srgb, var(--ink) 95%, transparent));
+  box-shadow: 0 10px 30px #000a;
+  transform: translateY(-50%);
+  animation: rpg-ui-tactical-kf-menu-in 0.14s ease-out;
+}
+@keyframes rpg-ui-tactical-kf-menu-in {
+  from {
+    opacity: 0;
+    transform: translate(-6px, -50%);
+  }
+}
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item {
+  display: grid;
+  grid-template-columns: 18px 18px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 9px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--cream);
+  font: 14px var(--rpg-ui-font-display);
+  text-align: left;
+  cursor: pointer;
+}
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item kbd {
+  font-size: 9px;
+  opacity: 0.55;
+}
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item span {
+  color: var(--gold);
+}
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item i {
+  font-style: normal;
+  font-size: 11px;
+  color: color-mix(in srgb, var(--rpg-ui-tactical-accent), white 45%);
+}
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item:hover,
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item.focused {
+  border-color: color-mix(in srgb, var(--gold) 40%, transparent);
+  background: color-mix(in srgb, var(--gold) 12%, transparent);
+}
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item.off {
+  opacity: 0.35;
+  cursor: default;
+}
+.rpg-ui-tactical-unit-menu small {
+  padding: 2px 9px 0;
+  font-size: 10px;
+  color: color-mix(in srgb, var(--muted), white 10%);
+}
+
+/* Danger zone and speed toggles */
+.rpg-ui-tactical-options .rpg-ui-tactical-danger.on {
+  border-color: color-mix(in srgb, var(--rpg-ui-tactical-danger), black 10%);
+  color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 20%);
+  background: color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 10%) 13%, transparent);
+}
+.rpg-ui-tactical-options .rpg-ui-tactical-speed {
+  width: auto;
+  min-width: 32px;
+  padding: 0 8px;
+  border-radius: 16px;
+  font: 12px var(--rpg-ui-font-display);
+}
+
+/* cinematic-hud */
+installTacticalStyles`). */
+export default `/* Contextual command stage. Artwork deliberately breaks out of the stage. */
+.rpg-ui-tactical-bottom{left:0;right:0;bottom:0;padding:0 30px 14px;isolation:isolate}
+.rpg-ui-tactical-bottom.has-character:before{content:"";position:absolute;z-index:-1;inset:35px 0 0;background:linear-gradient(110deg,color-mix(in srgb, var(--ink) 92%, transparent),color-mix(in srgb, var(--ink) 96%, transparent) 65%,color-mix(in srgb, var(--ink) 87%, transparent));border-top:1px solid color-mix(in srgb, color-mix(in srgb, var(--gold), black 20%) 36%, transparent);clip-path:polygon(0 0,76% 0,81% 24%,92% 24%,95% 36%,100% 36%,100% 100%,0 100%)}
+.rpg-ui-tactical-command-deck,.rpg-ui-tactical-command-deck.is-idle{display:flex;justify-content:flex-end;align-items:flex-end;gap:30px;min-height:80px}
+.rpg-ui-tactical-bottom.has-character .rpg-ui-tactical-command-deck{min-height:260px}
+.rpg-ui-tactical-actions{width: min(29vw,360px);padding:12px 0 4px;background:none;border:0;animation:rpg-ui-tactical-kf-command-rise .45s cubic-bezier(.16,1,.3,1) both}
+.rpg-ui-tactical-actions .rpg-ui-tactical-section-title{margin-bottom:10px;font-size:10px;color:color-mix(in srgb, var(--gold), black 10%)}
+.rpg-ui-tactical-actions .rpg-ui-tactical-section-title>small{font-size:8px}
+.rpg-ui-tactical-action-buttons{display:flex;flex-direction:column;gap:7px}
+.rpg-ui-tactical-action-buttons button{display:flex;flex-direction:row;align-items:center;gap:15px;text-align:left;min-height:53px;padding:9px 28px 9px 18px;border:1px solid color-mix(in srgb, var(--muted) 29%, transparent);border-radius:7px;background:linear-gradient(105deg,color-mix(in srgb, color-mix(in srgb, var(--ink), white 10%) 61%, transparent),color-mix(in srgb, var(--ink) 60%, transparent));position:relative;transition:transform .2s,background .2s,border-color .2s,box-shadow .2s;overflow:hidden}
+.rpg-ui-tactical-action-buttons button:before{content:"";position:absolute;left:0;top:0;bottom:0;width:52px;background:linear-gradient(135deg,color-mix(in srgb, color-mix(in srgb, var(--muted), white 35%) 8%, transparent),transparent);clip-path:polygon(0 0,100% 50%,0 100%)}
+.rpg-ui-tactical-action-buttons button:hover,.rpg-ui-tactical-action-buttons button.active{transform:translateX(5px);background:linear-gradient(100deg,color-mix(in srgb, color-mix(in srgb, var(--gold), black 40%) 30%, transparent),var(--ink) 70%);border-color:var(--gold);box-shadow:0 0 15px color-mix(in srgb, color-mix(in srgb, var(--gold), black 10%) 15%, transparent),inset 0 0 12px color-mix(in srgb, color-mix(in srgb, var(--gold), black 10%) 6%, transparent)}
+.rpg-ui-tactical-action-buttons button>span{width:38px;text-align:center;font-size:29px;color:color-mix(in srgb, var(--muted), white 50%);line-height:1}
+.rpg-ui-tactical-action-buttons button.active>span{color:color-mix(in srgb, var(--gold), white 30%)}
+.rpg-ui-tactical-action-buttons button>div{display:flex;flex-direction:column;gap:4px}
+.rpg-ui-tactical-action-buttons button strong{font:18px var(--rpg-ui-font-display);letter-spacing:.4px;color:var(--cream);font-weight:normal}
+.rpg-ui-tactical-action-buttons button small{font-size:10px;color:color-mix(in srgb, var(--muted), white 35%);font-weight:normal}
+.rpg-ui-tactical-action-buttons button kbd{left:auto;right:8px;top:8px;font-size:8px;opacity:.45}
+.rpg-ui-tactical-action-buttons button i{position:absolute;right:11px;bottom:9px;font-size:10px;color:var(--gold)}
+.rpg-ui-tactical-action-detail{display:none}
+.rpg-ui-tactical-order{width:185px;min-height:90px;padding:0 0 24px;background:none;border:0;flex-shrink:0}
+.rpg-ui-tactical-phase-button,.rpg-ui-tactical-order .rpg-ui-tactical-gold-button{min-height:56px;font:19px var(--rpg-ui-font-display);border:1px solid color-mix(in srgb, var(--gold), black 5%);outline:1px solid color-mix(in srgb, color-mix(in srgb, var(--gold), black 25%) 47%, transparent);outline-offset:4px;background:linear-gradient(105deg,color-mix(in srgb, color-mix(in srgb, var(--gold), black 40%) 19%, transparent),var(--ink));box-shadow:inset 0 0 16px color-mix(in srgb, color-mix(in srgb, var(--gold), black 20%) 7%, transparent)}
+.rpg-ui-tactical-order .rpg-ui-tactical-gold-button{color:color-mix(in srgb, var(--gold), white 55%)!important}
+.rpg-ui-tactical-order>small{margin-top:19px;letter-spacing:3px;font-size:8px}
+.rpg-ui-tactical-order .rpg-ui-tactical-text-button{margin-top:13px}
+.rpg-ui-tactical-hint{position:relative;margin:0 auto 5px;width:max-content;max-width:90%;font-size:10px;border:0;background:linear-gradient(90deg,transparent,color-mix(in srgb, var(--ink) 92%, transparent) 15%,color-mix(in srgb, var(--ink) 92%, transparent) 85%,transparent);padding:9px 35px}
+.rpg-ui-tactical-bottom.has-character .rpg-ui-tactical-hint{margin-left:auto;margin-right:0}
+.rpg-ui-tactical-footnote{margin-top:8px;font-size:7px;opacity:.5}
+.rpg-ui-tactical-unit-detail,.rpg-ui-tactical-unit-detail.enemy{position:absolute;left:0;top:auto;bottom:20px;width:49%;height:260px;display:flex;align-items:flex-end;background:none;border:0;overflow:visible;z-index:5;pointer-events:none;animation:none}
+.rpg-ui-tactical-detail-art,.rpg-ui-tactical-unit-detail.enemy .rpg-ui-tactical-detail-art{width:48%;height:360px;background:none;overflow:visible;position:relative;flex-shrink:0;animation:rpg-ui-tactical-kf-portrait-slide .6s cubic-bezier(.16,1,.3,1) both}
+.rpg-ui-tactical-portrait{left:0;top:0;width:100%;height:100%;background-repeat:no-repeat;filter:none!important;mask-image:linear-gradient(90deg,#000 70%,transparent),linear-gradient(0deg,#000 85%,transparent);mask-composite:intersect}
+.rpg-ui-tactical-detail-art.illustrated .rpg-ui-tactical-portrait{mask-image:radial-gradient(ellipse 90% 85% at 44% 67%,#000 55%,transparent 83%);mask-composite:add}
+.rpg-ui-tactical-unit-detail.enemy .rpg-ui-tactical-detail-art{height:360px;width:48%;margin-right:0}
+.rpg-ui-tactical-unit-detail.enemy .rpg-ui-tactical-portrait{image-rendering:auto;opacity:1}
+.rpg-ui-tactical-detail-sigil{display:block;position:absolute;left:auto;right:5px;bottom:175px;font-size:50px;color:color-mix(in srgb, var(--gold), white 15%);filter:drop-shadow(0 0 12px color-mix(in srgb, color-mix(in srgb, var(--gold), black 15%) 33%, transparent))}
+.rpg-ui-tactical-detail-copy{padding:18px 15px 15px 10px;flex:1;min-width:0;height:260px;animation:rpg-ui-tactical-kf-detail-slide .48s .08s cubic-bezier(.16,1,.3,1) both}
+.rpg-ui-tactical-detail-copy .rpg-ui-tactical-eyebrow{display:block;font-size:8px;letter-spacing:2px;color:color-mix(in srgb, var(--gold), black 10%)}
+.rpg-ui-tactical-detail-copy h3{font:30px var(--rpg-ui-font-display);margin:6px 0 3px;color:var(--cream)}
+.rpg-ui-tactical-detail-copy>small{font:15px var(--rpg-ui-font-display);color:color-mix(in srgb, var(--gold), white 20%)}
+.rpg-ui-tactical-detail-divider{height:1px;background:linear-gradient(90deg,color-mix(in srgb, color-mix(in srgb, var(--gold), black 20%) 67%, transparent),color-mix(in srgb, color-mix(in srgb, var(--gold), black 20%) 27%, transparent));margin:15px 0;position:relative}
+.rpg-ui-tactical-detail-divider span{position:absolute;right:0;top:-6px;font-size:9px;color:color-mix(in srgb, var(--gold), black 10%)}
+.rpg-ui-tactical-detail-stat{font-size:10px;letter-spacing:2px;margin:10px 0 6px;justify-content:flex-start;gap:14px}
+.rpg-ui-tactical-detail-stat strong{font-size:13px;color:color-mix(in srgb, var(--cream), white 40%);letter-spacing:1px}
+.rpg-ui-tactical-detail-track{position:relative;height:5px;border-radius:3px;background:color-mix(in srgb, color-mix(in srgb, var(--muted), black 15%) 20%, transparent);overflow:hidden;box-shadow:0 0 9px color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-success), white 20%) 13%, transparent)}
+.rpg-ui-tactical-detail-track>span{background:linear-gradient(90deg,var(--rpg-ui-tactical-success),color-mix(in srgb, var(--rpg-ui-tactical-success), white 55%));border-radius:3px}
+.rpg-ui-tactical-detail-track.mana>span{background:linear-gradient(90deg,color-mix(in srgb, var(--rpg-ui-tactical-accent), black 15%),color-mix(in srgb, var(--rpg-ui-tactical-accent), white 45%))}
+.rpg-ui-tactical-detail-copy p.rpg-ui-tactical-detail-bio{display:block;font:italic 13px/1.6 var(--rpg-ui-font-display);color:var(--gold);margin:15px 0 7px;max-width:235px}
+.rpg-ui-tactical-detail-copy .rpg-ui-tactical-detail-note{display:block;font-size:9px;letter-spacing:1px;margin-top:8px;color:color-mix(in srgb, var(--muted), black 10%)}
+.rpg-ui-tactical-hp-loss{position:absolute;top:0;height:100%;background:repeating-linear-gradient(115deg,color-mix(in srgb, var(--gold), white 15%) 0 4px,color-mix(in srgb, var(--rpg-ui-tactical-danger), black 15%) 4px 8px);animation:rpg-ui-tactical-kf-loss-pulse 1s ease-in-out infinite}
+.rpg-ui-tactical-integrated-forecast{margin-top:11px;border-left:1px solid color-mix(in srgb, var(--gold), black 5%);padding-left:10px}
+.rpg-ui-tactical-integrated-forecast>div{display:flex;justify-content:space-between;align-items:center;gap:8px;color:var(--gold);font-size:11px}
+.rpg-ui-tactical-integrated-forecast strong{font:24px var(--rpg-ui-font-display);color:color-mix(in srgb, var(--gold), white 55%)}.rpg-ui-tactical-integrated-forecast strong small{font-size:10px}
+.rpg-ui-tactical-detail-copy .rpg-ui-tactical-integrated-forecast p{display:block;font-size:11px;margin:6px 0;color:color-mix(in srgb, var(--gold), white 35%);line-height:1.4}.rpg-ui-tactical-integrated-forecast b{color:color-mix(in srgb, var(--rpg-ui-tactical-danger), white 20%);font-size:16px}.rpg-ui-tactical-integrated-forecast p span{padding:0 5px}
+.rpg-ui-tactical-integrated-forecast>small{display:block;font-size:10px;color:color-mix(in srgb, var(--muted), white 25%)}.rpg-ui-tactical-integrated-forecast em{display:block;font-size:9px;font-style:normal;margin-top:7px;color:var(--gold)}
+.rpg-ui-tactical-skill-menu{right:240px;bottom:325px;width:420px;background:linear-gradient(135deg,color-mix(in srgb, color-mix(in srgb, var(--ink), white 5%) 97%, transparent),color-mix(in srgb, var(--ink) 97%, transparent));border-color:color-mix(in srgb, color-mix(in srgb, var(--gold), black 10%) 53%, transparent);border-radius:3px 18px 3px 3px}
+@keyframes rpg-ui-tactical-kf-portrait-slide{from{opacity:0;transform:translate(-65px,30px)}to{opacity:1;transform:translate(0,0)}}
+@keyframes rpg-ui-tactical-kf-detail-slide{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:translateX(0)}}
+@keyframes rpg-ui-tactical-kf-command-rise{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+@keyframes rpg-ui-tactical-kf-loss-pulse{50%{opacity:.45}}
+.rpg-ui-tactical-reduced .rpg-ui-tactical-detail-art,.rpg-ui-tactical-reduced .rpg-ui-tactical-detail-copy,.rpg-ui-tactical-reduced .rpg-ui-tactical-actions,.rpg-ui-tactical-reduced .rpg-ui-tactical-hp-loss{animation:none}.rpg-ui-tactical-reduced .rpg-ui-tactical-action-buttons button,.rpg-ui-tactical-reduced .rpg-ui-tactical-detail-track>span{transition:none}
+@media(min-width:1500px){.rpg-ui-tactical-unit-detail{height:280px}.rpg-ui-tactical-detail-art{height:410px}.rpg-ui-tactical-detail-copy{height:280px}.rpg-ui-tactical-actions{width:360px}.rpg-ui-tactical-command-deck{gap:55px}.rpg-ui-tactical-order{width:230px}.rpg-ui-tactical-action-buttons button{min-height:58px}}
+@media(max-width:1050px){.rpg-ui-tactical-bottom{padding-inline:16px}.rpg-ui-tactical-command-deck,.rpg-ui-tactical-command-deck.is-idle{gap:16px}.rpg-ui-tactical-actions{width:29vw}.rpg-ui-tactical-order{width:140px}.rpg-ui-tactical-action-buttons button{gap:8px;padding-left:10px}.rpg-ui-tactical-action-buttons button strong{font-size:16px}.rpg-ui-tactical-action-buttons button small{font-size:9px}.rpg-ui-tactical-detail-copy h3{font-size:25px}.rpg-ui-tactical-detail-art{height:320px}.rpg-ui-tactical-detail-copy{padding-right:10px}.rpg-ui-tactical-detail-sigil{font-size:35px}.rpg-ui-tactical-skill-menu{right:170px}}
+@media(max-width:700px){
+ .rpg-ui-tactical-bottom.has-character .rpg-ui-tactical-command-deck{min-height:184px}
+ .rpg-ui-tactical-bottom{padding:0 12px 10px}.rpg-ui-tactical-bottom.has-character:before{inset:-120px 0 0;clip-path:polygon(0 0,65% 0,78% 8%,100% 8%,100% 100%,0 100%)}
+ .rpg-ui-tactical-command-deck,.rpg-ui-tactical-command-deck.is-idle{gap:14px;min-height:60px;align-items:flex-end}.rpg-ui-tactical-actions{width:calc(100% - 110px);padding:0}.rpg-ui-tactical-actions .rpg-ui-tactical-section-title{display:none}.rpg-ui-tactical-action-buttons{gap:5px}.rpg-ui-tactical-action-buttons button{min-height:42px;padding:6px 22px 6px 10px;gap:8px}.rpg-ui-tactical-action-buttons button>span{font-size:22px;width:25px}.rpg-ui-tactical-action-buttons button strong{font-size:14px}.rpg-ui-tactical-action-buttons button small{font-size:8px;display:block}.rpg-ui-tactical-order{width:96px;padding-bottom:7px;min-height:0}.rpg-ui-tactical-phase-button,.rpg-ui-tactical-order .rpg-ui-tactical-gold-button{min-height:44px;font-size:13px;padding:6px}.rpg-ui-tactical-order>small{font-size:6px;letter-spacing:1px;margin-top:14px}.rpg-ui-tactical-hint{font-size:8px;padding:6px 10px;margin-bottom:7px}.rpg-ui-tactical-bottom.has-character .rpg-ui-tactical-hint{max-width:100%;margin-right:auto}
+ .rpg-ui-tactical-unit-detail,.rpg-ui-tactical-unit-detail.enemy{bottom:220px;left:0;top:auto;width:100%;height:125px}.rpg-ui-tactical-detail-art{width:34%;height:175px}.rpg-ui-tactical-detail-copy{height:125px;padding:5px 20px 0 6px}.rpg-ui-tactical-detail-copy h3{font-size:22px;margin:2px 0}.rpg-ui-tactical-detail-copy .rpg-ui-tactical-eyebrow{font-size:6px;letter-spacing:1px}.rpg-ui-tactical-detail-copy>small{font-size:11px}.rpg-ui-tactical-detail-divider{margin:8px 0}.rpg-ui-tactical-detail-stat{font-size:8px;margin:6px 0 4px}.rpg-ui-tactical-detail-stat strong{font-size:10px}.rpg-ui-tactical-detail-copy p.rpg-ui-tactical-detail-bio,.rpg-ui-tactical-detail-copy .rpg-ui-tactical-detail-note{display:none}.rpg-ui-tactical-detail-sigil{display:none}.rpg-ui-tactical-unit-detail.enemy .rpg-ui-tactical-detail-art{height:140px;width:30%;margin-right:4%}.rpg-ui-tactical-integrated-forecast{margin-top:5px;padding-left:7px}.rpg-ui-tactical-integrated-forecast>div{font-size:9px}.rpg-ui-tactical-integrated-forecast strong{font-size:18px}.rpg-ui-tactical-detail-copy .rpg-ui-tactical-integrated-forecast p{font-size:9px;margin:3px 0}.rpg-ui-tactical-integrated-forecast>small,.rpg-ui-tactical-integrated-forecast em{font-size:8px;margin-top:3px}.rpg-ui-tactical-unit-detail.predicting{height:165px}.rpg-ui-tactical-unit-detail.predicting .rpg-ui-tactical-detail-copy{height:165px}
+ .rpg-ui-tactical-skill-menu{left:12px;right:12px;bottom:215px;width:auto;max-height:calc(100dvh - 290px);overflow-y:auto;z-index:35}.rpg-ui-tactical-footnote{display:none}
+}
+@media(max-height:600px) and (min-width:701px){.rpg-ui-tactical-detail-art{height:235px}.rpg-ui-tactical-unit-detail,.rpg-ui-tactical-detail-copy{height:210px}.rpg-ui-tactical-detail-copy p.rpg-ui-tactical-detail-bio,.rpg-ui-tactical-detail-note{display:none}.rpg-ui-tactical-action-buttons button{min-height:36px;padding-block:5px}.rpg-ui-tactical-action-buttons button small{display:none}.rpg-ui-tactical-actions{padding:0}.rpg-ui-tactical-skill-menu{bottom:230px;max-height:calc(100dvh - 250px);overflow:auto}}
+
+/* hud */
+installTacticalStyles`). */
+export default `/*
+ * The HUD of a battle, laid over the map: a phase chip and the controls at the top, a dock at the bottom that never moves (the card of
+ * the unit, what to do, the end of the phase). It comes after the older sheets and replaces their top bar, objective card and bottom panel.
+ */
+.rpg-ui-tactical-controls {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  pointer-events: auto;
+}
+.rpg-ui-tactical-controls button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--gold) 33%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
+  color: var(--cream);
+  font-size: 14px;
+  line-height: 1;
+}
+.rpg-ui-tactical-controls button:hover,
+.rpg-ui-tactical-controls button[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--gold), white 35%);
+  background: color-mix(in srgb, color-mix(in srgb, var(--ink), white 5%) 90%, transparent);
+}
+.rpg-ui-tactical-controls .rpg-ui-tactical-watchers,
+.rpg-ui-tactical-controls .rpg-ui-tactical-watch-badge {
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--gold) 33%, transparent);
+  border-radius: 17px;
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
+  font-size: 12px;
+}
+.rpg-ui-tactical-controls .rpg-ui-tactical-watch-badge button {
+  width: auto;
+  height: auto;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.rpg-ui-tactical-status {
+  position: fixed;
+  top: 12px;
+  left: 14px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: min(420px, 60vw);
+  pointer-events: none;
+}
+.rpg-ui-tactical-phase {
+  display: inline-flex;
+  align-items: baseline;
+  align-self: flex-start;
+  gap: 12px;
+  padding: 7px 22px 7px 14px;
+  border-left: 3px solid var(--rpg-ui-tactical-accent);
+  background: linear-gradient(90deg, color-mix(in srgb, color-mix(in srgb, var(--ink), white 10%) 90%, transparent), color-mix(in srgb, color-mix(in srgb, var(--ink), white 10%) 0%, transparent));
+  color: color-mix(in srgb, var(--rpg-ui-tactical-accent), white 85%);
+}
+.rpg-ui-tactical-phase.enemy {
+  border-left-color: var(--rpg-ui-tactical-danger);
+  background: linear-gradient(90deg, color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 75%) 90%, transparent), color-mix(in srgb, color-mix(in srgb, var(--rpg-ui-tactical-danger), black 75%) 0%, transparent));
+  color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 85%);
+}
+.rpg-ui-tactical-phase b {
+  font: 700 15px var(--rpg-ui-font-display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.rpg-ui-tactical-phase span {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  opacity: 0.85;
+  text-transform: uppercase;
+}
+.rpg-ui-tactical-phase .rpg-ui-tactical-timer {
+  min-width: 3.2em;
+  padding: 1px 8px;
+  border: 1px solid #ffffff33;
+  border-radius: 10px;
+  background: color-mix(in srgb, color-mix(in srgb, var(--ink), black 60%) 80%, transparent);
+  font: 700 13px var(--rpg-ui-font-mono);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.rpg-ui-tactical-phase .rpg-ui-tactical-timer.urgent {
+  border-color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 10%);
+  color: color-mix(in srgb, var(--rpg-ui-tactical-danger), white 40%);
+}
+.rpg-ui-tactical-status p {
+  margin: 0;
+  padding-left: 14px;
+  font-size: 12px;
+  color: var(--cream);
+  text-shadow: 0 1px 3px #000c;
+}
+.rpg-ui-tactical-status p span {
+  margin-right: 6px;
+  color: var(--gold);
+}
+
+.rpg-ui-tactical-dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(260px, 340px) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 96px;
+  padding: 10px 20px max(12px, env(safe-area-inset-bottom));
+  background: linear-gradient(0deg, color-mix(in srgb, color-mix(in srgb, var(--ink), black 55%) 95%, transparent) 0%, color-mix(in srgb, color-mix(in srgb, var(--ink), black 55%) 77%, transparent) 62%, color-mix(in srgb, color-mix(in srgb, var(--ink), black 55%) 0%, transparent) 100%);
+  pointer-events: none;
+}
+.rpg-ui-tactical-dock .rpg-ui-tactical-hint {
+  position: static;
+  justify-self: center;
+  max-width: 560px;
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--ink) 80%, transparent);
+  color: color-mix(in srgb, var(--gold), white 50%);
+  font-size: 12px;
+  text-align: center;
+}
+.rpg-ui-tactical-dock .rpg-ui-tactical-order {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+  pointer-events: auto;
+}
+.rpg-ui-tactical-dock .rpg-ui-tactical-phase-button,
+.rpg-ui-tactical-dock .rpg-ui-tactical-gold-button {
+  min-width: 112px;
+  min-height: 40px;
+}
+
+.rpg-ui-tactical-dock-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: 72px;
+  padding: 6px 12px 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--gold) 27%, transparent);
+  border-left: 3px solid var(--rpg-ui-tactical-accent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--ink) 94%, transparent);
+  color: var(--cream);
+  pointer-events: none;
+}
+.rpg-ui-tactical-dock-card.enemy {
+  border-left-color: var(--rpg-ui-tactical-danger);
+}
+.rpg-ui-tactical-dock-card.empty {
+  justify-content: center;
+  border-left-color: color-mix(in srgb, var(--gold) 33%, transparent);
+}
+.rpg-ui-tactical-dock-portrait {
+  position: relative;
+  flex: 0 0 56px;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--ink);
+}
+.rpg-ui-tactical-dock-portrait .rpg-ui-tactical-portrait {
+  width: 100%;
+  height: 100%;
+}
+.rpg-ui-tactical-dock-copy {
+  flex: 1;
+  min-width: 0;
+}
+.rpg-ui-tactical-dock-copy .rpg-ui-tactical-eyebrow {
+  font-size: 8px;
+}
+.rpg-ui-tactical-dock-copy h3 {
+  margin: 1px 0 4px;
+  overflow: hidden;
+  font: 16px var(--rpg-ui-font-display);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rpg-ui-tactical-dock-copy h3 small {
+  margin-left: 6px;
+  color: color-mix(in srgb, var(--gold), black 10%);
+  font-size: 10px;
+}
+.rpg-ui-tactical-dock-stat {
+  display: grid;
+  grid-template-columns: 22px 1fr auto;
+  align-items: center;
+  gap: 6px;
+  margin: 2px 0;
+  font-size: 9px;
+  color: color-mix(in srgb, var(--muted), white 30%);
+}
+.rpg-ui-tactical-dock-stat strong {
+  min-width: 60px;
+  color: var(--cream);
+  font-size: 10px;
+  font-weight: normal;
+  text-align: right;
+}
+.rpg-ui-tactical-dock-stat .rpg-ui-tactical-detail-track {
+  position: relative;
+  height: 5px;
+  background: #ffffff1f;
+}
+.rpg-ui-tactical-dock-forecast {
+  display: block;
+  margin-top: 2px;
+  color: #ffb38a;
+  font-size: 10px;
+  font-style: normal;
+}
+.rpg-ui-tactical-dock-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 849px) {
+  .rpg-ui-tactical-dock {
+    grid-template-columns: 1fr auto;
+    height: auto;
+    gap: 8px;
+  }
+  .rpg-ui-tactical-dock .rpg-ui-tactical-hint {
+    display: none;
+  }
+}
+
+.rpg-ui-tactical-unit-menu .rpg-ui-tactical-menu-item.hidden,
+.rpg-ui-tactical-flee.hidden {
+  display: none;
+}
+
+/* The skill list opens above the dock on the right, so the units stay in sight */
+.rpg-ui-tactical-skill-menu {
+  position: fixed;
+  right: 24px;
+  bottom: 112px;
+  left: auto;
+  width: min(470px, calc(100vw - 48px));
+  max-height: calc(100vh - 150px);
+  overflow-y: auto;
+  animation: none;
+}
+
+/* theme-surfaces */
+installTacticalStyles`). */
+export default `/*
+ * Panels and buttons of the battle drawn like the other interfaces of the game (\`@rpgjs/ui-css\`): the same surface, border, radius, shadow
+ * and font tokens as \`.rpg-ui-panel\` and the controls, so the chat, the menus and the HUD of a battle look like one interface and a theme
+ * restyles them all. It comes last: it replaces the look of the surfaces of the older sheets and keeps their layout.
+ */
+.rpg-ui-tactical-shell :is(.rpg-ui-tactical-panel, .rpg-ui-tactical-modal, .rpg-ui-tactical-skill-menu, .rpg-ui-tactical-unit-menu, .rpg-ui-tactical-dock-card, .rpg-ui-tactical-item-menu) {
+  background: var(--rpg-ui-panel-background, linear-gradient(180deg, rgba(15, 23, 42, 0.88), #0f172a));
+  border-color: var(--rpg-ui-border, rgba(148, 163, 184, 0.3));
+  border-radius: var(--rpg-ui-radius-lg, 8px);
+  box-shadow: var(--rpg-ui-panel-shadow, 0 24px 60px rgba(2, 6, 23, 0.45));
+  backdrop-filter: var(--rpg-ui-backdrop-blur, none);
+  color: var(--rpg-ui-text, #f8fafc);
+}
+.rpg-ui-tactical-shell :is(.rpg-ui-tactical-options button, .rpg-ui-tactical-controls button, .rpg-ui-tactical-action-buttons button, .rpg-ui-tactical-skill-choice, .rpg-ui-tactical-phase .rpg-ui-tactical-timer) {
+  background: var(--rpg-ui-control-background, linear-gradient(180deg, rgba(15, 23, 42, 0.88), #0f172a));
+  border-color: var(--rpg-ui-control-border, rgba(148, 163, 184, 0.3));
+  border-radius: var(--rpg-ui-control-radius, 4px);
+  box-shadow: var(--rpg-ui-control-shadow, none);
+  font-family: var(--rpg-ui-control-font, var(--rpg-ui-font, system-ui, sans-serif));
+}
+.rpg-ui-tactical-shell :is(.rpg-ui-tactical-options button, .rpg-ui-tactical-controls button) {
+  border-radius: 50%;
+}
+.rpg-ui-tactical-shell :is(.rpg-ui-tactical-options button, .rpg-ui-tactical-controls button, .rpg-ui-tactical-action-buttons button, .rpg-ui-tactical-skill-choice):is(:hover, .active, .focused, [aria-pressed="true"]) {
+  background: var(--rpg-ui-selected-background, color-mix(in srgb, var(--rpg-ui-selection, #f59e0b) 22%, var(--rpg-ui-bg, #0f172a)));
+  border-color: var(--rpg-ui-selection, #f59e0b);
+  color: var(--rpg-ui-selection, #f59e0b);
+}
+/* The main button of a screen (enter the battle, end the phase) is the primary control of the theme. */
+.rpg-ui-tactical-shell :is(.rpg-ui-tactical-gold-button, .rpg-ui-tactical-phase-button) {
+  background: var(--rpg-ui-primary-background, linear-gradient(180deg, #fbbf24, #f59e0b));
+  border-color: var(--rpg-ui-selection, #f59e0b);
+  border-radius: var(--rpg-ui-control-radius, 4px);
+  box-shadow: var(--rpg-ui-control-shadow, none);
+  color: var(--rpg-ui-primary-color, #0f172a) !important;
+  font-family: var(--rpg-ui-control-font, var(--rpg-ui-font, system-ui, sans-serif));
+}

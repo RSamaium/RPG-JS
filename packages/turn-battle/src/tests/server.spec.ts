@@ -2,17 +2,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpgPlayer } from "@rpgjs/server";
 import {
   clearLimits,
-  getBattle,
+  getTurnBattle,
   getLimit,
   getLimits,
   heroId,
-  isInBattle,
+  isInTurnBattle,
   provideTurnBattleServer,
   setLimit,
-  startBattle,
-  watchBattle,
+  startTurnBattle,
+  watchTurnBattle,
 } from "../server";
-import { actionCommand, battleCommand, type BattlePacket } from "../core";
+import { actionCommand, turnBattleCommand, type BattlePacket } from "../core";
 import { catalog, goblin, stats } from "./fixtures";
 
 let seq = 0;
@@ -87,7 +87,7 @@ async function playToEnd(packets: BattlePacket[], handlers: Record<string, (d: a
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
-describe("startBattle", () => {
+describe("startTurnBattle", () => {
   beforeEach(() => {
     provideTurnBattleServer({
       ...catalog,
@@ -99,9 +99,9 @@ describe("startBattle", () => {
 
   it("reads the native player, plays to victory and commits the outcome", async () => {
     const { player, packets, handlers, gui } = fakePlayer();
-    const done = startBattle(player, "duo", { seed: 3 });
+    const done = startTurnBattle(player, "duo", { seed: 3 });
     await flush();
-    expect(isInBattle(player)).toBe(true);
+    expect(isInTurnBattle(player)).toBe(true);
     expect(gui.open).toHaveBeenCalledWith(expect.objectContaining({ battleId: expect.any(String) }), {
       waitingAction: true,
       blockPlayerInput: true,
@@ -122,22 +122,22 @@ describe("startBattle", () => {
 
     await handlers.close({});
     await expect(done).resolves.toEqual(result);
-    expect(isInBattle(player)).toBe(false);
+    expect(isInTurnBattle(player)).toBe(false);
   });
 
   it("answers stale commands with an error packet and keeps the state", async () => {
     const { player, packets, handlers } = fakePlayer();
-    void startBattle(player, "duo", { seed: 3 });
+    void startTurnBattle(player, "duo", { seed: 3 });
     await flush();
     const s = last(packets).state;
     await handlers.command({ revision: s.revision - 1, actor: s.actor, command: { type: "guard" } });
-    expect(last(packets)).toMatchObject({ error: "tb.error.stale", revision: s.revision, beats: [] });
+    expect(last(packets)).toMatchObject({ error: "turnBattle.error.stale", revision: s.revision, beats: [] });
   });
 
   it("refuses a second battle and resolves as escape when aborted", async () => {
     const { player, gui } = fakePlayer();
-    const done = startBattle(player, "duo");
-    await expect(startBattle(player, "duo")).rejects.toThrow(/already in battle/);
+    const done = startTurnBattle(player, "duo");
+    await expect(startTurnBattle(player, "duo")).rejects.toThrow(/already in a battle/);
     await flush();
     gui.close(null);
     await expect(done).resolves.toMatchObject({ outcome: "escape", exp: 0 });
@@ -146,12 +146,12 @@ describe("startBattle", () => {
 
   it("reads skills, enemies and troops from the RPGJS database", async () => {
     const database = {
-      "db-skill": { name: "Éclair", spCost: 4, power: 130, battle: { kind: "magical", scope: "enemy", element: "thunder" } },
-      slime: { _type: "enemy", name: "Slime", gain: { exp: 7, gold: 3 }, battle: { battler: "slime", stats: stats({ maxHp: 30, agi: 5 }) } },
-      pond: { _type: "troop", battle: { enemies: ["slime"], background: "meadow" } },
+      "db-skill": { name: "Éclair", spCost: 4, power: 130, turnBattle: { kind: "magical", scope: "enemy", element: "thunder" } },
+      slime: { _type: "enemy", name: "Slime", gain: { exp: 7, gold: 3 }, turnBattle: { battler: "slime", stats: stats({ maxHp: 30, agi: 5 }) } },
+      pond: { _type: "troop", turnBattle: { enemies: ["slime"], background: "meadow" } },
     };
     const { player, packets } = fakePlayer({ database });
-    void startBattle(player, "pond", { seed: 1 });
+    void startTurnBattle(player, "pond", { seed: 1 });
     await flush();
     const s = packets[0].state;
     expect(s.catalog.skills["db-skill"]).toMatchObject({ name: "Éclair", spCost: 4, power: 130, kind: "magical" });
@@ -164,18 +164,18 @@ describe("startBattle", () => {
     const onStart = vi.fn();
     const onEnd = vi.fn();
     const hooks = {
-      "server-battle-onStart": [onStart],
-      "server-battle-onEnd": [onEnd],
-      "server-battle-onDamage": [({ target }: any) => (target.side === "enemy" ? 999 : undefined)],
-      "server-battle-onCommand": [(_p: unknown, _b: unknown, env: any) => (env.command.type === "escape" ? false : undefined)],
+      "server-turnBattle-onStart": [onStart],
+      "server-turnBattle-onEnd": [onEnd],
+      "server-turnBattle-onDamage": [({ target }: any) => (target.side === "enemy" ? 999 : undefined)],
+      "server-turnBattle-onCommand": [(_p: unknown, _b: unknown, env: any) => (env.command.type === "escape" ? false : undefined)],
     };
     const { player, packets, handlers, saved } = fakePlayer({ hooks });
-    void startBattle(player, "duo", { seed: 5 });
+    void startTurnBattle(player, "duo", { seed: 5 });
     await flush();
     expect(onStart).toHaveBeenCalled();
     const s = last(packets).state;
     await handlers.command({ revision: s.revision, actor: s.actor, command: { type: "escape" } });
-    expect(last(packets).error).toBe("tb.error.refused");
+    expect(last(packets).error).toBe("turnBattle.error.refused");
     const result = await playToEnd(packets, handlers);
     expect(result.outcome).toBe("victory");
     const damage = packets.flatMap((p) => p.beats).flatMap((b) => (b.t === "action" ? b.waves.flat() : []));
@@ -186,13 +186,13 @@ describe("startBattle", () => {
 
   it("derives the basic attack from the equipped weapon (effect, hits, element, atk)", async () => {
     const database = {
-      fangs: { _type: "weapon", name: "Crocs", atk: 9, battle: { type: "dualblades", element: "ice" } },
-      knife: { _type: "weapon", name: "Surin", atk: 2, battle: { type: "dagger" } },
-      imp: { _type: "enemy", name: "Imp", battle: { battler: "imp", stats: stats({ maxHp: 999, agi: 1 }), weapon: "knife" } },
-      den: { _type: "troop", battle: { enemies: ["imp"] } },
+      fangs: { _type: "weapon", name: "Crocs", atk: 9, turnBattle: { type: "dualblades", element: "ice" } },
+      knife: { _type: "weapon", name: "Surin", atk: 2, turnBattle: { type: "dagger" } },
+      imp: { _type: "enemy", name: "Imp", turnBattle: { battler: "imp", stats: stats({ maxHp: 999, agi: 1 }), weapon: "knife" } },
+      den: { _type: "troop", turnBattle: { enemies: ["imp"] } },
     };
     const { player, packets, handlers } = fakePlayer({ database, equipped: ["fangs"] });
-    void startBattle(player, "den", { seed: 2 });
+    void startTurnBattle(player, "den", { seed: 2 });
     await flush();
     const s = packets[0].state;
     const me = s.combatants.find((c) => c.id === `player:${player.id}`)!;
@@ -240,9 +240,9 @@ describe("coop", () => {
   it("sends every packet to each player, with its own units and bag, and commits both", async () => {
     const a = fakePlayer();
     const b = fakePlayer();
-    const done = startBattle({ players: [a.player, b.player], troop: "duo", seed: 4, turnTimer: false });
+    const done = startTurnBattle({ players: [a.player, b.player], troop: "duo", seed: 4, turnTimer: false });
     await flush();
-    expect(isInBattle(a.player) && isInBattle(b.player)).toBe(true);
+    expect(isInTurnBattle(a.player) && isInTurnBattle(b.player)).toBe(true);
     expect(a.packets[0]).toMatchObject({ viewer: a.player.id, players: { [a.player.id]: "Rain", [b.player.id]: "Rain" } });
     expect(b.packets[0].viewer).toBe(b.player.id);
     const allies = a.packets[0].state.combatants.filter((c) => c.side === "ally");
@@ -255,7 +255,7 @@ describe("coop", () => {
     const intruder = owner === a.player.id ? b : a;
     const before = a.packets.length + b.packets.length;
     await intruder.handlers.command({ revision: s.revision, actor: s.actor, command: { type: "guard" } });
-    expect(last(intruder.packets).error).toBe("tb.error.notYourTurn");
+    expect(last(intruder.packets).error).toBe("turnBattle.error.notYourTurn");
     expect(a.packets.length + b.packets.length).toBe(before + 1);
 
     const result = await coopToEnd([a, b]);
@@ -266,8 +266,8 @@ describe("coop", () => {
 
     // Each player leaves the result screen on their own; the battle resolves after both.
     await a.handlers.close({});
-    expect(isInBattle(a.player)).toBe(false);
-    expect(isInBattle(b.player)).toBe(true);
+    expect(isInTurnBattle(a.player)).toBe(false);
+    expect(isInTurnBattle(b.player)).toBe(true);
     await b.handlers.close({});
     await expect(done).resolves.toEqual(result);
   });
@@ -275,12 +275,12 @@ describe("coop", () => {
   it("hands a disconnected player's hero to the AI and commits only for the others", async () => {
     const a = fakePlayer();
     const b = fakePlayer();
-    const done = startBattle({ players: [a.player, b.player], troop: "duo", seed: 8, turnTimer: false });
+    const done = startTurnBattle({ players: [a.player, b.player], troop: "duo", seed: 8, turnTimer: false });
     await flush();
     // RPGJS calls the plugin's player.onDisconnected hook.
     const onDisconnected = findHook(provideTurnBattleServer({ ...catalog }), "onDisconnected");
     onDisconnected(b.player);
-    expect(isInBattle(b.player)).toBe(false);
+    expect(isInTurnBattle(b.player)).toBe(false);
     expect(b.gui.close).toHaveBeenCalledWith(null);
 
     // Only A plays now: B's hero acts on its own.
@@ -304,7 +304,7 @@ describe("coop", () => {
     try {
       const a = fakePlayer();
       const b = fakePlayer();
-      void startBattle({ players: [a.player, b.player], troop: "duo", seed: 4, turnTimer: 5 });
+      void startTurnBattle({ players: [a.player, b.player], troop: "duo", seed: 4, turnTimer: 5 });
       await vi.advanceTimersByTimeAsync(0);
       const s = last(a.packets).state;
       expect(a.packets[0].turnTimer).toBe(5);
@@ -330,7 +330,7 @@ describe("spectators", () => {
   it("joins a running battle, sees every packet, cannot command and leaves at will", async () => {
     const fighter = fakePlayer();
     const watcher = fakePlayer();
-    const done = startBattle(fighter.player, "duo", { seed: 4 });
+    const done = startTurnBattle(fighter.player, "duo", { seed: 4 });
     await flush();
     // Play one turn before the spectator arrives.
     let s = last(fighter.packets).state;
@@ -338,14 +338,14 @@ describe("spectators", () => {
     await fighter.handlers.command({ revision: s.revision, actor: s.actor, command: { type: "attack", target } });
     s = last(fighter.packets).state;
 
-    expect(getBattle(fighter.player)?.players).toEqual([fighter.player]);
-    const watching = watchBattle(watcher.player, fighter.player);
+    expect(getTurnBattle(fighter.player)?.players).toEqual([fighter.player]);
+    const watching = watchTurnBattle(watcher.player, fighter.player);
     await flush();
-    expect(isInBattle(watcher.player)).toBe(true);
-    expect(getBattle(watcher.player)).toBeUndefined(); // watching, not fighting
+    expect(isInTurnBattle(watcher.player)).toBe(true);
+    expect(getTurnBattle(watcher.player)).toBeUndefined(); // watching, not fighting
     expect(watcher.packets[0]).toMatchObject({ spectator: true, viewer: watcher.player.id, revision: s.revision, beats: [] });
     expect(last(fighter.packets)).toMatchObject({ spectators: 1, revision: s.revision });
-    expect(getBattle(fighter.player)!.spectators()).toEqual([watcher.player]);
+    expect(getTurnBattle(fighter.player)!.spectators()).toEqual([watcher.player]);
     expect(watcher.handlers.command).toBeUndefined();
 
     // Live: the fighter's next command reaches the spectator too.
@@ -355,7 +355,7 @@ describe("spectators", () => {
 
     await watcher.handlers.close({});
     await expect(watching).resolves.toBe(true);
-    expect(isInBattle(watcher.player)).toBe(false);
+    expect(isInTurnBattle(watcher.player)).toBe(false);
     expect(last(fighter.packets).spectators).toBe(0);
 
     const result = await playToEnd(fighter.packets, fighter.handlers);
@@ -367,18 +367,18 @@ describe("spectators", () => {
   it("starts with spectators, lets onSpectate refuse, and closes them when the fighters leave", async () => {
     const fighter = fakePlayer();
     const friend = fakePlayer();
-    const stranger = fakePlayer({ hooks: { "server-battle-onSpectate": [() => false] } });
-    void startBattle({ players: [fighter.player], troop: "duo", spectators: [friend.player], seed: 2 });
+    const stranger = fakePlayer({ hooks: { "server-turnBattle-onSpectate": [() => false] } });
+    void startTurnBattle({ players: [fighter.player], troop: "duo", spectators: [friend.player], seed: 2 });
     await flush();
     expect(friend.packets[0]?.spectator).toBe(true);
-    await expect(watchBattle(stranger.player, fighter.player)).resolves.toBe(false);
+    await expect(watchTurnBattle(stranger.player, fighter.player)).resolves.toBe(false);
     expect(stranger.gui.open).not.toHaveBeenCalled();
-    expect(isInBattle(stranger.player)).toBe(false);
-    await expect(watchBattle(stranger.player, "no-such-battle")).resolves.toBe(false);
+    expect(isInTurnBattle(stranger.player)).toBe(false);
+    await expect(watchTurnBattle(stranger.player, "no-such-battle")).resolves.toBe(false);
 
     findHook(provideTurnBattleServer({ ...catalog }), "onDisconnected")(fighter.player);
     expect(friend.gui.close).toHaveBeenCalledWith(null);
-    expect(isInBattle(friend.player)).toBe(false);
+    expect(isInTurnBattle(friend.player)).toBe(false);
   });
 });
 
@@ -396,10 +396,10 @@ describe("pvp", () => {
     const b = fakePlayer();
     const onEnd = vi.fn();
     (a.player.hooks as any).callHooks = ((orig) => (name: string, ...args: unknown[]) => {
-      if (name === "server-battle-onEnd") onEnd(...args);
+      if (name === "server-turnBattle-onEnd") onEnd(...args);
       return orig(name, ...args);
     })(a.player.hooks.callHooks);
-    const done = startBattle({ players: [a.player], versus: [b.player], background: "volcano", seed: 6 });
+    const done = startTurnBattle({ players: [a.player], versus: [b.player], background: "volcano", seed: 6 });
     await flush();
 
     const mine = (p: BattlePacket, id: string) => p.state.combatants.find((c) => c.id === `player:${id}`)!;
@@ -439,7 +439,7 @@ describe("pvp", () => {
   it("gives the victory to the other side when a duelist leaves", async () => {
     const a = fakePlayer();
     const b = fakePlayer();
-    const done = startBattle({ players: [a.player], versus: [b.player], seed: 1, turnTimer: false });
+    const done = startTurnBattle({ players: [a.player], versus: [b.player], seed: 1, turnTimer: false });
     await flush();
     findHook(provideTurnBattleServer({ ...catalog }), "onDisconnected")(b.player);
     const end = last(a.packets);
@@ -452,7 +452,7 @@ describe("pvp", () => {
   it("lets a duelist give up at any time, and a team only once all its players did", async () => {
     const a = fakePlayer();
     const b = fakePlayer();
-    const done = startBattle({ players: [a.player], versus: [b.player], seed: 3, turnTimer: false });
+    const done = startTurnBattle({ players: [a.player], versus: [b.player], seed: 3, turnTimer: false });
     await flush();
     expect(a.packets[0].pvp).toBe(true);
     // Whoever is not acting surrenders: it is not a turn command.
@@ -468,11 +468,11 @@ describe("pvp", () => {
 
     // 2 vs 2: one surrender is only a request; the second one ends it.
     const [c, d, e, f] = [fakePlayer(), fakePlayer(), fakePlayer(), fakePlayer()];
-    void startBattle({ players: [c.player, d.player], versus: [e.player, f.player], seed: 3, turnTimer: false });
+    void startTurnBattle({ players: [c.player, d.player], versus: [e.player, f.player], seed: 3, turnTimer: false });
     await flush();
     await e.handlers.surrender({});
-    expect(last(e.packets).error).toBe("tb.surrenderVote");
-    expect(last(f.packets).error).toBe("tb.surrenderVote");
+    expect(last(e.packets).error).toBe("turnBattle.surrenderVote");
+    expect(last(f.packets).error).toBe("turnBattle.surrenderVote");
     expect(last(c.packets).state.result).toBeNull();
     await f.handlers.surrender({});
     expect(last(c.packets).state.result).toMatchObject({ outcome: "victory" });
@@ -481,7 +481,7 @@ describe("pvp", () => {
   it("ignores a surrender outside PvP", async () => {
     const a = fakePlayer();
     provideTurnBattleServer({ ...catalog, troops: { duo: { id: "duo", enemies: [goblin("g")] } }, hero: () => ({ battler: "knight" }) });
-    void startBattle(a.player, "duo", { seed: 1 });
+    void startTurnBattle(a.player, "duo", { seed: 1 });
     await flush();
     const before = a.packets.length;
     await a.handlers.surrender({});
@@ -492,18 +492,18 @@ describe("pvp", () => {
   it("keeps a battle on one map: players and spectators elsewhere are refused", async () => {
     const a = fakePlayer({ map: "map-1" });
     const far = fakePlayer({ map: "map-2" });
-    await expect(startBattle({ players: [a.player], versus: [far.player] })).rejects.toThrow(/same map/);
-    expect(isInBattle(a.player) || isInBattle(far.player)).toBe(false);
-    void startBattle({ players: [a.player], versus: [fakePlayer({ map: "map-1" }).player], seed: 1 });
+    await expect(startTurnBattle({ players: [a.player], versus: [far.player] })).rejects.toThrow(/same map/);
+    expect(isInTurnBattle(a.player) || isInTurnBattle(far.player)).toBe(false);
+    void startTurnBattle({ players: [a.player], versus: [fakePlayer({ map: "map-1" }).player], seed: 1 });
     await flush();
-    await expect(watchBattle(far.player, a.player)).resolves.toBe(false);
+    await expect(watchTurnBattle(far.player, a.player)).resolves.toBe(false);
     expect(far.gui.open).not.toHaveBeenCalled();
   });
 
   it("requires a troop or opponents", async () => {
     const a = fakePlayer();
-    await expect(startBattle({ players: [a.player] })).rejects.toThrow(/troop or opponents/);
-    expect(isInBattle(a.player)).toBe(false);
+    await expect(startTurnBattle({ players: [a.player] })).rejects.toThrow(/troop or opponents/);
+    expect(isInTurnBattle(a.player)).toBe(false);
   });
 });
 
@@ -522,7 +522,7 @@ describe("a hero chosen for each player of a group battle", () => {
     const b = fakePlayer();
     const chosen = { name: "Kael", battler: "record:kael", stats: stats({ maxHp: 777 }), skills: [] };
 
-    void startBattle({ players: [a.player, b.player], troop: "duo", heroesByPlayer: { [a.player.id]: [chosen] }, seed: 3, turnTimer: false });
+    void startTurnBattle({ players: [a.player, b.player], troop: "duo", heroesByPlayer: { [a.player.id]: [chosen] }, seed: 3, turnTimer: false });
     await flush();
 
     const combatants = a.packets[0].state.combatants;
@@ -542,7 +542,7 @@ describe("custom commands", () => {
       troops: { duo: { id: "duo", enemies: ["goblin"] } },
       hero: () => ({ battler: "knight", commands: ["steal"] }),
       commands: {
-        steal: battleCommand({
+        steal: turnBattleCommand({
           label: "Voler",
           icon: "✋",
           scope: "enemy",
@@ -554,7 +554,7 @@ describe("custom commands", () => {
       },
     });
     const { player, packets, handlers } = fakePlayer();
-    void startBattle(player, "duo", { seed: 2 });
+    void startTurnBattle(player, "duo", { seed: 2 });
     await flush();
     const s = last(packets).state;
     expect(s.catalog.commands?.steal).toMatchObject({ id: "steal", label: "Voler", icon: "✋", scope: "enemy" });
@@ -580,7 +580,7 @@ describe("triggers of a skill", () => {
   };
   const zap = async () => {
     const { player, packets, handlers } = fakePlayer();
-    void startBattle(player, "duo", { seed: 2 });
+    void startTurnBattle(player, "duo", { seed: 2 });
     await flush();
     const s = last(packets).state;
     const enemy = s.combatants.find((c) => c.side === "enemy")!;
@@ -669,7 +669,7 @@ describe("actions of the database", () => {
       ...extra,
     });
     const rig = fakePlayer({ database: database as Record<string, any> });
-    void startBattle(rig.player, "duo", { seed: 2 });
+    void startTurnBattle(rig.player, "duo", { seed: 2 });
     await flush();
     return { ...rig, state: last(rig.packets).state };
   };
@@ -686,7 +686,7 @@ describe("actions of the database", () => {
   });
 
   it("leave an unknown action out, and let the commands of the options win", async () => {
-    const { state } = await begin({}, { commands: { steal: battleCommand({ label: "Du code", resolve: () => undefined }) } }, ["steal", "ghost"]);
+    const { state } = await begin({}, { commands: { steal: turnBattleCommand({ label: "Du code", resolve: () => undefined }) } }, ["steal", "ghost"]);
 
     expect(Object.keys(state.catalog.commands ?? {})).toEqual(["steal"]);
     expect(state.catalog.commands?.steal?.label).toBe("Du code");
@@ -717,12 +717,12 @@ describe("the native hook of a skill", () => {
       ...extra,
     });
     const rig = fakePlayer({ database: database as Record<string, any> });
-    void startBattle(rig.player, "duo", { seed: 2 });
+    void startTurnBattle(rig.player, "duo", { seed: 2 });
     await flush();
     const state = last(rig.packets).state;
     return { ...rig, state, enemies: state.combatants.filter((c) => c.side === "enemy") };
   };
-  const bash = (over: Record<string, unknown> = {}) => ({ bash: { _type: "skill", name: "Coup", spCost: 0, battle: { scope: "allEnemies" }, ...over } });
+  const bash = (over: Record<string, unknown> = {}) => ({ bash: { _type: "skill", name: "Coup", spCost: 0, turnBattle: { scope: "allEnemies" }, ...over } });
 
   it("is called by the skill record once for each target it reaches, with the player and the target", async () => {
     const onUse = vi.fn();
@@ -768,11 +768,11 @@ describe("skills that do several things", () => {
       hero: () => ({ battler: "knight", skills }),
     });
     const rig = fakePlayer({ database: database as Record<string, any> });
-    void startBattle(rig.player, "duo", { seed: 2 });
+    void startTurnBattle(rig.player, "duo", { seed: 2 });
     await flush();
     return { ...rig, state: last(rig.packets).state };
   };
-  const skill = (battle: Record<string, unknown>, over: Record<string, unknown> = {}) => ({ _type: "skill", name: "Frappe", spCost: 3, ...over, battle });
+  const skill = (battle: Record<string, unknown>, over: Record<string, unknown> = {}) => ({ _type: "skill", name: "Frappe", spCost: 3, ...over, turnBattle: battle });
 
   it("with effects are commands: listed among the skills, or in the menu when they are pinned", async () => {
     const { state } = await begin(
@@ -873,7 +873,7 @@ describe("the creatures of an action", () => {
       },
     };
     const { player, packets } = fakePlayer({ database });
-    void startBattle(player, "duo", { seed: 2 });
+    void startTurnBattle(player, "duo", { seed: 2 });
     await flush();
 
     expect(last(packets).state.catalog.commands?.call?.options).toEqual([
@@ -886,7 +886,7 @@ describe("the creatures of an action", () => {
 describe("summons", () => {
   it("finds summons of command options in the RPGJS database, with their skills", async () => {
     const database = {
-      firebird: { _type: "summon", name: "Oiseau de feu", battle: { battler: "firebird", stats: stats(), skills: ["fire"], turns: 2 } },
+      firebird: { _type: "summon", name: "Oiseau de feu", turnBattle: { battler: "firebird", stats: stats(), skills: ["fire"], turns: 2 } },
     };
     provideTurnBattleServer({
       ...catalog,
@@ -894,7 +894,7 @@ describe("summons", () => {
       troops: { duo: { id: "duo", enemies: ["goblin"] } },
       hero: () => ({ battler: "knight", commands: ["summon"], skills: [] }),
       commands: {
-        summon: battleCommand({
+        summon: turnBattleCommand({
           label: "Invoquer",
           scope: "self",
           options: [{ id: "firebird", label: "Oiseau de feu" }],
@@ -903,7 +903,7 @@ describe("summons", () => {
       },
     });
     const { player, packets, handlers } = fakePlayer({ database });
-    void startBattle(player, "duo", { seed: 3 });
+    void startTurnBattle(player, "duo", { seed: 3 });
     await flush();
     const s = last(packets).state;
     expect(s.catalog.summons?.firebird).toMatchObject({ name: "Oiseau de feu", battler: "firebird", turns: 2 });
@@ -930,7 +930,7 @@ describe("limit gauges", () => {
     setLimit(player, 40, `pet:${player.id}`);
     expect(getLimits(player)).toEqual({ [heroId(player)]: 100, [`pet:${player.id}`]: 40 });
 
-    void startBattle(player, "duo", { seed: 2 });
+    void startTurnBattle(player, "duo", { seed: 2 });
     await flush();
     const units = packets[0].state.combatants;
     expect(units.find((c) => c.id === heroId(player))!.limit!.value).toBe(100);

@@ -5,11 +5,11 @@ vi.hoisted(() => {
   target.navigator ??= { getGamepads: () => [] };
 });
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { TACTICAL_I18N } from "../core/messages";
 import { createEncounter } from "./fixture";
-import { messages } from "../core/messages";
 import { transition } from "../core/rules";
 import { reachable } from "../core/board";
-import { installInput } from "../client/input-controller";
+import { tacticalControls } from "../client/input-controller";
 import {
   battle,
   busy,
@@ -22,7 +22,7 @@ import {
   teardown,
   send,
   controls,
-  objectiveText, TEXTS,
+  objectiveText,
   action, timeLeft, notice, myId, spectator, myTeam, allies, mode, staged, commit, route, pace, setPace, selectUnit, skillMenu, selectedSkill, pickSkill, planned, chooseCell, cancel, inspected, hoverCell, details, forecast,
 } from "../client/state";
 
@@ -49,7 +49,7 @@ describe("client signals and transport", () => {
     const state = createEncounter();
     state.revision = 6;
     busy.set(true);
-    await receive({ state, error: "t.error.stale" });
+    await receive({ state, error: "tactical.error.stale" });
     expect(battle()?.revision).toBe(6);
     expect(busy()).toBe(false);
   });
@@ -78,7 +78,7 @@ describe("client signals and transport", () => {
     pickSkill('frost-lance');expect(selectedSkill()).toBe('frost-lance');expect(skillMenu()).toBe(false);
     // Touch: a first tap on the target only shows the forecast.
     chooseCell({x:6,y:1},{touch:true});expect(planned()).toMatchObject({type:'skill',skillId:'frost-lance'});
-    expect(current()?.mp).toBe(24);
+    expect(current()?.sp).toBe(24);
     // Escape goes back one step at a time.
     cancel();expect(planned()).toBeNull();expect(mode()).toBe('skill');
     cancel();expect(mode()).toBe('menu');
@@ -152,9 +152,9 @@ describe("client signals and transport", () => {
     const free=[...reachable(state,state.units[0]).values()].find((path)=>path.length)!.at(-1)!;
     chooseCell(free);
     expect(staged()?.cell).toEqual(free);
-    await receive({state:{...state},error:'t.error.held'});
+    await receive({state:{...state},error:'tactical.error.held'});
     expect(staged()).toBeNull();
-    expect(notice()).toBe('t.error.held');
+    expect(notice()).toBe('tactical.error.held');
     expect(mode()).toBe('move');
     connectEngine({ t: (key: string) => key } as never);
   });
@@ -177,7 +177,7 @@ describe("client signals and transport", () => {
     expect(timeLeft()).toBe(0);
     const over=transition(state,{type:'endPhase'},'ally');
     await receive({state:over.state,event:{...over.event,timeout:true}});
-    expect(notice()).toBe('t.timeout');
+    expect(notice()).toBe('tactical.timeout');
     // The phase the AI plays is not timed
     expect(timeLeft()).toBeNull();
   });
@@ -290,10 +290,10 @@ describe("the objective the HUD says", () => {
     battle.set(state);
     return state;
   };
-  beforeEach(() => Object.assign(TEXTS, messages.en));
+  // The i18n service of the engine, with the default texts of the battle.
+  beforeEach(() => connectEngine({ t: (key: string) => (TACTICAL_I18N.en as Record<string, string>)[key] ?? key } as never));
   afterEach(() => {
     battle.set(null);
-    for (const key of Object.keys(TEXTS)) delete TEXTS[key];
   });
 
   it("is to defeat every enemy when the battle has none", () => {
@@ -331,21 +331,14 @@ describe("the keys of the battle while the player writes", () => {
     vi.unstubAllGlobals();
   });
 
-  /** Installs the keyboard of the battle and returns what presses a key on an element. */
+  /** The controls of the HUD, and what presses one while an element has the focus. */
   function keyboard() {
-    const listeners: Record<string, (event: unknown) => void> = {};
-    vi.stubGlobal("addEventListener", (name: string, listener: (event: unknown) => void) => (listeners[name] = listener));
-    vi.stubGlobal("removeEventListener", () => {});
-    vi.stubGlobal("requestAnimationFrame", () => 0);
-    vi.stubGlobal("cancelAnimationFrame", () => {});
-    vi.stubGlobal("HTMLButtonElement", class {});
-    const remove = installInput();
-    const press = (key: string, target: unknown) => {
-      const event = { key, target, preventDefault: vi.fn(), stopImmediatePropagation: vi.fn() };
-      listeners.keydown(event);
-      return event;
+    const controls = tacticalControls({ globalConfig: { keyboardControls: { action: "space", escape: "escape" } } } as never) as Record<string, { keyDown(): void }>;
+    const press = (name: string, focused: { tagName: string }) => {
+      vi.stubGlobal("document", { activeElement: focused });
+      controls[name].keyDown();
     };
-    return { press, remove };
+    return { press, remove: () => vi.unstubAllGlobals() };
   }
 
   it("are left to the field of the chat: a letter is typed, not an order", async () => {
@@ -355,14 +348,12 @@ describe("the keys of the battle while the player writes", () => {
     selected.set("");
     const { press, remove } = keyboard();
 
-    // "e" ends the phase and Enter confirms, but not from the field the player writes in
-    const typed = press("e", { tagName: "INPUT" });
-    press("Enter", { tagName: "INPUT" });
-    expect(typed.preventDefault).not.toHaveBeenCalled();
+    // "e" ends the phase and the action confirms, but not from the field the player writes in
+    press("endPhase", { tagName: "INPUT" });
+    press("action", { tagName: "INPUT" });
     expect(planned()).toBeNull();
 
-    const order = press("e", { tagName: "CANVAS" });
-    expect(order.preventDefault).toHaveBeenCalled();
+    press("endPhase", { tagName: "CANVAS" });
     expect(planned()).toEqual({ type: "endPhase" });
     remove();
   });

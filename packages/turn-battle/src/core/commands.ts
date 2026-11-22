@@ -7,7 +7,7 @@ import type { BattleState, Combatant, CommandInfo, CommandOptionInfo, CommandRul
  * that have them (`commands: ["steal"]`), resolved on the server by `resolve`.
  *
  * ```ts
- * steal: battleCommand({
+ * steal: turnBattleCommand({
  *   label: "Voler", icon: "✋", scope: "enemy", melee: true,
  *   resolve({ target, rng, act }) {
  *     const loot = act.lootOf(target!);
@@ -71,8 +71,11 @@ export interface CommandActions {
   heal(target: Combatant, amount: number): Hit;
   /** Give (or take, if negative) SP. */
   sp(target: Combatant, amount: number): Hit;
-  /** A line over the target ("Raté !", "Potion volée !"). */
-  text(target: Combatant, text: string): Hit;
+  /**
+   * A line over the target. `text` is an i18n key of the game (`params` fill its `{placeholders}`) or a text shown as
+   * it is: `act.text(target, "turnBattle.steal.fail")`, `act.text(target, "mygame.analyse", { name })`.
+   */
+  text(target: Combatant, text: string, params?: Record<string, string | number>): Hit;
   /** Show HP, weaknesses and resistances of the target (kept for the whole battle). */
   reveal(target: Combatant): Hit;
   /** What could be stolen from the target (nothing once stolen, nothing between players). */
@@ -96,7 +99,7 @@ export interface CommandActions {
 export const summonOf = (state: Pick<BattleState, "combatants">, summoner: Combatant) =>
   state.combatants.find((c) => c.summon?.by === summoner.id && c.hp > 0);
 
-export const battleCommand = (command: CustomCommand): CustomCommand => command;
+export const turnBattleCommand = (command: CustomCommand): CustomCommand => command;
 
 /** Menu data of a command (sent to clients). */
 export function commandInfo(id: string, c: CustomCommand): CommandInfo {

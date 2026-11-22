@@ -1,5 +1,6 @@
 import type { RpgPlayer } from "@rpgjs/server";
 import type { BattleResult, BattleState, Catalog, CombatantDef, Stats } from "../core";
+import { readBattlePlayer, writeBattlePlayer } from "@rpgjs/battle-kit/server";
 import { weaponFromDb, type WeaponInfo } from "./database";
 
 /** Combatant id of a player's own hero. */
@@ -97,14 +98,8 @@ function equippedWeapon(player: RpgPlayer, record?: (id: string) => Record<strin
 
 /** Battle inventory: the player's items that the battle catalog knows how to use. */
 export function readInventory(player: RpgPlayer, catalog: Catalog): Record<string, number> {
-  const inventory: Record<string, number> = {};
-  const items = (read(() => (player as any).items?.()) ?? []) as unknown[];
-  for (const item of items) {
-    const id = String(val((item as any)?.id) ?? "");
-    const qty = Number(val((item as any)?.quantity) ?? 1);
-    if (id && catalog.items[id] && qty > 0) inventory[id] = (inventory[id] ?? 0) + qty;
-  }
-  return inventory;
+  const { items } = readBattlePlayer(player);
+  return Object.fromEntries(Object.entries(items).filter(([id]) => catalog.items[id]));
 }
 
 /** Write the outcome back to the player: HP/SP, consumed items, EXP, gold, drops. */
@@ -114,26 +109,18 @@ export function commitPlayer(
   result: BattleResult,
   { nativeStats = true, vitals = true }: { nativeStats?: boolean; vitals?: boolean } = {},
 ) {
-  const p = player as any;
   const me = state.combatants.find((c) => c.id === heroIdOf(player));
-  const attempt = (label: string, fn: () => void) => {
-    try {
-      fn();
-    } catch (error) {
-      console.warn(`[TurnBattle] commit ${label} failed`, error);
-    }
-  };
-  if (me && nativeStats && vitals) {
-    // A fallen leader comes back with 1 HP; the game decides what defeat means.
-    attempt("hp", () => (p.hp = Math.max(1, me.hp)));
-    attempt("sp", () => (p.sp = me.sp));
-  }
-  for (const [id, n] of Object.entries(state.used[player.id] ?? {}))
-    if (n > 0) attempt(`item ${id}`, () => p.removeItem(id, n));
-  if (result.exp) attempt("exp", () => (p.exp = (Number(p.exp) || 0) + result.exp));
-  if (result.gold) attempt("gold", () => (p.gold = (Number(p.gold) || 0) + result.gold));
-  for (const drop of result.items) attempt(`drop ${drop.id}`, () => p.addItem(drop.id, drop.quantity));
-  // Won during the battle (stolen…): kept whatever the outcome.
-  for (const [id, n] of Object.entries(state.gains?.[player.id] ?? {}))
-    if (n > 0) attempt(`gain ${id}`, () => p.addItem(id, n));
+  const gained: Record<string, number> = { ...state.gains?.[player.id] };
+  for (const drop of result.items) gained[drop.id] = (gained[drop.id] ?? 0) + drop.quantity;
+  writeBattlePlayer(
+    player,
+    {
+      ...(me && nativeStats && vitals ? { hp: me.hp, sp: me.sp } : {}),
+      usedItems: state.used[player.id],
+      gainedItems: gained,
+      exp: result.exp,
+      gold: result.gold,
+    },
+    "TurnBattle",
+  );
 }

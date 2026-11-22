@@ -1,7 +1,8 @@
 import type { Beat, BattleView, Combatant, FxName, Hit, Snap } from "../core";
 import { ease, runVisualEffect, type PlayableVisualEffect, type VisualEffectPlayback } from "@rpgjs/battle-kit/pure";
 import { FxPlayer } from "@rpgjs/battle-kit";
-import { ATTACK_SCALE, breakFx, builtinFx, burst, dissolveFx, elementColor, hasPreset, isAttackPreset, playPreset, type FxFn } from "./fx";
+import { elementColor } from "@rpgjs/battle-kit/pure";
+import { ATTACK_SCALE, breakFx, builtinFx, burst, dissolveFx, hasPreset, isAttackPreset, playPreset, type FxFn } from "./fx";
 import type { BattlerModel, FxPreset, Scene } from "./scene";
 import { sfx, sfxSound } from "./sfx";
 import {
@@ -207,7 +208,7 @@ export class Director {
     all.forEach((b) => b.offX.set((b.facingLeft ? 1 : -1) * w * 0.5));
     sc.zoom.set(1.3);
     void sc.flashScreen(0xffffff, 1, 420);
-    sc.showBurst(t("tb.encounter"), 0xffd45c);
+    sc.showBurst(t("turnBattle.encounter"), 0xffd45c);
     void sc.zoomBlurAt(sc.center.x, sc.center.y, 0.35, 700);
     const fade = this.clock.tween(380, (k) => sc.reveal.set(k));
     const zoom = this.clock.tween(1000, (k) => sc.zoom.set(1.3 - 0.3 * k), ease.outCubic);
@@ -552,9 +553,9 @@ export class Director {
         const push = (attacker.facingLeft ? -1 : 1) * (hit.crit ? 30 : 16) * this.s;
         void this.clock.tween(280, (k) => target.offX.set(push * Math.sin(Math.PI * (1 - k) * 0.5) * (1 - k)), ease.outCubic);
         sc.popup({ x: p.x + (Math.random() - 0.5) * 24, y: p.y - 10, value: hit.amount, kind: "damage", crit: hit.crit, weak: hit.weak, scale: this.s });
-        if (hit.weak) sc.spawn({ type: "label", x: p.x, y: p.y - 70 * this.s, text: t("tb.weak"), color: 0xffa24a, size: 17 * this.s, life: 900 });
-        if (hit.resist) sc.spawn({ type: "label", x: p.x, y: p.y - 70 * this.s, text: t("tb.resist"), color: 0x9fb6ff, size: 16 * this.s, life: 900 });
-        if (hit.crit) sc.spawn({ type: "label", x: p.x, y: p.y - 92 * this.s, text: t("tb.crit"), color: 0xffd45c, size: 20 * this.s, life: 900 });
+        if (hit.weak) sc.spawn({ type: "label", x: p.x, y: p.y - 70 * this.s, text: t("turnBattle.weak"), color: 0xffa24a, size: 17 * this.s, life: 900 });
+        if (hit.resist) sc.spawn({ type: "label", x: p.x, y: p.y - 70 * this.s, text: t("turnBattle.resist"), color: 0x9fb6ff, size: 16 * this.s, life: 900 });
+        if (hit.crit) sc.spawn({ type: "label", x: p.x, y: p.y - 92 * this.s, text: t("turnBattle.crit"), color: 0xffd45c, size: 20 * this.s, life: 900 });
         power = Math.max(power, hit.amount / Math.max(1, c.stats.maxHp));
         crit ||= !!hit.crit;
         if (hit.broke) {
@@ -578,7 +579,7 @@ export class Director {
         sc.popup({ x: p.x, y: p.y - 10, value: hit.amount, kind: "heal", scale: this.s });
       } else if (hit.kind === "text") {
         // A line over the target ("Raté !", "Potion volée !").
-        sc.spawn({ type: "label", x: p.x, y: target.head.y - 8 * this.s, text: hit.text ?? "", color: 0xfff4c8, size: 22 * this.s, life: 1500 });
+        sc.spawn({ type: "label", x: p.x, y: target.head.y - 8 * this.s, text: hit.text ? t(hit.text, hit.textParams) : "", color: 0xfff4c8, size: 22 * this.s, life: 1500 });
       } else if (hit.kind === "reveal") {
         // Scan: HP, weaknesses and resistances, then kept on the enemy HUD.
         target.revealed.set(true);
@@ -613,7 +614,7 @@ export class Director {
   private async breakMoment(x: number, y: number) {
     const sc = this.scene;
     sfx("break");
-    sc.showBurst(t("tb.break"), 0x9fd0ff, t("tb.staggered"));
+    sc.showBurst(t("turnBattle.break"), 0x9fd0ff, t("turnBattle.staggered"));
     void sc.flashScreen(0xcfe0ff, 0.5, 300);
     void sc.zoomBlurAt(x, y, 0.4, 700);
     void sc.chromatic(12, 700);
@@ -703,7 +704,7 @@ export class Director {
       this.skipCutin = null;
       cutin.set(null);
     }
-    this.scene.showBurst(beat.label, 0xffe9a8, t("tb.limit"));
+    this.scene.showBurst(beat.label, 0xffe9a8, t("turnBattle.limit"));
     playPreset(this.scene, "limitBurst", this.scene.camX(), this.scene.camY(), { scale: this.s });
     void this.scene.flashScreen(0xffffff, 1, 340);
     void this.scene.zoomBlurAt(a.x, a.chest.y, 0.45, 800);
@@ -714,7 +715,7 @@ export class Director {
     const b = this.scene.actor(id);
     if (!b) return;
     this.syncStatus(b, b.broken(), true);
-    this.scene.spawn({ type: "label", x: b.x, y: b.head.y - 10 * this.s, text: t("tb.guarding"), color: 0x9fd0ff, size: 18 * this.s, life: 900 });
+    this.scene.spawn({ type: "label", x: b.x, y: b.head.y - 10 * this.s, text: t("turnBattle.guarding"), color: 0x9fd0ff, size: 18 * this.s, life: 900 });
     await this.clock.wait(420);
     if (b.facingLeft) {
       const from = b.offX();
@@ -730,7 +731,7 @@ export class Director {
     b.idle();
     this.syncStatus(b, false, false);
     playPreset(this.scene, "impactBurst", b.chest.x, b.chest.y, { scale: this.s, color: "#ffd45c" });
-    this.scene.spawn({ type: "label", x: b.x, y: b.head.y - 10 * this.s, text: t("tb.recover"), color: 0xffd45c, size: 18 * this.s, life: 900 });
+    this.scene.spawn({ type: "label", x: b.x, y: b.head.y - 10 * this.s, text: t("turnBattle.recover"), color: 0xffd45c, size: 18 * this.s, life: 900 });
     await this.clock.wait(460);
   }
 
@@ -738,12 +739,12 @@ export class Director {
     const heroes = this.scene.battlers().filter((b) => b.facingLeft && !b.dead());
     const first = heroes[0];
     if (!success) {
-      if (first) this.scene.spawn({ type: "label", x: first.x, y: first.head.y, text: t("tb.escapeFail"), color: 0xffffff, size: 20 * this.s, life: 1000 });
+      if (first) this.scene.spawn({ type: "label", x: first.x, y: first.head.y, text: t("turnBattle.escapeFail"), color: 0xffffff, size: 20 * this.s, life: 1000 });
       this.scene.shake(5, 160);
       await this.clock.wait(600);
       return;
     }
-    if (first) this.scene.spawn({ type: "label", x: first.x, y: first.head.y, text: t("tb.escapeOk"), color: 0xffffff, size: 22 * this.s, life: 1000 });
+    if (first) this.scene.spawn({ type: "label", x: first.x, y: first.head.y, text: t("turnBattle.escapeOk"), color: 0xffffff, size: 22 * this.s, life: 1000 });
     await Promise.all(
       heroes.map((b, i) =>
         this.clock.wait(i * 60).then(() => this.clock.tween(520, (k) => b.offX.set(760 * this.s * k), ease.inCubic)),
@@ -778,12 +779,12 @@ export class Director {
 /** Push display numbers to the UI signals. */
 /** Coop: who commands a unit ("Vous", the other player's name, "· IA" once they left). */
 function ownerTag(c: BattleView["combatants"][number]): string {
-  if (c.summon) return `${t("tb.summon")} · ${c.summon.turns}`;
+  if (c.summon) return `${t("turnBattle.summon")} · ${c.summon.turns}`;
   const name = c.owner && players()[c.owner];
   // Solo fighter: no tags; coop or spectator: who commands what.
   if (!name || (Object.keys(players()).length < 2 && !spectating())) return "";
-  const who = c.owner === viewer() ? t("tb.you") : name;
-  return c.auto ? `${who} · ${t("tb.auto")}` : who;
+  const who = c.owner === viewer() ? t("turnBattle.you") : name;
+  return c.auto ? `${who} · ${t("turnBattle.auto")}` : who;
 }
 
 export function publish(view: BattleView) {
@@ -822,10 +823,10 @@ export function publish(view: BattleView) {
 
 /** "PV 180/250 · Faible : Feu, Lumière · Résiste : Glace" */
 export function scanText(c: BattleView["combatants"][number]): string {
-  const el = (ids: string[]) => ids.map((id) => t(`tb.el.${id}`)).join(", ");
-  const parts = [`${t("tb.hp")} ${c.hp}/${c.stats.maxHp}`];
-  if (c.weaknesses.length) parts.push(`${t("tb.weak.short")} : ${el(c.weaknesses)}`);
-  if (c.resists.length) parts.push(`${t("tb.resist.short")} : ${el(c.resists)}`);
+  const el = (ids: string[]) => ids.map((id) => t(`turnBattle.el.${id}`)).join(", ");
+  const parts = [`${t("turnBattle.hp")} ${c.hp}/${c.stats.maxHp}`];
+  if (c.weaknesses.length) parts.push(`${t("turnBattle.weak.short")} : ${el(c.weaknesses)}`);
+  if (c.resists.length) parts.push(`${t("turnBattle.resist.short")} : ${el(c.resists)}`);
   return parts.join(" · ");
 }
 

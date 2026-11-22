@@ -1,6 +1,7 @@
 import type { RpgPlayer } from "@rpgjs/server";
 import { actionCommand, type AttackStyle, type BattleActionRecord, type CombatantDef, type CustomCommand, type ItemDef, type Rewards, type SkillDef, type Stats, type SummonDef, type TroopDef } from "../core";
 import { visualEffectsOf } from "@rpgjs/battle-kit/pure";
+import { databaseRecord, plainValue } from "@rpgjs/battle-kit/server";
 
 /**
  * Battle data lives in the RPGJS database like any other game data:
@@ -8,33 +9,39 @@ import { visualEffectsOf } from "@rpgjs/battle-kit/pure";
  * ```ts
  * defineModule<RpgServer>({
  *   database: {
- *     fire: { name: "Feu", spCost: 18, power: 105, battle: { kind: "magical", scope: "allEnemies", element: "fire" } },
- *     potion: { name: "Potion", hpValue: 150, consumable: true, _type: "item", battle: { scope: "ally" } },
- *     goblin: { _type: "enemy", name: "Gobelin", battle: { battler: "goblin", stats: {...}, rewards: {...} } },
- *     goblins: { _type: "troop", battle: { enemies: ["goblin", "goblin"] } },
+ *     fire: { name: "Feu", spCost: 18, power: 105, turnBattle: { kind: "magical", scope: "allEnemies", element: "fire" } },
+ *     potion: { name: "Potion", hpValue: 150, consumable: true, _type: "item", turnBattle: { scope: "ally" } },
+ *     goblin: { _type: "enemy", name: "Gobelin", turnBattle: { battler: "goblin", stats: {...}, rewards: {...} } },
+ *     goblins: { _type: "troop", turnBattle: { enemies: ["goblin", "goblin"] } },
  *   },
  * })
  * ```
  *
  * Native fields (`name`, `description`, `spCost`, `power`, `hpValue`, `spValue`)
- * are reused; the `battle` field carries what RPGJS has no notion of.
+ * are reused; the `turnBattle` field carries what RPGJS has no notion of.
  */
 
 type Raw = Record<string, any>;
 
+/**
+ * A record of the RPGJS database as the battle reads it (see `databaseRecord` of
+ * `@rpgjs/battle-kit/server`). The `onUse` hook of a skill written as a method
+ * of its class is not enumerable: it is kept by name.
+ */
 export function dbRecord(player: RpgPlayer, id: string): Raw | undefined {
+  const record = databaseRecord<Raw>(player, id);
+  if (!record) return undefined;
+  let source: unknown;
   try {
-    const raw = (player as any).databaseById(id);
-    if (!raw) return undefined;
-    // Decorated classes keep their options on the prototype.
-    // A hook written as a method of the class is not enumerable: it is kept by name
-    return typeof raw === "function" ? { ...raw.prototype, ...raw.prototype?.options, ...(typeof raw.prototype?.onUse === "function" ? { onUse: raw.prototype.onUse } : {}) } : raw;
+    source = player.databaseById(id);
   } catch {
-    return undefined;
+    source = undefined;
   }
+  const onUse = typeof source === "function" ? (source as { prototype?: Raw }).prototype?.onUse : undefined;
+  return typeof onUse === "function" ? { ...record, onUse } : record;
 }
 
-const val = (v: unknown) => (typeof v === "function" ? (v as () => unknown)() : v);
+const val = plainValue;
 
 /** The `tags` of a record of the database, when it has some. */
 const tagsOf = (raw: Raw): { tags?: string[] } => {
@@ -44,7 +51,7 @@ const tagsOf = (raw: Raw): { tags?: string[] } => {
 
 export function skillFromDb(id: string, raw: Raw | undefined): SkillDef | undefined {
   if (!raw) return undefined;
-  const b = (raw.battle ?? {}) as Partial<SkillDef>;
+  const b = (raw.turnBattle ?? {}) as Partial<SkillDef>;
   const element = b.element ?? (typeof raw.element === "string" && raw.element !== "none" ? raw.element : undefined);
   return {
     kind: "physical",
@@ -65,8 +72,8 @@ export function skillFromDb(id: string, raw: Raw | undefined): SkillDef | undefi
 
 export function itemFromDb(id: string, raw: Raw | undefined): ItemDef | undefined {
   if (!raw || raw._type === "weapon" || raw._type === "armor") return undefined;
-  if (!raw.battle && raw.hpValue === undefined && raw.spValue === undefined) return undefined;
-  const b = (raw.battle ?? {}) as Partial<ItemDef>;
+  if (!raw.turnBattle && raw.hpValue === undefined && raw.spValue === undefined) return undefined;
+  const b = (raw.turnBattle ?? {}) as Partial<ItemDef>;
   return {
     scope: "ally",
     ...b,
@@ -117,13 +124,13 @@ export interface WeaponInfo {
  *
  * ```ts
  * "ember-blade": { _type: "weapon", name: "Lame des braises", atk: 14,
- *   battle: { type: "greatsword", element: "fire" } }
+ *   turnBattle: { type: "greatsword", element: "fire" } }
  * ```
- * `battle.fx`, `hits`, `power`, `stagger`, `color`, `melee` override the type defaults.
+ * `turnBattle.fx`, `hits`, `power`, `stagger`, `color`, `melee` override the type defaults.
  */
 export function weaponFromDb(raw: Raw | undefined): WeaponInfo | undefined {
-  if (!raw || (raw._type !== "weapon" && !raw.battle?.type)) return undefined;
-  const b = raw.battle ?? {};
+  if (!raw || (raw._type !== "weapon" && !raw.turnBattle?.type)) return undefined;
+  const b = raw.turnBattle ?? {};
   const base = WEAPON_STYLES[b.type ?? raw.weaponType ?? "sword"] ?? WEAPON_STYLES.sword;
   const name = String(val(raw.name) ?? "");
   const pick = <K extends keyof AttackStyle>(k: K) => (b[k] !== undefined ? b[k] : base[k]) as AttackStyle[K];
@@ -213,7 +220,7 @@ function rewardsOf(reward: Raw | undefined): Rewards | undefined {
 /** `level`: the level the enemy fights at, instead of its `initialLevel` (parameters of an RPGJS actor only). */
 export function enemyFromDb(raw: Raw | undefined, level?: number): EnemyDef | undefined {
   if (!raw) return undefined;
-  const b = raw.battle;
+  const b = raw.turnBattle;
   if (b) {
     if (!b.battler || !b.stats) return undefined;
     return {
@@ -263,7 +270,7 @@ export function heroFromDb(raw: Raw | undefined, battler: string, level?: number
   };
 }
 
-/** An action of the database (`_type: "command"`, see `battleAction`) as a custom command: its effects are data. */
+/** An action of the database (`_type: "command"`, see `turnBattleAction`) as a custom command: its effects are data. */
 export function commandFromDb(raw: Raw | undefined): CustomCommand | undefined {
   if (!raw || !Array.isArray(raw.effects)) return undefined;
   return actionCommand({ ...raw, name: String(val(raw.name) ?? "?"), effects: raw.effects } as BattleActionRecord);
@@ -276,7 +283,7 @@ export function commandFromDb(raw: Raw | undefined): CustomCommand | undefined {
  */
 export function skillCommandFromDb(id: string, raw: Raw | undefined): CustomCommand | undefined {
   if (!raw) return undefined;
-  const b = (raw.battle ?? {}) as Record<string, any>;
+  const b = (raw.turnBattle ?? {}) as Record<string, any>;
   const own = Array.isArray(b.effects) && b.effects.length > 0;
   if (!own && !b.pinned && !b.cooldown && !b.once) return undefined;
   const skill = skillFromDb(id, raw)!;
@@ -322,15 +329,15 @@ export function summonFromEnemy(enemy: EnemyDef, source: { turns?: number; contr
   };
 }
 
-/** A summonable creature of the database (`_type: "summon"`, see `battleSummon`). */
+/** A summonable creature of the database (`_type: "summon"`, see `turnBattleSummon`). */
 export function summonFromDb(raw: Raw | undefined): SummonDef | undefined {
-  const b = raw?.battle;
+  const b = raw?.turnBattle;
   if (!b?.battler || !b?.stats) return undefined;
   return { ...b, name: String(val(raw!.name) ?? b.name ?? "?") };
 }
 
 export function troopFromDb(id: string, raw: Raw | undefined): TroopDef | undefined {
-  const b = raw?.battle ?? raw;
+  const b = raw?.turnBattle ?? raw;
   if (!Array.isArray(b?.enemies) || b.enemies.length === 0) return undefined;
   return { ...b, ...tagsOf(raw ?? {}), id };
 }

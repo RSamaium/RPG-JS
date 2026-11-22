@@ -52,8 +52,8 @@ export interface SkillDef extends VisualEffects {
   id: string;
   name: string;
   description?: string;
-  /** MP cost. */
-  cost: number;
+  /** SP cost (the native `spCost` of the skill). */
+  spCost: number;
   power: number;
   range: number;
   shape: SkillShape;
@@ -77,7 +77,7 @@ export interface ItemDef extends Pick<VisualEffects, "effect"> {
   /** HP restored. */
   hp: number;
   /** MP restored. */
-  mp: number;
+  sp: number;
 }
 
 /** What the heroes may do in a battle (all by default): a `false` forbids it to them. */
@@ -120,10 +120,12 @@ export interface Unit extends Cell {
   tint?: number;
   /** Parameters for the damage formulas of RPGJS (Studio units). */
   params?: UnitParams;
+  /** Id of the player this unit is (a hero read from an `RpgPlayer`). */
+  player?: string;
   hp: number;
   maxHp: number;
-  mp: number;
-  maxMp: number;
+  sp: number;
+  maxSp: number;
   skillIds: string[];
   usedSkills: string[];
   /** Items carried, by item id. */
@@ -218,7 +220,7 @@ export interface BattleEvent {
   skillId?: string;
   itemId?: string;
   /** `item`: what each unit got back. */
-  heals?: { unitId: string; hp: number; mp: number }[];
+  heals?: { unitId: string; hp: number; sp: number }[];
   path?: Cell[];
   hits?: { unitId: string; damage: number; killed: boolean }[];
   /** `phase`: the phase ended because its time ran out. */

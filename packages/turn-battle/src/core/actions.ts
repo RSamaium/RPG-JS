@@ -1,5 +1,5 @@
 import type { ElementName, FxName } from "./data";
-import { battleCommand, summonOf, type CommandContext, type CustomCommand } from "./commands";
+import { turnBattleCommand, summonOf, type CommandContext, type CustomCommand } from "./commands";
 import type { Combatant, CommandRule, SkillKind, SkillPhase, SkillVisualEffects, TargetScope } from "./types";
 import { visualEffectsOf } from "@rpgjs/battle-kit/pure";
 
@@ -37,7 +37,7 @@ export type ActionEffect =
 
 /**
  * An action of the database (`_type: "command"`): a custom command described as data, which the plugin turns into a
- * `battleCommand`. Give it to units with `commands: ["<id>"]`.
+ * `turnBattleCommand`. Give it to units with `commands: ["<id>"]`.
  */
 export interface BattleActionRecord extends SkillVisualEffects {
   name: string;
@@ -72,9 +72,10 @@ export interface BattleActionRecord extends SkillVisualEffects {
   [field: string]: unknown;
 }
 
-export const battleAction = <T extends BattleActionRecord>(record: T) => ({ _type: "command" as const, ...record });
+export const turnBattleAction = <T extends BattleActionRecord>(record: T) => ({ _type: "command" as const, ...record });
 
-const DEFAULT_TEXTS = { empty: "Nothing to steal", fail: "Missed!", success: "{item} stolen!" };
+/** i18n keys of the default steal texts (translated on the client). */
+const DEFAULT_TEXTS = { empty: "turnBattle.steal.empty", fail: "turnBattle.steal.fail", success: "turnBattle.steal.success" };
 
 interface Run {
   /** The damage the action did so far, for the effects that give it back. */
@@ -131,7 +132,7 @@ function runEffects(effects: readonly ActionEffect[], ctx: CommandContext, run: 
         else if (!rng.chance((effect.chance ?? 100) / 100)) act.text(target, effect.failText ?? DEFAULT_TEXTS.fail);
         else {
           act.give(loot);
-          act.text(target, (effect.successText ?? DEFAULT_TEXTS.success).replace("{item}", loot.name));
+          act.text(target, effect.successText ?? DEFAULT_TEXTS.success, { item: loot.name });
         }
         break;
       }
@@ -158,7 +159,7 @@ export function actionCommand(record: BattleActionRecord): CustomCommand {
   const creatures = record.effects.flatMap((effect) => (effect.type === "summon" ? effect.creatures : []));
   const onlySummons = record.effects.length > 0 && record.effects.every((effect) => effect.type === "summon");
   const scope: TargetScope = record.scope ?? (onlySummons ? "self" : "enemy");
-  return battleCommand({
+  return turnBattleCommand({
     label: record.name,
     ...(record.icon ? { icon: record.icon } : {}),
     ...(record.description ? { description: record.description } : {}),

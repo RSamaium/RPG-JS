@@ -5,18 +5,24 @@ vi.hoisted(() => {
   target.navigator ??= { getGamepads: () => [] };
 });
 import { describe, it, expect, vi } from "vitest";
-import { CUE_SOUNDS, sound, connectEngine, cue } from "../client/state";
+import { cues, sound, cue } from "../client/state";
 
 describe("the sounds of the cues of the interface", () => {
   it("plays the sound of the game chosen for a cue, on the sfx channel", () => {
     const played: [string, unknown][] = [];
-    connectEngine({ playSound: async (id: string, options: unknown) => void played.push([id, options]) } as never);
+    cues.configure({ playSound: async (id: string, options: unknown) => void played.push([id, options]) } as never, {
+      sounds: { select: "ui-select", confirm: "ui-confirm" },
+    });
     sound.set(true);
-    Object.assign(CUE_SOUNDS, { select: "ui-select", confirm: "ui-confirm" });
 
     cue("select");
     cue("confirm");
 
-    expect(played).toEqual([["ui-select", { channel: "sfx" }], ["ui-confirm", { channel: "sfx" }]]);
+    expect(played).toEqual([["ui-select", { volume: 1, channel: "sfx" }], ["ui-confirm", { volume: 1, channel: "sfx" }]]);
+
+    // The sound of the HUD turned off: no cue.
+    sound.set(false);
+    cue("select");
+    expect(played).toHaveLength(2);
   });
 });

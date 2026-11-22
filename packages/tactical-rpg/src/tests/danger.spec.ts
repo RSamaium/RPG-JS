@@ -17,7 +17,7 @@ describe("chosen path", () => {
     const route = [{ x: 3, y: 5 }, { x: 3, y: 4 }, { x: 4, y: 4 }];
     const out = transition(state, { type: "move", unitId: "ally-warrior", cell: { x: 4, y: 4 }, path: route }, "ally");
     expect(out.event.path).toEqual(route);
-    expect(() => transition(state, { type: "move", unitId: "ally-warrior", cell: { x: 4, y: 3 }, path: route }, "ally")).toThrow("t.error.move");
+    expect(() => transition(state, { type: "move", unitId: "ally-warrior", cell: { x: 4, y: 3 }, path: route }, "ally")).toThrow("tactical.error.move");
   });
 });
 

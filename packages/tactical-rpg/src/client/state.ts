@@ -1,5 +1,6 @@
 import { portraitStyle } from "./portraits";
 import { signal, computed } from "canvasengine";
+import { BattleCues, synthTone } from "@rpgjs/battle-kit";
 import type { RpgClientEngine } from "@rpgjs/client";
 import type {
   BattleState,
@@ -10,6 +11,7 @@ import type {
   Team,
   Unit,
 } from "../core/types";
+import { TACTICAL_I18N } from "../core/messages";
 import { affected, damage, targetable } from "../core/rules";
 import { distance, reachable, key } from "../core/board";
 import { skillFor, skillsOf, skillUnavailable } from "../core/skills";
@@ -103,9 +105,9 @@ export function friendly(unit: Unit, team = myTeam()) {
 export function isMine(unit: Unit, me = myId()) {
   return friendly(unit) && (!unit.owner || unit.owner === me);
 }
-/** A built-in role is named in the language of the game (`t.role.<id>`); a role declared by the game keeps its own name. */
+/** A built-in role is named in the language of the game (`tactical.role.<id>`); a role declared by the game keeps its own name. */
 function named(role: ReturnType<typeof roleOf>) {
-  const key = `t.role.${role.id}`;
+  const key = `tactical.role.${role.id}`;
   const text = DEFAULT_ROLES[role.id] ? t(key) : key;
   return text === key ? role : { ...role, name: text };
 }
@@ -199,7 +201,6 @@ export const activeSkill = computed(()=>{const state=battle(),unit=current(),id=
 /** Texts of the encounter (name, chapter, objective, intro), with generic fallbacks. */
 export const meta = computed(() => battle()?.meta ?? {});
 /** Branding of the HUD (client option `title` / `subtitle`). */
-export const branding = signal<{ title?: string; subtitle?: string }>({});
 // CanvasEngine 2.1 captures computed dependencies on the first evaluation.
 // Read every signal before branching, including before the first state arrives.
 export const canPlay = computed(() => {
@@ -244,11 +245,11 @@ export let animation: {
   event: BattleEvent;
   before: BattleState | null;
   at: number;
-  /** A client `onEvent` hook plays the effects itself (units still move). */
+  /** A client `onPlay` hook plays the effects itself (units still move). */
   custom?: boolean;
 } | null = null;
 /**
- * Client `onEvent` hooks (set by the client module): resolve `true` when a
+ * Client `onPlay` hooks (set by the client module): resolve `true` when a
  * hook played the event itself (returned `false`).
  */
 let eventHook: (event: BattleEvent, state: BattleState) => Promise<boolean> = async () => false;
@@ -259,7 +260,6 @@ let unlockTimer: ReturnType<typeof setTimeout>,
   bannerTimer: ReturnType<typeof setTimeout>,
   timeout: ReturnType<typeof setTimeout>;
 let flourishTimer: ReturnType<typeof setTimeout>;
-let audio: AudioContext | undefined;
 export function connectEngine(value: RpgClientEngine) {
   engine = value;
 }
@@ -267,24 +267,29 @@ export function connectEngine(value: RpgClientEngine) {
 export const unitScales: Record<string, number> = {};
 /** Where the feet of a character are in each of its animations (`stand`, `walk`…), as a fraction of the frame: standing and walking sit at the same place. */
 export const unitAnchors: Record<string, Record<string, [number, number]>> = {};
-/** Text overrides (client option `texts`), checked before the i18n messages. */
-export const TEXTS: Record<string, string> = {};
-export function t(key: string) {
-  return key ? (TEXTS[key] ?? engine?.t(key) ?? key) : "";
+/**
+ * A text of the battle in the language of the game: the i18n service of the
+ * engine (the game overrides `tactical.*` keys there), the English default
+ * before the engine is connected.
+ */
+export function t(key: string, params?: Record<string, unknown>): string {
+  if (!key) return "";
+  if (engine) return engine.t(key, params);
+  return (TACTICAL_I18N.en as Record<string, string>)[key] ?? key;
 }
 /**
  * What the heroes have to do, as the HUD says it: the text of the encounter when it has one, else the one of the objective type (the text of a
- * type a plugin brought is its `t.objective.<type>` message), with the limit of rounds when there is one.
+ * type a plugin brought is its `tactical.objective.<type>` message), with the limit of rounds when there is one.
  */
 export const objectiveText = computed(() => {
   const state = battle();
   const own = state?.meta.objective;
   const objective = state?.objective;
-  if (own || !objective) return own ?? t("t.objective");
+  if (own || !objective) return own ?? t("tactical.objective");
   const name = state?.units.find((u) => u.id === objective.unitId)?.name ?? "";
-  const said = t(`t.objective.${objective.type}`);
-  const base = objective.type === "eliminate" || said === `t.objective.${objective.type}` ? t("t.objective") : said.replace("{name}", name).replace("{turns}", String(objective.turns ?? ""));
-  return objective.limit ? `${base} ${t("t.objective.limit").replace("{limit}", String(objective.limit))}` : base;
+  const said = t(`tactical.objective.${objective.type}`);
+  const base = objective.type === "eliminate" || said === `tactical.objective.${objective.type}` ? t("tactical.objective") : said.replace("{name}", name).replace("{turns}", String(objective.turns ?? ""));
+  return objective.limit ? `${base} ${t("tactical.objective.limit").replace("{limit}", String(objective.limit))}` : base;
 });
 let lastPacket: BattlePacket | null = null;
 let noticeUntil = 0;
@@ -326,7 +331,7 @@ async function play(packet: BattlePacket) {
   myId.set(engine?.playerIdSignal?.() ?? "");
   if (packet.left) {
     // Kept a few seconds: the next actions would clear it at once.
-    notice.set(`${packet.left} ${t("t.partnerLeft")}`);
+    notice.set(`${packet.left} ${t("tactical.partnerLeft")}`);
     noticeUntil = performance.now() + 6000;
   }
   if (packet.error) {
@@ -374,13 +379,13 @@ async function play(packet: BattlePacket) {
     // What was being prepared belonged to the phase that just ended
     staged.set(null);
     holding = "";
-    notice.set(t("t.timeout"));
+    notice.set(t("tactical.timeout"));
     noticeUntil = performance.now() + 4000;
   }
   if (packet.event?.kind === "surrender") {
     const side = packet.event.team === "enemy" ? packet.state.versus : packet.state.players;
     const names = side.map((p) => p.name).join(", ");
-    lastSurrender.set(`${names || t("t.opponents")} ${t("t.surrendered")}`);
+    lastSurrender.set(`${names || t("tactical.opponents")} ${t("tactical.surrendered")}`);
   } else if (packet.event?.kind === "start") lastSurrender.set("");
   if (packet.event) {
     const actor = packet.state.units.find(
@@ -393,11 +398,11 @@ async function play(packet: BattlePacket) {
     const timing = packet.event.kind === "item" ? itemTiming(packet.event.itemId ? packet.state.items?.[packet.event.itemId] : undefined) : actionTiming(usedSkill);
     if (packet.event.kind === "skill" && actor) {
       const skill = usedSkill;
-      flourish.set(skill?.name ?? t("t.skill"));
+      flourish.set(skill?.name ?? t("tactical.skill"));
       cutin.set({
         key: performance.now(),
         portrait: portraitStyle(actor),
-        name: skill?.name ?? t("t.skill"),
+        name: skill?.name ?? t("tactical.skill"),
         color: `#${(skill?.color ?? 0xffd89a).toString(16).padStart(6, "0")}`,
         team: friendly(actor) ? "ally" : "enemy",
       });
@@ -419,7 +424,7 @@ async function play(packet: BattlePacket) {
           packet.event?.kind === "start"
         )
           showBanner(
-            packet.state.phase === myTeam() ? "t.yourTurn" : "t.enemyTurn",
+            packet.state.phase === myTeam() ? "tactical.yourTurn" : "tactical.enemyTurn",
           );
         const active = packet.state.units.find((u) => u.id === selected());
         if (active?.acted || active?.hp===0 || packet.state.phase!==myTeam()) clearSelection();
@@ -455,7 +460,7 @@ async function play(packet: BattlePacket) {
   }
 }
 export function showBanner(key: string) {
-  bannerSide.set(key === "t.enemyTurn" ? "enemy" : "ally");
+  bannerSide.set(key === "tactical.enemyTurn" ? "enemy" : "ally");
   banner.set(t(key));
   clearTimeout(bannerTimer);
   // Short: the enemy phase starts right after (its first action is 1.65 s later).
@@ -508,11 +513,11 @@ export const menuItems = computed(() => {
   if (!state || !unit) return [];
   const targets = state.units.some((u) => u.hp > 0 && targetable(state, unit, u));
   const entries = [
-    allowed("canAttack") && { id: "attack" as const, glyph: "⚔", label: t("t.attack"), disabled: !targets, count: 0 },
-    allowed("canUseSkills") && { id: "skill" as const, glyph: "✧", label: t("t.skills"), disabled: !options.some((o) => !o.reason), count: options.filter((o) => !o.reason).length },
-    allowed("canUseItems") && { id: "item" as const, glyph: "⚗", label: t("t.items"), disabled: !items.length, count: items.reduce((n, item) => n + item.count, 0) },
-    allowed("canGuard") && { id: "guard" as const, glyph: "⛨", label: t("t.guard"), disabled: false, count: 0 },
-    { id: "wait" as const, glyph: "◷", label: t("t.wait"), disabled: false, count: 0 },
+    allowed("canAttack") && { id: "attack" as const, glyph: "⚔", label: t("tactical.attack"), disabled: !targets, count: 0 },
+    allowed("canUseSkills") && { id: "skill" as const, glyph: "✧", label: t("tactical.skills"), disabled: !options.some((o) => !o.reason), count: options.filter((o) => !o.reason).length },
+    allowed("canUseItems") && { id: "item" as const, glyph: "⚗", label: t("tactical.items"), disabled: !items.length, count: items.reduce((n, item) => n + item.count, 0) },
+    allowed("canGuard") && { id: "guard" as const, glyph: "⛨", label: t("tactical.guard"), disabled: false, count: 0 },
+    { id: "wait" as const, glyph: "◷", label: t("tactical.wait"), disabled: false, count: 0 },
   ].flatMap((entry) => (entry ? [entry] : []));
   return entries.map((entry, index) => ({ ...entry, key: String(index + 2) }));
 });
@@ -733,7 +738,7 @@ export function send(command: Command, then?: Command) {
   cue("confirm");
   timeout = setTimeout(() => {
     busy.set(false);
-    notice.set(t("t.error.connection"));
+    notice.set(t("tactical.error.connection"));
   }, 12000);
 }
 /** Enter / A: the shown order, the highlighted menu entry, or the cursor's cell. */
@@ -806,7 +811,7 @@ export const hint = computed(() => {
     kind = mode(),
     me = myId();
   if (!message && state && spectator()) {
-    return `${t("t.spectatorHint")} ${state.players.map((p) => p.name).join(", ")}`;
+    return `${t("tactical.spectatorHint")} ${state.players.map((p) => p.name).join(", ")}`;
   }
   // Coop: my units have all acted, a partner still plays.
   const mineLeft = state?.units.filter((u) => isMine(u, me) && u.hp > 0 && !u.acted) ?? [];
@@ -814,67 +819,55 @@ export const hint = computed(() => {
   const others = state?.units.filter((u) => u.team === team && !isMine(u, me) && u.hp > 0 && !u.acted) ?? [];
   if (!message && !locked && state?.started && !state.winner && state.phase === team && !mineLeft.length && others.length) {
     const names = [...new Set(others.map((u) => [...state.players, ...state.versus].find((p) => p.id === u.owner)?.name ?? ""))].filter(Boolean);
-    return `${t("t.partnerHint")} ${names.join(", ")}…`;
+    return `${t("tactical.partnerHint")} ${names.join(", ")}…`;
   }
   return (
     message ||
     t(
       locked
-        ? "t.busyHint"
+        ? "tactical.busyHint"
         : state && state.phase !== team
-          ? "t.enemyHint"
+          ? "tactical.enemyHint"
           : command?.type === "surrender"
-            ? "t.surrenderHint"
+            ? "tactical.surrenderHint"
             : command?.type === "escape"
-            ? "t.escapeHint"
+            ? "tactical.escapeHint"
             : command?.type === "endPhase"
-            ? "t.endPhaseHint"
+            ? "tactical.endPhaseHint"
             : command
-            ? "t.confirmHint"
+            ? "tactical.confirmHint"
             : kind === "move"
-              ? "t.moveHint"
+              ? "tactical.moveHint"
               : kind === "menu"
-              ? "t.menuHint"
+              ? "tactical.menuHint"
               : kind === "attack"
-                ? "t.attackHint"
+                ? "tactical.attackHint"
                 : kind === "skill"
-                  ? "t.skillHint"
+                  ? "tactical.skillHint"
                   : kind === "item"
-                    ? "t.itemHint"
-                    : "t.selectHint",
+                    ? "tactical.itemHint"
+                    : "tactical.selectHint",
     )
   );
 });
-/** The sounds of the cues (client option `sounds`): ids of sounds of the game. A cue without one keeps the small tone the plugin synthesizes. */
-export const CUE_SOUNDS: Partial<Record<"select" | "confirm" | "hit" | "back", string>> = {};
-export function cue(kind: "select" | "confirm" | "hit" | "back") {
-  if (!sound()) return;
-  const id = CUE_SOUNDS[kind];
-  if (id && engine?.playSound) return void Promise.resolve(engine.playSound(id, { channel: "sfx" })).catch(() => undefined);
-  audio ??= new AudioContext();
-  void audio.resume();
-  const oscillator = audio.createOscillator(),
-    gain = audio.createGain();
-  oscillator.connect(gain);
-  gain.connect(audio.destination);
-  oscillator.type = kind === "hit" || kind === "back" ? "triangle" : "sine";
-  const now = audio.currentTime;
-  oscillator.frequency.setValueAtTime(
-    kind === "hit" ? 160 : kind === "confirm" ? 660 : 440,
-    now,
-  );
-  oscillator.frequency.exponentialRampToValueAtTime(
-    kind === "hit" ? 35 : 880,
-    now + 0.12,
-  );
-  gain.gain.setValueAtTime(0.055, now);
-  gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-  oscillator.start(now);
-  oscillator.stop(now + 0.2);
-}
+/** The sound cues of the tactical HUD: a cell or an entry selected, an order confirmed, a blow, a cancel. */
+export type TacticalCue = "select" | "confirm" | "hit" | "back";
 
-// Debug handle for devtools and automated playtests.
-(globalThis as any).__tactical = { ...(globalThis as any).__tactical, mode, staged, pace, setPace, battle, busy, send, targetable, reachable, skillsOf, skillUnavailable, get engine() { return engine; } };
+/**
+ * The cues of the HUD (configured by `provideTacticalClient`): the sound the game gives in the `sounds` option, or a short synthesized
+ * tone. They play while the sound of the HUD is on (♪).
+ */
+export const cues = new BattleCues<TacticalCue>({
+  select: (v) => synthTone(440, 0.18, { type: "sine", gain: 0.055 * v, slide: 2 }),
+  confirm: (v) => synthTone(660, 0.18, { type: "sine", gain: 0.055 * v, slide: 4 / 3 }),
+  hit: (v) => synthTone(160, 0.18, { type: "triangle", gain: 0.055 * v, slide: 35 / 160 }),
+  back: (v) => synthTone(440, 0.18, { type: "triangle", gain: 0.055 * v, slide: 2 }),
+});
+
+export function cue(kind: TacticalCue) {
+  if (!sound()) return;
+  cues.play(kind);
+}
 
 /** The HUD is closed: forget the battle (the next one starts clean). */
 export function teardown() {
@@ -905,7 +898,7 @@ export function teardown() {
   hovered.set(null);
 }
 
-/** Result screen confirmed: give control back to the map (resolves `startTactical`). */
+/** Result screen confirmed: give control back to the map (resolves `startTacticalBattle`). */
 export function leave() {
   host.close();
 }

@@ -11,6 +11,24 @@ import { GamepadControls } from "canvasengine";
  * `stepInterval` is read by the patch below: while the stick stays pushed, a
  * direction is repeated at most once per interval instead of once per frame.
  * It can also be a `{ default, up, left... }` map of intervals per control.
+ *
+ * Exported so that the GUIs of modules (a battle system, a shop of a plugin)
+ * answer the gamepad like the built-in ones: A confirms, B or Start goes back,
+ * the d-pad or the stick moves, L/R switch tabs.
+ *
+ * @title Menu gamepad mapping
+ * @prop {object} menuGamepadControls
+ * @memberof Gui
+ * @example
+ * ```ts
+ * import { menuGamepadControls } from "@rpgjs/client";
+ *
+ * const controls = signal({
+ *   action: { bind: keyboardControls.action, keyDown: confirm },
+ *   escape: { bind: keyboardControls.escape, keyDown: back },
+ *   gamepad: menuGamepadControls,
+ * });
+ * ```
  */
 export const menuGamepadControls = {
   enabled: true,

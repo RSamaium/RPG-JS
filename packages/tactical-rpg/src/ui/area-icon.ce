@@ -1,4 +1,4 @@
-<span class={['t-area-icon', visual()]} aria-hidden="true">
+<span class={['rpg-ui-tactical-area-icon', visual()]} aria-hidden="true">
   @for (cell of cells(); track cell.id) {
     <i class={['', {lit:cell.lit}]}></i>
   }

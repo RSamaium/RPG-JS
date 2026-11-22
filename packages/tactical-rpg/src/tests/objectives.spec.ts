@@ -73,9 +73,9 @@ describe("the objective of a battle", () => {
 
 describe("the objective an encounter gives", () => {
   const units = Object.fromEntries(Object.entries(emberDatabase as Record<string, any>).filter(([, r]) => r._type === "tactical-unit"));
-  const skills = Object.fromEntries(Object.entries(emberDatabase as Record<string, any>).filter(([, r]) => r._type === "tactical-skill"));
+  const skills = Object.fromEntries(Object.entries(emberDatabase as Record<string, any>).filter(([, r]) => r._type === "skill"));
   const battle = (goal: any, versus: { id: string; name: string }[] = []) =>
-    createTacticalBattle({ data: { ...(emberDatabase as any).sanctuary.battle, goal }, units, skills }, { id: "t", versus });
+    createTacticalBattle({ data: { ...(emberDatabase as any).sanctuary.tactical, goal }, units, skills }, { id: "t", versus });
 
   it("names the chief by the id of the unit at its place among the enemies", () => {
     const state = battle({ type: "boss", enemy: 1, limit: 6 });

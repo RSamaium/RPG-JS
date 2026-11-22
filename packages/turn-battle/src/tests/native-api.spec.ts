@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { RpgPlayer } from "@rpgjs/server";
 import { DAMAGE_CRITICAL, DAMAGE_GUARD, DAMAGE_PHYSIC, DAMAGE_SKILL } from "@rpgjs/server";
-import { battleEnemy, battleTroop, provideTurnBattleServer, startBattle } from "../server";
+import { turnBattleEnemy, turnBattleTroop, provideTurnBattleServer, startTurnBattle } from "../server";
 import type { BattlePacket } from "../core";
 
 /**
@@ -11,11 +11,11 @@ import type { BattlePacket } from "../core";
 const curve = (start: number, end = start) => ({ start, end });
 
 const database = {
-  fireball: { id: "fireball", name: "Fireball", spCost: 18, power: 105, element: "fire", coefficient: { int: 0.5 }, battle: { scope: "allEnemies" } },
+  fireball: { id: "fireball", name: "Fireball", spCost: 18, power: 105, element: "fire", coefficient: { int: 0.5 }, turnBattle: { scope: "allEnemies" } },
   potion: { id: "potion", name: "Potion", hpValue: 150, consumable: true, price: 50 },
   "iron-sword": { id: "iron-sword", name: "Iron sword", atk: 6, _type: "weapon" },
   "flame-sword": { id: "flame-sword", name: "Flame sword", atk: 6, _type: "weapon", elements: [{ rate: 1, element: "fire" }] },
-  goblin: battleEnemy({
+  goblin: turnBattleEnemy({
     id: "goblin",
     name: "Goblin",
     battler: "goblin",
@@ -23,7 +23,7 @@ const database = {
     reward: { exp: 24, gold: 18, items: [{ itemId: "potion", amount: 1, chance: 100 }] },
     elementsEfficiency: [{ element: "fire", rate: 2 }],
   }),
-  meadow: battleTroop({ id: "meadow", name: "Meadow", enemies: ["goblin", "goblin"], background: "meadow" }),
+  meadow: turnBattleTroop({ id: "meadow", name: "Meadow", enemies: ["goblin", "goblin"], background: "meadow" }),
 };
 
 const last = <T>(list: T[]) => list[list.length - 1];
@@ -88,7 +88,7 @@ describe("a game written with the native RPGJS data", () => {
   it("fights with the parameters, the skills and the items of the player", async () => {
     const { player, packets } = rpgPlayer();
 
-    void startBattle(player, "meadow", { seed: 1 });
+    void startTurnBattle(player, "meadow", { seed: 1 });
     await flush();
 
     const hero = packets[0].state.combatants.find((c) => c.id === `player:${player.id}`)!;
@@ -100,7 +100,7 @@ describe("a game written with the native RPGJS data", () => {
   it("puts the enemies of the troop on the stage, shaped like actors", async () => {
     const { player, packets } = rpgPlayer();
 
-    void startBattle(player, "meadow", { seed: 1 });
+    void startTurnBattle(player, "meadow", { seed: 1 });
     await flush();
 
     const state = packets[0].state;
@@ -113,7 +113,7 @@ describe("a game written with the native RPGJS data", () => {
 
   it("uses the damage formulas of the map: the fire of the weapon hits a vulnerable goblin twice as hard", async () => {
     const { player, packets, handlers } = rpgPlayer();
-    void startBattle(player, "meadow", { seed: 1 });
+    void startTurnBattle(player, "meadow", { seed: 1 });
     await flush();
     const state = last(packets).state;
     const target = state.combatants.find((c) => c.side === "enemy")!.id;
@@ -128,7 +128,7 @@ describe("a game written with the native RPGJS data", () => {
   it("gives the plugin formulas when the map has none, so a bare game still works", async () => {
     const { player, packets } = rpgPlayer({ getFormulas: () => undefined });
 
-    void startBattle(player, "meadow", { seed: 1 });
+    void startTurnBattle(player, "meadow", { seed: 1 });
     await flush();
 
     expect(packets).toHaveLength(1);
@@ -136,7 +136,7 @@ describe("a game written with the native RPGJS data", () => {
 
   it("plays to the victory and commits the rewards, the items and the experience", async () => {
     const { player, packets, handlers } = rpgPlayer();
-    const done = startBattle(player, "meadow", { seed: 1 });
+    const done = startTurnBattle(player, "meadow", { seed: 1 });
     await flush();
 
     for (let turn = 0; turn < 60 && !last(packets).state.result; turn++) {
@@ -158,6 +158,6 @@ describe("a game written with the native RPGJS data", () => {
     const noBattler = { ...database, goblin: { ...database.goblin, battler: undefined } };
     const { player } = rpgPlayer({ databaseById: (id: string) => (noBattler as Record<string, unknown>)[id] });
 
-    await expect(startBattle(player, "meadow")).rejects.toThrow(/no battler/);
+    await expect(startTurnBattle(player, "meadow")).rejects.toThrow(/no battler/);
   });
 });

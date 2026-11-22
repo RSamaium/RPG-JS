@@ -13,8 +13,8 @@ export function skillsOf(state: Pick<BattleState, "skills">, unit: Unit): SkillD
 
 /** Why a skill cannot be used now (i18n key), or null. */
 export function skillUnavailable(unit: Unit, skill: SkillDef): string | null {
-  if (unit.usedSkills.filter((id) => id === skill.id).length >= (skill.uses ?? 1)) return "t.error.skill";
-  if (unit.mp < skill.cost) return "t.error.mp";
+  if (unit.usedSkills.filter((id) => id === skill.id).length >= (skill.uses ?? 1)) return "tactical.error.skill";
+  if (unit.sp < skill.spCost) return "tactical.error.sp";
   return null;
 }
 

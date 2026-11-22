@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { enemyFromDb, skillFromDb, troopFromDb, weaponFromDb } from "../server";
+import { enemyFromDb, skillFromDb, troopFromDb, weaponFromDb } from "../server/database";
 
 const curve = (start: number, end = start) => ({ start, end });
 
@@ -109,10 +109,10 @@ describe("an enemy shaped like an RPGJS actor", () => {
     expect(enemyFromDb(undefined)).toBeUndefined();
   });
 
-  it("keeps reading the previous shape, with `battle: { battler, stats }`", () => {
+  it("keeps reading the previous shape, with `turnBattle: { battler, stats }`", () => {
     const stats = { maxHp: 1, maxSp: 1, atk: 1, def: 1, mag: 1, mdef: 1, agi: 1, luk: 1 };
 
-    expect(enemyFromDb({ name: "Old", gain: { exp: 3 }, battle: { battler: "b", stats } })).toMatchObject({
+    expect(enemyFromDb({ name: "Old", gain: { exp: 3 }, turnBattle: { battler: "b", stats } })).toMatchObject({
       battler: "b",
       stats,
       rewards: { exp: 3 },
@@ -138,7 +138,7 @@ describe("a troop", () => {
   });
 
   it("keeps reading the previous shape, with its data in `battle`", () => {
-    expect(troopFromDb("t", { battle: { enemies: ["goblin"], background: "meadow" } })).toMatchObject({
+    expect(troopFromDb("t", { turnBattle: { enemies: ["goblin"], background: "meadow" } })).toMatchObject({
       id: "t",
       enemies: ["goblin"],
       background: "meadow",
@@ -160,11 +160,11 @@ describe("a skill with native fields", () => {
 
   it("is a physical skill on one enemy unless `battle` says otherwise", () => {
     expect(skillFromDb("hit", { name: "Hit", power: 50 })).toMatchObject({ kind: "physical", scope: "enemy" });
-    expect(skillFromDb("heal", { name: "Heal", battle: { kind: "heal", scope: "ally" } })).toMatchObject({ kind: "heal", scope: "ally" });
+    expect(skillFromDb("heal", { name: "Heal", turnBattle: { kind: "heal", scope: "ally" } })).toMatchObject({ kind: "heal", scope: "ally" });
   });
 
   it("lets `battle` override the native element", () => {
-    expect(skillFromDb("s", { name: "S", element: "fire", battle: { element: "ice" } })?.element).toBe("ice");
+    expect(skillFromDb("s", { name: "S", element: "fire", turnBattle: { element: "ice" } })?.element).toBe("ice");
   });
 
   it("ignores the native element `none`", () => {
@@ -180,7 +180,7 @@ describe("a weapon with native fields", () => {
   });
 
   it("lets `battle.element` override the native elements", () => {
-    const weapon = weaponFromDb({ _type: "weapon", name: "Flame", elements: [{ rate: 1, element: "fire" }], battle: { element: "ice" } });
+    const weapon = weaponFromDb({ _type: "weapon", name: "Flame", elements: [{ rate: 1, element: "fire" }], turnBattle: { element: "ice" } });
 
     expect(weapon?.attack.element).toBe("ice");
   });

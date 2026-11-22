@@ -20,7 +20,7 @@
   const label = computed(() => {
     const p = popup()
     if (!p) return ''
-    return p.kind === 'miss' ? t('tb.miss') : String(p.value).slice(0, 5)
+    return p.kind === 'miss' ? t('turnBattle.miss') : String(p.value).slice(0, 5)
   })
   tick(({ deltaTime }) => {
     const p = popup()

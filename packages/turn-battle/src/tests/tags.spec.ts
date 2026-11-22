@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { createBattle } from "../core";
-import { enemyFromDb, skillFromDb, troopFromDb } from "../server";
+import { enemyFromDb, skillFromDb, troopFromDb } from "../server/database";
 import { catalog, goblin, hero, stats } from "./fixtures";
 
 describe("the tags of the records of the database in a battle", () => {
   it("a skill, an enemy and a troop of the database keep their tags", () => {
     expect(skillFromDb("fire", { name: "Feu", tags: ["fire", "magic"] })!.tags).toEqual(["fire", "magic"]);
-    expect(enemyFromDb({ name: "Dragon", tags: ["boss"], battle: { battler: "dragon", stats: stats() } })!.tags).toEqual(["boss"]);
+    expect(enemyFromDb({ name: "Dragon", tags: ["boss"], turnBattle: { battler: "dragon", stats: stats() } })!.tags).toEqual(["boss"]);
     expect(enemyFromDb({ name: "Gobelin", tags: ["goblin"], parameters: {} })!.tags).toEqual(["goblin"]);
     expect(troopFromDb("lair", { tags: ["boss"], enemies: ["dragon"] })!.tags).toEqual(["boss"]);
   });

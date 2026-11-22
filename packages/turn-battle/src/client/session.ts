@@ -15,7 +15,7 @@ import {
 } from "../core";
 import { commandEntry, commandsOf } from "./menu-entries";
 import { Director, chips, publish } from "./director";
-import { playPreset, type FxFn } from "./fx";
+import type { FxFn } from "./fx";
 import { scene, type Backdrop } from "./scene";
 import { loadBattler, type BattleSpritesheet, type BattlerHints, type BattlerInfo } from "./sheets";
 import { setMuted, sfx } from "./sfx";
@@ -68,7 +68,7 @@ export interface SessionHost {
   hideOtherGuis(): () => void;
   /** Battle music (engine.music.enter / leave); returns a restore function. */
   music(bgm: string | undefined): () => void;
-  /** Client module hooks `battle.<name>`. */
+  /** Client hooks `turnBattle.<name>` (option, then game modules). */
   callHooks(name: string, ...args: unknown[]): Promise<unknown[]>;
 }
 
@@ -106,11 +106,6 @@ let current: {
 } | null = null;
 let targeting: Targeting | null = null;
 let endCinematic: (() => void) | null = null;
-
-// Debug handles for devtools.
-(globalThis as any).__turnBattle = () => current;
-(globalThis as any).__turnBattleScene = scene;
-(globalThis as any).__turnBattleFx = { playPreset, scene };
 
 export function configureSession(h: SessionHost, o: SessionOptions) {
   host = h;
@@ -177,7 +172,7 @@ function open(packet: BattlePacket) {
       current?.restore.push(host.music(display.victoryBgm));
       return true;
     },
-    beat: async (beat: Beat, steps) => !(await host.callHooks("onBeat", beat, scene, steps)).includes(false),
+    beat: async (beat: Beat, steps) => !(await host.callHooks("onPlay", beat, scene, steps)).includes(false),
   });
   const intro = packet.beats.find((b) => b.t === "intro");
   result.set(null);
@@ -343,19 +338,19 @@ function rootEntries(h: Combatant, view: BattleView): MenuEntry[] {
   const limitSkill = h.limit ? view.catalog.skills[h.limit.skill] : undefined;
   const entries: MenuEntry[] = [];
   if (h.limit && h.limit.value >= h.limit.max && limitSkill && !forbids(view, "limit"))
-    entries.push({ id: "limit", label: limitSkill.name, icon: "✦", special: true, hint: t("tb.limitReady"), detail: limitSkill.description });
+    entries.push({ id: "limit", label: limitSkill.name, icon: "✦", special: true, hint: t("turnBattle.limitReady"), detail: limitSkill.description });
   // Custom commands ("Voler", "Analyse"…) come right after the skills.
-  const custom: MenuEntry[] = commandsOf(h, view, false).map((c) => commandEntry(c, h, view, t("tb.sp")));
+  const custom: MenuEntry[] = commandsOf(h, view, false).map((c) => commandEntry(c, h, view, t("turnBattle.sp")));
   entries.push(
-    { id: "attack", label: t("tb.attack"), icon: "⚔", detail: t("tb.attackHint"), disabled: forbids(view, "attack") },
-    { id: "skills", label: t("tb.skills"), icon: "✧", disabled: (h.skills.length === 0 && commandsOf(h, view, true).length === 0) || forbids(view, "skill") },
+    { id: "attack", label: t("turnBattle.attack"), icon: "⚔", detail: t("turnBattle.attackHint"), disabled: forbids(view, "attack") },
+    { id: "skills", label: t("turnBattle.skills"), icon: "✧", disabled: (h.skills.length === 0 && commandsOf(h, view, true).length === 0) || forbids(view, "skill") },
     ...custom,
-    { id: "guard", label: t("tb.guard"), icon: "⛨", detail: t("tb.guardHint"), disabled: forbids(view, "guard") },
-    { id: "items", label: t("tb.items"), icon: "⚗", disabled: forbids(view, "item") || !Object.values(bagOf(view, h)).some((n) => n > 0) },
+    { id: "guard", label: t("turnBattle.guard"), icon: "⛨", detail: t("turnBattle.guardHint"), disabled: forbids(view, "guard") },
+    { id: "items", label: t("turnBattle.items"), icon: "⚗", disabled: forbids(view, "item") || !Object.values(bagOf(view, h)).some((n) => n > 0) },
     // PvP: no escape, but the player may give up.
     pvp()
-      ? { id: "surrender", label: surrenderArmed() ? t("tb.surrenderConfirm") : t("tb.surrender"), icon: "⚑", detail: t("tb.surrenderHint") }
-      : { id: "escape", label: t("tb.escape"), icon: "➶", disabled: !view.canEscape, detail: t("tb.escapeHint") },
+      ? { id: "surrender", label: surrenderArmed() ? t("turnBattle.surrenderConfirm") : t("turnBattle.surrender"), icon: "⚑", detail: t("turnBattle.surrenderHint") }
+      : { id: "escape", label: t("turnBattle.escape"), icon: "➶", disabled: !view.canEscape, detail: t("turnBattle.escapeHint") },
   );
   return entries;
 }
@@ -380,24 +375,24 @@ function openMenu(level: "root" | "skills" | "items" | "options") {
           id: o.id,
           label: o.label,
           icon: o.icon,
-          hint: cost ? `${cost} ${t("tb.sp")}` : undefined,
+          hint: cost ? `${cost} ${t("turnBattle.sp")}` : undefined,
           detail: o.description,
           disabled: cost > h.sp || !!view.blocked?.includes(`${info.id}:${o.id}`),
         };
       }),
     );
   } else if (level === "skills") {
-    menuTitle.set(t("tb.skills"));
+    menuTitle.set(t("turnBattle.skills"));
     menuEntries.set([
       ...h.skills.map((id) => {
         const s = view.catalog.skills[id];
-        return { id, label: s.name, hint: `${s.spCost ?? 0} ${t("tb.sp")}`, detail: s.description, disabled: (s.spCost ?? 0) > h.sp };
+        return { id, label: s.name, hint: `${s.spCost ?? 0} ${t("turnBattle.sp")}`, detail: s.description, disabled: (s.spCost ?? 0) > h.sp };
       }),
       // The skills that do several things, recharge… are commands listed here
-      ...commandsOf(h, view, true).map((c) => commandEntry(c, h, view, t("tb.sp"))),
+      ...commandsOf(h, view, true).map((c) => commandEntry(c, h, view, t("turnBattle.sp"))),
     ]);
   } else {
-    menuTitle.set(t("tb.items"));
+    menuTitle.set(t("turnBattle.items"));
     menuEntries.set(
       Object.entries(bagOf(view, h))
         .filter(([, n]) => n > 0)
@@ -457,8 +452,8 @@ export function chooseEntry(index: number) {
   if (e.disabled) {
     sfx("back");
     if (e.id.startsWith("cmd:") || menuLevel() === "options")
-      return showToast(e.hint && Number.parseInt(e.hint) > h.sp ? t("tb.error.noSp") : t("tb.error.unavailable"));
-    return showToast(e.hint && menuLevel() === "skills" ? t("tb.error.noSp") : e.label);
+      return showToast(e.hint && Number.parseInt(e.hint) > h.sp ? t("turnBattle.error.noSp") : t("turnBattle.error.unavailable"));
+    return showToast(e.hint && menuLevel() === "skills" ? t("turnBattle.error.noSp") : e.label);
   }
   sfx("confirm");
   menuIndex.set(index);
@@ -510,7 +505,7 @@ let disarm: ReturnType<typeof setTimeout> | undefined;
 /** Keep the menu entry label in sync ("Abandonner" / "Confirmer l'abandon ?"). */
 function refreshSurrenderEntry() {
   if (menuLevel() !== "root" || (phase() !== "command" && phase() !== "target")) return;
-  const label = surrenderArmed() ? t("tb.surrenderConfirm") : t("tb.surrender");
+  const label = surrenderArmed() ? t("turnBattle.surrenderConfirm") : t("turnBattle.surrender");
   menuEntries.set(menuEntries().map((e) => (e.id === "surrender" ? { ...e, label } : e)));
 }
 /**
@@ -569,7 +564,7 @@ function startTargeting(scope: TargetScope, command: (target?: string) => Comman
   const h = hero();
   if (!h || !current) return;
   const list = candidates(current.latest, h, scope);
-  if (!list.length) return showToast(t("tb.error.noTarget"));
+  if (!list.length) return showToast(t("turnBattle.error.noTarget"));
   if (scope === "self") return send(command(h.id));
   const multi = isMultiTarget(scope);
   // Default target: first foe still standing, or the most wounded friend.
@@ -586,7 +581,7 @@ function refreshTargets() {
   const ids = targeting.multi ? targeting.ids : [targeting.ids[targeting.index]];
   scene.setTargets(ids);
   const target = targeting.multi ? undefined : current.latest.combatants.find((c) => c.id === ids[0]);
-  targetName.set(targeting.multi ? t("tb.allTargets") : target?.name ?? "");
+  targetName.set(targeting.multi ? t("turnBattle.allTargets") : target?.name ?? "");
   targetInfo.set(target ? targetInfoOf(target, hero()) : null);
 }
 

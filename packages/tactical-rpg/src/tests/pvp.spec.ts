@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
-import { provideTacticalServer, startTactical, stopTactical, getTactical } from "../server";
+import { provideTacticalServer, startTacticalBattle, stopTacticalBattle, getTacticalBattle } from "../server";
 import { createTacticalBattle, transition, type BattlePacket } from "../core";
 import { emberDatabase } from "../demo/database";
 
@@ -12,11 +12,11 @@ const map = {};
 describe("PvP rules", () => {
   it("gives the enemies to the versus side; a side can surrender at any time", () => {
     let state = createTacticalBattle(
-      { data: db.sanctuary.battle, units: pick("tactical-unit") as never, skills: pick("tactical-skill") as never },
+      { data: db.sanctuary.tactical, units: pick("tactical-unit") as never, skills: pick("skill") as never },
       { id: "d", players: [{ id: "a", name: "Alice" }], versus: [{ id: "b", name: "Bob" }] },
     );
     expect(state.units.filter((u) => u.team === "enemy").every((u) => u.owner === "b")).toBe(true);
-    expect(() => transition(state, { type: "surrender" }, "enemy")).toThrow("t.error.turn");
+    expect(() => transition(state, { type: "surrender" }, "enemy")).toThrow("tactical.error.turn");
     state = transition(state, { type: "start" }, "ally").state;
     const out = transition(state, { type: "surrender" }, "enemy", [], "b");
     expect(out.state.winner).toBe("ally");
@@ -44,10 +44,10 @@ function fake(name: string) {
 }
 function duel() {
   vi.useFakeTimers();
-  provideTacticalServer({ units: pick("tactical-unit"), skills: pick("tactical-skill"), encounters: pick("tactical-encounter") });
+  provideTacticalServer({ units: pick("tactical-unit"), skills: pick("skill"), encounters: pick("tactical-encounter") });
   const alice = fake("Alice");
   const bob = fake("Bob");
-  const done = startTactical({ players: [alice.player], versus: [bob.player], encounter: "sanctuary" });
+  const done = startTacticalBattle({ players: [alice.player], versus: [bob.player], encounter: "sanctuary" });
   return { alice, bob, done };
 }
 afterEach(() => vi.useRealTimers());
@@ -56,13 +56,13 @@ describe("PvP session", () => {
   it("each side plays its own units and phase; no AI", async () => {
     const { alice, bob } = duel();
     await vi.advanceTimersByTimeAsync(0);
-    expect(getTactical(bob.player)?.versus).toEqual([bob.player]);
+    expect(getTacticalBattle(bob.player)?.versus).toEqual([bob.player]);
     await alice.command({ type: "start" });
     await bob.command({ type: "start" });
     expect(alice.state().started).toBe(true);
     await vi.advanceTimersByTimeAsync(1500);
     await bob.command({ type: "endPhase" });
-    expect(bob.packets.at(-1)?.error).toBe("t.error.turn");
+    expect(bob.packets.at(-1)?.error).toBe("tactical.error.turn");
     await alice.command({ type: "endPhase" });
     expect(bob.state().phase).toBe("enemy");
     // No AI: nothing happens until Bob plays.
@@ -75,7 +75,7 @@ describe("PvP session", () => {
     // Alice's order waits for the running animation, then the rules refuse it.
     await alice.command({ type: "wait", unitId: cendre.id });
     await vi.advanceTimersByTimeAsync(1500);
-    expect(alice.packets.at(-1)?.error).toBe("t.error.turn");
+    expect(alice.packets.at(-1)?.error).toBe("tactical.error.turn");
   });
   it("surrender: a result per side, the winners listed", async () => {
     const { alice, bob, done } = duel();
@@ -94,7 +94,7 @@ describe("PvP session", () => {
   it("a side left without players loses by forfeit, even before the start", async () => {
     const { alice, bob, done } = duel();
     await vi.advanceTimersByTimeAsync(0);
-    await stopTactical(alice.player);
+    await stopTacticalBattle(alice.player);
     expect(bob.state().winner).toBe("enemy");
     expect(bob.state().started).toBe(true);
     expect(bob.packets.at(-1)?.event).toMatchObject({ kind: "surrender", team: "ally" });
