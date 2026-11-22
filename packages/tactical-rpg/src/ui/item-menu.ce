@@ -1,0 +1,22 @@
+<section class="t-skill-menu t-panel" style={placement()} role="dialog" aria-label={t('t.chooseItem')}>
+  <header><div><span class="t-eyebrow">{{ t('t.chooseItem') }}</span><h3>{{ current()?.name ?? '' }}</h3></div><button click={cancel} aria-label={t('t.back')}>×</button></header>
+  <p>{{ t('t.itemMenuHint') }}</p>
+  <div class="t-skill-list">
+    @for (item of itemOptions(); track item.id) {
+      <button class={['t-skill-choice', {focused: itemOptions()[itemIndex()]?.id === item.id}]} aria-disabled={busy()} click={() => pickItem(item.id)}>
+        <span class="t-skill-copy"><strong>{{ item.name }}</strong><span>{{ item.description ?? '' }}</span><small>{{ restores(item) }}</small></span>
+        <span class="t-skill-cost"><b>{{ item.count }}</b>{{ t('t.owned') }}</span>
+      </button>
+    }
+  </div>
+  <footer><span>{{ t('t.items') }}</span><small>{{ t('t.skillKeys') }}</small></footer>
+</section>
+<script>
+  import { field } from '../client/field'
+  import { panelPlacement } from '../client/panel-anchor'
+  import { current, itemOptions, itemIndex, pickItem, cancel, busy, t } from '../client/state'
+  // Beside the unit that acts (like its menu of actions); docked above the dock on a narrow screen.
+  const placement = () => panelPlacement(field.menuAt(), { width: window.innerWidth, height: window.innerHeight })
+  // What an item gives back.
+  const restores = (item) => [item.hp ? '+' + item.hp + ' ' + t('t.hp') : '', item.mp ? '+' + item.mp + ' ' + t('t.mp') : ''].filter(Boolean).join(' · ')
+</script>

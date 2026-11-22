@@ -1,0 +1,10 @@
+<button class={['t-unit-card', {selected: selected() === unit().id, exhausted: unit().acted || unit().hp <= 0}]} click={() => selectUnit(unit())} aria-disabled={unit().hp <= 0 || unit().acted || !canPlay()} aria-label={unit().name}>
+  <span class={'t-crest ' + unit().role}><span>{{ glyph(unit().role) }}</span></span>
+  <span class="t-card-info"><span class="t-card-name">{{ unit().name }} <small>{{ roleInfo(unit()).name }}</small></span><span class="t-hp-track"><span style={{width: (unit().hp / unit().maxHp * 100) + '%'}}></span></span><span class="t-card-status">{{ unit().hp }} / {{ unit().maxHp }} {{ t('t.hp') }} <b>{{ t(unit().hp <= 0 ? 't.defeated' : unit().acted ? 't.done' : 't.ready') }}</b></span></span>
+</button>
+<script>
+  import { selected, selectUnit, canPlay, t, roleInfo } from '../client/state'
+  const { unit } = defineProps()
+  // Role glyph from the battle's roles (built-in or declared with tacticalRole).
+  const glyph = role => roleInfo({ role }).glyph
+</script>
