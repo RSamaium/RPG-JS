@@ -314,7 +314,7 @@ on("player.inShape", { where: { "shape.name": "well-area" } }, () => {
 | Name | What it does |
 | --- | --- |
 | `createDynamicEvent(options)` | makes an event and gives its id. Plain data: `id` (letters, digits, `_`, `.`, `-`), `x` and `y`, and optionally `name`, `graphic` (the id of a graphic), `hitbox: { width, height }`, `through`, `forPlayer` (the event exists for the player of the script only: the others neither see nor touch it, it goes when that player leaves the map, and its id is made unique for the player). It is a real event: it listens to `event.action` and `event.touch` like the others, and has no look beyond its graphic |
-| `getEvent(id)`, `getEvents()` | copies `{ id, name, x, y, direction }` of the events of the map, the ones of the game too |
+| `getEvent(id)`, `getEvents()` | copies `{ id, name, tags, x, y, direction }` of the events of the map, the ones of the game too. `tags` is what kind of event it is (empty list when none, and for the events a script makes): find the events of a kind with `$map.getEvents().filter((e) => e.tags.includes("sheriff"))`, never by their name |
 | `removeEvent(id)` | removes an event **a script made**; an event of the game stays and it gives `false` |
 | `getPlayers()` | `{ id, name }` of the players on the map |
 
