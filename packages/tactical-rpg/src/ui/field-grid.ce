@@ -1,0 +1,48 @@
+<Container>
+  <Graphics draw={drawCells} />
+  <Graphics draw={drawTrail} />
+  <Graphics draw={drawCursor} />
+</Container>
+
+<script>
+  import { field } from '../client/field'
+  import { battle } from '../client/state'
+
+  // A cell is as big as the cells of the board (the tile of the map), a hair smaller so that neighbours stay apart.
+  const half = () => (battle()?.board.cellSize ?? 60) / 2 - 1
+
+  // Contextual grid: reachable cells, targets, skill area.
+  const drawCells = (g) => {
+    const h = half()
+    for (const c of field.cells())
+      g.roundRect(c.x - h, c.y - h, h * 2, h * 2, 3).fill({ color: c.color, alpha: c.alpha }).stroke({ color: c.color, alpha: c.stroke, width: 1 })
+  }
+
+  // Planned path: line and dots.
+  const drawTrail = (g) => {
+    const path = field.trail()
+    if (path.length < 2) return
+    g.moveTo(path[0].x, path[0].y)
+    for (const p of path.slice(1)) g.lineTo(p.x, p.y)
+    g.stroke({ color: 0xa9eaff, width: 3, alpha: 0.8 })
+    for (const p of path.slice(1)) g.circle(p.x, p.y, 3).fill(0xe7fbff)
+  }
+
+  // Selection corners, or an aim reticle when attacking / casting.
+  const drawCursor = (g) => {
+    const c = field.cursorMark()
+    const pulse = field.cursorPulse() // read before any early return (tracked dependency)
+    if (!c) return
+    if (c.kind === 'target') {
+      const tint = c.valid ? 0xff7474 : 0x9c9caa
+      g.circle(c.x, c.y - 12, 23).stroke({ color: tint, width: 2.5, alpha: 0.95 })
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
+        g.moveTo(c.x + dx * 15, c.y - 12 + dy * 15).lineTo(c.x + dx * 33, c.y - 12 + dy * 33).stroke({ color: tint, width: 3 })
+      return
+    }
+    const h = half()
+    g.roundRect(c.x - h, c.y - h, h * 2, h * 2, 3).fill({ color: 0xffe7ae, alpha: 0.12 }).stroke({ color: 0xffe7ae, alpha: pulse, width: 2 })
+    for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]])
+      g.moveTo(c.x + sx * (h - 10), c.y + sy * h).lineTo(c.x + sx * h, c.y + sy * h).lineTo(c.x + sx * h, c.y + sy * (h - 10)).stroke({ color: 0xffedc4, width: 3 })
+  }
+</script>

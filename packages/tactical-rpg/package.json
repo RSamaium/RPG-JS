@@ -1,0 +1,51 @@
+{
+  "name": "@rpgjs/tactical-rpg",
+  "repository": "github:RSamaium/RPG-JS",
+  "version": "5.2.0",
+  "description": "Grid-based tactical RPG battles for RPGJS: rules, AI, objectives, skills, HUD and battlefield, independent of the turn-based battle",
+  "type": "module",
+  "main": "dist/client/index.js",
+  "types": "dist/client/client/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/client/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client/index.js",
+      "types": "./dist/client/client/index.d.ts"
+    },
+    "./server": {
+      "import": "./dist/server/index.js",
+      "types": "./dist/server/server/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "dev": "vite build --watch",
+    "build": "vite build",
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "peerDependencies": {
+    "@canvasengine/presets": "^2.5.0",
+    "@rpgjs/battle-kit": "workspace:^",
+    "@rpgjs/client": "workspace:^",
+    "@rpgjs/common": "workspace:^",
+    "@rpgjs/server": "workspace:^",
+    "@rpgjs/vite": "workspace:^",
+    "canvasengine": "^2.5.1"
+  },
+  "devDependencies": {
+    "@canvasengine/compiler": "2.5.0",
+    "vite": "^8.0.16",
+    "vite-plugin-dts": "^5.0.2"
+  }
+}

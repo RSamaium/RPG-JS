@@ -1,0 +1,58 @@
+<Container x={v.x} y={v.y} zIndex={v.y} alpha={v.alpha} visible={v.visible}>
+  <Graphics draw={drawRing} />
+  <Container scale={spriteScale}>
+    <Sprite sheet={{ definition: definition(), playing: v.anim(), params: { direction: v.facing() } }} anchor={anchor} tint={tint} filters={filters} />
+  </Container>
+  <Graphics draw={drawBar} />
+  <Text text={v.partner} y={-88} anchor={[0.5, 0.5]} style={partnerStyle} />
+</Container>
+
+<script>
+  import { computed, effect } from 'canvasengine'
+  import { ColorMatrixFilter } from 'pixi.js'
+  import { inject, RpgClientEngine } from '@rpgjs/client'
+  import { field } from '../client/field'
+  import { unitAnchors, unitScales } from '../client/state'
+
+  // One unit: its battler, the RPGJS spritesheet of its character.
+  const { id } = defineProps()
+  const v = field.unit(id())
+  const engine = inject(RpgClientEngine)
+  // The sprite of its character, as the map draws it (stand, walk, attack… and the animations linked to it in the Character Editor).
+  const definition = computed(() => engine.getSpriteSheet(v.battler))
+  // Units are drawn at the same height when the game measured their character, else ~92 px wide whatever the frame size of their sheet.
+  const spriteScale = computed(() => { const s = unitScales[v.battler] ?? 92 / (field.frames()[v.battler]?.w ?? 48); return [s, s] })
+  // The feet of the character stay on the ring, standing or walking
+  const anchor = computed(() => unitAnchors[v.battler]?.[v.anim()] ?? unitAnchors[v.battler]?.stand ?? [0.5, 0.9])
+  const tint = v.tint
+  // Coop: a partner's units wear a blue ring and their commander's name.
+  const PARTNER = 0x8fb2ff
+  // Colours are relative to the local player's side (PvP).
+  // Both signals read first: a draw only tracks what its first run reads.
+  const accentOf = () => { const mine = v.friendly(), partner = v.partner(); return !mine ? 0xf17b76 : partner ? PARTNER : v.color }
+  const partnerStyle = { fontFamily: 'Georgia', fontSize: 11, fontWeight: 'bold', fill: PARTNER, stroke: { color: 0x05070a, width: 3 } }
+
+  // Hit flash (brightness), driven by the choreography.
+  const flash = new ColorMatrixFilter()
+  const filters = [flash]
+  effect(() => {
+    const f = v.flash()
+    flash.reset()
+    if (f > 0) flash.brightness(1 + f * 1.4, false)
+  })
+
+  const drawRing = (g) => {
+    const selected = v.selected()
+    const acted = v.acted()
+    const accent = accentOf()
+    g.ellipse(0, 0, 25, 10).fill({ color: 0x000000, alpha: 0.45 })
+    g.ellipse(0, 0, 27, 11).stroke({ color: accent, width: selected ? 3 : 1.5, alpha: acted ? 0.4 : 0.85 })
+    const pulse = v.pulse()
+    if (pulse > 0) g.ellipse(0, 0, 31 + pulse * 4 - 2, 14).stroke({ color: 0xffeac1, width: 1, alpha: 0.7 })
+  }
+  const drawBar = (g) => {
+    const mine = v.friendly()
+    g.roundRect(-21, -78, 42, 5, 2).fill({ color: 0x091018, alpha: 0.9 })
+    g.roundRect(-20, -77, Math.max(0, 40 * v.hp()), 3, 1).fill(mine ? 0x8ddbd2 : 0xf3867c)
+  }
+</script>
