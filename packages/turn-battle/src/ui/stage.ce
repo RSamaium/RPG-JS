@@ -1,0 +1,151 @@
+<Container alpha={reveal} filters={filters} visible={active}>
+  <Backdrop />
+  <Container x={worldX} y={worldY} scale={zoom} freeze={frozen}>
+    <Container sortableChildren={true}>
+      @for (b of battlers(); track b.id) {
+        <Battler model={b} />
+      }
+    </Container>
+    @for (b of battlers(); track b.id) {
+      <EnemyHud model={b} />
+    }
+    <Graphics draw={drawCursor} />
+    <Graphics draw={drawShapes} blendMode="add" />
+    <Container pixiChildren={[particleLayer]} />
+    @for (a of animations(); track a.key) {
+      <SkillAnimation animation={a} />
+    }
+    @for (i of labelIndexes; track i) {
+      <LabelSlot index={i} />
+    }
+    @for (i of popupIndexes; track i) {
+      <PopupSlot index={i} />
+    }
+  </Container>
+  <Foreground />
+  <BurstView />
+  <Graphics draw={drawOverlay} />
+</Container>
+
+<script>
+  import { computed, mount, tick } from 'canvasengine'
+  import { ZoomBlurFilter, RGBSplitFilter } from 'pixi-filters'
+  import { Container as PixiContainer } from 'pixi.js'
+  import { FxPlayer } from '@rpgjs/battle-kit'
+  import { scene } from '../client/scene'
+  import Backdrop from './backdrop.ce'
+  import Foreground from './foreground.ce'
+  import Battler from './battler.ce'
+  import EnemyHud from './enemy-hud.ce'
+  import LabelSlot from './label-slot.ce'
+  import PopupSlot from './popup-slot.ce'
+  import BurstView from './burst.ce'
+  import SkillAnimation from './skill-animation.ce'
+
+  const { battlers, frozen, zoom, reveal, active, animations } = scene
+  // Pools are addressed by index: a signal passed as a prop would be unwrapped.
+  // Particles: the battle kit's preset player (FxRuntime, the engine behind <Fx>) into a raw layer.
+  const fxPlayer = new FxPlayer({ maxParticles: 3000 })
+  const particleLayer = fxPlayer.layer
+  scene.particles = (preset, x, y, o = {}) =>
+    fxPlayer.play(preset, x, y, { flip: o.flipX, rotation: o.rotation, loop: o.loop })
+  const labelIndexes = scene.labelSlots.map((_, i) => i)
+  const popupIndexes = scene.popupSlots.map((_, i) => i)
+
+  // Camera: the world container is pivoted on (camX, camY) plus a slow sway.
+  const worldX = computed(() => scene.size().w / 2 - (scene.camX() + scene.driftX()) * scene.zoom() + scene.shakeX())
+  const worldY = computed(() => scene.size().h / 2 - (scene.camY() + scene.driftY()) * scene.zoom() + scene.shakeY())
+
+  // Screen-space post effects, created once and driven every frame.
+  const zoomBlur = new ZoomBlurFilter({ strength: 0, innerRadius: 40 })
+  const rgbSplit = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } })
+  zoomBlur.enabled = rgbSplit.enabled = false
+  const filters = [zoomBlur, rgbSplit]
+
+  let app = null
+  mount((element) => {
+    const context = element.props.context
+    app = typeof context?.app === 'function' ? context.app() : context?.app
+  })
+
+  tick(({ deltaTime }) => {
+    const screen = app?.renderer?.screen
+    if (screen && (screen.width !== scene.size().w || screen.height !== scene.size().h)) {
+      scene.size.set({ w: screen.width, h: screen.height })
+      scene.layout()
+    }
+    if (!scene.active()) return
+    const dt = scene.update(deltaTime)
+    fxPlayer.update(dt)
+    const { w, h } = scene.size()
+    const zb = scene.zoomBlur()
+    zoomBlur.enabled = zb.strength > 0.01
+    zoomBlur.strength = zb.strength
+    zoomBlur.center = { x: zb.x * w, y: zb.y * h }
+    const split = scene.rgbSplit()
+    rgbSplit.enabled = split > 0.3
+    rgbSplit.red = { x: -split, y: 0 }
+    rgbSplit.blue = { x: split, y: split * 0.3 }
+  })
+
+  // Targeting cursor: bouncing arrows above the selected battlers.
+  const drawCursor = (g) => {
+    const bob = Math.sin(scene.time() / 140) * 5
+    for (const b of scene.battlers()) {
+      if (!b.targeted() || b.dead()) continue
+      const { x, y } = b.head
+      const color = b.facingLeft ? 0x7dffb2 : 0xffd45c
+      g.poly([x - 12, y - 24 + bob, x + 12, y - 24 + bob, x, y - 7 + bob]).fill({ color }).stroke({ width: 2, color: 0x1a1020 })
+    }
+  }
+
+  // All shape effects (slash arcs, rings, beams, bolts) in one Graphics.
+  const bolts = new WeakMap()
+  const boltPath = (e) => {
+    if (!bolts.has(e)) {
+      const pts = []
+      for (let py = e.y - 540, px = e.x; py <= e.y; py += 40) {
+        pts.push(px, py)
+        px = e.x + (Math.random() - 0.5) * 64
+      }
+      pts.push(e.x, e.y)
+      bolts.set(e, pts)
+    }
+    return bolts.get(e)
+  }
+  const drawShapes = (g) => {
+    const now = scene.time()
+    for (const e of scene.shapes()) {
+      const k = Math.min(1, (now - e.born) / e.life)
+      const t = 1 - (1 - k) ** 3
+      if (e.type === 'arc') {
+        const sweep = Math.PI * 1.25 * Math.min(1, k * 2.2)
+        const w = e.width * (1 - t)
+        const a0 = e.rotation - Math.PI * 0.6
+        // moveTo first: otherwise the arc is joined to the previous path.
+        const sx = e.x + Math.cos(a0) * e.radius, sy = e.y + Math.sin(a0) * e.radius
+        g.moveTo(sx, sy).arc(e.x, e.y, e.radius, a0, a0 + sweep).stroke({ width: w + 1, color: e.color, alpha: 1 - t })
+        g.moveTo(sx, sy).arc(e.x, e.y, e.radius, a0, a0 + sweep).stroke({ width: Math.max(1, w * 0.35), color: 0xffffff, alpha: 1 - t * 0.7 })
+      } else if (e.type === 'ring') {
+        const r = e.from + (e.to - e.from) * t
+        g.ellipse(e.x, e.y, Math.max(0.1, r), Math.max(0.1, r * (e.squash ?? 1))).stroke({ width: e.width * (1 - t) + 0.5, color: e.color, alpha: 1 - t })
+      } else if (e.type === 'beam') {
+        const w = e.width * Math.sin(Math.PI * Math.min(1, k * 1.3))
+        g.rect(e.x - w / 2, e.y - e.height, w, e.height).fill({ color: e.color, alpha: 0.55 * (1 - k) })
+        g.rect(e.x - w / 6, e.y - e.height, w / 3, e.height).fill({ color: 0xffffff, alpha: 0.8 * (1 - k) })
+      } else if (e.type === 'bolt') {
+        const pts = boltPath(e)
+        g.poly(pts, false).stroke({ width: 10 * (1 - k) + 1, color: e.color, alpha: 1 - k })
+        g.poly(pts, false).stroke({ width: 3, color: 0xffffff, alpha: 1 - k })
+      }
+    }
+  }
+
+  const drawOverlay = (g) => {
+    const { w, h } = scene.size()
+    const f = scene.flash()
+    const fade = scene.fade()
+    if (f.alpha > 0.01) g.rect(0, 0, w, h).fill({ color: f.color, alpha: f.alpha })
+    if (fade > 0.01) g.rect(0, 0, w, h).fill({ color: 0x05070f, alpha: fade })
+  }
+</script>

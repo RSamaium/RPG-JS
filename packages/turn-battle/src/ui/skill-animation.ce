@@ -1,0 +1,25 @@
+@if (definition()) {
+  <Sprite sheet={{ definition: definition(), playing: 'default', onFinish: finish }} x={a.x} y={a.y} scale={a.scale} anchor={0.5} />
+}
+
+<script>
+  import { signal } from 'canvasengine'
+  import { inject, RpgClientEngine } from '@rpgjs/client'
+  import { scene } from '../client/scene'
+
+  // One animation of a skill (a sprite sheet of the project, registered in the engine) played where a hit lands.
+  const { animation } = defineProps()
+  const a = animation()
+  const engine = inject(RpgClientEngine)
+  const finish = () => scene.endAnimation(a.key)
+  const definition = signal(null)
+
+  // The engine may still be reading the sheet. One that is missing, or has no `default` animation, is not an error of the battle: nothing is shown.
+  Promise.resolve(engine.getSpriteSheet(a.sheet))
+    .then((found) => {
+      const sheet = typeof found === 'function' ? { ...found.prototype } : found
+      if (sheet?.textures?.default) definition.set(sheet)
+      else finish()
+    })
+    .catch(finish)
+</script>

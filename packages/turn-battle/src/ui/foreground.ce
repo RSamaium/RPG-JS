@@ -1,0 +1,27 @@
+<Container>
+  @if (hasFg()) {
+    <Sprite image={fgImage} anchor={[0.5, 1]} x={fgX} y={fgY} scale={fgScale} blur={2.5} />
+  }
+</Container>
+
+<script>
+  import { computed } from 'canvasengine'
+  import { scene } from '../client/scene'
+
+  // Near layer: grass / rocks close to the lens move faster than the world.
+  const backdrop = scene.backdrop
+  const hasFg = computed(() => !!backdrop()?.fg)
+  const fgImage = computed(() => backdrop()?.fg ?? '')
+  const fgX = computed(() => {
+    const w = scene.size().w
+    return w / 2 - (scene.camX() + scene.driftX() - w / 2) * 1.45 + scene.shakeX() * 1.3
+  })
+  const fgY = computed(() => {
+    const h = scene.size().h
+    return h * 1.04 - (scene.camY() + scene.driftY() - h / 2) * 0.6
+  })
+  const fgScale = computed(() => {
+    const size = backdrop()?.fgSize ?? { w: 1920, h: 640 }
+    return (scene.size().w * 1.3 / size.w) * (1 + (scene.zoom() - 1) * 1.6)
+  })
+</script>

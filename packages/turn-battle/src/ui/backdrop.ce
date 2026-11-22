@@ -1,0 +1,48 @@
+<Container>
+  @if (hasBg()) {
+    <Sprite image={bgImage} anchor={0.5} x={bgX} y={bgY} scale={bgScale} />
+  }
+  <Graphics draw={drawGrade} />
+  @if (weatherA()) {
+    <Weather preset={weatherA()} />
+  }
+  @if (weatherB()) {
+    <Weather preset={weatherB()} />
+  }
+</Container>
+
+<script>
+  import { computed } from 'canvasengine'
+  import { Weather } from '@canvasengine/presets'
+  import { scene } from '../client/scene'
+  import { gradeStrips } from '../client/grade'
+
+  // Far layer: the painted background moves 30% of the camera (parallax).
+  const backdrop = scene.backdrop
+  const hasBg = computed(() => !!backdrop()?.bg)
+  const bgImage = computed(() => backdrop()?.bg ?? '')
+  const pan = () => scene.camX() + scene.driftX() - scene.size().w / 2
+  const bgX = computed(() => scene.size().w / 2 - pan() * 0.3 + scene.shakeX() * 0.3)
+  const bgY = computed(() => scene.size().h / 2 - (scene.camY() + scene.driftY() - scene.size().h / 2) * 0.2)
+  const bgScale = computed(() => {
+    const { w, h } = scene.size()
+    const size = backdrop()?.bgSize ?? { w: 1920, h: 1088 }
+    const cover = Math.max(w / size.w, h / size.h) * 1.12
+    return cover * (1 + (scene.zoom() - 1) * 0.35)
+  })
+
+  // Colour grading: warm top, darker ground so battlers pop.
+  const drawGrade = (g) => {
+    const { w, h } = scene.size()
+    if (!backdrop()) {
+      g.rect(0, 0, w, h).fill({ color: 0x141b33 })
+      return
+    }
+    // Bands that darken little by little: a veil with an edge shows as a stripe across the scenery
+    for (const strip of gradeStrips(w, h)) g.rect(0, strip.y, w, strip.height).fill({ color: 0x000000, alpha: strip.alpha })
+  }
+
+  // Ambient layers: CanvasEngine Weather presets (embers, ash, rays, spores…).
+  const weatherA = computed(() => backdrop()?.weather?.[0] ?? null)
+  const weatherB = computed(() => backdrop()?.weather?.[1] ?? null)
+</script>
