@@ -9,7 +9,7 @@ import { SpatialPartition } from './SpatialPartition';
 import { Vector2 } from '../core/math/Vector2';
 import { AABB } from '../core/math/AABB';
 import { Ray, RaycastHit } from '../collision/Ray';
-import type { EntityConfig } from '../physics/Entity';
+import type { EntityConfig, EntityPositionBatch } from '../physics/Entity';
 import { sweepEntities, type SweepResult } from '../collision/sweep';
 import { invalidateCollider } from '../collision/collider-cache';
 import { sortByCollationKey } from './collision-order';
@@ -79,10 +79,13 @@ export interface WorldConfig {
  */
 export class World {
   private entities: Set<Entity> = new Set();
+  /** First entity added for each UUID, so that a lookup does not scan every entity */
+  private entitiesByUUID: Map<Entity['uuid'], Entity> = new Map();
   // Separate collections for performance
   private staticEntities: Set<Entity> = new Set();
   private dynamicEntities: Set<Entity> = new Set();
   private integrator: Integrator;
+  private readonly positionBatch: EntityPositionBatch = { active: false, dirty: new Set() };
   private resolver: CollisionResolver;
   private spatialPartition: SpatialPartition;
   private events: EventSystem;
@@ -184,6 +187,10 @@ export class World {
    */
   public addEntity(entity: Entity): Entity {
     this.entities.add(entity);
+    if (!this.entitiesByUUID.has(entity.uuid)) {
+      this.entitiesByUUID.set(entity.uuid, entity);
+    }
+    entity.positionBatch = this.positionBatch;
     this.syncEntityCollection(entity);
     this.spatialPartition.insert(entity);
     this.events.emitEntityAdded(entity);
@@ -259,6 +266,18 @@ export class World {
    */
   public removeEntity(entity: Entity): void {
     if (this.entities.delete(entity)) {
+      entity.positionBatch = null;
+      this.positionBatch.dirty.delete(entity);
+      if (this.entitiesByUUID.get(entity.uuid) === entity) {
+        this.entitiesByUUID.delete(entity.uuid);
+        // Another entity can share the UUID: it becomes the one that a lookup returns
+        for (const other of this.entities) {
+          if (other.uuid === entity.uuid) {
+            this.entitiesByUUID.set(other.uuid, other);
+            break;
+          }
+        }
+      }
       this.staticEntities.delete(entity);
       this.dynamicEntities.delete(entity);
       this.spatialPartition.remove(entity);
@@ -282,12 +301,7 @@ export class World {
    * @returns Entity or undefined
    */
   public getEntityByUUID(uuid: string): Entity | undefined {
-    for (const entity of this.entities) {
-      if (entity.uuid === uuid) {
-        return entity;
-      }
-    }
-    return undefined;
+    return this.entitiesByUUID.get(uuid);
   }
 
   /**
@@ -296,45 +310,52 @@ export class World {
    * Updates all entities, detects and resolves collisions.
    */
   public step(): void {
-    // Pick up direct position/state mutations made since the previous step.
-    this.refreshEntitiesInPartition();
+    // The integrator and the resolver can move an entity several times in one step:
+    // position handlers are called once per entity, after the resolution.
+    let firstPassCollisions: CollisionInfo[] = [];
+    this.positionBatch.active = true;
+    try {
+      // Pick up direct position/state mutations made since the previous step.
+      this.refreshEntitiesInPartition();
 
-    // Clear forces and integrate
-    for (const entity of this.dynamicEntities) {
-      if (!entity.isSleeping()) {
-        const startPos = entity.position.clone();
-        this.integrator.integrate(entity);
+      // Clear forces and integrate
+      for (const entity of this.dynamicEntities) {
+        if (!entity.isSleeping()) {
+          const startPos = entity.position.clone();
+          this.integrator.integrate(entity);
 
-        // Check for tile change
-        this.updateEntityTile(entity, startPos);
+          // Check for tile change
+          this.updateEntityTile(entity, startPos);
 
-        // CCD: Check for tunneling if enabled
-        if (entity.continuous) {
-          this.performCCD(entity);
+          // CCD: Check for tunneling if enabled
+          if (entity.continuous) {
+            this.performCCD(entity);
+          }
         }
       }
-    }
 
-    // Broad-phase queries below must use post-integration positions.
-    this.refreshDynamicEntitiesInPartition();
-
-    let firstPassCollisions: CollisionInfo[] = [];
-    for (let iteration = 0; iteration < this.resolverIterations; iteration++) {
-      const collisions = this.detectCollisions();
-      if (iteration === 0) {
-        firstPassCollisions = collisions;
-      }
-      if (collisions.length === 0) {
-        break;
-      }
-      this.sortCollisionsForDeterminism(collisions);
-      this.resolver.resolveAll(collisions);
+      // Broad-phase queries below must use post-integration positions.
       this.refreshDynamicEntitiesInPartition();
-    }
 
-    if (this.positionQuantizationStep !== null || this.velocityQuantizationStep !== null) {
-      this.quantizeEntities();
-      this.refreshDynamicEntitiesInPartition();
+      for (let iteration = 0; iteration < this.resolverIterations; iteration++) {
+        const collisions = this.detectCollisions();
+        if (iteration === 0) {
+          firstPassCollisions = collisions;
+        }
+        if (collisions.length === 0) {
+          break;
+        }
+        this.sortCollisionsForDeterminism(collisions);
+        this.resolver.resolveAll(collisions);
+        this.refreshDynamicEntitiesInPartition();
+      }
+
+      if (this.positionQuantizationStep !== null || this.velocityQuantizationStep !== null) {
+        this.quantizeEntities();
+        this.refreshDynamicEntitiesInPartition();
+      }
+    } finally {
+      this.flushPositionChanges();
     }
 
     this.handleCollisionEvents(firstPassCollisions);
@@ -463,9 +484,12 @@ export class World {
    */
   public clear(): void {
     for (const entity of this.entities) {
+      entity.positionBatch = null;
       this.events.emitEntityRemoved(entity);
     }
+    this.positionBatch.dirty.clear();
     this.entities.clear();
+    this.entitiesByUUID.clear();
     this.staticEntities.clear();
     this.dynamicEntities.clear();
     this.spatialPartition.clear();
@@ -484,6 +508,18 @@ export class World {
         entity.velocity.y = this.quantizeValue(entity.velocity.y, this.velocityQuantizationStep);
       }
     }
+  }
+
+  private flushPositionChanges(): void {
+    const batch = this.positionBatch;
+    batch.active = false;
+    if (batch.dirty.size === 0) {
+      return;
+    }
+    for (const entity of batch.dirty) {
+      entity.flushPositionChange();
+    }
+    batch.dirty.clear();
   }
 
   private quantizeValue(value: number, step: number): number {

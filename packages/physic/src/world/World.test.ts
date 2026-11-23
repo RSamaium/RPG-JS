@@ -223,4 +223,80 @@ describe('World', () => {
       expect(countFor(statics[1]!)).toBe(before + 1);
     });
   });
+
+  describe('lookup by UUID', () => {
+    it('finds an entity, and no longer after it is removed or the world is cleared', () => {
+      const a = world.createEntity({ uuid: 'a', position: { x: 0, y: 0 }, radius: 10 });
+      const b = world.createEntity({ uuid: 'b', position: { x: 50, y: 0 }, radius: 10 });
+      expect(world.getEntityByUUID('a')).toBe(a);
+      expect(world.getEntityByUUID('b')).toBe(b);
+
+      world.removeEntity(a);
+      expect(world.getEntityByUUID('a')).toBeUndefined();
+
+      world.clear();
+      expect(world.getEntityByUUID('b')).toBeUndefined();
+    });
+
+    it('returns the first entity added when two share a UUID, then the other one', () => {
+      const first = world.createEntity({ uuid: 'same', position: { x: 0, y: 0 }, radius: 10 });
+      const second = world.createEntity({ uuid: 'same', position: { x: 50, y: 0 }, radius: 10 });
+      expect(world.getEntityByUUID('same')).toBe(first);
+
+      world.removeEntity(first);
+      expect(world.getEntityByUUID('same')).toBe(second);
+    });
+  });
+
+  describe('position notifications', () => {
+    it('notifies a moving entity once per step', () => {
+      const entity = world.createEntity({ position: { x: 0, y: 0 }, radius: 10, mass: 1, linearDamping: 0 });
+      entity.setVelocity({ x: 60, y: 0 });
+      const handler = vi.fn();
+      entity.onPositionChange(handler);
+
+      world.step();
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].x).toBe(entity.position.x);
+    });
+
+    it('notifies once, with the resolved position, an entity pushed back by a collision', () => {
+      world.createEntity({ position: { x: 25, y: 0 }, width: 20, height: 100, mass: Infinity, state: EntityState.Static });
+      const entity = world.createEntity({ position: { x: 0, y: 0 }, width: 20, height: 20, mass: 1, linearDamping: 0 });
+      entity.setVelocity({ x: 600, y: 0 });
+      const handler = vi.fn();
+      entity.onPositionChange(handler);
+
+      world.step();
+
+      // Without the collision, the entity would be at x = 10
+      expect(entity.position.x).toBeLessThan(10);
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0].x).toBe(entity.position.x);
+      expect(handler.mock.calls[0][0].y).toBe(entity.position.y);
+    });
+
+    it('notifies immediately outside of a step', () => {
+      const entity = world.createEntity({ position: { x: 0, y: 0 }, radius: 10 });
+      const handler = vi.fn();
+      entity.onPositionChange(handler);
+
+      entity.teleport({ x: 50, y: 60 });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler.mock.calls[0][0]).toMatchObject({ x: 50, y: 60 });
+    });
+
+    it('notifies immediately once the entity is removed from the world', () => {
+      const entity = world.createEntity({ position: { x: 0, y: 0 }, radius: 10 });
+      const handler = vi.fn();
+      entity.onPositionChange(handler);
+      world.removeEntity(entity);
+
+      entity.teleport({ x: 5, y: 5 });
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+  });
 });
