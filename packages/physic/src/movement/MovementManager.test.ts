@@ -205,3 +205,51 @@ describe('MovementManager helpers', () => {
     expect(follower.velocity.x).toBeGreaterThan(0);
   });
 });
+
+describe('MovementManager pause', () => {
+  it('does not update the strategies of a paused entity, and goes on after resume', () => {
+    const engine = new PhysicsEngine({ timeStep: 1 / 60, enableSleep: false });
+    const npc = engine.createEntity({ uuid: 'npc', position: { x: 0, y: 0 }, radius: 10, mass: 1, linearDamping: 0 });
+    const movement = engine.getMovementManager();
+    const handle = movement.linearMove(npc, { velocity: { x: 60, y: 0 }, duration: 0.1 });
+
+    engine.stepWithMovements();
+    const xBeforePause = npc.position.x;
+    expect(xBeforePause).toBeGreaterThan(0);
+
+    movement.pause(npc);
+    expect(movement.isPaused('npc')).toBe(true);
+    expect(npc.isSleeping()).toBe(true);
+    for (let i = 0; i < 30; i++) engine.stepWithMovements();
+
+    // Neither the entity nor the time of the movement advanced
+    expect(npc.position.x).toBe(xBeforePause);
+    expect(handle.isActive()).toBe(true);
+
+    expect(movement.resume(npc)).toBe(true);
+    expect(movement.isPaused(npc)).toBe(false);
+    expect(npc.isSleeping()).toBe(false);
+    engine.stepWithMovements();
+    expect(npc.position.x).toBeGreaterThan(xBeforePause);
+
+    for (let i = 0; i < 10; i++) engine.stepWithMovements();
+    expect(handle.isActive()).toBe(false);
+  });
+
+  it('pauses the strategies added after the pause, and an unknown identifier is allowed', () => {
+    const engine = new PhysicsEngine({ timeStep: 1 / 60, enableSleep: false });
+    const movement = engine.getMovementManager();
+    expect(() => movement.pause('later')).not.toThrow();
+
+    const npc = engine.createEntity({ uuid: 'later', position: { x: 0, y: 0 }, radius: 10, mass: 1 });
+    const update = vi.fn();
+    movement.add(npc, { update });
+    movement.update(1 / 60);
+    expect(update).not.toHaveBeenCalled();
+
+    expect(movement.resume('later')).toBe(true);
+    expect(movement.resume('later')).toBe(false);
+    movement.update(1 / 60);
+    expect(update).toHaveBeenCalledTimes(1);
+  });
+});

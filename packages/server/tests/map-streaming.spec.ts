@@ -44,7 +44,7 @@ describe("server map streaming", () => {
     let x = 10;
     const emit = vi.fn();
     const player = { id: "player", conn: {}, x: () => x, y: () => 10, emit };
-    const map = { getPlayers: () => [player] };
+    const map = { getPlayers: () => [player], getEvents: () => [] };
 
     installMapStreaming(map as any, createDefinition(), { loadRadius: 0, retainRadius: 1 });
     expect(emit.mock.calls[0][1]).toMatchObject({
@@ -83,7 +83,7 @@ describe("server map streaming", () => {
     const map = {
       id: "test",
       getTick: () => 0,
-      getPlayers: () => [player],
+      getPlayers: () => [player], getEvents: () => [],
       projectiles: { getActiveNetworkProjectiles: () => [projectile] },
     };
 
@@ -121,7 +121,7 @@ describe("server map streaming", () => {
     const map = {
       id: "test",
       getTick: () => tick,
-      getPlayers: () => [player],
+      getPlayers: () => [player], getEvents: () => [],
       projectiles: { getActiveNetworkProjectiles: () => [projectile] },
     };
 
@@ -139,7 +139,7 @@ describe("server map streaming", () => {
 
   it("keeps projectile impacts and destruction scoped to previously disclosed projectiles", () => {
     const player = { id: "player", conn: {}, x: () => 10, y: () => 10, emit: vi.fn() };
-    const map = { getPlayers: () => [player] };
+    const map = { getPlayers: () => [player], getEvents: () => [] };
 
     installMapStreaming(map as any, createDefinition(), { loadRadius: 0, retainRadius: 0 });
 
@@ -190,7 +190,7 @@ describe("server map streaming", () => {
   it("resends initial chunks when the same player id reconnects", async () => {
     const emit = vi.fn();
     const player = { id: "player", conn: {}, x: () => 10, y: () => 10, emit };
-    const map = { getPlayers: () => [player] };
+    const map = { getPlayers: () => [player], getEvents: () => [] };
     const module = provideServerMapStreaming({
       compile: () => createDefinition(),
     }, { loadRadius: 0, retainRadius: 1 });
@@ -208,7 +208,7 @@ describe("server map streaming", () => {
 
   it("shows entities only in chunks actually disclosed to the player", () => {
     const player = { id: "player", conn: {}, x: () => 10, y: () => 10, emit: vi.fn() };
-    const map = { getPlayers: () => [player] };
+    const map = { getPlayers: () => [player], getEvents: () => [] };
 
     installMapStreaming(map as any, createDefinition(), { loadRadius: 0, retainRadius: 2 });
 
@@ -224,7 +224,7 @@ describe("server map streaming", () => {
     const events = { event };
     const queryHitbox = vi.fn(() => [player, event]);
     const map = {
-      getPlayers: () => [player],
+      getPlayers: () => [player], getEvents: () => [],
       players: () => players,
       events: () => events,
       queryHitbox,

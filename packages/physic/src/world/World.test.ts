@@ -299,4 +299,91 @@ describe('World', () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('sleeping entities', () => {
+    beforeEach(() => {
+      world = new World({ timeStep: 1 / 60, enableSleep: false });
+    });
+
+    it('keeps the collision of a sleeping entity while nothing moves, and ends it when the entity is removed', () => {
+      const zone = world.createEntity({ uuid: 'zone', position: { x: 0, y: 0 }, width: 100, height: 100, mass: Infinity, state: EntityState.Static });
+      const npc = world.createEntity({ uuid: 'npc', position: { x: 10, y: 0 }, width: 20, height: 20, mass: 1 });
+      npc.shouldResolveCollisionWith = () => false;
+      zone.shouldResolveCollisionWith = () => false;
+      const enter = vi.fn();
+      const exit = vi.fn();
+      world.getEvents().onCollisionEnter(enter);
+      world.getEvents().onCollisionExit(exit);
+
+      world.step();
+      expect(enter).toHaveBeenCalledTimes(1);
+
+      npc.sleep();
+      for (let i = 0; i < 5; i++) world.step();
+      expect(enter).toHaveBeenCalledTimes(1);
+      expect(exit).not.toHaveBeenCalled();
+
+      world.removeEntity(npc);
+      world.step();
+      expect(exit).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ['a', 'z'],
+      ['z', 'a'],
+    ])('detects a moving entity "%s" that reaches a sleeping entity "%s"', (movingId, sleepingId) => {
+      const sleeping = world.createEntity({ uuid: sleepingId, position: { x: 40, y: 0 }, width: 20, height: 20, mass: 1 });
+      const moving = world.createEntity({ uuid: movingId, position: { x: 0, y: 0 }, width: 20, height: 20, mass: 1, linearDamping: 0 });
+      const enter = vi.fn();
+      world.getEvents().onCollisionEnter(enter);
+      sleeping.sleep();
+      world.step();
+      world.step();
+      expect(enter).not.toHaveBeenCalled();
+
+      moving.setVelocity({ x: 300, y: 0 });
+      for (let i = 0; i < 10; i++) world.step();
+
+      expect(enter).toHaveBeenCalledTimes(1);
+      // The moving entity did not walk through the sleeping one
+      expect(moving.position.x).toBeLessThan(sleeping.position.x);
+    });
+
+    it('detects a static entity added on a sleeping entity', () => {
+      const npc = world.createEntity({ uuid: 'npc', position: { x: 0, y: 0 }, width: 20, height: 20, mass: 1 });
+      npc.sleep();
+      world.step();
+      world.step();
+      const enter = vi.fn();
+      world.getEvents().onCollisionEnter(enter);
+
+      const zone = world.createEntity({ uuid: 'zone', position: { x: 5, y: 0 }, width: 50, height: 50, mass: Infinity, state: EntityState.Static });
+      zone.shouldResolveCollisionWith = () => false;
+      world.step();
+
+      expect(enter).toHaveBeenCalledTimes(1);
+    });
+
+    it('detects a sleeping entity that was moved directly', () => {
+      const zone = world.createEntity({ uuid: 'zone', position: { x: 500, y: 0 }, width: 50, height: 50, mass: Infinity, state: EntityState.Static });
+      zone.shouldResolveCollisionWith = () => false;
+      const npc = world.createEntity({ uuid: 'npc', position: { x: 0, y: 0 }, width: 20, height: 20, mass: 1 });
+      npc.shouldResolveCollisionWith = () => false;
+      npc.sleep();
+      world.step();
+      world.step();
+      const enter = vi.fn();
+      const exit = vi.fn();
+      world.getEvents().onCollisionEnter(enter);
+      world.getEvents().onCollisionExit(exit);
+
+      npc.position.set(500, 0);
+      world.step();
+      expect(enter).toHaveBeenCalledTimes(1);
+
+      npc.position.set(0, 0);
+      world.step();
+      expect(exit).toHaveBeenCalledTimes(1);
+    });
+  });
 });
