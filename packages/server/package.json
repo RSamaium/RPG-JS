@@ -37,7 +37,7 @@
     "@rpgjs/physic": "workspace:*",
     "@rpgjs/testing": "workspace:*",
     "@signe/di": "3.1.0",
-    "@signe/reactive": "3.1.0",
+    "@signe/reactive": "3.1.1",
     "@signe/room": "3.2.1",
     "@signe/sync": "3.1.1",
     "rxjs": "^7.8.2",

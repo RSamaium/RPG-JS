@@ -234,8 +234,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@signe/reactive':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       '@signe/sync':
         specifier: 3.1.1
         version: 3.1.1(react@19.2.7)
@@ -374,8 +374,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@signe/reactive':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       '@signe/room':
         specifier: 3.2.1
         version: 3.2.1(react@19.2.7)
@@ -573,8 +573,8 @@ importers:
         specifier: 3.1.0
         version: 3.1.0
       '@signe/reactive':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       '@signe/room':
         specifier: 3.2.1
         version: 3.2.1(react@19.2.7)
@@ -3240,9 +3240,6 @@ packages:
 
   '@signe/reactive@2.10.0':
     resolution: {integrity: sha512-JmGxTS1C5C2jrB3vxnQXVuoiHgUNeAOJQ1uRS5pnAfo3qN/LJhFKmnHXBntdN5ypQSqLHoM6zDZhkhGFQYvHAQ==}
-
-  '@signe/reactive@3.1.0':
-    resolution: {integrity: sha512-cMaisjBWB4Hvtysp+gxNmuNYZtTMNMwttRF5i6ch43QAWSDG/UtA6lkXBjcSQBM1L5L8+mX+ygiTG0fUPmc2Ag==}
 
   '@signe/reactive@3.1.1':
     resolution: {integrity: sha512-WP3gGmDqQJnssp9CgaNrsZ41/nhktPjzxBj7Xm46xo8l54bmZbg14jqlq/O5GM1FZ0BmvYcUlTdmwDVPaJbysQ==}
@@ -7414,10 +7411,6 @@ snapshots:
   '@signe/di@3.1.0': {}
 
   '@signe/reactive@2.10.0':
-    dependencies:
-      rxjs: 7.8.2
-
-  '@signe/reactive@3.1.0':
     dependencies:
       rxjs: 7.8.2
 
