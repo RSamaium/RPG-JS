@@ -216,13 +216,11 @@ describe("server map streaming", () => {
     expect(isMapStreamingPositionVisible(map as any, player as any, 110, 10)).toBe(false);
   });
 
-  it("queries visible synchronized entities through the retained chunk bounds", () => {
-    const emit = vi.fn();
-    const player = { id: "player", conn: {}, x: () => 10, y: () => 10, emit };
-    const event = { id: "event", x: () => 20, y: () => 20 };
-    const players = { player };
-    const events = { event };
-    const queryHitbox = vi.fn(() => [player, event]);
+  it("shows the players and the events whose position is in a retained chunk", () => {
+    const player = { id: "player", conn: {}, x: () => 10, y: () => 10, emit: vi.fn() };
+    const players = { player, near: { id: "near", x: () => 90, y: () => 50 }, far: { id: "far", x: () => 250, y: () => 10 } };
+    const events = { event: { id: "event", x: () => 20, y: () => 20 }, away: { id: "away", x: () => 150, y: () => 20 } };
+    const queryHitbox = vi.fn(() => []);
     const map = {
       getPlayers: () => [player], getEvents: () => [],
       players: () => players,
@@ -233,14 +231,33 @@ describe("server map streaming", () => {
     installMapStreaming(map as any, createDefinition(), { loadRadius: 0, retainRadius: 1 });
 
     expect(getMapStreamingVisibleEntityIds(map as any, player as any)).toEqual({
-      players: new Set(["player"]),
+      players: new Set(["player", "near"]),
       events: new Set(["event"]),
     });
-    expect(queryHitbox).toHaveBeenCalledWith({
-      x: 0,
-      y: 0,
-      width: 100,
-      height: 100,
-    });
+    // No spatial query per client: an event without a physics body is visible too
+    expect(queryHitbox).not.toHaveBeenCalled();
+  });
+
+  it("indexes the positions once per broadcast, and again for the next one", async () => {
+    let eventX = 20;
+    const readX = vi.fn(() => eventX);
+    const first = { id: "first", conn: {}, x: () => 10, y: () => 10, emit: vi.fn() };
+    const second = { id: "second", conn: {}, x: () => 30, y: () => 10, emit: vi.fn() };
+    const map = {
+      getPlayers: () => [first, second], getEvents: () => [],
+      players: () => ({ first, second }),
+      events: () => ({ event: { id: "event", x: readX, y: () => 20 } }),
+    };
+    installMapStreaming(map as any, createDefinition(), { loadRadius: 0, retainRadius: 1 });
+
+    // Two clients of the same broadcast read one index
+    expect(getMapStreamingVisibleEntityIds(map as any, first as any)?.events).toEqual(new Set(["event"]));
+    expect(getMapStreamingVisibleEntityIds(map as any, second as any)?.events).toEqual(new Set(["event"]));
+    expect(readX).toHaveBeenCalledTimes(1);
+
+    eventX = 250;
+    await Promise.resolve();
+    expect(getMapStreamingVisibleEntityIds(map as any, first as any)?.events).toEqual(new Set());
+    expect(readX).toHaveBeenCalledTimes(2);
   });
 });

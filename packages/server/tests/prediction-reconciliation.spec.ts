@@ -188,7 +188,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     );
   });
 
-  test("should use spatial candidates for streamed player visibility transitions", () => {
+  test("should follow the chunk of each player for streamed player visibility transitions", async () => {
     installMapStreaming(serverMap, createStreamingDefinition(), {
       loadRadius: 0,
       retainRadius: 0,
@@ -208,15 +208,9 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     farPlayer.id = "far-player";
     farPlayer.x.set(250);
     farPlayer.y.set(player.y());
-    const farX = vi.fn(() => 250);
-    farPlayer.x = farX as any;
     serverMap.players()[farPlayer.id] = farPlayer;
-    farX.mockClear();
-
-    const queryHitbox = vi.spyOn(serverMap, "queryHitbox")
-      .mockReturnValue([player])
-      .mockReturnValueOnce([player, nearbyPlayer])
-      .mockReturnValueOnce([player]);
+    // The visibility no longer asks the physics for candidates: it reads the chunk of every player
+    const queryHitbox = vi.spyOn(serverMap, "queryHitbox");
 
     const entering = serverMap.interceptorPacket(
       player,
@@ -226,9 +220,11 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(entering?.value?.players?.[nearbyPlayer.id]).toEqual(
       expect.objectContaining({ isConnected: true, graphics: ["hero"] }),
     );
-    expect(farX).not.toHaveBeenCalled();
+    expect(entering?.value?.players?.[farPlayer.id]).toBeUndefined();
 
     nearbyPlayer.x.set(250);
+    // The positions are indexed once per broadcast: the next one starts in another task
+    await Promise.resolve();
     const leaving = serverMap.interceptorPacket(
       player,
       { type: "sync", value: {} },
@@ -242,6 +238,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     pendingIndexPlayer.y.set(player.y());
     pendingIndexPlayer.isConnected.set(true);
     serverMap.players()[pendingIndexPlayer.id] = pendingIndexPlayer;
+    await Promise.resolve();
     const supplemented = serverMap.interceptorPacket(
       player,
       {
@@ -257,7 +254,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     expect(supplemented?.value?.players?.[pendingIndexPlayer.id]).toEqual(
       expect.objectContaining({ isConnected: true }),
     );
-    expect(queryHitbox).toHaveBeenCalledTimes(3);
+    expect(queryHitbox).not.toHaveBeenCalled();
   });
 
   test("should stream shared and owned scenario events only while they remain visible", async () => {
@@ -290,10 +287,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
     const ownedEvent = serverMap.events()[ownedId];
     const privateEvent = serverMap.events()[privateId];
 
-    vi.spyOn(serverMap, "queryHitbox")
-      .mockReturnValueOnce([player, sharedEvent, ownedEvent, privateEvent])
-      .mockReturnValueOnce([player]);
-
+    await Promise.resolve();
     const entering = serverMap.interceptorPacket(
       player,
       { type: "sync", value: {} },
@@ -305,6 +299,7 @@ describe("Prediction + Reconciliation Server Protocol", () => {
 
     sharedEvent.x.set(250);
     ownedEvent.x.set(250);
+    await Promise.resolve();
     const leaving = serverMap.interceptorPacket(
       player,
       { type: "sync", value: {} },

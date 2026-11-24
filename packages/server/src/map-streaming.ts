@@ -2,6 +2,7 @@ import {
   MAP_STREAM_EVENT,
   defineModule,
   getMapChunkCoordinates,
+  getMapChunkKey,
   getMapInterestKeys,
   type MapStreamDefinition,
   type MapStreamPacket,
@@ -53,6 +54,11 @@ export type MapStreamingVisibleEntityIds = {
   events: Set<string>;
 };
 
+type MapStreamingEntityIndex = {
+  players: Map<string, string[]>;
+  events: Map<string, string[]>;
+};
+
 class ServerMapStreamingRuntime {
   private readonly players = new Map<string, PlayerInterest>();
   private readonly loadRadius: number;
@@ -63,6 +69,7 @@ class ServerMapStreamingRuntime {
   private interestChanged = true;
   private stepsBeforeEventCheck = 0;
   private stepsBeforePausedCheck = 0;
+  private entityIndex?: MapStreamingEntityIndex;
   /** Events paused because no player retains their chunk */
   private pausedEvents = new Set<string>();
 
@@ -172,36 +179,57 @@ class ServerMapStreamingRuntime {
     return getMapInterestKeys(center, this.loadRadius, manifest).has(targetKey);
   }
 
+  /**
+   * Ids of the players and of the events of the map, by chunk key.
+   *
+   * The positions are the same for every client of one sync broadcast: the index is built for the first client and
+   * read by the others, then dropped at the end of the task so that the next broadcast reads the new positions.
+   */
+  private getEntityIndex(): MapStreamingEntityIndex {
+    if (this.entityIndex) return this.entityIndex;
+    const { chunkWidth, chunkHeight, columns, rows } = this.definition.manifest;
+    const index: MapStreamingEntityIndex = { players: new Map(), events: new Map() };
+    const add = (into: Map<string, string[]>, objects: Record<string, { x(): number; y(): number } | undefined>) => {
+      for (const id of Object.keys(objects)) {
+        const object = objects[id];
+        if (!object) continue;
+        // Same cell as `getMapChunkCoordinates()`, without an object per entity
+        const column = Math.max(0, Math.min(columns - 1, Math.floor(object.x() / chunkWidth)));
+        const row = Math.max(0, Math.min(rows - 1, Math.floor(object.y() / chunkHeight)));
+        const key = getMapChunkKey(column, row);
+        const ids = into.get(key);
+        if (ids) ids.push(id);
+        else into.set(key, [id]);
+      }
+    };
+    add(index.players, this.map.players());
+    add(index.events, this.map.events());
+    this.entityIndex = index;
+    queueMicrotask(() => {
+      this.entityIndex = undefined;
+    });
+    return index;
+  }
+
   getVisibleEntityIds(player: RpgPlayer): MapStreamingVisibleEntityIds {
     const players = new Set<string>([player.id]);
     const events = new Set<string>();
-    const retained = this.players.get(player.id)?.retained;
-    if (!retained || retained.size === 0) return { players, events };
+    // Before the first chunks are sent, the player sees its load window, like `isPositionVisible()`
+    const retained = this.players.get(player.id)?.retained
+      ?? getMapInterestKeys(
+        getMapChunkCoordinates(player.x(), player.y(), this.definition.manifest),
+        this.loadRadius,
+        this.definition.manifest,
+      );
+    if (retained.size === 0) return { players, events };
 
-    const visibleChunks = [...retained]
-      .map((key) => this.definition.chunks[key])
-      .filter((chunk) => !!chunk);
-    if (visibleChunks.length === 0) return { players, events };
-
-    const left = Math.min(...visibleChunks.map((chunk) => chunk.bounds.x));
-    const top = Math.min(...visibleChunks.map((chunk) => chunk.bounds.y));
-    const right = Math.max(...visibleChunks.map((chunk) => chunk.bounds.x + chunk.bounds.width));
-    const bottom = Math.max(...visibleChunks.map((chunk) => chunk.bounds.y + chunk.bounds.height));
-    const mapPlayers = this.map.players();
-    const mapEvents = this.map.events();
-
-    for (const entity of this.map.queryHitbox({
-      x: left,
-      y: top,
-      width: right - left,
-      height: bottom - top,
-    })) {
-      const id = entity?.id;
-      if (!id || !this.isPositionVisible(player, entity.x(), entity.y())) continue;
-      if (mapPlayers[id]) players.add(id);
-      else if (mapEvents[id]) events.add(id);
+    const index = this.getEntityIndex();
+    for (const key of retained) {
+      const playerIds = index.players.get(key);
+      if (playerIds) for (const id of playerIds) players.add(id);
+      const eventIds = index.events.get(key);
+      if (eventIds) for (const id of eventIds) events.add(id);
     }
-
     return { players, events };
   }
 
@@ -377,7 +405,10 @@ export function isMapStreamingPositionVisible(
   return getRuntime(map)?.isPositionVisible(player, x, y) ?? true;
 }
 
-/** Resolve nearby synchronized entities through the map physics spatial index. */
+/**
+ * Ids of the players and of the events whose position is in a chunk retained by the player, or `undefined` when the
+ * map is not streamed. The entities are indexed by chunk once per sync broadcast, not once per client.
+ */
 export function getMapStreamingVisibleEntityIds(
   map: RpgMap,
   player: RpgPlayer,
