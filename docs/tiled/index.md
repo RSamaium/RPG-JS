@@ -123,6 +123,42 @@ Node.js room transport and inside a Cloudflare Durable Object. One map room owns
 one authoritative map instance; Wrangler local development exercises that same
 Durable Object path.
 
+### Events far from the players
+
+On a streamed map, the server only simulates the events that a player can reach.
+An event in a chunk that no player retains (`retainRadius`) is paused: its route,
+its movements and its physics stop, it stays where it is with its state and its
+hitbox, and it goes on when a player comes near. The server cost then grows with
+what players see, not with the number of events on the map, so a large map with
+hundreds of NPCs fits in one room when players are grouped.
+
+An event that must keep moving everywhere, such as a patrol that players meet at
+a fixed time, opts out with `alwaysSimulated`:
+
+```ts
+@EventData({ name: "patrol" })
+class PatrolEvent extends RpgEvent {
+  onInit() {
+    this.alwaysSimulated = true;
+    this.infiniteMoveRoute([Move.tileRight(10), Move.tileLeft(10)]);
+  }
+}
+```
+
+To simulate every event of every map, as before, set `eventSimulation: "always"`
+in the `streaming` options. Each simulated event costs server time at every
+step, whether a player sees it or not.
+
+```ts
+provideTiledMap({
+  basePath: "/map",
+  streaming: { eventSimulation: "always" }
+})
+```
+
+This runs on the server, in MMORPG mode. In standalone RPG mode the map is not
+streamed and every event is simulated.
+
 ### Custom, Studio, and other map formats
 
 Chunk streaming is not tied to Tiled. A map package can pair

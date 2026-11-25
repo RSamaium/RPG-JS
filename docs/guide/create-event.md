@@ -138,6 +138,10 @@ When building an MMORPG, choose the right mode:
 
 See [Event modes](/guide/event-modes) for the full behavior.
 
+## Events far from the players
+
+In an MMORPG, a streamed map pauses the events that no player is near: they stop moving, keep their state, and go on when a player comes back. A route started in `onInit()` therefore does not advance while nobody is around. Set `this.alwaysSimulated = true` in `onInit()` for an event that must keep moving everywhere, such as a patrol or a boss that crosses the map. See [Events far from the players](/tiled/#events-far-from-the-players).
+
 ## Next step
 
 Continue with [Create database](/guide/create-database).

@@ -50,6 +50,34 @@ export class MovementManager {
     return this.core.getStrategies(id);
   }
 
+  /**
+   * Pauses the movements of an entity: they keep their state and are no longer updated until `resume()`.
+   *
+   * @param id - Entity identifier
+   */
+  pause(id: string): void {
+    this.core.pause(id);
+  }
+
+  /**
+   * Resumes the movements of an entity paused with `pause()`.
+   *
+   * @param id - Entity identifier
+   * @returns True when the entity was paused
+   */
+  resume(id: string): boolean {
+    return this.core.resume(id);
+  }
+
+  /**
+   * Checks if the movements of an entity are paused.
+   *
+   * @param id - Entity identifier
+   */
+  isPaused(id: string): boolean {
+    return this.core.isPaused(id);
+  }
+
   update(dtMs: number): void {
     this.core.update(dtMs / 1000);
   }

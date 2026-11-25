@@ -15,7 +15,23 @@ export interface ServerMapStreamingOptions {
   loadRadius?: number;
   /** Chunks retained client-side to avoid churn at grid boundaries. Defaults to 3. */
   retainRadius?: number;
+  /**
+   * Which events of the map are simulated (routes, movements, physics).
+   *
+   * - `'interest'` (default): only the events in a chunk retained by at least one player. The others are paused where
+   *   they are, keep their state, and go on when a player comes near. The server cost then grows with what players
+   *   can see, not with the size of the map.
+   * - `'always'`: every event, wherever the players are.
+   *
+   * An event with `alwaysSimulated = true` is simulated in both modes.
+   */
+  eventSimulation?: "interest" | "always";
 }
+
+/** Fixed steps between two checks of the events to pause or to resume (10 times per second at 60 Hz). */
+const EVENT_SIMULATION_CHECK_STEPS = 6;
+/** Fixed steps between two checks of the paused events when the retained chunks did not change (once per second). */
+const PAUSED_EVENT_CHECK_STEPS = 60;
 
 /** Adapter that compiles a private source map into serializable public chunks. */
 export interface ServerMapStreamingAdapter<TMapData = unknown, TManifestData = unknown, TChunkData = unknown> {
@@ -41,6 +57,14 @@ class ServerMapStreamingRuntime {
   private readonly players = new Map<string, PlayerInterest>();
   private readonly loadRadius: number;
   private readonly retainRadius: number;
+  private readonly eventSimulation: "interest" | "always";
+  /** Chunks (`row * columns + column`) retained by at least one player; rebuilt when `interestChanged` */
+  private readonly retainedByAnyPlayer = new Set<number>();
+  private interestChanged = true;
+  private stepsBeforeEventCheck = 0;
+  private stepsBeforePausedCheck = 0;
+  /** Events paused because no player retains their chunk */
+  private pausedEvents = new Set<string>();
 
   constructor(
     private readonly map: RpgMap,
@@ -49,6 +73,7 @@ class ServerMapStreamingRuntime {
   ) {
     this.loadRadius = Math.max(0, Math.floor(options.loadRadius ?? 2));
     this.retainRadius = Math.max(this.loadRadius, Math.floor(options.retainRadius ?? 3));
+    this.eventSimulation = options.eventSimulation ?? "interest";
   }
 
   sendInitial(player: RpgPlayer): void {
@@ -56,6 +81,7 @@ class ServerMapStreamingRuntime {
     // renderer/physics state is empty. Never reuse the previous connection's
     // retained chunks or projectile visibility for an initial delivery.
     this.players.delete(player.id);
+    this.interestChanged = true;
     this.sendForPosition(player, true);
   }
 
@@ -63,10 +89,77 @@ class ServerMapStreamingRuntime {
     for (const player of this.map.getPlayers()) {
       this.sendForPosition(player, false);
     }
+    this.updateEventSimulation();
   }
 
   removePlayer(player: RpgPlayer): void {
     this.players.delete(player.id);
+    this.interestChanged = true;
+  }
+
+  /** Resume every event this runtime paused. Called when the runtime is replaced or removed. */
+  dispose(): void {
+    for (const id of this.pausedEvents) {
+      this.map.moveManager.resume(id);
+    }
+    this.pausedEvents.clear();
+  }
+
+  /**
+   * Pause the events that no player can see, resume those a player comes near.
+   *
+   * A paused event does not move. The events that are simulated are checked a few times per second (one walks out of
+   * the retained area, or is created). The paused ones are checked when the retained chunks change, and once per
+   * second in case a script moved one.
+   */
+  private updateEventSimulation(): void {
+    if (this.eventSimulation !== "interest") return;
+    this.stepsBeforeEventCheck -= 1;
+    this.stepsBeforePausedCheck -= 1;
+    if (!this.interestChanged && this.stepsBeforeEventCheck > 0) return;
+    this.stepsBeforeEventCheck = EVENT_SIMULATION_CHECK_STEPS;
+
+    const { chunkWidth, chunkHeight, columns, rows } = this.definition.manifest;
+    const retained = this.retainedByAnyPlayer;
+    const checkPaused = this.interestChanged || this.stepsBeforePausedCheck <= 0;
+    if (checkPaused) this.stepsBeforePausedCheck = PAUSED_EVENT_CHECK_STEPS;
+    if (this.interestChanged) {
+      this.interestChanged = false;
+      retained.clear();
+      for (const state of this.players.values()) {
+        for (const key of state.retained) {
+          const chunk = this.definition.chunks[key];
+          if (chunk) retained.add(chunk.y * columns + chunk.x);
+        }
+      }
+    }
+
+    const moveManager = this.map.moveManager;
+    const previous = this.pausedEvents;
+    const paused = new Set<string>();
+    for (const event of this.map.getEvents()) {
+      const id = event?.id;
+      if (!id) continue;
+      const wasPaused = previous.has(id);
+      if (wasPaused && !checkPaused) {
+        paused.add(id);
+        continue;
+      }
+      if (event.alwaysSimulated) continue;
+      // Same cell as `getMapChunkCoordinates()`, without an object and a string per event
+      const column = Math.max(0, Math.min(columns - 1, Math.floor(event.x() / chunkWidth)));
+      const row = Math.max(0, Math.min(rows - 1, Math.floor(event.y() / chunkHeight)));
+      if (retained.has(row * columns + column)) continue;
+      paused.add(id);
+      // The body is created again when the physics of the map is reset: put it back to sleep
+      if (!wasPaused || this.map.physic.getEntityByUUID(id)?.isSleeping() === false) {
+        moveManager.pause(id);
+      }
+    }
+    for (const id of previous) {
+      if (!paused.has(id)) moveManager.resume(id);
+    }
+    this.pausedEvents = paused;
   }
 
   isPositionVisible(player: RpgPlayer, x: number, y: number): boolean {
@@ -177,6 +270,7 @@ class ServerMapStreamingRuntime {
     player.emit(MAP_STREAM_EVENT, packet);
     const projectiles = previous?.projectiles ?? new Set<string>();
     this.players.set(player.id, { centerKey, retained, projectiles });
+    this.interestChanged = true;
     this.sendEnteringProjectiles(player, projectiles);
   }
 
@@ -240,12 +334,14 @@ export function installMapStreaming(
   definition: MapStreamDefinition,
   options: ServerMapStreamingOptions = {},
 ): void {
+  getRuntime(map)?.dispose();
   const runtime = new ServerMapStreamingRuntime(map, definition, options);
   setRuntime(map, runtime);
   map.getPlayers().forEach((player) => runtime.sendInitial(player));
 }
 
 export function clearMapStreaming(map: RpgMap): void {
+  getRuntime(map)?.dispose();
   delete (map as any)[MAP_STREAMING_RUNTIME];
 }
 
@@ -300,7 +396,7 @@ export function filterMapStreamingProjectilePacket(map: RpgMap, player: RpgPlaye
  * the Node.js room adapter and on a Cloudflare Durable Object.
  *
  * @param adapter - Server compiler for the installed map format.
- * @param options - Interest and retention radii expressed in chunks.
+ * @param options - Interest and retention radii expressed in chunks, and which events are simulated.
  * @returns A composable server module installed with `createServer()`.
  *
  * @example
@@ -310,6 +406,9 @@ export function filterMapStreamingProjectilePacket(map: RpgMap, player: RpgPlaye
  *     return compileMyPrivateMap(mapData)
  *   },
  * }, { loadRadius: 2, retainRadius: 3 })
+ *
+ * // Keep simulating every event of the map, even far from the players
+ * provideServerMapStreaming(adapter, { eventSimulation: 'always' })
  * ```
  */
 export function provideServerMapStreaming<TMapData, TManifestData, TChunkData>(
