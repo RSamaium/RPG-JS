@@ -11,13 +11,15 @@
 }
 
 <script>
-    import { computed, effect, signal } from "canvasengine";
+    import { computed, effect, signal, untracked } from "canvasengine";
 
     const { object } = defineProps();
     const displayShadow = signal(false);
 
     effect(() => {
-        displayShadow.set(!!object.graphics()[0]);
+        const visible = !!object.graphics()[0];
+        // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+        untracked(() => displayShadow.set(visible));
     })
 
     const hitbox = object().hitbox;
