@@ -60,7 +60,6 @@ import {
   getMapStreamingDefinition,
   getMapStreamingVisibleEntityIds,
   hasMapStreamingRuntime,
-  isMapStreamingPositionVisible,
   refreshMapStreaming,
   removeMapStreamingPlayer,
   sendInitialMapStreaming,
@@ -839,60 +838,35 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       const visibleEvents = streamingVisibility?.events ?? new Set(previousEvents);
       const visiblePlayers = streamingVisibility?.players ?? new Set(previousPlayers);
 
-      // Keep previously visible entities when their current authoritative
-      // position is still retained. This avoids a transient delete if the
-      // physics broad phase is one update behind synchronized state.
       if (streamingVisibility) {
-        for (const eventId of previousEvents) {
-          const event = this.events()[eventId];
-          if (event && isMapStreamingPositionVisible(this, player, event.x(), event.y())) {
+        // The streaming index is exact for the current positions: only the events of another player are removed
+        const events = this.events();
+        for (const eventId of visibleEvents) {
+          if (!events[eventId] || !this.isEventVisibleForPlayer(eventId, player)) visibleEvents.delete(eventId);
+        }
+        const players = this.players();
+        for (const otherId of visiblePlayers) {
+          if (!players[otherId]) visiblePlayers.delete(otherId);
+        }
+      }
+      else {
+        // Without streaming, a player sees what it already saw and what the packet brings
+        for (const [eventId, value] of Object.entries(packetValue.events ?? {})) {
+          if (value !== "$delete" && this.events()[eventId] && this.isEventVisibleForPlayer(eventId, player)) {
             visibleEvents.add(eventId);
           }
-        }
-        for (const otherId of previousPlayers) {
-          const other = this.players()[otherId];
-          if (other && (otherId === player.id
-            || isMapStreamingPositionVisible(this, player, other.x(), other.y()))) {
-            visiblePlayers.add(otherId);
+          else {
+            visibleEvents.delete(eventId);
           }
         }
-      }
-
-      // Packet entries supplement the physics query. This covers an entity
-      // created or moved immediately before the broad-phase index is updated.
-      for (const [eventId, value] of Object.entries(packetValue.events ?? {})) {
-        if (value === "$delete") {
-          visibleEvents.delete(eventId);
-          continue;
+        for (const eventId of [...visibleEvents]) {
+          if (!this.events()[eventId] || !this.isEventVisibleForPlayer(eventId, player)) {
+            visibleEvents.delete(eventId);
+          }
         }
-        const event = this.events()[eventId];
-        if (event && this.isEventVisibleForPlayer(eventId, player)
-          && (!streamingVisibility || isMapStreamingPositionVisible(this, player, event.x(), event.y()))) {
-          visibleEvents.add(eventId);
-        }
-        else {
-          visibleEvents.delete(eventId);
-        }
-      }
-      for (const eventId of [...visibleEvents]) {
-        const event = this.events()[eventId];
-        if (!event || !this.isEventVisibleForPlayer(eventId, player)) {
-          visibleEvents.delete(eventId);
-        }
-      }
-
-      for (const [otherId, value] of Object.entries(packetValue.players ?? {})) {
-        if (value === "$delete") {
-          visiblePlayers.delete(otherId);
-          continue;
-        }
-        const other = this.players()[otherId];
-        if (other && (otherId === player.id || !streamingVisibility
-          || isMapStreamingPositionVisible(this, player, other.x(), other.y()))) {
-          visiblePlayers.add(otherId);
-        }
-        else {
-          visiblePlayers.delete(otherId);
+        for (const [otherId, value] of Object.entries(packetValue.players ?? {})) {
+          if (value !== "$delete" && this.players()[otherId]) visiblePlayers.add(otherId);
+          else visiblePlayers.delete(otherId);
         }
       }
       visiblePlayers.add(player.id);
