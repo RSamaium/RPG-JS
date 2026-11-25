@@ -137,6 +137,64 @@ describe("server map streaming", () => {
     });
   });
 
+  it("computes the chunk of a flying projectile once per refresh, for every player", () => {
+    let tick = 0;
+    const projectile = {
+      id: "arrow-1", type: "arrow", origin: { x: 10, y: 10 }, direction: { x: 1, y: 0 },
+      speed: 60, range: 300, ttl: 5, spawnTick: 0, delay: 0, index: 0, count: 1, ownerId: "other",
+    };
+    const near = { id: "near", conn: {}, x: () => 10, y: () => 10, emit: vi.fn() };
+    const far = { id: "far", conn: {}, x: () => 210, y: () => 10, emit: vi.fn() };
+    const getActiveNetworkProjectiles = vi.fn(() => [projectile]);
+    const map = {
+      id: "test",
+      getTick: () => tick,
+      getPlayers: () => [near, far], getEvents: () => [],
+      projectiles: { getActiveNetworkProjectiles },
+    };
+    installMapStreaming(map as any, createDefinition(), { loadRadius: 0, retainRadius: 0 });
+    // Each player sees the projectile only while it is in its chunk
+    expect(near.emit).toHaveBeenCalledWith("projectile:spawnBatch", expect.objectContaining({ projectiles: [projectile] }));
+    expect(far.emit).not.toHaveBeenCalledWith("projectile:spawnBatch", expect.anything());
+
+    getActiveNetworkProjectiles.mockClear();
+    near.emit.mockClear();
+    far.emit.mockClear();
+    refreshMapStreaming(map as any);
+    // One read of the projectiles for the two players, and nothing to send: nothing moved
+    expect(getActiveNetworkProjectiles).toHaveBeenCalledTimes(1);
+    expect(near.emit).not.toHaveBeenCalled();
+    expect(far.emit).not.toHaveBeenCalled();
+
+    // Two seconds later the projectile is at x = 130, then at x = 250: it leaves one player and reaches the other
+    tick = 240;
+    refreshMapStreaming(map as any);
+    expect(near.emit).toHaveBeenCalledWith("projectile:destroyBatch", {
+      mapId: "test",
+      projectiles: [{ id: "arrow-1", reason: "interest" }],
+    });
+    expect(far.emit).toHaveBeenCalledWith("projectile:spawnBatch", expect.objectContaining({ projectiles: [projectile] }));
+  });
+
+  it("filters a spawn packet for every client from one computation of its chunks", () => {
+    const near = { id: "near", conn: {}, x: () => 10, y: () => 10, emit: vi.fn() };
+    const far = { id: "far", conn: {}, x: () => 210, y: () => 10, emit: vi.fn() };
+    const map = { getPlayers: () => [near, far], getEvents: () => [] };
+    installMapStreaming(map as any, createDefinition(), { loadRadius: 0, retainRadius: 0 });
+    const readOrigin = vi.fn(() => ({ x: 20, y: 10 }));
+    const packet = {
+      type: "projectile:spawnBatch",
+      value: { mapId: "test", projectiles: [{ id: "a", ownerId: "other", get origin() { return readOrigin(); } }] },
+    };
+
+    const forNear = filterMapStreamingProjectilePacket(map as any, near as any, packet);
+    const forFar = filterMapStreamingProjectilePacket(map as any, far as any, packet);
+
+    expect(forNear.value.projectiles.map((projectile: any) => projectile.id)).toEqual(["a"]);
+    expect(forFar).toBeNull();
+    expect(readOrigin).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps projectile impacts and destruction scoped to previously disclosed projectiles", () => {
     const player = { id: "player", conn: {}, x: () => 10, y: () => 10, emit: vi.fn() };
     const map = { getPlayers: () => [player], getEvents: () => [] };
