@@ -47,12 +47,19 @@ type PlayerInterest = {
   centerKey?: string;
   retained: Set<string>;
   projectiles: Set<string>;
+  /** Revision of the flying projectiles that this player was last compared with */
+  projectileRevision?: number;
 };
 
 export type MapStreamingVisibleEntityIds = {
   players: Set<string>;
   events: Set<string>;
 };
+
+type NetworkProjectile = ReturnType<NonNullable<RpgMap["projectiles"]>["getActiveNetworkProjectiles"]>[number];
+
+/** A flying projectile and the key of the chunk it is in, by projectile id. */
+type FlyingProjectiles = Map<string, { projectile: NetworkProjectile; chunkKey: string }>;
 
 type MapStreamingEntityIndex = {
   players: Map<string, string[]>;
@@ -70,6 +77,14 @@ class ServerMapStreamingRuntime {
   private stepsBeforeEventCheck = 0;
   private stepsBeforePausedCheck = 0;
   private entityIndex?: MapStreamingEntityIndex;
+  /** Index of the flying projectiles of the refresh in progress, shared by every player */
+  private flyingProjectiles?: FlyingProjectiles;
+  private refreshing = false;
+  /** Chunk key of each flying projectile at the last revision, and the number of that revision */
+  private readonly flyingChunkKeys = new Map<string, string>();
+  private flyingRevision = 0;
+  /** Chunk keys of the origins of a spawn packet, by its array of projectiles */
+  private readonly spawnChunkKeys = new WeakMap<object, string[]>();
   /** Events paused because no player retains their chunk */
   private pausedEvents = new Set<string>();
 
@@ -93,8 +108,16 @@ class ServerMapStreamingRuntime {
   }
 
   refreshPlayers(): void {
-    for (const player of this.map.getPlayers()) {
-      this.sendForPosition(player, false);
+    this.flyingProjectiles = this.indexFlyingProjectiles();
+    this.trackFlyingChanges(this.flyingProjectiles);
+    this.refreshing = true;
+    try {
+      for (const player of this.map.getPlayers()) {
+        this.sendForPosition(player, false);
+      }
+    } finally {
+      this.refreshing = false;
+      this.flyingProjectiles = undefined;
     }
     this.updateEventSimulation();
   }
@@ -238,9 +261,21 @@ class ServerMapStreamingRuntime {
     this.players.set(player.id, state);
     const value = packet?.value;
     if (packet?.type === "projectile:spawnBatch") {
-      const projectiles = (value?.projectiles ?? []).filter((projectile: any) => {
-        const visible = projectile.ownerId === player.id
-          || this.isPositionVisible(player, projectile.origin?.x ?? 0, projectile.origin?.y ?? 0);
+      const spawned: any[] = value?.projectiles ?? [];
+      // The same packet is filtered for every client: the chunk of each origin is computed once
+      let chunkKeys = this.spawnChunkKeys.get(spawned);
+      if (!chunkKeys) {
+        const manifest = this.definition.manifest;
+        chunkKeys = spawned.map((projectile) => {
+          const origin = projectile.origin;
+          const chunk = getMapChunkCoordinates(origin?.x ?? 0, origin?.y ?? 0, manifest);
+          return getMapChunkKey(chunk.x, chunk.y);
+        });
+        this.spawnChunkKeys.set(spawned, chunkKeys);
+      }
+      const keys = chunkKeys;
+      const projectiles = spawned.filter((projectile: any, index: number) => {
+        const visible = projectile.ownerId === player.id || state.retained.has(keys[index]!);
         if (visible) state.projectiles.add(projectile.id);
         return visible;
       });
@@ -272,7 +307,7 @@ class ServerMapStreamingRuntime {
     const previous = this.players.get(player.id);
 
     if (!includeManifest && previous?.centerKey === centerKey) {
-      this.sendEnteringProjectiles(player, previous.projectiles);
+      this.sendEnteringProjectiles(player, previous, false);
       return;
     }
 
@@ -297,41 +332,94 @@ class ServerMapStreamingRuntime {
     };
     player.emit(MAP_STREAM_EVENT, packet);
     const projectiles = previous?.projectiles ?? new Set<string>();
-    this.players.set(player.id, { centerKey, retained, projectiles });
+    const state: PlayerInterest = { centerKey, retained, projectiles };
+    this.players.set(player.id, state);
     this.interestChanged = true;
-    this.sendEnteringProjectiles(player, projectiles);
+    this.sendEnteringProjectiles(player, state);
   }
 
-  private sendEnteringProjectiles(player: RpgPlayer, visibleIds: Set<string>): void {
+  /**
+   * Flying projectiles, with the chunk of their position at the current tick.
+   *
+   * The position of a projectile is the same for every player: it is computed once per refresh, and each player only
+   * looks its chunk up in the chunks it retains.
+   */
+  private indexFlyingProjectiles(): FlyingProjectiles | undefined {
     const active = this.map.projectiles?.getActiveNetworkProjectiles?.() ?? [];
-    const activeById = new Map(active.map((projectile) => [projectile.id, projectile]));
-    const positionAtCurrentTick = (projectile: (typeof active)[number]) => {
-      const elapsed = Math.max(0, (this.map.getTick() - projectile.spawnTick) / 60 - projectile.delay);
-      return {
-        x: projectile.origin.x + projectile.direction.x * projectile.speed * elapsed,
-        y: projectile.origin.y + projectile.direction.y * projectile.speed * elapsed,
-      };
-    };
-    const leaving = [...visibleIds].filter((id) => {
-      const projectile = activeById.get(id);
-      if (!projectile || projectile.ownerId === player.id) return false;
-      const position = positionAtCurrentTick(projectile);
-      return !this.isPositionVisible(player, position.x, position.y);
-    });
-    if (leaving.length > 0) {
-      leaving.forEach((id) => visibleIds.delete(id));
+    if (active.length === 0) return undefined;
+    const { chunkWidth, chunkHeight, columns, rows } = this.definition.manifest;
+    const tick = this.map.getTick();
+    const flying: FlyingProjectiles = new Map();
+    for (const projectile of active) {
+      const elapsed = Math.max(0, (tick - projectile.spawnTick) / 60 - projectile.delay);
+      const x = projectile.origin.x + projectile.direction.x * projectile.speed * elapsed;
+      const y = projectile.origin.y + projectile.direction.y * projectile.speed * elapsed;
+      // Same cell as `getMapChunkCoordinates()`, without an object per projectile
+      const column = Math.max(0, Math.min(columns - 1, Math.floor(x / chunkWidth)));
+      const row = Math.max(0, Math.min(rows - 1, Math.floor(y / chunkHeight)));
+      flying.set(projectile.id, { projectile, chunkKey: getMapChunkKey(column, row) });
+    }
+    return flying;
+  }
+
+  /**
+   * Count a new revision when a projectile appeared, ended or moved to another chunk since the previous refresh.
+   * Between two revisions, a player whose retained chunks did not change sees the same projectiles.
+   */
+  private trackFlyingChanges(flying: FlyingProjectiles | undefined): void {
+    const previous = this.flyingChunkKeys;
+    let changed = (flying?.size ?? 0) !== previous.size;
+    if (!changed && flying) {
+      for (const [id, entry] of flying) {
+        if (previous.get(id) !== entry.chunkKey) {
+          changed = true;
+          break;
+        }
+      }
+    }
+    if (!changed) return;
+    this.flyingRevision += 1;
+    previous.clear();
+    if (flying) {
+      for (const [id, entry] of flying) previous.set(id, entry.chunkKey);
+    }
+  }
+
+  private sendEnteringProjectiles(player: RpgPlayer, state: PlayerInterest, retainedChanged = true): void {
+    const visibleIds = state.projectiles;
+    // During a refresh the index is shared by every player; `sendInitial()` builds its own
+    const flying = this.refreshing ? this.flyingProjectiles : this.indexFlyingProjectiles();
+    if (this.refreshing) {
+      // Same projectiles in the same chunks, and same retained chunks: nothing enters or leaves
+      if (!retainedChanged && state.projectileRevision === this.flyingRevision) return;
+      state.projectileRevision = this.flyingRevision;
+    }
+    if (!flying) return;
+    const retained = state.retained;
+
+    let leaving: string[] | undefined;
+    for (const id of visibleIds) {
+      const entry = flying.get(id);
+      // An ended projectile is removed from the set by its destroy packet
+      if (!entry || entry.projectile.ownerId === player.id || retained.has(entry.chunkKey)) continue;
+      (leaving ??= []).push(id);
+    }
+    if (leaving) {
+      for (const id of leaving) visibleIds.delete(id);
       player.emit("projectile:destroyBatch", {
         mapId: this.map.id,
         projectiles: leaving.map((id) => ({ id, reason: "interest" })),
       });
     }
-    const entering = active.filter((projectile) => {
-      if (visibleIds.has(projectile.id)) return false;
-      const position = positionAtCurrentTick(projectile);
-      return projectile.ownerId === player.id || this.isPositionVisible(player, position.x, position.y);
-    });
-    if (entering.length === 0) return;
-    entering.forEach((projectile) => visibleIds.add(projectile.id));
+
+    let entering: NetworkProjectile[] | undefined;
+    for (const [id, entry] of flying) {
+      if (visibleIds.has(id)) continue;
+      if (entry.projectile.ownerId !== player.id && !retained.has(entry.chunkKey)) continue;
+      visibleIds.add(id);
+      (entering ??= []).push(entry.projectile);
+    }
+    if (!entering) return;
     player.emit("projectile:spawnBatch", {
       mapId: this.map.id,
       projectiles: entering,
