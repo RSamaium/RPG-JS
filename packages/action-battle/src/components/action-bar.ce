@@ -74,7 +74,7 @@
 </style>
 
 <script>
-  import { signal, computed, effect, mount } from "canvasengine";
+  import { signal, computed, effect, mount, untracked } from "canvasengine";
   import { inject } from "@rpgjs/client";
   import { getKeyboardControlBind, RpgClientEngine } from "@rpgjs/client";
   import {
@@ -381,7 +381,9 @@
   const controls = signal(buildControls());
 
   effect(() => {
-    controls.set(buildControls());
+    const next = buildControls();
+    // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+    untracked(() => controls.set(next));
   });
 
   mount(() => {

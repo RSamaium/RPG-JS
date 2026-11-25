@@ -30,7 +30,7 @@
 </style>
 
 <script>
-    import { effect, computed } from "canvasengine";
+    import { effect, computed, untracked } from "canvasengine";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
 
@@ -45,8 +45,12 @@
     effect(() => {
         const list = notifications();
         const rowHeight = 68;
-        list.forEach((notif, index) => {
-            notif.layoutY.set(index * rowHeight);
+        // Starting an animation reads its own state: outside dependency collection, the effect only follows the list
+        // and is not run again by every frame of the animations it starts.
+        untracked(() => {
+            list.forEach((notif, index) => {
+                notif.layoutY.set(index * rowHeight);
+            });
         });
     });
 
