@@ -257,6 +257,33 @@ describe("ProjectileManager", () => {
     expect(current[0].props.destroyed).toBe(true);
   });
 
+  test("calls onImpact once for a projectile that stops on its hit, whichever packet carries the impact", () => {
+    const onImpact = vi.fn();
+    const hooks = new Hooks([{ projectiles: { onImpact } }], "client");
+    const manager = new ProjectileManager(hooks);
+    manager.register("arrow", () => null);
+    const spawn = (id: string) => manager.spawnBatch([
+      { id, type: "arrow", origin: { x: 0, y: 0 }, direction: { x: 1, y: 0 }, speed: 100, range: 500, ttl: 5, spawnTick: 1 },
+    ]);
+
+    // The server sends the impact in the destroy entry only
+    spawn("alone");
+    manager.destroyBatch([{ id: "alone", reason: "hit", targetId: "slime", x: 48, y: 0, distance: 48 }]);
+    expect(onImpact).toHaveBeenCalledTimes(1);
+    expect(onImpact.mock.calls[0][0].impact).toMatchObject({ targetId: "slime", x: 48 });
+
+    // An impact packet came first (a server that still sends both): the destroy entry does not call it again
+    spawn("both");
+    manager.impactBatch([{ id: "both", targetId: "slime", x: 48, y: 0, distance: 48 }]);
+    manager.destroyBatch([{ id: "both", reason: "hit", targetId: "slime", x: 48, y: 0, distance: 48 }]);
+    expect(onImpact).toHaveBeenCalledTimes(2);
+
+    // A projectile that ends without a hit plays no impact
+    spawn("missed");
+    manager.destroyBatch([{ id: "missed", reason: "range" }]);
+    expect(onImpact).toHaveBeenCalledTimes(2);
+  });
+
   test("freezes hit destroys at the authoritative impact position until the impact completes", () => {
     vi.useFakeTimers();
     vi.setSystemTime(1000);
