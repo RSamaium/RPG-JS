@@ -1,10 +1,23 @@
 ---
-"@rpgjs/common": patch
+"@rpgjs/account": patch
+"@rpgjs/action-battle": patch
+"@rpgjs/calendar": patch
+"@rpgjs/chat": patch
 "@rpgjs/client": patch
+"@rpgjs/common": patch
+"@rpgjs/map-builder": patch
 "@rpgjs/server": patch
+"@rpgjs/studio": patch
+"@rpgjs/testing": patch
+"@rpgjs/tiledmap": patch
 "@rpgjs/vite": patch
 ---
 
-`@rpgjs/common` and `@rpgjs/client` no longer bundle `@signe/reactive`, `@signe/sync`, `@signe/di`, `@signe/room` and `rxjs` in their `dist`: they import them, so that an application has one copy of the reactive runtime shared by RPGJS (#518). Signals of two copies of `@signe/reactive` do not track each other. `@signe/reactive` is now `3.1.1` everywhere, the version `@signe/sync` depends on (it was `3.1.0`, which installed a second copy). The Vite plugin dedupes `@signe/reactive` when the application can resolve it from its root.
+The reactive runtime is updated and shared (#518):
 
-The MMORPG client bundle goes from several copies of `@signe/reactive` 3 to one. canvasengine 2.5.2 still bundles its own `@signe/reactive` 2.10: the larger part of the cost reported in #518 is there and needs a canvasengine release.
+- `canvasengine` 2.6.0, which is built on `@signe/reactive` 3 (it was on 2.10).
+- `@signe/reactive` 3.2.0, `@signe/sync` 3.2.0, `@signe/room` 3.3.0 and `@signe/di` 3.1.1: `batch()`, faster `load()`, signals that notify without rxjs subjects, less memory per signal, and one sync packet per interval instead of two.
+- `@rpgjs/common` and `@rpgjs/client` no longer bundle `@signe/*` and `rxjs` in their `dist`: they import them, so that an application has one copy shared by RPGJS. The lockfile has a single version of `@signe/reactive`.
+- The Vite plugin dedupes `@signe/reactive` when the application can resolve it from its root.
+
+canvasengine 2.6.0 still bundles its own copy of `@signe/reactive` 3.2.0, so the client bundle has two copies. They share the dependency tracker and the batch state through the global reactive store, so a `batch()` spans both.

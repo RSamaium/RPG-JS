@@ -26,7 +26,7 @@ importers:
         version: 2.5.0(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@changesets/cli':
         specifier: ^2.31.0
         version: 2.31.0(@types/node@25.9.3)
@@ -34,8 +34,8 @@ importers:
         specifier: ^25.9.3
         version: 25.9.3
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1
@@ -67,8 +67,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
         specifier: 2.5.0
@@ -87,7 +87,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: ^2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:^
         version: link:../client
@@ -101,8 +101,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
         specifier: 2.5.0
@@ -129,8 +129,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
         specifier: 2.5.0
@@ -160,8 +160,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
         specifier: 2.5.0
@@ -180,7 +180,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: ^2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/common':
         specifier: workspace:*
         version: link:../common
@@ -191,17 +191,17 @@ importers:
         specifier: workspace:*
         version: link:../ui-css
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@signe/room':
-        specifier: 3.2.1
-        version: 3.2.1(react@19.2.7)
-      '@signe/sync':
         specifier: 3.1.1
-        version: 3.1.1(react@19.2.7)
+        version: 3.1.1
+      '@signe/room':
+        specifier: 3.3.0
+        version: 3.3.0(react@19.2.7)
+      '@signe/sync':
+        specifier: 3.2.0
+        version: 3.2.0(react@19.2.7)
       canvasengine:
-        specifier: ^2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi-filters:
         specifier: ^6.1.5
         version: 6.1.5(pixi.js@8.19.0)
@@ -231,14 +231,14 @@ importers:
         specifier: workspace:*
         version: link:../physic
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@signe/reactive':
         specifier: 3.1.1
         version: 3.1.1
+      '@signe/reactive':
+        specifier: 3.2.0
+        version: 3.2.0
       '@signe/sync':
-        specifier: 3.1.1
-        version: 3.1.1(react@19.2.7)
+        specifier: 3.2.0
+        version: 3.2.0(react@19.2.7)
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -274,8 +274,8 @@ importers:
         specifier: ^25.9.3
         version: 25.9.3
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: 8.19.0
         version: 8.19.0
@@ -371,17 +371,17 @@ importers:
         specifier: workspace:*
         version: link:../testing
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@signe/reactive':
         specifier: 3.1.1
         version: 3.1.1
+      '@signe/reactive':
+        specifier: 3.2.0
+        version: 3.2.0
       '@signe/room':
-        specifier: 3.2.1
-        version: 3.2.1(react@19.2.7)
+        specifier: 3.3.0
+        version: 3.3.0(react@19.2.7)
       '@signe/sync':
-        specifier: 3.1.1
-        version: 3.1.1(react@19.2.7)
+        specifier: 3.2.0
+        version: 3.2.0(react@19.2.7)
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -400,7 +400,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: ^2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:^
         version: link:../action-battle
@@ -420,8 +420,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       json-schema-to-ts:
         specifier: ^3.1.1
         version: 3.1.1
@@ -446,7 +446,7 @@ importers:
     dependencies:
       '@canvasengine/testing':
         specifier: 2.4.1
-        version: 2.4.1(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))
+        version: 2.4.1(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../client
@@ -457,11 +457,11 @@ importers:
         specifier: workspace:*
         version: link:../server
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       rxjs:
         specifier: ^7.8.2
         version: 7.8.2
@@ -480,7 +480,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: ^2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@canvasengine/tiled':
         specifier: 2.4.1
         version: 2.4.1
@@ -497,8 +497,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
         specifier: 2.5.0
@@ -570,17 +570,17 @@ importers:
         specifier: workspace:*
         version: link:../server
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
-      '@signe/reactive':
         specifier: 3.1.1
         version: 3.1.1
+      '@signe/reactive':
+        specifier: 3.2.0
+        version: 3.2.0
       '@signe/room':
-        specifier: 3.2.1
-        version: 3.2.1(react@19.2.7)
+        specifier: 3.3.0
+        version: 3.3.0(react@19.2.7)
       '@signe/sync':
-        specifier: 3.1.1
-        version: 3.1.1(react@19.2.7)
+        specifier: 3.2.0
+        version: 3.2.0(react@19.2.7)
       '@types/node':
         specifier: ^25.9.3
         version: 25.9.3
@@ -666,7 +666,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/account':
         specifier: workspace:*
         version: link:../../../packages/account
@@ -686,8 +686,8 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -703,7 +703,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../../packages/action-battle
@@ -723,11 +723,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -743,7 +743,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../../packages/action-battle
@@ -763,11 +763,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -800,8 +800,8 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -817,7 +817,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/chat':
         specifier: workspace:*
         version: link:../../../packages/chat
@@ -837,8 +837,8 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -854,7 +854,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -871,11 +871,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -905,8 +905,8 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -922,7 +922,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -942,11 +942,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -962,7 +962,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -979,11 +979,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -999,7 +999,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1016,11 +1016,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1036,7 +1036,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1053,11 +1053,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1090,8 +1090,8 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1107,7 +1107,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../../packages/action-battle
@@ -1130,11 +1130,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/ui-css
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: 8.19.0
         version: 8.19.0
@@ -1177,7 +1177,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../../packages/action-battle
@@ -1203,11 +1203,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vue
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1229,7 +1229,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1246,11 +1246,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1266,7 +1266,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1286,11 +1286,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vite
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1306,7 +1306,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:*
         version: link:../../../packages/client
@@ -1326,11 +1326,11 @@ importers:
         specifier: workspace:*
         version: link:../../../packages/vue
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js:
         specifier: ^8.19.0
         version: 8.19.0
@@ -1401,7 +1401,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: 2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/action-battle':
         specifier: workspace:*
         version: link:../../packages/action-battle
@@ -1430,11 +1430,11 @@ importers:
         specifier: workspace:*
         version: link:../../packages/vue
       '@signe/di':
-        specifier: 3.1.0
-        version: 3.1.0
+        specifier: 3.1.1
+        version: 3.1.1
       canvasengine:
-        specifier: 2.5.2
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: 2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -3235,20 +3235,17 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@signe/di@3.1.0':
-    resolution: {integrity: sha512-TH54PLrNnTLQi8QXzx3REoiz1br52ZbK/YDCwTSbSZfRnvF9fFbB5TqRDLehF4apLs30qRpD53fuONnaEx3AXA==}
+  '@signe/di@3.1.1':
+    resolution: {integrity: sha512-cwfh9NunVh6hHX6jmqsnAQhEbc11guYxHmnnEVJiy7BPGiHsQcqr1kHAt/jbexyoFf1j9lsN8HcuQ+wWoEwi4Q==}
 
-  '@signe/reactive@2.10.0':
-    resolution: {integrity: sha512-JmGxTS1C5C2jrB3vxnQXVuoiHgUNeAOJQ1uRS5pnAfo3qN/LJhFKmnHXBntdN5ypQSqLHoM6zDZhkhGFQYvHAQ==}
+  '@signe/reactive@3.2.0':
+    resolution: {integrity: sha512-CVAv8PC31s+SmOOm96/Nde9WYRCCqMtE/e0QYrbLnJD9Fuq8pueHlgfYNrghZmSSTWyqyeto+iD2W5cyPvCbXQ==}
 
-  '@signe/reactive@3.1.1':
-    resolution: {integrity: sha512-WP3gGmDqQJnssp9CgaNrsZ41/nhktPjzxBj7Xm46xo8l54bmZbg14jqlq/O5GM1FZ0BmvYcUlTdmwDVPaJbysQ==}
+  '@signe/room@3.3.0':
+    resolution: {integrity: sha512-lEPWTN2ZtLVx58EXOhqXZlUqJCoJwav5Q9uGit6S1X10GRRGO98TFu8YOo3GWLpWQnSztDiqpaUaaeCoBNWduA==}
 
-  '@signe/room@3.2.1':
-    resolution: {integrity: sha512-g/1LC+jGTRExPRA1V+10dWYH7noZD8UuYhC75ucOHvBLNZ+3EAc9mqRIvgwOmFDN3i/ZPv0a0zM7NSOLrMmD3A==}
-
-  '@signe/sync@3.1.1':
-    resolution: {integrity: sha512-s6UmuumDGE0n/qyso1mN9rbRLUcuSSRZf9mtBquL99nBMTKUHZ+3ouPxbMX4FKT81m9Tu5gF5DA0wk5r3PI/kg==}
+  '@signe/sync@3.2.0':
+    resolution: {integrity: sha512-RKip33sY6x5Ur/pETHMbJUn/94aOegdqViQ0hguTMAQ5kqeivPjzQjgysZIj13G2ctNbVSanTcUU7eI68RX/nw==}
 
   '@sindresorhus/is@7.2.0':
     resolution: {integrity: sha512-P1Cz1dWaFfR4IR+U13mqqiGsLFf1KbayybWwdd2vfctdV6hDpUkgCY0nKOLLTMSoRd/jJNjtbqzf13K8DCCXQw==}
@@ -3746,8 +3743,8 @@ packages:
     resolution: {integrity: sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==}
     engines: {node: '>= 0.4'}
 
-  canvasengine@2.5.2:
-    resolution: {integrity: sha512-NyFKZCSqauTFXRdhMZggFPtOeL62JB+3Pb6/N9Ci8qSxFug5lNbvOVtszaIkpoYrHQUwWONEFAlPBJ4BSMJgYA==}
+  canvasengine@2.6.0:
+    resolution: {integrity: sha512-Et5RI5YIDm6U7AhJlGXIcYwLMJSU8/4xjBiWYTAjkJtbu3sbwQ+nbR8hyebZuFZ5UXBzFTFYwV9n0BDNtcSfsQ==}
     peerDependencies:
       pixi.js: ^8.19.0
 
@@ -4104,6 +4101,9 @@ packages:
     peerDependenciesMeta:
       picomatch:
         optional: true
+
+  fflate@0.8.2:
+    resolution: {integrity: sha512-cPJU47OaAoCbg0pBvzsgpTPhmhqI5eJjh/JIu8tPj5q+T7iLvW/JAYUqmE7KOB4R1ZyEhzBaIQpQpardBF5z8A==}
 
   fflate@0.8.3:
     resolution: {integrity: sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==}
@@ -6102,17 +6102,17 @@ snapshots:
       - tsx
       - yaml
 
-  '@canvasengine/presets@2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)':
+  '@canvasengine/presets@2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)':
     dependencies:
       '@canvasengine/tiled': 2.4.1
       '@canvasengine/tilemap': 5.0.2(pixi.js@8.19.0)
-      canvasengine: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+      canvasengine: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi.js: 8.19.0
       rxjs: 7.8.2
 
-  '@canvasengine/testing@2.4.1(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))':
+  '@canvasengine/testing@2.4.1(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(vitest@4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0)))':
     dependencies:
-      canvasengine: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+      canvasengine: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       rxjs: 7.8.2
       vitest: 4.1.10(@types/node@25.9.3)(@vitest/coverage-v8@4.1.9(vitest@4.1.9))(@vitest/ui@4.1.9(vitest@4.1.9))(jsdom@29.1.1)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(tsx@4.22.4)(yaml@2.9.0))
 
@@ -7408,28 +7408,25 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@signe/di@3.1.0': {}
+  '@signe/di@3.1.1': {}
 
-  '@signe/reactive@2.10.0':
+  '@signe/reactive@3.2.0':
     dependencies:
       rxjs: 7.8.2
 
-  '@signe/reactive@3.1.1':
+  '@signe/room@3.3.0(react@19.2.7)':
     dependencies:
-      rxjs: 7.8.2
-
-  '@signe/room@3.2.1(react@19.2.7)':
-    dependencies:
-      '@signe/sync': 3.1.1(react@19.2.7)
+      '@signe/sync': 3.2.0(react@19.2.7)
       dset: 3.1.4
       partysocket: 1.2.0(react@19.2.7)
       zod: 3.25.76
     transitivePeerDependencies:
       - react
 
-  '@signe/sync@3.1.1(react@19.2.7)':
+  '@signe/sync@3.2.0(react@19.2.7)':
     dependencies:
-      '@signe/reactive': 3.1.1
+      '@signe/reactive': 3.2.0
+      fflate: 0.8.2
       partysocket: 1.2.0(react@19.2.7)
       rxjs: 7.8.2
     transitivePeerDependencies:
@@ -8044,12 +8041,12 @@ snapshots:
       call-bind-apply-helpers: 1.0.2
       get-intrinsic: 1.3.0
 
-  canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7):
+  canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7):
     dependencies:
       '@barvynkoa/particle-emitter': 0.0.1(pixi.js@8.19.0)
       '@chenglou/pretext': 0.0.6
       '@pixi/layout': 3.2.1(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)(yoga-layout@3.2.1)
-      '@signe/reactive': 2.10.0
+      '@signe/reactive': 3.2.0
       howler: 2.2.4
       joypad.js: 2.3.5
       pixi-filters: 6.1.5(pixi.js@8.19.0)
@@ -8462,6 +8459,8 @@ snapshots:
   fdir@6.5.0(picomatch@4.0.5):
     optionalDependencies:
       picomatch: 4.0.5
+
+  fflate@0.8.2: {}
 
   fflate@0.8.3: {}
 

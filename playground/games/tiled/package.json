@@ -27,8 +27,8 @@
     "@rpgjs/ui-css": "workspace:*",
     "@rpgjs/vite": "workspace:*",
     "@rpgjs/vue": "workspace:*",
-    "@signe/di": "3.1.0",
-    "canvasengine": "2.5.2",
+    "@signe/di": "3.1.1",
+    "canvasengine": "2.6.0",
     "pixi.js": "^8.19.0"
   },
   "type": "module"
