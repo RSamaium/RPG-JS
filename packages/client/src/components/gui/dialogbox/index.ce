@@ -69,7 +69,7 @@
 </DOMContainer>
     
 <script>
-    import { effect, signal, computed, createTabindexNavigator, mount } from "canvasengine";
+    import { effect, signal, computed, untracked, createTabindexNavigator, mount } from "canvasengine";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import { guiTransition, lockGuiInput, selectionSound } from "../lifecycle";
@@ -185,11 +185,16 @@
         const text = currentRuns().map(run => run.text).join("");
         fullMessage.set(text);
         const useTypewriter = resolveProp(typewriterEffect()) !== false;
-        if (!useTypewriter) {
-            finishTyping();
-            return;
-        }
-        startTypewriter(text, pagination().resume);
+        const resume = pagination().resume;
+        // The writes below update the DOM at once. Outside dependency collection, what that rendering reads does not
+        // become a dependency of this effect, which would then run again on its own writes.
+        untracked(() => {
+            if (!useTypewriter) {
+                finishTyping();
+                return;
+            }
+            startTypewriter(text, resume);
+        });
     });
 
 
