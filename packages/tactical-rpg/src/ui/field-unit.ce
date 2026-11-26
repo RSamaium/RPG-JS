@@ -9,8 +9,8 @@
 
 <script>
   import { computed, effect } from 'canvasengine'
-  import { ColorMatrixFilter } from 'pixi.js'
   import { inject, RpgClientEngine } from '@rpgjs/client'
+  import { BattlerLook } from '@rpgjs/battle-kit'
   import { field } from '../client/field'
   import { unitAnchors, unitScales } from '../client/state'
 
@@ -30,15 +30,15 @@
   // Colours are relative to the local player's side (PvP).
   // Both signals read first: a draw only tracks what its first run reads.
   const accentOf = () => { const mine = v.friendly(), partner = v.partner(); return !mine ? 0xf17b76 : partner ? PARTNER : v.color }
-  const partnerStyle = { fontFamily: 'Georgia', fontSize: 11, fontWeight: 'bold', fill: PARTNER, stroke: { color: 0x05070a, width: 3 } }
+  const partnerStyle = { fontSize: 11, fontWeight: 'bold', fill: PARTNER, stroke: { color: 0x05070a, width: 3 } }
 
-  // Hit flash (brightness), driven by the choreography.
-  const flash = new ColorMatrixFilter()
-  const filters = [flash]
+  // Hit flash (brightness), driven by the choreography; the battle kit owns the filter.
+  const look = new BattlerLook()
+  const filters = look.filters
   effect(() => {
     const f = v.flash()
-    flash.reset()
-    if (f > 0) flash.brightness(1 + f * 1.4, false)
+    look.reset()
+    if (f > 0) look.brightness(1 + f * 1.4)
   })
 
   const drawRing = (g) => {

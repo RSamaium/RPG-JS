@@ -2,19 +2,36 @@
 import { createModule } from "@rpgjs/common";
 import { defineModule, inject, RpgClientEngine, RpgGui, type RpgClient } from "@rpgjs/client";
 import { BattleClientHooks, hideGuisDuringBattle, type BattleCueSound, type BattleScreenOptions } from "@rpgjs/battle-kit";
-import { TACTICAL_GUI, TACTICAL_HIDDEN_GRAPHIC, TACTICAL_I18N, type BattleEvent, type BattleState, type Cell } from "../core";
+import { TACTICAL_GUI, TACTICAL_HIDDEN_GRAPHIC } from "../core";
+import { TACTICAL_I18N } from "../core/messages";
+import type { BattleEvent, BattleState, Cell } from "../core/types";
 import { world } from "../core/board";
 import TacticalHud from "../ui/tactical-hud.ce";
 import Battlefield from "../ui/battlefield.ce";
 import { field, type UnitView } from "./field";
 import { connectEngine, connectEventHook, connectHost, cues, notice, reduced, sound, t, type TacticalCue } from "./state";
 
-export * from "../core";
-export type { Stage } from "./choreography";
+// The public surface of the client side: the module, its options and hooks, the texts, the walking sheets of the battlers, and the
+// types the hooks receive. The rules, the board and the HUD state stay internal.
+export { TACTICAL_I18N } from "../core/messages";
+export { walkingSheet } from "../core/data";
 export type { UnitView } from "./field";
 export type { TacticalCue } from "./state";
+export type { TacticalControl } from "./keys";
+export type { AttackStyle, BattleEvent, BattlePlayer, BattleState, Board, Cell, Role, RoleDef, SkillDef, ItemDef, Team, Unit } from "../core/types";
 
-/** What an `onPlay` hook can drive: the effect presets and screen impacts of `@rpgjs/battle-kit`, popups, unit views. */
+/**
+ * What an `onPlay` hook can drive: the effect presets and screen impacts of `@rpgjs/battle-kit`, popups, unit views. Client only:
+ * it changes what is shown, never the outcome.
+ *
+ * @example
+ * ```ts
+ * onPlay(event, state, stage) {
+ *   const at = stage.world(state.units.find((u) => u.id === event.targetId)!);
+ *   stage.popup("Critical!", at.x, at.y, { color: 0xffd166, big: true });
+ * }
+ * ```
+ */
 export interface TacticalStage {
   /** CanvasEngine presets (`fx.play("fireball", x, y)`), in map world coordinates. */
   fx: typeof field.fx;
@@ -73,7 +90,13 @@ declare module "@rpgjs/client" {
  * (`hideGuis`, `keepGuis`, `onBattleShown`) are the ones of every RPGJS battle
  * system (`BattleScreenOptions` of `@rpgjs/battle-kit`). The texts are the
  * `tactical.*` keys of the i18n service: a game overrides them in its own
- * module.
+ * module. The keys are the `keyboardControls` of the game (see
+ * `TacticalControl`). Client only.
+ *
+ * @example
+ * ```ts
+ * provideTacticalClient({ keepGuis: ["chat"], sounds: { confirm: "ui-ok", hit: false }, reducedMotion: true });
+ * ```
  */
 export interface TacticalClientOptions extends BattleScreenOptions {
   /**

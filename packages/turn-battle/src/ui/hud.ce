@@ -22,8 +22,8 @@
         @if (!spectating() && audience() > 0) {
           <span class="rpg-ui-turn-battle-pill rpg-ui-turn-battle-audience" title={t('turnBattle.audience')}>👁 {{ audience() }}</span>
         }
-        <button class="rpg-ui-btn rpg-ui-turn-battle-pill" data-variant="ghost" data-size="small" click={toggleMuted} title={t('turnBattle.sound')}>{{ muted() ? '🔇' : '🔊' }}</button>
-        <button class="rpg-ui-btn rpg-ui-turn-battle-pill" data-variant="ghost" data-size="small" click={cycleSpeed} title={t('turnBattle.speed')}>▸▸ ×{{ speed() }}</button>
+        <button class="rpg-ui-btn rpg-ui-turn-battle-pill" data-variant="ghost" data-size="small" click={toggleMuted} title={t('turnBattle.sound')} aria-label={t(muted() ? 'turnBattle.soundOn' : 'turnBattle.soundOff')} aria-pressed={muted() ? 'true' : 'false'}>{{ muted() ? '🔇' : '🔊' }}</button>
+        <button class="rpg-ui-btn rpg-ui-turn-battle-pill" data-variant="ghost" data-size="small" click={cycleSpeed} title={t('turnBattle.speed')} aria-label={t('turnBattle.speedValue', { speed: speed() })}>▸▸ ×{{ speed() }}</button>
       </div>
     }
 
@@ -79,13 +79,13 @@
           <div class="rpg-ui-turn-battle-stat">
             <span class="rpg-ui-turn-battle-stat-key">{{ t('turnBattle.hp') }}</span>
             <div class={['rpg-ui-turn-battle-gauge', targetInfo()?.foe ? 'rpg-ui-turn-battle-foe-hp' : 'rpg-ui-turn-battle-hp']}><i style={{ width: pct(targetInfo()?.hp, targetInfo()?.maxHp) }}></i></div>
-            <span class="rpg-ui-turn-battle-stat-val">{{ targetInfo()?.known ? targetInfo()?.hp + ' / ' + targetInfo()?.maxHp : '???' }}</span>
+            <span class="rpg-ui-turn-battle-stat-val">{{ targetInfo()?.known ? t('turnBattle.gaugeValue', { value: targetInfo()?.hp, max: targetInfo()?.maxHp }) : t('turnBattle.unknownValue') }}</span>
           </div>
           @if (targetInfo()?.known && !targetInfo()?.foe) {
             <div class="rpg-ui-turn-battle-stat">
               <span class="rpg-ui-turn-battle-stat-key">{{ t('turnBattle.sp') }}</span>
               <div class="rpg-ui-turn-battle-gauge rpg-ui-turn-battle-sp"><i style={{ width: pct(targetInfo()?.sp, targetInfo()?.maxSp) }}></i></div>
-              <span class="rpg-ui-turn-battle-stat-val">{{ targetInfo()?.sp + ' / ' + targetInfo()?.maxSp }}</span>
+              <span class="rpg-ui-turn-battle-stat-val">{{ t('turnBattle.gaugeValue', { value: targetInfo()?.sp, max: targetInfo()?.maxSp }) }}</span>
             </div>
           }
           @if (targetInfo()?.stagger) {
@@ -98,8 +98,8 @@
           }
           @if (targetInfo()?.known && targetInfo()?.foe && (targetInfo()?.weaknesses.length || targetInfo()?.resists.length)) {
             <div class="rpg-ui-turn-battle-target-elements">
-              @for (el of targetInfo()?.weaknesses; track el) { <span class="rpg-ui-turn-battle-chip rpg-ui-turn-battle-chip-weak">{{ t('turnBattle.weak.short') + ' · ' + t('turnBattle.el.' + el) }}</span> }
-              @for (el of targetInfo()?.resists; track el) { <span class="rpg-ui-turn-battle-chip">{{ t('turnBattle.resist.short') + ' · ' + t('turnBattle.el.' + el) }}</span> }
+              @for (el of targetInfo()?.weaknesses; track el) { <span class="rpg-ui-turn-battle-chip rpg-ui-turn-battle-chip-weak">{{ t('turnBattle.weakTo', { element: t('turnBattle.el.' + el) }) }}</span> }
+              @for (el of targetInfo()?.resists; track el) { <span class="rpg-ui-turn-battle-chip">{{ t('turnBattle.resistsTo', { element: t('turnBattle.el.' + el) }) }}</span> }
             </div>
           }
           @if (targetInfo()?.foe && !targetInfo()?.known) {
@@ -153,7 +153,7 @@
           <div class="rpg-ui-turn-battle-cutin-face" style={faceStyle(cutin()?.battler, 300)}></div>
           <div class="rpg-ui-turn-battle-cutin-text">
             <small>{{ cutin()?.name }}</small>
-            <strong>« {{ cutin()?.line }} »</strong>
+            <strong>{{ t('turnBattle.cutinLine', { line: cutin()?.line }) }}</strong>
           </div>
         </div>
         <div class="rpg-ui-turn-battle-letterbox rpg-ui-turn-battle-top"></div>
@@ -173,7 +173,7 @@
             <div class="rpg-ui-turn-battle-result-row rpg-ui-turn-battle-drops"><span>{{ t('turnBattle.drops') }}</span>
               <div>
                 @for (drop of drops(); track drop.id) {
-                  <em>✦ {{ drop.name }} ×{{ drop.quantity }}</em>
+                  <em>✦ {{ drop.name }} {{ t('turnBattle.quantity', { count: drop.quantity }) }}</em>
                 }
                 @if (noDrops()) {
                   <em>{{ t('turnBattle.none') }}</em>

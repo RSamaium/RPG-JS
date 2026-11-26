@@ -317,7 +317,7 @@ export class Director {
       announce: () =>
         use(() => {
           sc.setActive(beat.actor);
-          if (beat.label) banner.set({ text: beat.label, side: a.facingLeft ? "ally" : "enemy", key: nextKey() });
+          if (beat.label) banner.set({ text: actionLabel(beat), side: a.facingLeft ? "ally" : "enemy", key: nextKey() });
         }),
       cutin: () => use(async () => {
         if (beat.cutin) await director.cutin(beat, a);
@@ -578,7 +578,7 @@ export class Director {
         target.hp.set(c.hp);
         sc.popup({ x: p.x, y: p.y - 10, value: hit.amount, kind: "heal", scale: this.s });
       } else if (hit.kind === "text") {
-        // A line over the target ("Raté !", "Potion volée !").
+        // A line over the target ("Missed!", "Potion stolen!").
         sc.spawn({ type: "label", x: p.x, y: target.head.y - 8 * this.s, text: hit.text ? t(hit.text, hit.textParams) : "", color: 0xfff4c8, size: 22 * this.s, life: 1500 });
       } else if (hit.kind === "reveal") {
         // Scan: HP, weaknesses and resistances, then kept on the enemy HUD.
@@ -779,12 +779,12 @@ export class Director {
 /** Push display numbers to the UI signals. */
 /** Coop: who commands a unit ("Vous", the other player's name, "· IA" once they left). */
 function ownerTag(c: BattleView["combatants"][number]): string {
-  if (c.summon) return `${t("turnBattle.summon")} · ${c.summon.turns}`;
+  if (c.summon) return t("turnBattle.summonTag", { turns: c.summon.turns });
   const name = c.owner && players()[c.owner];
   // Solo fighter: no tags; coop or spectator: who commands what.
   if (!name || (Object.keys(players()).length < 2 && !spectating())) return "";
   const who = c.owner === viewer() ? t("turnBattle.you") : name;
-  return c.auto ? `${who} · ${t("turnBattle.auto")}` : who;
+  return c.auto ? t("turnBattle.autoTag", { player: who }) : who;
 }
 
 export function publish(view: BattleView) {
@@ -821,12 +821,17 @@ export function publish(view: BattleView) {
   sync(foeIds, view.combatants.filter((c) => c.side === "enemy").map((c) => c.id));
 }
 
-/** "PV 180/250 · Faible : Feu, Lumière · Résiste : Glace" */
+/** The banner of an action: its label, with the picked option of a custom command ("Summon: Phoenix"). */
+export function actionLabel(beat: Pick<ActionBeat, "label" | "option">): string {
+  return beat.option ? t("turnBattle.commandOption", { command: beat.label, option: beat.option }) : beat.label;
+}
+
+/** What a scan shows over the target: "HP 180/250 · Weak: Fire, Light · Resists: Ice" (each part is an i18n key). */
 export function scanText(c: BattleView["combatants"][number]): string {
   const el = (ids: string[]) => ids.map((id) => t(`turnBattle.el.${id}`)).join(", ");
-  const parts = [`${t("turnBattle.hp")} ${c.hp}/${c.stats.maxHp}`];
-  if (c.weaknesses.length) parts.push(`${t("turnBattle.weak.short")} : ${el(c.weaknesses)}`);
-  if (c.resists.length) parts.push(`${t("turnBattle.resist.short")} : ${el(c.resists)}`);
+  const parts = [t("turnBattle.scan.hp", { hp: c.hp, maxHp: c.stats.maxHp })];
+  if (c.weaknesses.length) parts.push(t("turnBattle.scan.weak", { elements: el(c.weaknesses) }));
+  if (c.resists.length) parts.push(t("turnBattle.scan.resists", { elements: el(c.resists) }));
   return parts.join(" · ");
 }
 

@@ -166,7 +166,7 @@ describe("summons and sub-menus", () => {
     const out = run(s, { type: "custom", command: "summon", option: "phoenix" });
     expect(out.error).toBeUndefined();
     const action = out.beats.find((b) => b.t === "action") as Extract<typeof out.beats[number], { t: "action" }>;
-    expect(action.label).toBe("Invoquer : Phénix");
+    expect(action).toMatchObject({ label: "Invoquer", option: "Phénix" });
     const hit = action.waves[0][0];
     expect(hit.kind).toBe("summon");
     expect(hit.unit).toMatchObject({ name: "Phénix", battler: "phoenix", side: "ally", owner: "p1", auto: true, summon: { by: "hero", turns: 2 } });

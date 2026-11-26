@@ -17,6 +17,7 @@ import { distance, reachable, key } from "../core/board";
 import { skillFor, skillsOf, skillUnavailable } from "../core/skills";
 import { actionTiming, itemTiming } from "./choreography";
 import { DEFAULT_ROLES, roleOf } from "../core/roles";
+import { keyLabel, keyParams, tacticalBinds, type TacticalControl } from "./keys";
 
 export const battle = signal<BattleState | null>(null);
 export const selected = signal("");
@@ -275,8 +276,18 @@ export const unitAnchors: Record<string, Record<string, [number, number]>> = {};
 export function t(key: string, params?: Record<string, unknown>): string {
   if (!key) return "";
   if (engine) return engine.t(key, params);
-  return (TACTICAL_I18N.en as Record<string, string>)[key] ?? key;
+  const text = (TACTICAL_I18N.en as Record<string, string>)[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (match, name: string) => (params && name in params ? String(params[name] ?? "") : match));
 }
+/** The keyboard controls of the game (`keyboardControls` of the client config). */
+const keyboard = () => (engine?.globalConfig as { keyboardControls?: Record<string, unknown> } | undefined)?.keyboardControls ?? {};
+/**
+ * The keys of the HUD as the i18n parameters of its texts (`{escape}`, `{action}`, `{danger}`…): the keys the game binds, so a
+ * hint never names a key the player does not have.
+ */
+export const keys = (): Record<string, string> => keyParams(keyboard(), (id) => t(id));
+/** The label of the key of one control of the HUD (`entry2` → `2`). */
+export const keyOf = (control: TacticalControl): string => keyLabel(tacticalBinds(keyboard())[control], (id) => t(id));
 /**
  * What the heroes have to do, as the HUD says it: the text of the encounter when it has one, else the one of the objective type (the text of a
  * type a plugin brought is its `tactical.objective.<type>` message), with the limit of rounds when there is one.
@@ -287,9 +298,10 @@ export const objectiveText = computed(() => {
   const objective = state?.objective;
   if (own || !objective) return own ?? t("tactical.objective");
   const name = state?.units.find((u) => u.id === objective.unitId)?.name ?? "";
-  const said = t(`tactical.objective.${objective.type}`);
-  const base = objective.type === "eliminate" || said === `tactical.objective.${objective.type}` ? t("tactical.objective") : said.replace("{name}", name).replace("{turns}", String(objective.turns ?? ""));
-  return objective.limit ? `${base} ${t("tactical.objective.limit").replace("{limit}", String(objective.limit))}` : base;
+  const id = `tactical.objective.${objective.type}`;
+  const said = t(id, { name, turns: objective.turns ?? "" });
+  const goal = objective.type === "eliminate" || said === id ? t("tactical.objective") : said;
+  return objective.limit ? t("tactical.objective.withLimit", { goal, limit: objective.limit }) : goal;
 });
 let lastPacket: BattlePacket | null = null;
 let noticeUntil = 0;
@@ -331,7 +343,7 @@ async function play(packet: BattlePacket) {
   myId.set(engine?.playerIdSignal?.() ?? "");
   if (packet.left) {
     // Kept a few seconds: the next actions would clear it at once.
-    notice.set(`${packet.left} ${t("tactical.partnerLeft")}`);
+    notice.set(t("tactical.partnerLeft", { name: packet.left }));
     noticeUntil = performance.now() + 6000;
   }
   if (packet.error) {
@@ -385,7 +397,7 @@ async function play(packet: BattlePacket) {
   if (packet.event?.kind === "surrender") {
     const side = packet.event.team === "enemy" ? packet.state.versus : packet.state.players;
     const names = side.map((p) => p.name).join(", ");
-    lastSurrender.set(`${names || t("tactical.opponents")} ${t("tactical.surrendered")}`);
+    lastSurrender.set(t("tactical.surrendered", { names: names || t("tactical.opponents") }));
   } else if (packet.event?.kind === "start") lastSurrender.set("");
   if (packet.event) {
     const actor = packet.state.units.find(
@@ -519,7 +531,8 @@ export const menuItems = computed(() => {
     allowed("canGuard") && { id: "guard" as const, glyph: "⛨", label: t("tactical.guard"), disabled: false, count: 0 },
     { id: "wait" as const, glyph: "◷", label: t("tactical.wait"), disabled: false, count: 0 },
   ].flatMap((entry) => (entry ? [entry] : []));
-  return entries.map((entry, index) => ({ ...entry, key: String(index + 2) }));
+  // `entry1` goes back to the move: the entries take the keys that follow.
+  return entries.map((entry, index) => ({ ...entry, slot: index + 2, key: keyOf(`entry${index + 2}` as TacticalControl) }));
 });
 /** The heroes may flee a battle when its troop lets them (never a duel: there they surrender). */
 export const canFlee = computed(() => {
@@ -811,7 +824,7 @@ export const hint = computed(() => {
     kind = mode(),
     me = myId();
   if (!message && state && spectator()) {
-    return `${t("tactical.spectatorHint")} ${state.players.map((p) => p.name).join(", ")}`;
+    return t("tactical.spectatorHint", { names: state.players.map((p) => p.name).join(", ") });
   }
   // Coop: my units have all acted, a partner still plays.
   const mineLeft = state?.units.filter((u) => isMine(u, me) && u.hp > 0 && !u.acted) ?? [];
@@ -819,7 +832,7 @@ export const hint = computed(() => {
   const others = state?.units.filter((u) => u.team === team && !isMine(u, me) && u.hp > 0 && !u.acted) ?? [];
   if (!message && !locked && state?.started && !state.winner && state.phase === team && !mineLeft.length && others.length) {
     const names = [...new Set(others.map((u) => [...state.players, ...state.versus].find((p) => p.id === u.owner)?.name ?? ""))].filter(Boolean);
-    return `${t("tactical.partnerHint")} ${names.join(", ")}…`;
+    return t("tactical.partnerHint", { names: names.join(", ") });
   }
   return (
     message ||
@@ -847,10 +860,18 @@ export const hint = computed(() => {
                   : kind === "item"
                     ? "tactical.itemHint"
                     : "tactical.selectHint",
+      keys(),
     )
   );
 });
-/** The sound cues of the tactical HUD: a cell or an entry selected, an order confirmed, a blow, a cancel. */
+/**
+ * The sound cues of the tactical HUD: a cell or an entry selected, an order confirmed, a blow, a cancel. Client only.
+ *
+ * @example
+ * ```ts
+ * provideTacticalClient({ sounds: { select: "cursor", confirm: "ok", hit: "impact", back: false } satisfies Partial<Record<TacticalCue, unknown>> });
+ * ```
+ */
 export type TacticalCue = "select" | "confirm" | "hit" | "back";
 
 /**

@@ -418,6 +418,8 @@ export type Beat =
       /** Skill / item / custom command id (absent for a plain attack). */
       ref?: string;
       label: string;
+      /** Label of the picked option of a custom command (shown with the `turnBattle.commandOption` key). */
+      option?: string;
       anim: string;
       melee: boolean;
       fx?: string;
@@ -464,7 +466,7 @@ export interface BattlePacket {
   spectator?: boolean;
   /** Number of players watching. */
   spectators?: number;
-  /** Player versus player battle (the client offers "Abandonner"). */
+  /** Player versus player battle (the client offers "Surrender"). */
   pvp?: boolean;
 }
 

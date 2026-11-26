@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { Clock, aim, digitMotion, elementColor, popupLift, popupMotion, toCss, toHex } from "./pure";
+import { Clock, aim, digitMotion, elementColor, popupLift, popupMotion } from "./pure";
+import { toCss, toHex } from "./colors";
 
 describe("battle kit (pure parts)", () => {
   it("runs tweens and waits on a scalable clock, with freeze and flush", async () => {

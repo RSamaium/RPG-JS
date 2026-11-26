@@ -38,7 +38,26 @@ export const hasPreset = (name?: string) => FxPlayer.has(name);
 export const isAttackPreset = (name?: string) => !!name && name in ATTACK_FX_PRESETS;
 export const ATTACK_SCALE = 1.6;
 
-/** Custom particle burst (when no preset fits). */
+/**
+ * A custom particle burst, for an effect recipe of the `fx` client option when no CanvasEngine preset fits. Client only:
+ * effects are never sent by the server, which only names them (`fx` of a skill or a weapon).
+ *
+ * @title burst
+ * @method burst(color, options?)
+ * @param {string} color - CSS colour of the particles
+ * @param {object} [options] - `count`, `speed` and `life` ranges, `size`, `shape`, `gravity`, `angle` range
+ * @returns {FxPreset} A particle preset to play with `scene.particles(preset, x, y)`
+ * @example
+ * ```ts
+ * import { burst, provideTurnBattleClient } from "@rpgjs/turn-battle/client";
+ *
+ * provideTurnBattleClient({
+ *   fx: {
+ *     sparkle: (scene, x, y, { color }) => void scene.particles(burst(color, { count: 30, gravity: -200 }), x, y),
+ *   },
+ * });
+ * ```
+ */
 export function burst(
   color: string,
   o: {
@@ -75,7 +94,28 @@ export function burst(
   };
 }
 
-/** Recipes combining presets. Keys are usable as skill / weapon `fx`. */
+/**
+ * The effect recipes of the plugin, by name (`slash`, `stab`, `hit`, `fire`, `ice`, `thunder`, `light`, `dark`, `heal`,
+ * `burst`): usable as the `fx` of a skill or a weapon, next to the CanvasEngine presets. A recipe of the `fx` client
+ * option can call one of them and add its own particles. Client only.
+ *
+ * @title builtinFx
+ * @prop {Record<string, FxFn>} builtinFx
+ * @example
+ * ```ts
+ * import { builtinFx, provideTurnBattleClient } from "@rpgjs/turn-battle/client";
+ *
+ * provideTurnBattleClient({
+ *   fx: {
+ *     // The fire recipe, with a screen shake.
+ *     inferno: (scene, x, y, o) => {
+ *       builtinFx.fire(scene, x, y, o);
+ *       scene.shake(10, 400);
+ *     },
+ *   },
+ * });
+ * ```
+ */
 export const builtinFx: Record<string, FxFn> = {
   slash(scene, x, y, { color, scale, crit, flip }) {
     playPreset(scene, crit ? "heavySlash" : "swordSlash", x, y, { color, scale: scale * ATTACK_SCALE, flip });

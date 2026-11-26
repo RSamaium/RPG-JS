@@ -1,11 +1,28 @@
 import type { RpgPlayer } from "@rpgjs/server";
 import type { BattleResult, BattleState, Catalog, CombatantDef, Stats } from "../core";
+import { translateBattleText } from "../core/i18n";
 import { readBattlePlayer, writeBattlePlayer } from "@rpgjs/battle-kit/server";
 import { weaponFromDb, type WeaponInfo } from "./database";
 
 /** Combatant id of a player's own hero. */
 export const heroIdOf = (player: RpgPlayer) => `player:${player.id}`;
 
+/**
+ * The battle stats of a hero when neither the RPGJS player (`nativeStats: false`, or a player without parameters) nor the
+ * `hero` option give them. Spread it to tune a few stats. Server only.
+ *
+ * @title DEFAULT_HERO_STATS
+ * @prop {Stats} DEFAULT_HERO_STATS
+ * @example
+ * ```ts
+ * import { DEFAULT_HERO_STATS, provideTurnBattleServer } from "@rpgjs/turn-battle/server";
+ *
+ * provideTurnBattleServer({
+ *   nativeStats: false,
+ *   hero: () => ({ battler: "hero", stats: { ...DEFAULT_HERO_STATS, atk: 60 } }),
+ * });
+ * ```
+ */
 export const DEFAULT_HERO_STATS: Stats = {
   maxHp: 420,
   maxSp: 80,
@@ -25,6 +42,16 @@ const read = <T>(fn: () => T): T | undefined => {
   }
 };
 const val = (v: unknown) => (typeof v === "function" ? (v as () => unknown)() : v);
+
+/**
+ * A battle text in the language of a player (its RPGJS i18n service), or the English default of `TURN_BATTLE_I18N` when the
+ * player has none (a bare object in a test).
+ */
+export function playerText(player: RpgPlayer, key: string, params?: Record<string, unknown>): string {
+  const p = player as unknown as { t?: (key: string, params?: Record<string, unknown>) => string };
+  const i18n = typeof p.t === "function" ? { t: (k: string, v?: Record<string, unknown>) => p.t!(k, v) } : undefined;
+  return read(() => translateBattleText(key, params, i18n)) ?? translateBattleText(key, params);
+}
 const positive = (v: unknown, fallback: number) => {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -67,10 +94,12 @@ export function readPlayer(
   // Equipped weapon (native RPGJS equipment) shapes the basic attack; `base.weapon` forces one.
   const weapon = base.weapon && record ? weaponFromDb(record(base.weapon)) : equippedWeapon(player, record);
   if (weapon && !nativeStats) stats.atk += weapon.atk; // native atk already sums equipment
-  const hp = nativeHp ? positive(read(() => p.hp), stats.maxHp) : stats.maxHp;
+  // A knocked-out player (0 HP) joins knocked out: a battle is no free revival.
+  const nativeHpValue = Number(read(() => p.hp));
+  const hp = nativeHp && Number.isFinite(nativeHpValue) ? Math.max(0, nativeHpValue) : stats.maxHp;
   const sp = Number(param.maxSp) > 0 ? Number(read(() => p.sp)) || 0 : stats.maxSp;
   return {
-    name: String(val(p.name) || "Héros"),
+    name: String(val(p.name) || playerText(player, "turnBattle.hero")),
     ...base,
     id: heroIdOf(player),
     side: "ally",

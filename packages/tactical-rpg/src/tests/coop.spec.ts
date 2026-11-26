@@ -3,7 +3,7 @@ vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
 import { provideTacticalServer, startTacticalBattle, stopTacticalBattle, isInTacticalBattle } from "../server";
 import { createTacticalBattle, transition, type BattlePacket, type TacticalSkillRecord, type TacticalUnitRecord } from "../core";
-import { emberDatabase } from "../demo/database";
+import { emberDatabase } from "./demo-database";
 
 const db = emberDatabase as Record<string, any>;
 const pick = (type: string) => Object.fromEntries(Object.entries(db).filter(([, r]) => r._type === type));

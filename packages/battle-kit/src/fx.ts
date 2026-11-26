@@ -18,6 +18,7 @@ type Preset = Parameters<FxRuntime["preload"]>[0];
  *
  * Client only.
  *
+ * @title FxPlayer
  * @example
  * ```ts
  * const fx = new FxPlayer({ maxParticles: 2000 });
@@ -28,20 +29,57 @@ type Preset = Parameters<FxRuntime["preload"]>[0];
  * ```
  */
 export class FxPlayer {
-  /** The layer the effects are drawn in. */
+  /**
+   * The Pixi container the effects are drawn in: add it to the battle scene.
+   *
+   * @prop {Container} layer
+   * @memberof FxPlayer
+   */
   readonly layer = new Container();
   private readonly runtime: FxRuntime;
 
+  /**
+   * @param options - Options of the particle runtime
+   * @param options.maxParticles - Particle cap of the whole layer. Default: 3000
+   */
   constructor(options: { maxParticles?: number } = {}) {
     this.runtime = new FxRuntime({ maxParticles: options.maxParticles ?? 3000 });
   }
 
-  /** True when a built-in preset of that name exists. */
+  /**
+   * Is there a built-in preset (`@canvasengine/presets`) of that name?
+   *
+   * @title has
+   * @method FxPlayer.has(name?)
+   * @param {string} [name] - Preset name (`"fireball"`)
+   * @returns {boolean} False for an empty or unknown name
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * const name = FxPlayer.has(skill.fx) ? skill.fx : "hit";
+   * ```
+   */
   static has(name?: string): boolean {
     return !!name && !!getFxPreset(name);
   }
 
-  /** A built-in preset recoloured / resized with `customizeFx`. */
+  /**
+   * A built-in preset recoloured and resized with `customizeFx`, without
+   * playing it. `scale` multiplies both size and speed; `flip`, `rotation`
+   * and `loop` are ignored here.
+   *
+   * @title preset
+   * @method FxPlayer.preset(name, o?)
+   * @param {string} name - Preset name (`"fireball"`)
+   * @param {PresetOptions} [o] - `color`, `scale`, `intensity`, `lifetime`
+   * @returns {Preset | undefined} The tuned preset, undefined when the name is unknown
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * const acid = FxPlayer.preset("fireball", { color: "#6dff4a", intensity: 1.5 });
+   * if (acid) fx.play(acid, x, y);
+   * ```
+   */
   static preset(name: string, o: PresetOptions = {}): Preset | undefined {
     const base = getFxPreset(name);
     if (!base) return undefined;
@@ -60,6 +98,18 @@ export class FxPlayer {
    * (`pathSpace: "target"`, `at: "target"`) aimed at `target`, the target seen
    * from the caster. `scale` multiplies its size and speed (the screen scale of
    * a battle).
+   *
+   * @title visualEffect
+   * @method FxPlayer.visualEffect(effect, target, scale?)
+   * @param {PlayableVisualEffect} effect - The Visual Effect to tune
+   * @param {Point} target - Position of the target relative to the caster (px)
+   * @param {number} [scale] - Size and speed multiplier. Default: 1
+   * @returns {Preset | undefined} The tuned preset, undefined when the effect has neither a preset with emitters nor a known `effect` name
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * const preset = FxPlayer.visualEffect(effect, { x: target.x - caster.x, y: target.y - caster.y }, 0.8);
+   * ```
    */
   static visualEffect(effect: PlayableVisualEffect, target: Point, scale = 1): Preset | undefined {
     const own = effect.preset as Preset | undefined;
@@ -77,14 +127,53 @@ export class FxPlayer {
     ) as Preset;
   }
 
-  /** Plays a Visual Effect from `from` toward `to` (layer positions); returns a stop function (loops). */
+  /**
+   * Plays a Visual Effect from `from` toward `to` (positions in the layer).
+   * Does nothing when the effect cannot be resolved (see `visualEffect`).
+   * Use `runVisualEffect` to also schedule its sounds and its hit.
+   *
+   * @title playEffect
+   * @method fx.playEffect(effect, from, to, o?)
+   * @param {PlayableVisualEffect} effect - The Visual Effect to play
+   * @param {Point} from - Where it starts (the caster), layer px
+   * @param {Point} to - Where it goes (the target), layer px
+   * @param {object} [o] - Options
+   * @param {number} [o.scale] - Size and speed multiplier. Default: 1
+   * @param {boolean} [o.loop] - Loop until stopped (auras, statuses)
+   * @returns {() => void} Stops the effect (needed for a loop)
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * const stop = fx.playEffect(aura, hero, hero, { loop: true });
+   * // later
+   * stop();
+   * ```
+   */
   playEffect(effect: PlayableVisualEffect, from: Point, to: Point, o: { scale?: number; loop?: boolean } = {}): () => void {
     const target = { x: to.x - from.x, y: to.y - from.y };
     const preset = FxPlayer.visualEffect(effect, target, o.scale);
     return preset ? this.play(preset, from.x, from.y, { loop: o.loop, target }) : () => {};
   }
 
-  /** Plays a preset (by name or ready-made) at a layer position; returns a stop function (loops). */
+  /**
+   * Plays a preset, by name or ready-made, at a position of the layer. The
+   * preset is preloaded first, so it starts asynchronously; its container is
+   * destroyed when it completes. An unknown name does nothing.
+   *
+   * @title play
+   * @method fx.play(preset, x, y, o?)
+   * @param {string | Preset} preset - A preset name (`"fireball"`) or a preset (`FxPlayer.preset(...)`)
+   * @param {number} x - Layer x (px)
+   * @param {number} y - Layer y (px)
+   * @param {PresetOptions & { target?: Point }} [o] - Tuning (applied to a name only), `flip`, `rotation`, `loop`, and `target`: where the emitters aimed at a target go, relative to `x, y`
+   * @returns {() => void} Stops the effect (needed for a loop); safe to call before it started
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * fx.play("fireball", 120, 80, { color: "#ff6600", scale: 1.2 });
+   * const stop = fx.play("poisonAura", unit.x, unit.y, { loop: true });
+   * ```
+   */
   play(preset: string | Preset, x: number, y: number, o: PresetOptions & { target?: Point } = {}): () => void {
     const resolved = typeof preset === "string" ? FxPlayer.preset(preset, o) : preset;
     if (!resolved) return () => {};
@@ -109,16 +198,57 @@ export class FxPlayer {
     };
   }
 
-  /** Plays a directional preset at `to`, pointing from `from` (attack presets strike to the right). */
+  /**
+   * Plays a directional preset at `to`, pointing from `from` (attack presets
+   * strike to the right): `flip` and `rotation` come from `aim(from, to)`.
+   *
+   * @title aimed
+   * @method fx.aimed(name, from, to, o?)
+   * @param {string} name - Preset name (`"swordSlash"`)
+   * @param {Point} from - The attacker, layer px
+   * @param {Point} to - The target, layer px (where the preset plays)
+   * @param {PresetOptions} [o] - Tuning of the preset
+   * @returns {() => void} Stops the effect
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * fx.aimed("swordSlash", attacker, target, { color: elementColor("fire") });
+   * ```
+   */
   aimed(name: string, from: Point, to: Point, o: PresetOptions = {}): () => void {
     return this.play(name, to.x, to.y, { ...o, ...aim(from, to) });
   }
 
-  /** Advances the particles by `dt` ms. */
+  /**
+   * Advances the particles. Call it every frame (with the scaled delta of a
+   * `Clock` so the battle speed and hit-stop apply).
+   *
+   * @title update
+   * @method fx.update(dt)
+   * @param {number} dt - Elapsed time (ms)
+   * @returns {void}
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * ticker.add(({ deltaMS }) => fx.update(clock.tick(deltaMS)));
+   * ```
+   */
   update(dt: number): void {
     this.runtime.update(dt);
   }
 
+  /**
+   * Destroys the layer and every effect still playing in it.
+   *
+   * @title destroy
+   * @method fx.destroy()
+   * @returns {void}
+   * @memberof FxPlayer
+   * @example
+   * ```ts
+   * onDestroy(() => fx.destroy());
+   * ```
+   */
   destroy(): void {
     this.layer.destroy({ children: true });
   }

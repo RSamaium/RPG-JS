@@ -71,6 +71,40 @@ describe("the hero of a player in a tactical battle", () => {
     expect(packets.at(-1)!.state.skills["ember-nova"]).toMatchObject({ spCost: 6, power: 30, range: 3 });
   });
 
+  it("calls a guest without a name by the tactical.player text of their language, never by their id", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer();
+    const { player, packets } = heroPlayer();
+    (player as { name?: string }).name = undefined;
+    (player as unknown as { t: (key: string, params: Record<string, unknown>) => string }).t = (key, params) =>
+      key === "tactical.player" ? `Joueur ${params.index}` : key;
+    void startTacticalBattle(player as never, "guard-room");
+    await vi.advanceTimersByTimeAsync(0);
+    const state = packets.at(-1)!.state;
+    expect(state.players[0].name).toBe("Joueur 1");
+    expect(state.units.find((u) => u.player === player.id)!.name).toBe("Joueur 1");
+  });
+
+  it("falls back on the English text when the player has no i18n service", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer();
+    const { player, packets } = heroPlayer();
+    (player as { name?: string }).name = undefined;
+    void startTacticalBattle(player as never, "guard-room");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(packets.at(-1)!.state.players[0].name).toBe("Player 1");
+  });
+
+  it("joins knocked out when the player has no HP left (a battle is no free revival)", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer();
+    const { player, packets } = heroPlayer();
+    player.hp = 0;
+    void startTacticalBattle(player as never, "guard-room");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(packets.at(-1)!.state.units.find((u) => u.player === player.id)!.hp).toBe(0);
+  });
+
   it("writes HP, SP and the items spent back on the player at the end", async () => {
     vi.useFakeTimers();
     provideTacticalServer({ hero: () => ({ stats: { hp: 0, sp: 0, power: 22, range: 1, move: 3 } }) });
@@ -97,5 +131,21 @@ describe("the hero of a player in a tactical battle", () => {
     expect(player.sp).toBe(after.sp);
     expect(player.removeItem).toHaveBeenCalledWith("potion", 1);
     await done;
+  });
+
+  it("ends the enemy phase when the AI has nothing to play, so the battle never stops there", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer({ ai: () => null });
+    const { player, packets, listeners } = heroPlayer();
+    void startTacticalBattle(player as never, "guard-room");
+    await vi.advanceTimersByTimeAsync(0);
+    listeners.get("command")!({ revision: packets.at(-1)!.state.revision, command: { type: "start" } });
+    await vi.advanceTimersByTimeAsync(2000);
+    listeners.get("command")!({ revision: packets.at(-1)!.state.revision, command: { type: "endPhase" } });
+    // Without a command from the AI, the enemy phase ends by itself.
+    await vi.advanceTimersByTimeAsync(20000);
+    const state = packets.at(-1)!.state;
+    expect(state.phase).toBe("ally");
+    expect(state.round).toBe(2);
   });
 });

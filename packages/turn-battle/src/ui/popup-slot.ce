@@ -7,10 +7,13 @@
 </Container>
 
 <script>
+  import { battleFont } from '@rpgjs/battle-kit'
   import { signal, computed, tick } from 'canvasengine'
   import { scene } from '../client/scene'
   import { t } from '../client/state'
   import { digitMotion, popupLift } from '@rpgjs/battle-kit/pure'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
 
   // One pooled damage number: digits drop in one by one with a bounce, then lift and fade.
   const { index } = defineProps()
@@ -39,7 +42,7 @@
     return !p ? '#ffffff' : p.kind === 'heal' ? '#8dffb4' : p.kind === 'sp' ? '#8fd0ff' : p.crit ? '#ffd45c' : p.weak ? '#ffa24a' : '#ffffff'
   })
   const style = {
-    fontFamily: 'Trebuchet MS, sans-serif', fontWeight: '900',
+    fontFamily: font, fontWeight: '900',
     stroke: { color: '#17121f', width: 7, join: 'round' },
     dropShadow: { color: '#000000', alpha: 0.6, blur: 2, distance: 3, angle: Math.PI / 2 },
   }

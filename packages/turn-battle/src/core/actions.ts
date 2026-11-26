@@ -72,6 +72,28 @@ export interface BattleActionRecord extends SkillVisualEffects {
   [field: string]: unknown;
 }
 
+/**
+ * Types an action of the RPGJS database (`_type: "command"`): a custom command
+ * described as data (damage, heal, steal, summon… effects) instead of code.
+ * The record is returned unchanged with `_type: "command"`; the server turns it
+ * into a command and resolves it. Give it to units with `commands: ["<id>"]`.
+ * Standalone RPG and MMORPG.
+ *
+ * @title turnBattleAction
+ * @method turnBattleAction(record)
+ * @param {BattleActionRecord} record - The action: `name`, menu data and its `effects`
+ * @returns The same record with `_type: "command"`
+ * @example
+ * ```ts
+ * import { turnBattleAction } from "@rpgjs/turn-battle/server";
+ *
+ * defineModule<RpgServer>({
+ *   database: {
+ *     "power-strike": turnBattleAction({ name: "Power strike", icon: "⚔", spCost: 8, melee: true, effects: [{ type: "damage", power: 180 }] }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleAction = <T extends BattleActionRecord>(record: T) => ({ _type: "command" as const, ...record });
 
 /** i18n keys of the default steal texts (translated on the client). */

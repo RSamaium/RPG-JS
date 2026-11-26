@@ -10,7 +10,6 @@
   @for (i of popupIndexes; track i) {
     <FieldPopup index={i} />
   }
-  <Graphics draw={drawEmbers} />
 </Container>
 
 <script>
@@ -19,7 +18,6 @@
   import FieldUnit from './field-unit.ce'
   import FieldPopup from './field-popup.ce'
   import { field } from '../client/field'
-  import { battle, reduced } from '../client/state'
 
   // Tactical battlefield, rendered in the map world (RPGJS component animation).
   // The model (client/field.ts) is advanced every tick; components read its signals.
@@ -41,20 +39,5 @@
     g.moveTo(p.ax, p.ay).lineTo(p.x, p.y).stroke({ color: p.color, width: p.size > 5 ? 6 : 3, alpha: 0.65 })
     g.circle(p.x, p.y, p.size).fill(0xffffff)
     g.circle(p.x, p.y, 18).fill({ color: p.color, alpha: 0.18 })
-  }
-
-  // Sparse embers rising from the lava around the arena.
-  const drawEmbers = (g) => {
-    // Read every dependency before returning early (tracked on the first run).
-    const now = field.time()
-    const b = battle()?.board
-    const calm = reduced()
-    if (!b || calm) return
-    for (let i = 0; i < 22; i++) {
-      const speed = now * 0.015 + i * 61
-      const x = b.origin.x - 180 + ((i * 137) % 930)
-      const y = b.origin.y + 520 - (speed % 660)
-      g.circle(x + Math.sin(now / 1200 + i) * 15, y, 1 + (i % 2)).fill({ color: 0xffad63, alpha: 0.15 + (0.5 * (Math.sin(now / 450 + i) + 1)) / 2 })
-    }
   }
 </script>

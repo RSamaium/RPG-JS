@@ -258,6 +258,18 @@ describe("commands", () => {
     expect(action.cutin?.line).toBe("Lumière !");
     expect(out.state.combatants.find((c) => c.id === actor.id)!.limit!.value).toBeLessThan(100);
   });
+
+  it("refuses a limit whose skill the catalog does not hold, instead of throwing", () => {
+    const { state } = started();
+    const s = structuredClone(state);
+    const actor = s.combatants.find((c) => c.id === s.actor)!;
+    actor.limit!.value = 100;
+    delete s.catalog.skills[actor.limit!.skill];
+    let out: ReturnType<typeof act> | undefined;
+    expect(() => (out = act(s, { type: "limit" }))).not.toThrow();
+    expect(out!.error).toBe("turnBattle.error.unknownSkill");
+    expect(out!.state).toBe(s);
+  });
 });
 
 describe("full battle", () => {

@@ -14,7 +14,8 @@
 export * from "./pure";
 export { FxPlayer } from "./fx";
 export { ScreenEffects } from "./screen";
+export { BattlerLook, ScreenFilters, imageSize } from "./look";
 export { BattleClientHooks } from "./client/hooks";
-export { hideGuisDuringBattle, modalGuiShown, MODAL_GUIS, type BattleScreenOptions } from "./client/guis";
-export { battleControls, typingInTextField, type BattleControl, type BattleControlHandler, type BattleControlHandlers, type BattleExtraControl } from "./client/controls";
+export { hideGuisDuringBattle, modalGuiShown, battleFont, type BattleScreenOptions } from "./client/guis";
+export { battleControls, type BattleControl, type BattleControlHandler, type BattleControlHandlers, type BattleExtraControl } from "./client/controls";
 export { BattleCues, synthNoise, synthTone, type BattleCueSound, type SynthesizedCue } from "./client/cues";

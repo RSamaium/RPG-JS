@@ -312,6 +312,8 @@ export function validate(
     case "limit": {
       if (!actor.limit || actor.limit.value < actor.limit.max) return "turnBattle.error.limitNotReady";
       const skill = state.catalog.skills[actor.limit.skill];
+      // A limit skill the catalog does not hold (removed from the database…): refused, never thrown.
+      if (!skill) return "turnBattle.error.unknownSkill";
       return targetError(state, actor, skill.scope, cmd.target);
     }
     case "item": {
@@ -605,7 +607,9 @@ function perform(
         actor: actor.id,
         kind: "custom",
         ref: info.id,
-        label: option ? `${info.label} : ${option.label}` : info.label,
+        label: info.label,
+        // The client writes "<command>: <option>" with the `turnBattle.commandOption` key (word order is per language).
+        ...(option ? { option: option.label } : {}),
         anim: info.anim ?? "skill",
         melee: !!info.melee,
         fx: info.fx,

@@ -3,7 +3,7 @@ vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
 import { provideTacticalServer, startTacticalBattle, isInTacticalBattle, type TacticalServerHooks } from "../server";
 import type { BattlePacket, TacticalResult } from "../core/types";
-import { emberDatabase } from "../demo/database";
+import { emberDatabase } from "./demo-database";
 
 const db = emberDatabase as Record<string, any>;
 const pick = (type: string) => Object.fromEntries(Object.entries(db).filter(([, r]) => r._type === type));
@@ -47,8 +47,8 @@ describe("startTacticalBattle (GUI transport)", () => {
     const s = session();
     await s.flush();
     expect(s.gui.open).toHaveBeenCalledOnce();
-    expect(s.state().units.map((u) => u.name)).toEqual(["Kaël", "Éryn", "Lior", "Cendre", "Braise", "Silex"]);
-    expect(s.state().meta.name).toBe("Le Sanctuaire des Cendres");
+    expect(s.state().units.map((u) => u.name)).toEqual(["Kael", "Eryn", "Lior", "Cinder", "Ember", "Flint"]);
+    expect(s.state().meta.name).toBe("The Sanctuary of Ashes");
     expect(s.player.setGraphic).toHaveBeenCalledWith("tactical-hidden");
     expect(isInTacticalBattle(s.player as never)).toBe(true);
   });

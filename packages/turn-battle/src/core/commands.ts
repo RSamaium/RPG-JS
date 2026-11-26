@@ -3,22 +3,23 @@ import type { Rng } from "./rng";
 import type { BattleState, Combatant, CommandInfo, CommandOptionInfo, CommandRule, Hit, SkillKind, SkillVisualEffects, TargetScope } from "./types";
 
 /**
- * Custom battle commands ("Voler", "Analyse"…): shown in the menu of the units
+ * A custom battle command ("Steal", "Scan"…): shown in the menu of the units
  * that have them (`commands: ["steal"]`), resolved on the server by `resolve`.
+ * Its Visual Effects ride on its beats, not in the menu data sent with the
+ * state. Texts shown over a target are i18n keys (`act.text(target, key, params)`).
  *
  * ```ts
  * steal: turnBattleCommand({
- *   label: "Voler", icon: "✋", scope: "enemy", melee: true,
+ *   label: "Steal", icon: "✋", scope: "enemy", melee: true,
  *   resolve({ target, rng, act }) {
  *     const loot = act.lootOf(target!);
- *     if (!loot || !rng.chance(0.6)) return act.text(target!, "Raté !");
+ *     if (!loot || !rng.chance(0.6)) return act.text(target!, "turnBattle.steal.fail");
  *     act.give(loot);
- *     act.text(target!, `${loot.name} volé !`);
+ *     act.text(target!, "turnBattle.steal.success", { item: loot.name });
  *   },
  * })
  * ```
  */
-/** Its Visual Effects ride on its beats, not in the menu data sent with the state (`commandInfo` leaves them out). */
 export interface CustomCommand extends Omit<CommandInfo, "id" | "scope">, SkillVisualEffects {
   /** Who can be targeted. Default: enemy. */
   scope?: TargetScope;
@@ -99,6 +100,36 @@ export interface CommandActions {
 export const summonOf = (state: Pick<BattleState, "combatants">, summoner: Combatant) =>
   state.combatants.find((c) => c.summon?.by === summoner.id && c.hp > 0);
 
+/**
+ * Declares a custom battle command with its type checked: give it to
+ * `provideTurnBattleServer({ commands })` and to the units with
+ * `commands: ["<id>"]`. The command runs on the server (`resolve`); the client
+ * only receives its menu data (label, icon, cost, scope). Standalone RPG and
+ * MMORPG.
+ *
+ * @title turnBattleCommand
+ * @method turnBattleCommand(command)
+ * @param {CustomCommand} command - Menu data (`label`, `icon`, `spCost`, `scope`, `options`…) and the server-side `resolve`
+ * @returns {CustomCommand} The same command, unchanged
+ * @example
+ * ```ts
+ * import { provideTurnBattleServer, turnBattleCommand } from "@rpgjs/turn-battle/server";
+ *
+ * provideTurnBattleServer({
+ *   commands: {
+ *     steal: turnBattleCommand({
+ *       label: "Steal", icon: "✋", scope: "enemy", melee: true,
+ *       resolve({ target, rng, act }) {
+ *         const loot = act.lootOf(target!);
+ *         if (!loot || !rng.chance(0.6)) return act.text(target!, "turnBattle.steal.fail");
+ *         act.give(loot);
+ *         act.text(target!, "turnBattle.steal.success", { item: loot.name });
+ *       },
+ *     }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleCommand = (command: CustomCommand): CustomCommand => command;
 
 /** Menu data of a command (sent to clients). */

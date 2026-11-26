@@ -11,7 +11,26 @@ export type AiFn = (ctx: AiContext) => Command;
 
 const hpRatio = (c: Combatant) => c.hp / Math.max(1, c.stats.maxHp);
 
-/** Default enemy brain: pressure the weakest hero, sometimes use a skill. */
+/**
+ * The default enemy brain: pressures the weakest hero and sometimes uses a skill. Units without an `ai` id use it; a named
+ * AI of the `ai` option can fall back on it. Runs on the server only, with the battle's seeded random numbers.
+ *
+ * @title defaultAi
+ * @method defaultAi(ctx)
+ * @param {AiContext} ctx - The battle state, the acting unit (`self`) and the random numbers of the battle (`rng`)
+ * @returns {Command} The command the unit plays
+ * @example
+ * ```ts
+ * import { defaultAi, provideTurnBattleServer } from "@rpgjs/turn-battle/server";
+ *
+ * provideTurnBattleServer({
+ *   ai: {
+ *     // Guards when its life is low, otherwise plays like any enemy.
+ *     careful: (ctx) => (ctx.self.hp < ctx.self.stats.maxHp * 0.25 ? { type: "guard" } : defaultAi(ctx)),
+ *   },
+ * });
+ * ```
+ */
 export const defaultAi: AiFn = ({ state, self, rng }) => {
   const foes = state.combatants.filter((c) => c.side !== self.side && c.hp > 0);
   const friends = state.combatants.filter((c) => c.side === self.side && c.hp > 0);

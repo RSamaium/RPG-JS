@@ -9,9 +9,9 @@ import { databaseRecord, plainValue } from "@rpgjs/battle-kit/server";
  * ```ts
  * defineModule<RpgServer>({
  *   database: {
- *     fire: { name: "Feu", spCost: 18, power: 105, turnBattle: { kind: "magical", scope: "allEnemies", element: "fire" } },
+ *     fire: { name: "Fire", spCost: 18, power: 105, turnBattle: { kind: "magical", scope: "allEnemies", element: "fire" } },
  *     potion: { name: "Potion", hpValue: 150, consumable: true, _type: "item", turnBattle: { scope: "ally" } },
- *     goblin: { _type: "enemy", name: "Gobelin", turnBattle: { battler: "goblin", stats: {...}, rewards: {...} } },
+ *     goblin: { _type: "enemy", name: "Goblin", turnBattle: { battler: "goblin", stats: {...}, rewards: {...} } },
  *     goblins: { _type: "troop", turnBattle: { enemies: ["goblin", "goblin"] } },
  *   },
  * })
@@ -123,7 +123,7 @@ export interface WeaponInfo {
  * A weapon record of the RPGJS database (`_type: "weapon"`, native `atk`):
  *
  * ```ts
- * "ember-blade": { _type: "weapon", name: "Lame des braises", atk: 14,
+ * "ember-blade": { _type: "weapon", name: "Ember blade", atk: 14,
  *   turnBattle: { type: "greatsword", element: "fire" } }
  * ```
  * `turnBattle.fx`, `hits`, `power`, `stagger`, `color`, `melee` override the type defaults.

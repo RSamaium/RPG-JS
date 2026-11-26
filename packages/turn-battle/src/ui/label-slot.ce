@@ -1,8 +1,11 @@
 <Text text={text} anchor={0.5} x={x} y={y} scale={scale} alpha={alpha} visible={shown} size={size} color={color} style={style} />
 
 <script>
+  import { battleFont } from '@rpgjs/battle-kit'
   import { signal, computed, tick } from 'canvasengine'
   import { scene } from '../client/scene'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
 
   // One pooled floating label ("FAIBLESSE", "CRITIQUE"…).
   const { index } = defineProps()
@@ -29,5 +32,5 @@
   const alpha = computed(() => (k() > 0.75 ? 1 - (k() - 0.75) / 0.25 : 1))
   const size = computed(() => label()?.size ?? 16)
   const color = computed(() => '#' + (label()?.color ?? 0xffffff).toString(16).padStart(6, '0'))
-  const style = { fontFamily: 'Trebuchet MS, sans-serif', fontWeight: '900', stroke: { color: 0x120d18, width: 5, join: 'round' }, letterSpacing: 1 }
+  const style = { fontFamily: font, fontWeight: '900', stroke: { color: 0x120d18, width: 5, join: 'round' }, letterSpacing: 1 }
 </script>

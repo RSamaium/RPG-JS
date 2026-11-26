@@ -15,9 +15,8 @@
 
 <script>
   import { computed, tick } from 'canvasengine'
-  import { ColorMatrixFilter } from 'pixi.js'
-  import { MotionBlurFilter } from 'pixi-filters'
   import { inject, RpgClientEngine } from '@rpgjs/client'
+  import { BattlerLook } from '@rpgjs/battle-kit'
   import { scene } from '../client/scene'
   import { pick, hover } from '../client/session'
 
@@ -38,23 +37,19 @@
   const bodyScale = computed(() => [m.scale() * flip, m.scale()])
   const wobble = computed(() => (m.broken() ? Math.sin(scene.time() / 55) * 2.5 : 0))
 
-  const tint = new ColorMatrixFilter()
-  const motion = new MotionBlurFilter({ velocity: { x: 0, y: 0 }, kernelSize: 9 })
-  motion.enabled = false
-  const filters = [tint, motion]
+  // Hit flash, stagger tint, target glow and dash blur: the battle kit owns the filters.
+  const look = new BattlerLook({ motionBlur: true })
+  const filters = look.filters
 
   tick(({ deltaTime, deltaRatio }) => {
     m.onSpriteTick(deltaRatio)
     const flash = m.flash()
     if (flash > 0) m.flash.set(Math.max(0, flash - deltaTime))
-    tint.reset()
-    if (flash > 0) tint.brightness(3.2, false)
-    else if (m.broken()) {
-      tint.tint(0x9fb6ff, false)
-      tint.brightness(0.9 + Math.sin(scene.time() / 90) * 0.15, true)
-    } else if (m.targeted()) tint.brightness(1.15 + Math.sin(scene.time() / 120) * 0.12, false)
-    motion.enabled = m.blur() > 0
-    motion.velocity = { x: m.blur() * (m.facingLeft ? -34 : 34), y: 0 }
+    look.reset()
+    if (flash > 0) look.brightness(3.2)
+    else if (m.broken()) look.tint(0x9fb6ff).brightness(0.9 + Math.sin(scene.time() / 90) * 0.15, true)
+    else if (m.targeted()) look.brightness(1.15 + Math.sin(scene.time() / 120) * 0.12)
+    look.motionBlur(m.blur() > 0 ? m.blur() * (m.facingLeft ? -34 : 34) : 0)
   })
 
   const onFinish = () => m.onSheetFinish()

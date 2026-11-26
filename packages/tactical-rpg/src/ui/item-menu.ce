@@ -9,12 +9,12 @@
       </button>
     }
   </div>
-  <footer><span>{{ t('tactical.items') }}</span><small>{{ t('tactical.skillKeys') }}</small></footer>
+  <footer><span>{{ t('tactical.items') }}</span><small>{{ t('tactical.skillKeys', keys()) }}</small></footer>
 </section>
 <script>
   import { field } from '../client/field'
   import { panelPlacement } from '../client/panel-anchor'
-  import { current, itemOptions, itemIndex, pickItem, cancel, busy, t } from '../client/state'
+  import { current, itemOptions, itemIndex, pickItem, cancel, busy, t, keys } from '../client/state'
   // Beside the unit that acts (like its menu of actions); docked above the dock on a narrow screen.
   const placement = () => panelPlacement(field.menuAt(), { width: window.innerWidth, height: window.innerHeight })
   // What an item gives back.

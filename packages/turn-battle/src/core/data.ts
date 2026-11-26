@@ -7,11 +7,11 @@ import type { AttackStyle, Rewards, SkillKind, Stats, TargetScope } from "./type
  *
  * ```ts
  * database: {
- *   fire: turnBattleSkill({ name: "Brasier", spCost: 18, power: 105,
+ *   fire: turnBattleSkill({ name: "Blaze", spCost: 18, power: 105,
  *     turnBattle: { kind: "magical", scope: "allEnemies", element: "fire", fx: "fireball" } }),
  *   potion: turnBattleItem({ name: "Potion", hpValue: 150, consumable: true }),
- *   "iron-sword": turnBattleWeapon({ name: "Épée de fer", atk: 6, turnBattle: { type: "sword" } }),
- *   goblin: turnBattleEnemy({ name: "Gobelin", gain: { exp: 24 }, turnBattle: { battler: "enemy-goblin", stats } }),
+ *   "iron-sword": turnBattleWeapon({ name: "Iron sword", atk: 6, turnBattle: { type: "sword" } }),
+ *   goblin: turnBattleEnemy({ name: "Goblin", gain: { exp: 24 }, turnBattle: { battler: "enemy-goblin", stats } }),
  *   goblins: turnBattleTroop({ turnBattle: { enemies: ["goblin", "goblin"], background: "meadow" } }),
  * }
  * ```
@@ -283,9 +283,146 @@ export interface TurnBattleTroopBattleRecord extends NativeFields {
   turnBattle: TroopBattleData;
 }
 
+/**
+ * Types a skill of the RPGJS database for the turn-based battle (skills are the default kind of record).
+ * The record is returned unchanged, so RPGJS keeps reading its native
+ * fields while the editor checks the `turnBattle` part. Battle data is read on
+ * the server only; standalone RPG and MMORPG.
+ *
+ * @title turnBattleSkill
+ * @method turnBattleSkill(record)
+ * @param {TurnBattleSkillRecord} record - The skill: native fields (`name`, `spCost`, `power`…) and its `turnBattle` data
+ * @returns The same record
+ * @example
+ * ```ts
+ * import { turnBattleSkill } from "@rpgjs/turn-battle/server";
+ *
+ * defineModule<RpgServer>({
+ *   database: {
+ *     fire: turnBattleSkill({ name: "Fire", spCost: 18, power: 105, turnBattle: { kind: "magical", scope: "allEnemies", element: "fire" } }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleSkill = <T extends TurnBattleSkillRecord>(record: T): T => record;
+
+/**
+ * Types an item of the RPGJS database for the turn-based battle.
+ * The record is returned unchanged with `_type: "item"`, so RPGJS keeps reading its native
+ * fields while the editor checks the `turnBattle` part. Battle data is read on
+ * the server only; standalone RPG and MMORPG.
+ *
+ * @title turnBattleItem
+ * @method turnBattleItem(record)
+ * @param {TurnBattleItemRecord} record - The item: native fields (`name`, `hpValue`, `consumable`…) and its `turnBattle` data
+ * @returns The same record with `_type: "item"`
+ * @example
+ * ```ts
+ * import { turnBattleItem } from "@rpgjs/turn-battle/server";
+ *
+ * defineModule<RpgServer>({
+ *   database: {
+ *     potion: turnBattleItem({ name: "Potion", hpValue: 150, consumable: true, turnBattle: { scope: "ally" } }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleItem = <T extends TurnBattleItemRecord>(record: T) => ({ _type: "item" as const, ...record });
+
+/**
+ * Types a weapon of the RPGJS database for the turn-based battle: its `turnBattle` data shapes the basic attack of who wields it.
+ * The record is returned unchanged with `_type: "weapon"`, so RPGJS keeps reading its native
+ * fields while the editor checks the `turnBattle` part. Battle data is read on
+ * the server only; standalone RPG and MMORPG.
+ *
+ * @title turnBattleWeapon
+ * @method turnBattleWeapon(record)
+ * @param {TurnBattleWeaponRecord} record - The weapon: native fields (`name`, `atk`…) and its `turnBattle` data (attack style, element)
+ * @returns The same record with `_type: "weapon"`
+ * @example
+ * ```ts
+ * import { turnBattleWeapon } from "@rpgjs/turn-battle/server";
+ *
+ * defineModule<RpgServer>({
+ *   database: {
+ *     "iron-sword": turnBattleWeapon({ name: "Iron sword", atk: 6, turnBattle: { type: "sword" } }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleWeapon = <T extends TurnBattleWeaponRecord>(record: T) => ({ _type: "weapon" as const, ...record });
+
+/**
+ * Types an enemy of the RPGJS database for the turn-based battle.
+ * The record is returned unchanged with `_type: "enemy"`, so RPGJS keeps reading its native
+ * fields while the editor checks the `turnBattle` part. Battle data is read on
+ * the server only; standalone RPG and MMORPG.
+ *
+ * @title turnBattleEnemy
+ * @method turnBattleEnemy(record)
+ * @param {TurnBattleEnemyRecord | TurnBattleEnemyBattleRecord} record - The enemy: native fields (`name`, `gain`…) and its `turnBattle` data (battler, stats, AI)
+ * @returns The same record with `_type: "enemy"`
+ * @example
+ * ```ts
+ * import { turnBattleEnemy } from "@rpgjs/turn-battle/server";
+ *
+ * defineModule<RpgServer>({
+ *   database: {
+ *     goblin: turnBattleEnemy({
+ *       name: "Goblin", battler: "goblin", initialLevel: 3, reward: { exp: 24, gold: 10 },
+ *       parameters: { maxHp: { start: 120, end: 900 }, str: { start: 25, end: 200 }, pdef: { start: 20, end: 150 }, agi: { start: 20, end: 120 }, int: { start: 10, end: 80 } },
+ *     }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleEnemy = <T extends TurnBattleEnemyRecord | TurnBattleEnemyBattleRecord>(record: T) => ({ _type: "enemy" as const, ...record });
+
+/**
+ * Types a troop of the RPGJS database: what `startTurnBattle(player, "<troop id>")` fights.
+ * The record is returned unchanged with `_type: "troop"`, so RPGJS keeps reading its native
+ * fields while the editor checks the `turnBattle` part. Battle data is read on
+ * the server only; standalone RPG and MMORPG.
+ *
+ * @title turnBattleTroop
+ * @method turnBattleTroop(record)
+ * @param {TurnBattleTroopRecord | TurnBattleTroopBattleRecord} record - The troop: the enemies that fight together, the background and the music
+ * @returns The same record with `_type: "troop"`
+ * @example
+ * ```ts
+ * import { turnBattleTroop } from "@rpgjs/turn-battle/server";
+ *
+ * defineModule<RpgServer>({
+ *   database: {
+ *     goblins: turnBattleTroop({ enemies: ["goblin", "goblin"], background: "meadow" }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleTroop = <T extends TurnBattleTroopRecord | TurnBattleTroopBattleRecord>(record: T) => ({ _type: "troop" as const, ...record });
+
+/**
+ * Types a creature of the RPGJS database that a command calls to the battle (`act.summon(id)`, or an option of a command).
+ * The record is returned unchanged with `_type: "summon"`, so RPGJS keeps reading its native
+ * fields while the editor checks the `turnBattle` part. Battle data is read on
+ * the server only; standalone RPG and MMORPG.
+ *
+ * @title turnBattleSummon
+ * @method turnBattleSummon(record)
+ * @param {TurnBattleSummonRecord} record - The creature: `name` and its `turnBattle` data (battler, stats, turns)
+ * @returns The same record with `_type: "summon"`
+ * @example
+ * ```ts
+ * import { turnBattleSummon } from "@rpgjs/turn-battle/server";
+ *
+ * defineModule<RpgServer>({
+ *   database: {
+ *     ifrit: turnBattleSummon({
+ *       name: "Ifrit",
+ *       turnBattle: { battler: "ifrit", turns: 3, stats: { maxHp: 400, maxSp: 60, atk: 60, def: 30, mag: 70, mdef: 30, agi: 40, luk: 10 } },
+ *     }),
+ *   },
+ * });
+ * ```
+ */
 export const turnBattleSummon = <T extends TurnBattleSummonRecord>(record: T) => ({ _type: "summon" as const, ...record });

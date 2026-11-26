@@ -15,6 +15,7 @@ import {
   type BattleGroupOptions,
   type BattleHandleBase,
   type BattleSession,
+  type BattleHookArgs,
 } from "@rpgjs/battle-kit/server";
 import {
   TACTICAL_GUI,
@@ -47,20 +48,78 @@ import {
   type BattleEvent,
 } from "../core";
 
-export * from "../core";
+// The public surface of the server side: the data helpers of the database, the objective types of plugins, and the types the
+// options and hooks use. The rules, the board and the AI stay internal.
+export { tacticalEncounter, tacticalItem, tacticalRole, tacticalSkill, tacticalUnit } from "../core/data";
+export { registerObjectiveType, unregisterObjectiveType } from "../core/objectives";
+export type { ObjectiveType } from "../core/objectives";
+export type { RulesHooks } from "../core/rules";
+export type { TacticalAi } from "../core/ai";
+export type {
+  Placement,
+  TacticalEncounterData,
+  TacticalEncounterRecord,
+  TacticalItemRecord,
+  TacticalRoleData,
+  TacticalRoleRecord,
+  TacticalSkillData,
+  TacticalSkillRecord,
+  TacticalUnitData,
+  TacticalUnitRecord,
+} from "../core/data";
+export type {
+  AttackStyle,
+  BattleEvent,
+  BattlePlayer,
+  BattleRules,
+  BattleState,
+  Board,
+  Cell,
+  Command,
+  CommandEnvelope,
+  EncounterMeta,
+  Hold,
+  ItemDef,
+  Objective,
+  Role,
+  RoleDef,
+  SkillDef,
+  SkillShape,
+  SkillVisual,
+  TacticalResult,
+  Team,
+  Unit,
+  UnitParams,
+} from "../core/types";
 
 /**
  * A running tactical battle, as the hooks and `getTacticalBattle` see it.
  * `players` keeps the players who left. Server only: the server owns the state.
+ *
+ * @example
+ * ```ts
+ * const battle = getTacticalBattle(player);
+ * if (battle && battle.state().round > 5) await stopTacticalBattle(player);
+ * ```
  */
 export interface TacticalBattleHandle extends BattleHandleBase {
   /** Current authoritative state (read-only for hooks). */
   state(): BattleState;
 }
 
+/** What a rule hook of a game also gets: the leader of the battle and the battle. Server only. */
+export interface TacticalRuleContext {
+  player: RpgPlayer;
+  battle: TacticalBattleHandle;
+}
+type WithBattle<K extends keyof RulesHooks> = NonNullable<RulesHooks[K]> extends (ctx: infer C) => infer R ? (ctx: C & TacticalRuleContext) => R : never;
+
 /**
- * Hooks any game module can implement:
+ * Server hooks of the tactical battle: a game module declares them under the
+ * `tactical` key (`provideTacticalServer({ hooks })` takes them too). They run
+ * on the server, which owns the battle; standalone RPG and MMORPG.
  *
+ * @example
  * ```ts
  * defineModule<RpgServer>({
  *   tactical: {
@@ -79,13 +138,6 @@ export interface TacticalBattleHandle extends BattleHandleBase {
  * ```
  * Rule hooks (`onDamage`, `onJudge`, `onAction`, `onMove`, `onDefeat`, `onPhase`) are synchronous. A type of objective is added with `registerObjectiveType`.
  */
-/** What a rule hook of a game also gets: the leader of the battle and the battle. */
-export interface TacticalRuleContext {
-  player: RpgPlayer;
-  battle: TacticalBattleHandle;
-}
-type WithBattle<K extends keyof RulesHooks> = NonNullable<RulesHooks[K]> extends (ctx: infer C) => infer R ? (ctx: C & TacticalRuleContext) => R : never;
-
 export interface TacticalServerHooks extends Omit<RulesHooks, (typeof RULE_HOOKS)[number]> {
   onDamage?: WithBattle<"onDamage">;
   onJudge?: WithBattle<"onJudge">;
@@ -122,6 +174,19 @@ declare module "@rpgjs/server" {
   }
 }
 
+/**
+ * Options of `provideTacticalServer`. Server only.
+ *
+ * @example
+ * ```ts
+ * provideTacticalServer({
+ *   enemyDelay: 1200,
+ *   turnSeconds: 45,
+ *   // The heroes of the players are mages, whatever their class.
+ *   hero: () => ({ role: "mage" }),
+ * });
+ * ```
+ */
 export interface TacticalServerOptions {
   /** Data outside the RPGJS database (the database is read otherwise). */
   units?: Record<string, TacticalUnitRecord>;
@@ -150,7 +215,14 @@ export interface TacticalServerOptions {
   hooks?: TacticalServerHooks;
 }
 
-/** Options of a tactical battle, solo or in a group. */
+/**
+ * Options of a tactical battle, solo or in a group. Server only.
+ *
+ * @example
+ * ```ts
+ * await startTacticalBattle(player, "sanctuary", { origin: { x: 320, y: 240 } });
+ * ```
+ */
 export interface StartTacticalBattleOptions {
   /** World position of the grid's top-left corner (map pixels), if the encounter gives none. */
   origin?: Cell;
@@ -160,6 +232,12 @@ export interface StartTacticalBattleOptions {
  * Several players: coop against the encounter's enemies (`players`), each
  * commanding their own allies, or PvP (`versus` commands the enemies, no AI).
  * `spectators` watch from the start (see `watchTacticalBattle` to join later).
+ * Server only.
+ *
+ * @example
+ * ```ts
+ * await startTacticalBattle({ players: [alice, bob], encounter: "sanctuary", spectators: [carol] });
+ * ```
  */
 export interface TacticalBattleGroupOptions extends StartTacticalBattleOptions, BattleGroupOptions {
   encounter: string | TacticalEncounterRecord;
@@ -185,7 +263,7 @@ const val = plainValue;
 const dbRecord = <T>(player: RpgPlayer, id: string): T | undefined => databaseRecord<T>(player, id);
 
 /** Resolve an encounter and everything it needs (options first, then the database). */
-export function resolveEncounter(player: RpgPlayer, encounter: string | TacticalEncounterRecord): EncounterSetup {
+function resolveEncounter(player: RpgPlayer, encounter: string | TacticalEncounterRecord): EncounterSetup {
   const record =
     typeof encounter === "string" ? options.encounters?.[encounter] ?? dbRecord<TacticalEncounterRecord>(player, encounter) : encounter;
   if (!record?.tactical) throw new Error(`[Tactical] Unknown encounter "${String(encounter)}"`);
@@ -242,6 +320,9 @@ function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterS
   const classRole = classId ? dbRecord<{ tactical?: { role?: string } }>(player, classId)?.tactical?.role : undefined;
   const maxHp = me.params.maxHp || own.stats?.hp || 100;
   const maxSp = me.params.maxSp || own.stats?.sp || 20;
+  // The HP of the player when they have some (`readBattlePlayer` reads a missing value as 0).
+  const rawHp = (read(() => val((player as unknown as { hp?: unknown }).hp)) as unknown) ?? undefined;
+  const hpNow = rawHp !== undefined && rawHp !== null && Number.isFinite(Number(rawHp)) ? Math.min(maxHp, Math.max(0, Number(rawHp))) : maxHp;
   const skills = [...new Set([...(own.skills ?? []), ...me.skills])].filter((id) => {
     const skill = skillRecord(player, id);
     if (skill) setup.skills[id] = skill;
@@ -258,10 +339,11 @@ function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterS
   const roleRecord = setup.roles?.[role] ?? options.roles?.[role] ?? dbRecord<TacticalRoleRecord>(player, role);
   if (roleRecord?.tactical) setup.roles = { ...setup.roles, [role]: { ...roleRecord, name: String(val(roleRecord.name) ?? role) } };
   return {
-    name: me.name ?? battlePlayerName(player, seat),
+    name: me.name ?? nameOf(player, seat),
     tactical: {
       role,
-      battler: own.battler ?? me.graphic ?? "hero",
+      // Right after another battle, the map sprite is still the hidden one: take the graphic it stashed.
+      battler: own.battler ?? (me.graphic === TACTICAL_HIDDEN_GRAPHIC ? stashed.get(player.id)?.[0] : me.graphic) ?? "hero",
       ...(own.portrait ? { portrait: own.portrait } : {}),
       ...(own.tint !== undefined ? { tint: own.tint } : {}),
       stats: {
@@ -274,7 +356,8 @@ function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterS
       skills,
       items,
       params: { ...me.params, ...own.params },
-      current: { hp: me.hp > 0 ? me.hp : maxHp, sp: Math.max(0, me.sp) },
+      // A knocked-out player (0 HP) joins knocked out: a battle is no free revival.
+      current: { hp: hpNow, sp: Math.max(0, me.sp) },
       player: player.id,
     },
   };
@@ -318,7 +401,8 @@ function ruleHooks(player: RpgPlayer, battle: () => TacticalBattleHandle): Rules
 }
 
 /** Async hooks (option, then game modules): their results. */
-const callHooks = (player: RpgPlayer, name: keyof TacticalServerHooks & string, ...args: unknown[]) => hooks.call(player, name, ...args);
+const callHooks = <K extends keyof TacticalServerHooks & string>(player: RpgPlayer, name: K, ...args: BattleHookArgs<TacticalServerHooks, K>) =>
+  hooks.call(player, name, ...args);
 
 /** The grid centred on the player when the encounter does not place it. */
 function aroundPlayer(player: RpgPlayer, setup: EncounterSetup): Cell {
@@ -394,8 +478,19 @@ export function stopTacticalBattle(player: RpgPlayer): Promise<void> {
   return battles.stop(player);
 }
 
-/** The name of a player: a guest of an online game has none, and is not called by their id. */
-const nameOf = (player: RpgPlayer, index = 0) => battlePlayerName(player, index, player.t?.("tactical.player", { index: "{index}" }) ?? "Player {index}");
+/**
+ * A text of the battle in the language of a player (the i18n service of the server, where the game overrides the `tactical.*`
+ * keys), the English default when the player has no i18n service.
+ */
+function playerText(player: RpgPlayer, key: string, params: Record<string, string | number> = {}): string {
+  const said = read(() => player.t?.(key, params));
+  if (typeof said === "string" && said && said !== key) return said;
+  const text = (TACTICAL_I18N.en as Record<string, string>)[key] ?? key;
+  return text.replace(/\{(\w+)\}/g, (match, name: string) => (name in params ? String(params[name]) : match));
+}
+
+/** The name of a player: a guest of an online game has none, and is called by the `tactical.player` text with their seat, never by their id. */
+const nameOf = (player: RpgPlayer, index = 0) => battlePlayerName(player, playerText(player, "tactical.player", { index: index + 1 }));
 
 /**
  * Hide the player's map sprite during the battle. Kept hidden: a map module may
@@ -546,9 +641,36 @@ async function run(
   const schedule = () => {
     // PvP: the enemies are players, no AI.
     if (versus.length || state.phase !== "enemy" || state.winner || !state.started || !present().length) return;
+    /** Plays a command of the AI; `false` when the rules refuse it. */
+    const play = (command: Command): boolean => {
+      try {
+        const out = transition(state, command, "enemy", hooks);
+        state = out.state;
+        busyUntil = 0;
+        aiLength = wait(out.event, command.type === "move" ? 1100 : 1450, 50) * pace();
+        arm();
+        send({ event: out.event });
+      } catch (error) {
+        console.warn("[Tactical] AI command refused", command, error);
+        return false;
+      }
+      if (state.winner) void finish().catch((error) => console.error("[Tactical] end of battle failed", error));
+      else schedule();
+      return true;
+    };
+    /** The AI has nothing (or nothing valid) to play: the enemy phase ends, so the battle never stops there. */
+    const giveUp = () => {
+      if (state.winner || state.phase !== "enemy" || !present().length) return;
+      if (!play({ type: "endPhase" })) console.error("[Tactical] the enemy phase could not end");
+    };
     timer = setTimeout(async () => {
-      const suggested = ai(state);
-      if (!suggested) return;
+      let suggested: Command | null | undefined;
+      try {
+        suggested = ai(state);
+      } catch (error) {
+        console.warn("[Tactical] AI failed", error);
+      }
+      if (!suggested) return giveUp();
       // Per-unit AI hook: another command for the unit about to act.
       const unit = "unitId" in suggested ? state.units.find((u) => u.id === suggested.unitId) : undefined;
       let command = suggested;
@@ -568,18 +690,7 @@ async function run(
         }
         if (state.winner || !present().length) return;
       }
-      try {
-        const out = transition(state, command, "enemy", hooks);
-        state = out.state;
-        busyUntil = 0;
-        aiLength = wait(out.event, command.type === "move" ? 1100 : 1450, 50) * pace();
-        arm();
-        send({ event: out.event });
-        if (state.winner) void finish();
-        else schedule();
-      } catch (error) {
-        console.warn("[Tactical] AI command refused", error);
-      }
+      if (!play(command)) giveUp();
     }, Math.max(enemyDelay, aiLength + 200) / pace());
     aiLength = 0;
   };
@@ -602,17 +713,20 @@ async function run(
   };
   /** The time of the phase is over: the units that did not play wait, and the next phase begins. */
   const expire = () =>
-    (queue = queue.then(async () => {
-      if (!deadline || ended || state.winner || !present().length) return;
-      // Actions played meanwhile gave their time back
-      if (Date.now() < deadline) return watch();
-      const out = transition(state, { type: "endPhase" }, state.phase, hooks);
-      state = out.state;
-      arm();
-      send({ event: { ...out.event, timeout: true } });
-      if (state.winner) await finish();
-      else schedule();
-    }));
+    (queue = queue
+      .then(async () => {
+        if (!deadline || ended || state.winner || !present().length) return;
+        // Actions played meanwhile gave their time back
+        if (Date.now() < deadline) return watch();
+        const out = transition(state, { type: "endPhase" }, state.phase, hooks);
+        state = out.state;
+        arm();
+        send({ event: { ...out.event, timeout: true } });
+        if (state.winner) await finish();
+        else schedule();
+      })
+      // A failing hook must not reject the queue: every later order would be skipped.
+      .catch((error) => console.error("[Tactical] end of the phase failed", error)));
 
   // Orders one at a time, whoever gives them (veto hooks are async).
   let queue = Promise.resolve();
@@ -659,7 +773,7 @@ async function run(
       } catch (error) {
         seat.gui.update({ state: shown(seat), error: error instanceof Error ? error.message : "tactical.error.action" });
       }
-    }));
+    }).catch((error) => console.error("[Tactical] order failed", error)));
 
   /** A player holds the cell their unit is about to move to, or lets it go (`cell: null`): the others no longer aim at it. */
   const reserve = (seat: Seat, data?: { unitId?: unknown; cell?: Cell | null }) =>
@@ -673,7 +787,7 @@ async function run(
         // Letting go of a cell that is no longer held (the phase ended meanwhile) is nothing to tell
         if (cell) seat.gui.update({ state: shown(seat), error: error instanceof Error ? error.message : "tactical.error.move" });
       }
-    }));
+    }).catch((error) => console.error("[Tactical] hold failed", error)));
 
   /**
    * A player leaves (disconnection, stopTacticalBattle): their units go to a partner
@@ -693,6 +807,8 @@ async function run(
       return;
     }
     const heir = present().find((s) => s.team === seat.team);
+    // A duel as it was before they left: their side forfeits it below.
+    const before = state;
     state = {
       ...state,
       holds: (state.holds ?? []).filter((h) => h.owner !== player.id),
@@ -701,16 +817,19 @@ async function run(
       versus: state.versus.filter((p) => p.id !== player.id),
       units: heir ? state.units.map((u) => (u.owner === player.id ? { ...u, owner: heir.player.id } : u)) : state.units,
     };
-    send({ left: nameOf(player) });
+    // The name the battle gave them (a guest has the one of their seat).
+    send({ left: [...before.players, ...before.versus].find((p) => p.id === player.id)?.name ?? nameOf(player) });
     if (!heir) {
       if (state.winner) return;
+      const winner = (seat.team === "ally" ? "enemy" : "ally") as Team;
       const out = state.started
-        ? transition(state, { type: "surrender" }, seat.team, hooks)
-        : { state: { ...state, started: true, winner: (seat.team === "ally" ? "enemy" : "ally") as Team }, event: { kind: "surrender" as const, team: seat.team } };
-      state = out.state;
+        ? transition(before, { type: "surrender" }, seat.team, hooks)
+        : { state: { ...state, started: true, winner }, event: { kind: "surrender" as const, team: seat.team } };
+      // The outcome of the forfeit, with the players who are still there.
+      state = { ...state, started: true, winner: out.state.winner, revision: out.state.revision };
       arm();
       send({ event: out.event });
-      void finish();
+      void finish().catch((error) => console.error("[Tactical] end of battle failed", error));
       return;
     }
     // The last one waiting for them may now start.

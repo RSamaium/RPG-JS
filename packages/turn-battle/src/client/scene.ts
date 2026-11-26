@@ -93,7 +93,7 @@ export class BattlerModel {
   readonly broken = signal(false);
   readonly dead = signal(false);
   readonly visible = signal(true);
-  /** Scanned ("Analyse"): the enemy HUD shows its HP. */
+  /** Scanned (a "Scan" command): the enemy HUD shows its HP. */
   readonly revealed = signal(false);
   /** A player's character (PvP opponents lie down instead of dissolving). */
   readonly owned: boolean;

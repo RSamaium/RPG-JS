@@ -7,7 +7,9 @@ import { getTacticalBattle, startTacticalBattle, watchTacticalBattle, type Place
 
 describe("public types of the tactical battle", () => {
   it("start, get and watch a battle with the shared battle vocabulary", () => {
-    expectTypeOf(startTacticalBattle).parameter(0).toEqualTypeOf<RpgPlayer>();
+    // Overloads: a player and an encounter, or the options of a group battle.
+    expectTypeOf(startTacticalBattle).toBeCallableWith({} as RpgPlayer, "guard-room");
+    expectTypeOf(startTacticalBattle).toBeCallableWith({ players: [{} as RpgPlayer], encounter: "guard-room" });
     expectTypeOf<ReturnType<typeof startTacticalBattle>>().toEqualTypeOf<Promise<TacticalResult>>();
     expectTypeOf(getTacticalBattle).returns.toEqualTypeOf<TacticalBattleHandle | undefined>();
     expectTypeOf<TacticalBattleHandle>().toMatchTypeOf<BattleHandleBase>();

@@ -6,7 +6,20 @@ import { outcome } from "./objectives";
 /**
  * Synchronous rule hooks, called while a command is resolved. On the server
  * they come from `defineModule({ tactical: { onDamage… } })` and the plugin
- * options.
+ * options (see `TacticalServerHooks`, which adds `player` and `battle` to each
+ * context). Server only: the state they change is the authoritative one.
+ *
+ * @example
+ * ```ts
+ * defineModule<RpgServer>({
+ *   tactical: {
+ *     onDamage: ({ target, amount }) => (target.guarding ? Math.floor(amount / 2) : amount),
+ *     onPhase: ({ state, phase }) => {
+ *       for (const unit of state.units) if (unit.team === phase && unit.hp > 0) unit.hp = Math.min(unit.maxHp, unit.hp + 2);
+ *     },
+ *   },
+ * });
+ * ```
  */
 export interface RulesHooks {
   /** Adjust damage: return a number to replace it. */
@@ -109,16 +122,17 @@ export function transition(
     return done({ kind: "start" });
   }
   if (command.type === "surrender") {
-    // PvP: a side gives up at any time.
+    // PvP: a side gives up at any time. Against the AI (solo, co-op) the heroes flee instead (`escape`, if the troop allows it).
     if (!state.started || state.winner) throw new Error("tactical.error.turn");
+    if (!state.versus.length) throw new Error("tactical.error.forbidden");
     state.winner = team === "ally" ? "enemy" : "ally";
     state.revision++;
     return done({ kind: "surrender", team });
   }
   if (!state.started || state.winner || state.phase !== team) throw new Error("tactical.error.turn");
-  // What the troop forbids is forbidden to the heroes; the AI of the enemies plays what it wants.
+  // What the troop forbids is forbidden to the players, on both sides of a duel; the AI of the enemies plays what it wants.
   const forbidden = (rule: keyof NonNullable<BattleState["rules"]>) => {
-    if (team === "ally" && state.rules?.[rule] === false) throw new Error("tactical.error.forbidden");
+    if ((team === "ally" || !!actor) && state.rules?.[rule] === false) throw new Error("tactical.error.forbidden");
   };
   if (command.type === "escape") {
     forbidden("canEscape");

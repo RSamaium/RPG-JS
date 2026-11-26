@@ -12,14 +12,16 @@ import { toSpritesheet, type BattleSpritesheet, type BattlerHints, type BattlerI
 import { connectI18n, muted } from "./state";
 import { TURN_BATTLE_I18N } from "../core";
 
+// Public surface of `@rpgjs/turn-battle/client`: the client module, what its options and hooks take, and the texts.
+// The battle data helpers and the rules are server side (`@rpgjs/turn-battle/server`).
 export type { BattleSpritesheet, BattlerHints, BattleAnimName, BattlerInfo, RpgFrame } from "./sheets";
-export { battlerAnims, readTexture } from "./sheets";
 export type { FxFn } from "./fx";
 export type { Backdrop, Scene, BattlerModel, EffectSpec, FxPreset } from "./scene";
 export type { ActionSteps, BeatSteps } from "./director";
 export type { TurnBattleCue } from "./sfx";
 export { builtinFx, burst } from "./fx";
-export * from "../core";
+export { TURN_BATTLE_I18N } from "../core";
+export type { BattleResult, BattleView, Beat, Combatant, Hit, Side, Snap } from "../core";
 
 /**
  * Client hooks of the turn-based battle. A game module declares them under
@@ -166,7 +168,7 @@ export function provideTurnBattleClient(options: TurnBattleClientOptions = {}) {
                   void engine.music.enter(bgm, { fadeInMs: 500, fadeOutMs: 400 });
                   return () => void engine.music.leave({ exitDelayMs: 0, fadeOutMs: 600 });
                 },
-                callHooks: (name, ...args) => hooks.call(name as keyof TurnBattleClientHooks & string, ...args),
+                callHooks: (name, ...args) => hooks.call(name, ...args),
               },
               options,
             );

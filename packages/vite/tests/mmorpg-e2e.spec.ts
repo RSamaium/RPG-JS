@@ -24,10 +24,27 @@ import {
   provideClientScenes,
   provideMmorpg,
   RpgClientEngine,
+  RpgGui,
   startGame,
   type RpgClient,
 } from "../../client/src";
 import { provideTestingLoadMap } from "../../testing/src";
+import {
+  isInTurnBattle,
+  provideTurnBattleServer,
+  startTurnBattle,
+  turnBattleEnemy,
+  turnBattleTroop,
+} from "../../turn-battle/src/server";
+import { provideTurnBattleClient } from "../../turn-battle/src/client";
+import {
+  isInTacticalBattle,
+  provideTacticalServer,
+  startTacticalBattle,
+  tacticalEncounter,
+  tacticalUnit,
+} from "../../tactical-rpg/src/server";
+import { provideTacticalClient } from "../../tactical-rpg/src/client";
 
 /**
  * End-to-end MMORPG harness: a real Node HTTP/WebSocket server hosting the
@@ -369,5 +386,136 @@ describe("MMORPG end-to-end", () => {
 
     await waitFor(() => calls.includes("onDisconnected"), "onDisconnected");
     expect(calls).toContain("onLeaveMap:map1");
+  });
+
+  describe("turn-based battle", () => {
+    const TURN_BATTLE_GUI = "turn-battle";
+    const battleModule = () =>
+      defineModule<RpgServer>({
+        maps: [{ id: "map1" }],
+        database: {
+          slime: turnBattleEnemy({
+            name: "Slime",
+            turnBattle: { battler: "slime", stats: { maxHp: 500, maxSp: 0, atk: 1, def: 50, mag: 1, mdef: 50, agi: 1, luk: 1 } },
+          }),
+          slimes: turnBattleTroop({ turnBattle: { enemies: ["slime"] } }),
+        },
+        player: {
+          async onConnected(player) {
+            await player.changeMap("map1", { x: 100, y: 100 });
+          },
+        },
+      }) as RpgServer;
+
+    /** The data of the battle GUI as the client received it (the packets of the server). */
+    const battleData = () => {
+      const gui = inject(RpgGui);
+      return gui.isDisplaying(TURN_BATTLE_GUI) ? (gui.get(TURN_BATTLE_GUI)!.data() as any) : undefined;
+    };
+
+    test("opens the battle on the client and applies a command sent through the GUI", async () => {
+      const server = await startMmorpgServer(battleModule(), [provideTurnBattleServer()]);
+      const engine = await startClient(server.host, {}, [provideTestingLoadMap(), provideTurnBattleClient()]);
+      const player = await waitFor(() => joinedPlayer("map-map1"), "the server player");
+      await waitFor(() => localPlayerOn(engine, "map-map1"), "the local player");
+
+      void startTurnBattle(player, "slimes", { seed: 1 });
+      const opening = await waitFor(() => battleData()?.state, "the battle GUI");
+      expect(isInTurnBattle(player)).toBe(true);
+
+      // The hero acts first (the slime is slow): guard, through the GUI channel.
+      const actor = await waitFor(() => battleData()?.state?.actor, "the hero's turn");
+      inject(RpgGui).guiInteraction(TURN_BATTLE_GUI, "command", { revision: battleData().state.revision, actor, command: { type: "guard" } });
+      await waitFor(() => battleData()?.state?.revision > opening.revision, "the authoritative state after the command");
+      expect(battleData().error).toBeUndefined();
+    });
+
+    test("frees a player who disconnects during a battle", async () => {
+      const server = await startMmorpgServer(battleModule(), [provideTurnBattleServer()]);
+      const engine = await startClient(server.host, {}, [provideTestingLoadMap(), provideTurnBattleClient()]);
+      const player = await waitFor(() => joinedPlayer("map-map1"), "the server player");
+      await waitFor(() => localPlayerOn(engine, "map-map1"), "the local player");
+
+      const battle = startTurnBattle(player, "slimes", { seed: 1 });
+      await waitFor(() => battleData()?.state, "the battle GUI");
+
+      engine.disconnect();
+      client = undefined;
+
+      // The battle ends without anyone left to fight it, and the player is no longer busy.
+      const result = await battle;
+      expect(result.outcome).not.toBe("victory");
+      expect(isInTurnBattle(player)).toBe(false);
+    });
+  });
+
+  describe("tactical battle", () => {
+    const TACTICAL_GUI = "tactical-hud";
+    const battleModule = () =>
+      defineModule<RpgServer>({
+        maps: [{ id: "map1" }],
+        database: {
+          wolf: tacticalUnit({ name: "Wolf", tactical: { role: "warrior", battler: "wolf", stats: { hp: 40, sp: 0, power: 8, range: 1, move: 3 } } }),
+          "guard-room": tacticalEncounter({
+            name: "Guard room",
+            tactical: { allies: [{ hero: true, x: 2, y: 4 }], enemies: [{ unit: "wolf", x: 2, y: 0 }] },
+          }),
+        },
+        player: {
+          async onConnected(player) {
+            await player.changeMap("map1", { x: 100, y: 100 });
+          },
+        },
+      }) as RpgServer;
+
+    /** The data of the tactical HUD as the client received it (the packets of the server). */
+    const hudData = () => {
+      const gui = inject(RpgGui);
+      return gui.isDisplaying(TACTICAL_GUI) ? (gui.get(TACTICAL_GUI)!.data() as any) : undefined;
+    };
+
+    test("opens the HUD on the client and starts the battle from a command of the GUI", async () => {
+      const server = await startMmorpgServer(battleModule(), [provideTacticalServer()]);
+      const engine = await startClient(server.host, {}, [provideTestingLoadMap(), provideTacticalClient()]);
+      const player = await waitFor(() => joinedPlayer("map-map1"), "the server player");
+      await waitFor(() => localPlayerOn(engine, "map-map1"), "the local player");
+
+      void startTacticalBattle(player, "guard-room");
+      const opening = await waitFor(() => hudData()?.state, "the tactical HUD");
+      expect(opening.started).toBe(false);
+      expect(isInTacticalBattle(player)).toBe(true);
+      // The hero of the player is read on the server and synchronised to the client.
+      expect(opening.units.some((u: any) => u.player === player.id)).toBe(true);
+
+      // Sent with the latest revision the client holds, again if the server refused a stale one (as the HUD does).
+      let sentAt = 0;
+      await waitFor(() => {
+        const data = hudData();
+        if (data?.state?.started) return true;
+        if (data && Date.now() - sentAt > 500) {
+          sentAt = Date.now();
+          inject(RpgGui).guiInteraction(TACTICAL_GUI, "command", { revision: data.state.revision, command: { type: "start" } });
+        }
+        return false;
+      }, "the battle started by the server");
+    });
+
+    test("frees a player who disconnects during a battle", async () => {
+      const server = await startMmorpgServer(battleModule(), [provideTacticalServer()]);
+      const engine = await startClient(server.host, {}, [provideTestingLoadMap(), provideTacticalClient()]);
+      const player = await waitFor(() => joinedPlayer("map-map1"), "the server player");
+      await waitFor(() => localPlayerOn(engine, "map-map1"), "the local player");
+
+      const battle = startTacticalBattle(player, "guard-room");
+      await waitFor(() => hudData()?.state, "the tactical HUD");
+
+      engine.disconnect();
+      client = undefined;
+
+      // The player left before the end, and is no longer busy.
+      const result = await battle;
+      expect(result.outcome).toBe("abandon");
+      expect(isInTacticalBattle(player)).toBe(false);
+    });
   });
 });

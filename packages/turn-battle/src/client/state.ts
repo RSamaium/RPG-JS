@@ -49,6 +49,8 @@ export interface MenuEntry {
   detail?: string;
   disabled?: boolean;
   special?: boolean;
+  /** SP the entry costs, read to tell why a greyed-out entry is refused (the hint is translated text). */
+  cost?: number;
 }
 
 export interface FaceData {
@@ -101,9 +103,9 @@ export const waitingFor = signal<{ unit: string; player: string } | null>(null);
 export const spectating = signal(false);
 /** Number of players watching. */
 export const audience = signal(0);
-/** Player versus player battle: "Abandonner" is offered. */
+/** Player versus player battle: "Surrender" is offered. */
 export const pvp = signal(false);
-/** "Abandonner" pressed once: the next press confirms (a few seconds). */
+/** "Surrender" pressed once: the next press confirms (a few seconds). */
 export const surrenderArmed = signal(false);
 /** This player already gave up (waiting for the team, or the end). */
 export const surrendered = signal(false);

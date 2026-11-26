@@ -1,5 +1,5 @@
 import { createTacticalBattle, type BattleState, type TacticalSkillRecord, type TacticalUnitRecord } from "../core";
-import { emberDatabase } from "../demo/database";
+import { emberDatabase } from "./demo-database";
 
 const db = emberDatabase as Record<string, any>;
 

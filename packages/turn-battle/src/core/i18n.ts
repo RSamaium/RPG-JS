@@ -1,10 +1,14 @@
-import type { I18nMessages } from "@rpgjs/common";
+import { I18nService, type I18nMessages, type I18nParams } from "@rpgjs/common";
 
 /**
- * Default texts of the turn-based battle, registered in the RPGJS i18n service
- * by `provideTurnBattleClient` and `provideTurnBattleServer` (keys `turnBattle.*`). A game overrides them with
- * the `i18n` of its own module, and adds its languages the same way:
+ * Default texts of the turn-based battle (English and French), registered in the RPGJS i18n service by
+ * `provideTurnBattleClient` and `provideTurnBattleServer` (keys `turnBattle.*`). The client shows the menus, the HUD and the
+ * result screen with them; the server names the players and heroes that have no name. A game overrides them with the
+ * `i18n` of its own module, and adds its languages the same way. Texts with `{placeholders}` are filled with params.
  *
+ * @title TURN_BATTLE_I18N
+ * @prop {I18nMessages} TURN_BATTLE_I18N
+ * @example
  * ```ts
  * defineModule<RpgClient>({ i18n: { en: { "turnBattle.attack": "Strike" }, de: { "turnBattle.attack": "Angriff" } } })
  * ```
@@ -93,7 +97,7 @@ export const TURN_BATTLE_I18N: I18nMessages = {
     "turnBattle.bonus.noDamage": "No damage bonus",
     "turnBattle.bonus.staggerFinish": "Finishing blow bonus",
     "turnBattle.bonus.swift": "Swiftness bonus",
-    "turnBattle.keys": "↑↓ choose · Enter confirm · Esc back · Tab speed",
+    "turnBattle.keys": "Choose a command, confirm it or go back",
     "turnBattle.guardHint": "Halves the damage and comes back faster",
     "turnBattle.attackHint": "Basic attack",
     "turnBattle.escapeHint": "Try to flee the battle",
@@ -110,8 +114,6 @@ export const TURN_BATTLE_I18N: I18nMessages = {
     "turnBattle.error.unknownSkill": "Unknown skill",
     "turnBattle.error.unknownCommand": "Unknown command",
     "turnBattle.error.unavailable": "Unavailable for now",
-    "turnBattle.weak.short": "Weak",
-    "turnBattle.resist.short": "Resists",
     "turnBattle.summon": "Summon",
     "turnBattle.el.physical": "Physical",
     "turnBattle.el.fire": "Fire",
@@ -141,6 +143,24 @@ export const TURN_BATTLE_I18N: I18nMessages = {
     "turnBattle.breakHelp": "Drops with each hit, faster on a weakness. Empty: broken, it loses a turn and takes more damage.",
     "turnBattle.brokenHelp": "Broken: it loses its next turn and takes more damage.",
     "turnBattle.scanHint": "Scan it to see its HP and weaknesses.",
+    "turnBattle.hero": "Hero",
+    "turnBattle.commandOption": "{command}: {option}",
+    "turnBattle.soundOn": "Turn the sound on",
+    "turnBattle.soundOff": "Turn the sound off",
+    "turnBattle.speedValue": "Speed ×{speed}",
+    "turnBattle.gaugeValue": "{value} / {max}",
+    "turnBattle.unknownValue": "???",
+    "turnBattle.weakTo": "Weak · {element}",
+    "turnBattle.resistsTo": "Resists · {element}",
+    "turnBattle.cutinLine": "“{line}”",
+    "turnBattle.spCost": "{cost} MP",
+    "turnBattle.quantity": "×{count}",
+    "turnBattle.summonTag": "Summon · {turns}",
+    "turnBattle.autoTag": "{player} · AI",
+    "turnBattle.scan.hp": "HP {hp}/{maxHp}",
+    "turnBattle.scan.weak": "Weak: {elements}",
+    "turnBattle.scan.resists": "Resists: {elements}",
+    "turnBattle.error.playback": "The battle could not be shown",
   },
   fr: {
     "turnBattle.attack": "Attaque",
@@ -225,7 +245,7 @@ export const TURN_BATTLE_I18N: I18nMessages = {
     "turnBattle.bonus.noDamage": "Bonus sans dégâts",
     "turnBattle.bonus.staggerFinish": "Bonus coup de grâce",
     "turnBattle.bonus.swift": "Bonus rapidité",
-    "turnBattle.keys": "↑↓ choisir · Entrée valider · Échap retour · Tab vitesse",
+    "turnBattle.keys": "Choisissez une commande, validez-la ou revenez en arrière",
     "turnBattle.guardHint": "Réduit les dégâts de moitié et revient plus vite",
     "turnBattle.attackHint": "Attaque de base",
     "turnBattle.escapeHint": "Tenter de fuir le combat",
@@ -242,8 +262,6 @@ export const TURN_BATTLE_I18N: I18nMessages = {
     "turnBattle.error.unknownSkill": "Compétence inconnue",
     "turnBattle.error.unknownCommand": "Commande inconnue",
     "turnBattle.error.unavailable": "Indisponible pour l'instant",
-    "turnBattle.weak.short": "Faible",
-    "turnBattle.resist.short": "Résiste",
     "turnBattle.summon": "Invocation",
     "turnBattle.el.physical": "Physique",
     "turnBattle.el.fire": "Feu",
@@ -273,5 +291,39 @@ export const TURN_BATTLE_I18N: I18nMessages = {
     "turnBattle.steal.fail": "Raté !",
     "turnBattle.steal.success": "{item} volé !",
     "turnBattle.player": "Joueur {index}",
+    "turnBattle.hero": "Héros",
+    "turnBattle.commandOption": "{command} : {option}",
+    "turnBattle.soundOn": "Activer le son",
+    "turnBattle.soundOff": "Couper le son",
+    "turnBattle.speedValue": "Vitesse ×{speed}",
+    "turnBattle.gaugeValue": "{value} / {max}",
+    "turnBattle.unknownValue": "???",
+    "turnBattle.weakTo": "Faible · {element}",
+    "turnBattle.resistsTo": "Résiste · {element}",
+    "turnBattle.cutinLine": "« {line} »",
+    "turnBattle.spCost": "{cost} PM",
+    "turnBattle.quantity": "×{count}",
+    "turnBattle.summonTag": "Invocation · {turns}",
+    "turnBattle.autoTag": "{player} · IA",
+    "turnBattle.scan.hp": "PV {hp}/{maxHp}",
+    "turnBattle.scan.weak": "Faible : {elements}",
+    "turnBattle.scan.resists": "Résiste : {elements}",
+    "turnBattle.error.playback": "Le combat n'a pas pu être affiché",
   },
 };
+
+let defaults: I18nService | undefined;
+
+/**
+ * A battle text in the language of `i18n` (the RPGJS i18n service of the engine or of a player), or the default English
+ * text of `TURN_BATTLE_I18N` when there is none yet. `params` fill the `{placeholders}` of the text.
+ */
+export function translateBattleText(
+  key: string,
+  params?: I18nParams,
+  i18n?: { t(key: string, params?: I18nParams): string },
+): string {
+  if (i18n) return i18n.t(key, params);
+  defaults ??= new I18nService({ messages: TURN_BATTLE_I18N });
+  return defaults.t(key, params);
+}

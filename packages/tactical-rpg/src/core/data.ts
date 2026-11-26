@@ -24,7 +24,10 @@ interface NativeFields {
   [field: string]: unknown;
 }
 
-/** `effect` / `castEffect` / `impactEffect`: the Visual Effects of the Studio, which replace the look of `visual` (see `SkillDef`). */
+/**
+ * The `tactical` field of a skill (see `tacticalSkill`). `effect` / `castEffect` / `impactEffect`: the Visual Effects of the Studio,
+ * which replace the look of `visual` (see `SkillDef`).
+ */
 export interface TacticalSkillData extends VisualEffects {
   range: number;
   shape: SkillShape;
@@ -36,6 +39,7 @@ export interface TacticalSkillData extends VisualEffects {
   /** Uses per battle (default 1). */
   uses?: number;
 }
+/** A skill of the database usable in a tactical battle (see `tacticalSkill`). */
 export interface TacticalSkillRecord extends NativeFields {
   name: string;
   description?: string;
@@ -46,6 +50,7 @@ export interface TacticalSkillRecord extends NativeFields {
   tactical: TacticalSkillData;
 }
 
+/** The `tactical` field of a role (see `tacticalRole`). */
 export interface TacticalRoleData {
   /** Basic attack: `melee` (charge), `ranged` (arrow), `magic` (bolt). */
   attack: AttackStyle;
@@ -54,6 +59,7 @@ export interface TacticalRoleData {
   /** Accent colour (0xrrggbb). */
   color?: number;
 }
+/** An item of the database usable in a tactical battle (see `tacticalItem`). */
 export interface TacticalItemRecord extends NativeFields {
   name: string;
   description?: string;
@@ -65,11 +71,13 @@ export interface TacticalItemRecord extends NativeFields {
   tactical?: Pick<VisualEffects, "effect">;
 }
 
+/** A role of the database (see `tacticalRole`). */
 export interface TacticalRoleRecord extends NativeFields {
   name: string;
   tactical: TacticalRoleData;
 }
 
+/** The `tactical` field of a unit (see `tacticalUnit`); the `hero` server option returns a part of it. */
 export interface TacticalUnitData {
   /** Role id: `warrior`, `archer`, `mage` or a `tacticalRole` of the database. */
   role: Role;
@@ -88,12 +96,14 @@ export interface TacticalUnitData {
   /** Id of the player this unit is (a hero read from an `RpgPlayer`): it is theirs, and its outcome is written back on them. */
   player?: string;
 }
+/** A unit of the database (see `tacticalUnit`). */
 export interface TacticalUnitRecord extends NativeFields {
   name: string;
   description?: string;
   tactical: TacticalUnitData;
 }
 
+/** Where a unit of an encounter stands at the start (`x`, `y`: a cell of the grid), and who commands it. */
 export interface Placement extends Cell {
   /**
    * Unit id of the database (or of the `units` option). The server fills it for a `hero` placement.
@@ -110,9 +120,16 @@ export interface Placement extends Cell {
   invincible?: boolean;
 }
 
+/** The `tactical` field of an encounter (see `tacticalEncounter`). */
 export interface TacticalEncounterData {
+  /** Small title shown at the start (`tactical.chapter` otherwise). */
   chapter?: string;
+  /**
+   * What the HUD says the heroes have to do: display text only (the text of the `goal` type otherwise). The objective that decides
+   * the battle is `goal`.
+   */
   objective?: string;
+  /** Text shown at the start (`tactical.intro` otherwise). */
   intro?: string;
   /** Grid size and position; `origin` (map pixels) defaults to around the player. */
   board?: Partial<Board>;
@@ -122,21 +139,130 @@ export interface TacticalEncounterData {
   rules?: Partial<BattleRules>;
   /** Seconds a side has to play its phase when several players are in the battle (0: no limit; the one of the server otherwise, 60 by default). */
   turnSeconds?: number;
-  /** What the heroes have to do to win (every enemy down by default). `enemy`: the chief, as its index among `enemies`. */
+  /**
+   * The objective type that decides the battle (every enemy down by default): `eliminate`, `boss` (`enemy`: the chief, as its index
+   * among `enemies`), `survive` (`turns`), `reach` (`cell`), or a type registered with `registerObjectiveType`; `limit` caps the
+   * rounds. Ignored in PvP, where a side wins when the other one is down or surrenders.
+   */
   goal?: Omit<Objective, "unitId"> & { enemy?: number };
 }
+/** An encounter of the database (see `tacticalEncounter`). */
 export interface TacticalEncounterRecord extends NativeFields {
   name?: string;
   tactical: TacticalEncounterData;
 }
 
-export const tacticalRole = <T extends TacticalRoleRecord>(record: T) => ({ _type: "tactical-role" as const, ...record });
-/** An item usable in a tactical battle: an ordinary RPGJS item (`_type: "item"`), so players carry it. */
-export const tacticalItem = <T extends TacticalItemRecord>(record: T) => ({ _type: "item" as const, ...record });
-/** A skill usable in a tactical battle: an ordinary RPGJS skill (`_type: "skill"`), so players learn it. */
-export const tacticalSkill = <T extends TacticalSkillRecord>(record: T) => ({ _type: "skill" as const, ...record });
-export const tacticalUnit = <T extends TacticalUnitRecord>(record: T) => ({ _type: "tactical-unit" as const, ...record });
-export const tacticalEncounter = <T extends TacticalEncounterRecord>(record: T) => ({ _type: "tactical-encounter" as const, ...record });
+/**
+ * A role of the units of a tactical battle, besides the built-in `warrior`,
+ * `archer` and `mage`: how its units attack, their badge and colour. Returns
+ * the record with `_type: "tactical-role"`, to put in the RPGJS database. Data
+ * only: the server reads it when a battle starts; standalone RPG and MMORPG.
+ *
+ * @title tacticalRole
+ * @method tacticalRole(record)
+ * @param {TacticalRoleRecord} record - `name` and the `tactical` field (`attack`, `glyph`, `color`)
+ * @returns {TacticalRoleRecord & { _type: "tactical-role" }} The database record
+ * @example
+ * ```ts
+ * import { tacticalRole } from "@rpgjs/tactical-rpg/server";
+ *
+ * const database = {
+ *   paladin: tacticalRole({ name: "Paladin", tactical: { attack: "melee", glyph: "✠", color: 0xffe29a } }),
+ * };
+ * ```
+ */
+export const tacticalRole = <T extends TacticalRoleRecord>(record: T): T & { _type: "tactical-role" } => ({ _type: "tactical-role" as const, ...record });
+
+/**
+ * An item usable in a tactical battle: an ordinary RPGJS item (`_type: "item"`),
+ * so players carry it. A unit uses it on itself or on an ally next to it and
+ * restores the native `hpValue` / `spValue`; `tactical.effect` is the Visual
+ * Effect played. Data only, read by the server; standalone RPG and MMORPG.
+ *
+ * @title tacticalItem
+ * @method tacticalItem(record)
+ * @param {TacticalItemRecord} record - `name`, `hpValue`, `spValue` and the optional `tactical` field
+ * @returns {TacticalItemRecord & { _type: "item" }} The database record
+ * @example
+ * ```ts
+ * import { tacticalItem } from "@rpgjs/tactical-rpg/server";
+ *
+ * const database = { potion: tacticalItem({ name: "Potion", hpValue: 40 }) };
+ * ```
+ */
+export const tacticalItem = <T extends TacticalItemRecord>(record: T): T & { _type: "item" } => ({ _type: "item" as const, ...record });
+
+/**
+ * A skill usable in a tactical battle: an ordinary RPGJS skill
+ * (`_type: "skill"`), so players learn it. The native `spCost` and `power` are
+ * shared with every battle system; the `tactical` field gives its range, area
+ * and look. Data only, read by the server; standalone RPG and MMORPG.
+ *
+ * @title tacticalSkill
+ * @method tacticalSkill(record)
+ * @param {TacticalSkillRecord} record - `name`, `spCost`, `power` and the `tactical` field (`range`, `shape`, `visual`, `color`…)
+ * @returns {TacticalSkillRecord & { _type: "skill" }} The database record
+ * @example
+ * ```ts
+ * import { tacticalSkill } from "@rpgjs/tactical-rpg/server";
+ *
+ * const database = {
+ *   nova: tacticalSkill({ name: "Nova", spCost: 14, power: 30, tactical: { range: 3, shape: "square", visual: "fire", color: 0xff995d } }),
+ * };
+ * ```
+ */
+export const tacticalSkill = <T extends TacticalSkillRecord>(record: T): T & { _type: "skill" } => ({ _type: "skill" as const, ...record });
+
+/**
+ * A unit an encounter places on the grid (an ally or an enemy that is not the
+ * hero of a player): its role, battler, stats, skills and items. Returns the
+ * record with `_type: "tactical-unit"`. Data only, read by the server;
+ * standalone RPG and MMORPG.
+ *
+ * @title tacticalUnit
+ * @method tacticalUnit(record)
+ * @param {TacticalUnitRecord} record - `name` and the `tactical` field (`role`, `battler`, `stats`, `skills`…)
+ * @returns {TacticalUnitRecord & { _type: "tactical-unit" }} The database record
+ * @example
+ * ```ts
+ * import { tacticalUnit } from "@rpgjs/tactical-rpg/server";
+ *
+ * const database = {
+ *   sentinel: tacticalUnit({ name: "Sentinel", tactical: { role: "archer", battler: "guard", stats: { hp: 60, sp: 0, power: 12, range: 3, move: 2 } } }),
+ * };
+ * ```
+ */
+export const tacticalUnit = <T extends TacticalUnitRecord>(record: T): T & { _type: "tactical-unit" } => ({ _type: "tactical-unit" as const, ...record });
+
+/**
+ * A tactical battle: where the allies and the enemies stand, the grid, the
+ * rules, the objective type (`goal`) and the texts shown at the start. Its id
+ * is what `startTacticalBattle` takes. Returns the record with
+ * `_type: "tactical-encounter"`. Data only, read by the server; standalone RPG
+ * and MMORPG.
+ *
+ * @title tacticalEncounter
+ * @method tacticalEncounter(record)
+ * @param {TacticalEncounterRecord} record - `name` and the `tactical` field (`allies`, `enemies`, `board`, `rules`, `goal`…)
+ * @returns {TacticalEncounterRecord & { _type: "tactical-encounter" }} The database record
+ * @example
+ * ```ts
+ * import { tacticalEncounter } from "@rpgjs/tactical-rpg/server";
+ *
+ * const database = {
+ *   sanctuary: tacticalEncounter({
+ *     name: "Sanctuary",
+ *     tactical: {
+ *       objective: "Defeat the warden.",
+ *       goal: { type: "boss", enemy: 0, limit: 8 },
+ *       allies: [{ hero: true, x: 3, y: 5 }],
+ *       enemies: [{ unit: "sentinel", x: 4, y: 1 }],
+ *     },
+ *   }),
+ * };
+ * ```
+ */
+export const tacticalEncounter = <T extends TacticalEncounterRecord>(record: T): T & { _type: "tactical-encounter" } => ({ _type: "tactical-encounter" as const, ...record });
 
 /** A resolved encounter: its data plus every unit and skill it needs. */
 export interface EncounterSetup {
@@ -243,7 +369,21 @@ export function createTacticalBattle(
 
 /**
  * A Studio / RPG Maker style walking sheet (4 × 4: one row per direction) as
- * an RPGJS spritesheet with `stand-<dir>` and `walk-<dir>` textures.
+ * an RPGJS spritesheet with the `stand-<dir>` and `walk-<dir>` textures a
+ * battler needs. Client side: give it to the `spritesheets` of a client module.
+ *
+ * @title walkingSheet
+ * @method walkingSheet(id, image, rows?)
+ * @param {string} id - The spritesheet id, the `battler` of the units
+ * @param {string} image - The image of the sheet
+ * @param {Record<"up" | "left" | "down" | "right", number>} [rows] - The row of each direction (default up 0, left 1, down 2, right 3)
+ * @returns {object} The spritesheet
+ * @example
+ * ```ts
+ * import { walkingSheet } from "@rpgjs/tactical-rpg/client";
+ *
+ * defineModule<RpgClient>({ spritesheets: [walkingSheet("guard", "/sprites/guard.png")] });
+ * ```
  */
 export function walkingSheet(
   id: string,

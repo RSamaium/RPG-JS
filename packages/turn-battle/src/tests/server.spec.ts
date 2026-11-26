@@ -272,6 +272,34 @@ describe("coop", () => {
     await expect(done).resolves.toEqual(result);
   });
 
+  it("names the players and heroes without a name with the i18n keys of the player's language", async () => {
+    const a = fakePlayer();
+    const b = fakePlayer();
+    for (const { player } of [a, b]) {
+      (player as any).name = "";
+      (player as any).t = (key: string, params?: Record<string, unknown>) => `${key}:${JSON.stringify(params ?? {})}`;
+    }
+    void startTurnBattle({ players: [a.player, b.player], troop: "duo", seed: 4, turnTimer: false });
+    await flush();
+    expect(a.packets[0].players).toEqual({
+      [a.player.id]: 'turnBattle.player:{"index":1}',
+      [b.player.id]: 'turnBattle.player:{"index":2}',
+    });
+    const hero = a.packets[0].state.combatants.find((c) => c.id === `player:${b.player.id}`)!;
+    expect(hero.name).toBe("turnBattle.hero:{}");
+  });
+
+  it("falls back on the English texts of the module when the player has no i18n service", async () => {
+    const a = fakePlayer();
+    const b = fakePlayer();
+    (a.player as any).name = "";
+    (b.player as any).name = "";
+    void startTurnBattle({ players: [a.player, b.player], troop: "duo", seed: 4, turnTimer: false });
+    await flush();
+    expect(Object.values(a.packets[0].players ?? {})).toEqual(["Player 1", "Player 2"]);
+    expect(a.packets[0].state.combatants.find((c) => c.id === `player:${a.player.id}`)!.name).toBe("Hero");
+  });
+
   it("hands a disconnected player's hero to the AI and commits only for the others", async () => {
     const a = fakePlayer();
     const b = fakePlayer();

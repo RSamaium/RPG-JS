@@ -11,12 +11,12 @@
       @if (skill.reason) { <small class="rpg-ui-tactical-skill-reason">{{ t(skill.reason) }}</small> }
     }
   </div>
-  <footer><span>{{ t('tactical.mockSkills') }}</span><small>{{ t('tactical.skillKeys') }}</small></footer>
+  <footer><span>{{ t('tactical.mockSkills') }}</span><small>{{ t('tactical.skillKeys', keys()) }}</small></footer>
 </section>
 <script>
   import { field } from '../client/field'
   import { panelPlacement } from '../client/panel-anchor'
-  import { current, skillOptions, skillIndex, pickSkill, cancel, busy, t } from '../client/state'
+  import { current, skillOptions, skillIndex, pickSkill, cancel, busy, t, keys } from '../client/state'
   import AreaIcon from './area-icon.ce'
   // Beside the unit that acts (like its menu of actions); docked above the dock on a narrow screen.
   const placement = () => panelPlacement(field.menuAt(), { width: window.innerWidth, height: window.innerHeight })

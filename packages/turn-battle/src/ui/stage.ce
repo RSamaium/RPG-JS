@@ -29,9 +29,7 @@
 
 <script>
   import { computed, mount, tick } from 'canvasengine'
-  import { ZoomBlurFilter, RGBSplitFilter } from 'pixi-filters'
-  import { Container as PixiContainer } from 'pixi.js'
-  import { FxPlayer } from '@rpgjs/battle-kit'
+  import { FxPlayer, ScreenFilters } from '@rpgjs/battle-kit'
   import { scene } from '../client/scene'
   import Backdrop from './backdrop.ce'
   import Foreground from './foreground.ce'
@@ -56,11 +54,9 @@
   const worldX = computed(() => scene.size().w / 2 - (scene.camX() + scene.driftX()) * scene.zoom() + scene.shakeX())
   const worldY = computed(() => scene.size().h / 2 - (scene.camY() + scene.driftY()) * scene.zoom() + scene.shakeY())
 
-  // Screen-space post effects, created once and driven every frame.
-  const zoomBlur = new ZoomBlurFilter({ strength: 0, innerRadius: 40 })
-  const rgbSplit = new RGBSplitFilter({ red: { x: 0, y: 0 }, green: { x: 0, y: 0 }, blue: { x: 0, y: 0 } })
-  zoomBlur.enabled = rgbSplit.enabled = false
-  const filters = [zoomBlur, rgbSplit]
+  // Screen-space post effects (the battle kit owns the filters), driven every frame.
+  const screenFilters = new ScreenFilters()
+  const filters = screenFilters.filters
 
   let app = null
   mount((element) => {
@@ -79,13 +75,7 @@
     fxPlayer.update(dt)
     const { w, h } = scene.size()
     const zb = scene.zoomBlur()
-    zoomBlur.enabled = zb.strength > 0.01
-    zoomBlur.strength = zb.strength
-    zoomBlur.center = { x: zb.x * w, y: zb.y * h }
-    const split = scene.rgbSplit()
-    rgbSplit.enabled = split > 0.3
-    rgbSplit.red = { x: -split, y: 0 }
-    rgbSplit.blue = { x: split, y: split * 0.3 }
+    screenFilters.zoomBlur(zb.strength, zb.x * w, zb.y * h).chromatic(scene.rgbSplit())
   })
 
   // Targeting cursor: bouncing arrows above the selected battlers.

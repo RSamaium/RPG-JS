@@ -11,7 +11,17 @@ description: "The foundation shared by the RPGJS battle systems: battle sessions
 npm install @rpgjs/battle-kit
 ```
 
-Peer dependencies: `@rpgjs/common`, `@rpgjs/client`, `@rpgjs/server`, `canvasengine`, `@canvasengine/presets`, `pixi.js`, `pixi-filters`.
+Peer dependencies: `@rpgjs/common`, `@rpgjs/client`, `@rpgjs/server`, `canvasengine`, `@canvasengine/presets`, `pixi.js`, `pixi-filters`. The battle kit is the only battle package that touches the renderer: a battle GUI built on it is made of CanvasEngine components and gets its filters and particle layer from the kit (`BattlerLook`, `ScreenFilters`, `FxPlayer`), never from Pixi.
+
+## Standalone RPG and MMORPG
+
+| Piece | Runtime | Standalone RPG | MMORPG |
+|---|---|---|---|
+| `BattleSessions`, participants, server hooks, player reading and writing | server | The local server of the game holds the battles. | The room of the map holds the battles of its players; every fighter and spectator must be on that map. |
+| Battle state | server, sent to the client as the data of the battle GUI (`gui.open` / `gui.update`) | Same packets, through the local transport. | Packets over the WebSocket; the client never decides an outcome. |
+| Commands | client GUI → server (`gui.on("command")`) | Same. | Validated by the server (revision, owner, rules); a refused command comes back as an i18n error key. |
+| Disconnection | server (`battles.disconnect` in `player.onDisconnected`) | Closing the game ends the battle. | The battle goes on without the player (the battle system decides: AI, partner, forfeit); a player gone while the battle is being prepared leaves it as soon as it opens. |
+| Screen, controls, cues, client hooks, effects | client only | Same. | Same: purely visual, nothing is sent back. |
 
 ## Three entry points
 
@@ -34,12 +44,15 @@ export async function startMyBattle(a: RpgPlayer | MyGroupOptions) {
   const group = isBattleGroup(a) ? a : { players: [a] };
   const { players, versus, everyone, spectators } = battleParticipants("MyBattle", group); // same map, no duplicates
   const release = battles.reserve(everyone);                                              // throws when one is busy
+  const session = createSession(players, versus);   // a BattleSession: handle, plays, leave, watch, closed
   try {
-    const session = createSession(players, versus);   // a BattleSession: handle, plays, leave, watch, closed
-    battles.open(session, everyone);
+    await callStartHooks(everyone);                  // may await: a player may disconnect meanwhile
+    battles.open(session, everyone);                 // a player who disconnected meanwhile leaves here
     return await session.result;
   } finally {
-    release();
+    release();                                       // frees the reservations `open` did not take
+    for (const p of everyone) battles.release(p, session);
+    battles.close(session);
   }
 }
 
@@ -51,11 +64,11 @@ export const stopMyBattle = (player: RpgPlayer) => battles.stop(player);
 
 | Piece | Meaning |
 |---|---|
-| `BattleSessions` | `reserve`, `open`, `close`, `seat` / `release` (spectators), `isIn`, `get(playerOrId)`, `watch`, `stop`, `disconnect`. |
+| `BattleSessions` | `reserve`, `open`, `close`, `seat` / `release`, `isIn`, `get(playerOrId)`, `watch`, `stop`, `disconnect`. A player is busy from `reserve` until `release(player, session)`: release every player and `close` the session when the battle ends. A player who disconnects between `reserve` and `open` leaves the battle as soon as it is opened (`session.leave`). |
 | `BattleHandleBase` | What every battle handle gives the hooks: `id`, `player`, `players`, `versus`, `spectators()`. |
 | `battleParticipants(label, group)` / `isBattleGroup` | Checks who takes part (`players`, `versus`, `spectators`): no duplicates, one side per player, everyone on the leader's map. |
 | `sameBattleMap(a, b)` | Are two players in the same room? A spectator watches from the map of the battle. |
-| `battlePlayerName(player, index, fallback)` | The name a battle shows (never the id of a guest). |
+| `battlePlayerName(player, guestLabel)` | The name a battle shows: the player's name, or `guestLabel` (a translated text of the battle system) for a guest, never their id. |
 
 ## Server: hooks, database, players
 
@@ -72,7 +85,7 @@ const me = readBattlePlayer(player);  // hp, sp, params (equipment and states in
 writeBattlePlayer(player, { hp: 40, sp: 3, usedItems: { potion: 1 }, exp: 120, gold: 30 }, "MyBattle");
 ```
 
-A battle system declares its hooks under its own key (`turnBattle`, `tactical`): a game module implements them with `defineModule<RpgServer>({ myBattle: { … } })`, and the `hooks` option of the battle system takes them too.
+A battle system declares its hooks under its own key (`turnBattle`, `tactical`): a game module implements them with `defineModule<RpgServer>({ myBattle: { … } })`, and the `hooks` option of the battle system takes them too. The arguments of `call`, `vetoed` and `replaced` are typed from the hooks interface (`BattleHookArgs<MyServerHooks, "onCommand">`): a call with the wrong arguments does not compile. A server hook that throws rejects the call (the battle system catches it in its command queue); a client hook that throws is logged and the battle goes on.
 
 ## Client: screen, controls, cues, hooks
 
@@ -94,7 +107,7 @@ const clientHooks = new BattleClientHooks<MyClientHooks>("myBattle", options.hoo
 const replaced = await clientHooks.replaced("onPlay", event, scene); // a hook returned false
 ```
 
-`battleControls` gives the root of the battle GUI its CanvasEngine `controls` (`<DOMContainer controls={controls}>`): A confirms, B or Start goes back, the d-pad or the stick moves, L/R are `tabPrev` / `tabNext`. A built-in dialog shown over the battle (`modalGuiShown()`) or a text field the player writes in (`typingInTextField()`) keeps the keys.
+`battleControls` gives the root of the battle GUI its CanvasEngine `controls` (`<DOMContainer controls={controls}>`): A confirms, B or Start goes back, the d-pad or the stick moves, L/R are `tabPrev` / `tabNext`. The tab keys are `page up` / `page down` unless `keyboardControls` binds `tabPrev` / `tabNext`. A built-in dialog shown over the battle (`modalGuiShown()`) or a text field the player writes in (the chat) keeps the keys.
 
 The texts of a battle system go through the RPGJS i18n service: register the defaults with the `i18n` of the module, under keys named after the system (`myBattle.*`), and read them with `engine.t(key, params)`. The styles of its HUD belong in `@rpgjs/ui-css` (`rpg-ui-<system>-*` classes), with stories in its Storybook.
 
@@ -157,10 +170,33 @@ screen.shockwaveAt(x, y);
 screen.update(dtMs);
 ```
 
-`FxPlayer.has(name)` tells whether a preset name exists, and `FxPlayer.preset(name, options)` builds one. Options are `color`, `scale`, `intensity`, `lifetime`, `flip`, `rotation` and `loop`.
+`FxPlayer.has(name)` tells whether a preset name exists, and `FxPlayer.preset(name, options)` builds one. Options are `color`, `scale`, `intensity`, `lifetime`, `flip`, `rotation` and `loop`. In a `.ce` component, give the layer with `<Container pixiChildren={[fx.layer]} />`.
+
+### Sprite looks, screen filters and fonts (client)
+
+A battle component never creates a renderer filter: it drives the ones of the kit from its signals.
+
+```html
+<Sprite sheet={sheet} filters={look.filters} />
+<script>
+  import { tick } from 'canvasengine'
+  import { BattlerLook, battleFont } from '@rpgjs/battle-kit'
+
+  const look = new BattlerLook({ motionBlur: true })
+  tick(() => {
+    look.reset()
+    if (unit.flash() > 0) look.brightness(3.2)          // hit flash
+    else if (unit.broken()) look.tint(0x9fb6ff)         // a tint
+    look.motionBlur(unit.dash())                        // 0 turns it off
+  })
+  const style = { fontFamily: battleFont(), fontSize: 28 }  // the font of the ui-css theme
+</script>
+```
+
+`ScreenFilters` does the same for a whole scene (`zoomBlur(strength, x, y)`, `chromatic(amount)`, `filters={screen.filters}`) when the scene times its impacts itself; `ScreenEffects` times them for you. `imageSize(url)` gives the size of a spritesheet image before its battler is drawn.
 
 ### Colours, floating numbers, aim
 
-- `elementColor(element)` returns the CSS colour of an element (`ELEMENT_COLORS` lists them); `toCss(number)` and `toHex(css)` convert between a Pixi number and CSS.
+- `elementColor(element)` returns the CSS colour of an element (`ELEMENT_COLORS`, read only, lists them).
 - `popupMotion(age)`, `digitMotion(age, index)` and `popupLift(age, chars)` give the motion of floating damage and heal numbers at a given age in ms.
 - `aim(from, to)` returns `{ flip, rotation }` to orient a directional preset towards a point.

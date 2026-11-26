@@ -6,8 +6,11 @@
 </Container>
 
 <script>
+  import { battleFont } from '@rpgjs/battle-kit'
   import { signal, computed, tick } from 'canvasengine'
   import { scene } from '../client/scene'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
 
   // Full-screen burst ("BRISURE !", limit name, encounter): radial speed lines,
   // chromatic rings and a punched-in title, as in FFBE break moments.
@@ -40,12 +43,12 @@
   })
   const subAlpha = computed(() => Math.min(1, Math.max(0, (k() - 0.1) * 5)))
   const titleStyle = computed(() => ({
-    fontFamily: 'Trebuchet MS, sans-serif', fontWeight: '900', fontStyle: 'italic', fontSize: 64,
+    fontFamily: font, fontWeight: '900', fontStyle: 'italic', fontSize: 64,
     fill: '#ffffff', stroke: { color: color(), width: 8, join: 'round' },
     dropShadow: { color: color(), alpha: 0.9, blur: 18, distance: 0 }, letterSpacing: 4,
   }))
   const subStyle = computed(() => ({
-    fontFamily: 'Trebuchet MS, sans-serif', fontWeight: '800', fontSize: 20 * scene.uiScale,
+    fontFamily: font, fontWeight: '800', fontSize: 20 * scene.uiScale,
     fill: '#ffffff', letterSpacing: 8, stroke: { color: '#0a0f24', width: 4 },
   }))
 

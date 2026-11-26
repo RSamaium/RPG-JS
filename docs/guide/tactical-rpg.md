@@ -34,7 +34,7 @@ The styles of the HUD are part of `@rpgjs/ui-css` (`rpg-ui-tactical-*` classes):
 Data lives in the RPGJS database. The native fields are shared with every battle system (`name`, `description`, `spCost` and `power` of a skill, `hpValue` and `spValue` of an item); the `tactical` field carries what only a tactical battle needs. Helpers add the `_type` and type the record: `tacticalSkill` and `tacticalItem` make ordinary RPGJS skills and items (players learn and carry them), `tacticalUnit`, `tacticalRole` and `tacticalEncounter` the records of the tactical battle.
 
 ```ts
-import { tacticalEncounter, tacticalSkill, tacticalUnit } from "@rpgjs/tactical-rpg/server";
+import { tacticalEncounter, tacticalItem, tacticalSkill, tacticalUnit } from "@rpgjs/tactical-rpg/server";
 
 export const database = {
   nova: tacticalSkill({ name: "Nova", spCost: 14, power: 30, tactical: { range: 3, shape: "square", visual: "fire", color: 0xff995d } }),
@@ -73,6 +73,14 @@ Native fields: `spCost` (SP cost) and `power` (damage or healing power). The `ta
 | `items` | Items carried: id → count. |
 | `params` | Parameters under RPGJS names; the map's damage formulas are used when present. |
 
+A battler is a client spritesheet. `walkingSheet(id, image)` (from `@rpgjs/tactical-rpg/client`) turns a 4 × 4 walking sheet into one:
+
+```ts
+import { walkingSheet } from "@rpgjs/tactical-rpg/client";
+
+defineModule<RpgClient>({ spritesheets: [walkingSheet("guard", "/sprites/guard.png")] });
+```
+
 ### Item
 
 Native fields: `hpValue`, `spValue` restored to a unit next to the user. The `tactical` field may give an `effect`: a Visual Effect played from the user to that unit.
@@ -87,10 +95,11 @@ Native fields: `hpValue`, `spValue` restored to a unit next to the user. The `ta
 |---|---|
 | `allies`, `enemies` | Placements: `unit` (or `hero: true`), `x`, `y`, `seat` (index of the commanding player, coop and PvP), `invincible` (keeps one hit point). |
 | `chapter`, `intro` | Texts shown at the start. |
+| `objective` | Display text only: what the HUD says the heroes have to do. Without it, the HUD shows the text of the `goal` type (`tactical.objective.<type>`). It decides nothing. |
 | `board` | Grid size and position; `origin` (map pixels) defaults to around the player. |
 | `rules` | What the heroes may do (everything by default). |
 | `turnSeconds` | Seconds a side has to play its phase when several players are in the battle (0: no limit). |
-| `objective` / `goal` | What the heroes must do to win. Built-in types: `eliminate` (default), `boss` (`enemy`: index of the chief), `survive` (`turns`), `reach` (`cell`). |
+| `goal` | The objective type that decides the battle: `type` is `eliminate` (default), `boss` (`enemy`: index of the chief among `enemies`), `survive` (`turns`), `reach` (`cell`) or a type added with `registerObjectiveType`; `limit` is the number of rounds the heroes have. The heroes always lose when none of them stands, and win when no enemy stands. **Ignored in PvP**: a duel is won when the other side is down or surrenders. |
 
 ### The hero of a player
 
@@ -115,6 +124,24 @@ const result = await startTacticalBattle(player, "sanctuary", { origin: { x: 320
 | `watchTacticalBattle(spectator, target)` | Watch a running battle; resolves `false` when refused (see `onSpectate`). |
 | `stopTacticalBattle(player)` | Take a player out of their battle, as a disconnection does. |
 | `isInTacticalBattle(player)`, `getTacticalBattle(playerOrBattleId)` | Test, or get the running `TacticalBattleHandle`. |
+
+### Fleeing and surrendering
+
+Against the AI (solo or co-op), the heroes leave a battle by **fleeing** (`escape`): the battle is lost, and only when the encounter's `rules.canEscape` is not `false`. In a duel there is no fleeing: a side **surrenders**, at any time, and the other side wins. A surrender outside a duel is refused (`tactical.error.forbidden`).
+
+## Who owns what
+
+| | |
+|---|---|
+| **Server** | The battle state, the rules, the AI, the objectives, the timer of a phase, the hooks of `TacticalServerHooks`, the heroes read from the players and the outcome written back on them. Every order of a player is checked by the server before it is played. |
+| **Synchronised** | The state of the battle and each event (a move, an attack…) go to every player and spectator through the GUI of the battle; a player sends their orders, the cell a unit is about to move to (so a partner does not aim at it) and the speed they want. The data is plain serialisable JSON. |
+| **Client only** | The HUD, the grid and the animations drawn on the map, the cursor, the menus, the preview of a move, the forecast, the danger zone, the sound cues, the speed and the reduced motion, and the client hooks (`TacticalClientHooks`). They change what is shown, never the outcome. |
+
+It works the same in standalone RPG mode (the server runs in the browser) and in MMORPG mode (an authoritative server). Without `provideTacticalServer`, `startTacticalBattle` is not available; without `provideTacticalClient`, the battle has no HUD and no grid on the client.
+
+### Disconnection
+
+When a player leaves a battle (disconnection, or `stopTacticalBattle`), their units go to a partner of the same side, who now commands them (the others see `tactical.partnerLeft`), and the cells they held are freed. A side with no player left loses: in a duel, the other side wins by forfeit; when every player has left, the battle ends. A player who left is not written back (`abandon` outcome).
 
 ## Server options (`provideTacticalServer`)
 
@@ -155,15 +182,35 @@ New objective types: `registerObjectiveType(id, { judge(state, objective) })` re
 
 ### Texts
 
-The texts of the HUD are `tactical.*` keys of the RPGJS i18n service (`TACTICAL_I18N` holds the English and French defaults). A game overrides them, or adds a language, with the `i18n` of its own module:
+The texts of the HUD are `tactical.*` keys of the RPGJS i18n service (`TACTICAL_I18N`, exported by `@rpgjs/tactical-rpg/client`, holds the English and French defaults). A guest without a name is called by `tactical.player` (`Player {index}`). A game overrides them, or adds a language, with the `i18n` of its own module:
 
 ```ts
 defineModule<RpgClient>({ i18n: { en: { "tactical.title": "Sanctuary", "tactical.victory": "Glory!" } } });
 ```
 
+The hints that name a key (`tactical.moveHint`, `tactical.skillKeys`, `tactical.danger`…) take the keys the game binds as parameters: `{escape}`, `{action}`, `{up}`, `{down}`, `{left}`, `{right}`, `{next}` (next unit), `{end}` (end the phase), `{danger}` and `{entries}` (the keys of the action menu). Keep them in your own texts. The names of the keys are the `tactical.key.*` texts (`tactical.key.space`, `tactical.key.escape`…); other keys are shown in capitals.
+
 ### Controls
 
-The HUD uses the keyboard controls of the game (`keyboardControls` of the client config) and the gamepad mapping of the built-in GUIs: A confirms (held during the opposing turn: fast-forward), B or Start goes back, the d-pad or the stick moves the cursor, R selects the next unit, Y ends the phase. The keys `e` (end the phase) and `1`–`4` (entries of the action menu) are shortcuts. While the player writes in a text field (the chat), the keys are left to it. Every command also has a button for touch screens.
+The HUD uses the keyboard controls of the game (`keyboardControls` of the client config) and the gamepad mapping of the built-in GUIs. Every key is configurable, and the HUD always shows the key the game binds:
+
+| Control (`keyboardControls`) | Default key | Gamepad | Does |
+|---|---|---|---|
+| `up`, `down`, `left`, `right` | arrows | d-pad, stick | Move the cursor; go through a menu. |
+| `action` | `space` | A | Confirm; held during the opposing turn: fast-forward. |
+| `escape` | `escape` | B, Start | Go back one step; a spectator leaves. |
+| `tabNext` | `page down` | R | Select the next unit. |
+| `endPhase` | `e` | Y | End the phase. |
+| `danger` | `r` | — | Show or hide the danger zone. |
+| `entry1` … `entry6` | `hotbar1` … `hotbar6` (`1` … `6`) | X: `entry2` | `entry1` goes back to the move; `entry2` … `entry6` are the entries of the action menu, in the order it shows them. |
+
+```ts
+provideClientGlobalConfig({
+  keyboardControls: { endPhase: "enter", danger: "d" },
+});
+```
+
+While the player writes in a text field (the chat), the keys are left to it. Every command also has a button for touch screens, and a right click goes back.
 
 ## Client hooks
 
@@ -184,6 +231,10 @@ defineModule<RpgClient>({
 ```
 
 `onPlay` runs before each event: return `false` to play its effects yourself (the units still move). `stage` gives `fx` (battle-kit `FxPlayer`), `screen` (`ScreenEffects`), `popup(text, x, y, { color, big })`, `world(cell)` (cell centre in map pixels) and `unit(id)` (reactive view of a unit). The hooks change what is shown, never the outcome: the server owns the rules.
+
+## Public API
+
+`@rpgjs/tactical-rpg/server` exports the module (`provideTacticalServer`), the battle functions above, the data helpers (`tacticalSkill`, `tacticalItem`, `tacticalUnit`, `tacticalRole`, `tacticalEncounter`), `registerObjectiveType` / `unregisterObjectiveType`, and the types of the data, options and hooks (`BattleState`, `Unit`, `Command`, `TacticalResult`, `TacticalAi`…). `@rpgjs/tactical-rpg/client` exports `provideTacticalClient`, `walkingSheet`, `TACTICAL_I18N` and the types of the client hooks. The rules, the board, the AI and the HUD state are internal.
 
 ## Not included
 

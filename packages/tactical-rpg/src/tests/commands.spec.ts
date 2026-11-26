@@ -109,6 +109,23 @@ describe("fleeing", () => {
   });
 });
 
+describe("surrendering", () => {
+  it("is only for a duel: against the AI the heroes flee", () => {
+    const solo = started();
+
+    expect(() => transition(solo, { type: "surrender" }, "ally")).toThrow("tactical.error.forbidden");
+    expect(solo.winner).toBeNull();
+  });
+
+  it("concedes a duel at any time", () => {
+    const duel = started((s) => { s.versus = [{ id: "b", name: "Bo" }]; });
+
+    const { state, event } = transition(duel, { type: "surrender" }, "ally", [], "a");
+    expect(state.winner).toBe("enemy");
+    expect(event).toMatchObject({ kind: "surrender", team: "ally" });
+  });
+});
+
 describe("the rules of the troop", () => {
   const forbid = (rule: string) => started((s) => { s.rules = { canAttack: true, canUseSkills: true, canUseItems: true, canGuard: true, canEscape: true, [rule]: false }; });
 
@@ -128,6 +145,16 @@ describe("the rules of the troop", () => {
     enemy.x = target.x; enemy.y = target.y - 1; enemy.range = 1;
 
     expect(() => transition(state, { type: "attack", unitId: enemy.id, targetId: target.id }, "enemy")).not.toThrow();
+  });
+
+  it("bind the player of the other side in a duel too", () => {
+    let state = forbid("canAttack");
+    state = transition(state, { type: "endPhase" }, "ally").state;
+    const enemy = state.units.find((u) => u.team === "enemy")!;
+    const target = state.units.find((u) => u.team === "ally")!;
+    enemy.x = target.x; enemy.y = target.y - 1; enemy.range = 1;
+
+    expect(() => transition(state, { type: "attack", unitId: enemy.id, targetId: target.id }, "enemy", [], "bob")).toThrow("tactical.error.forbidden");
   });
 
   it("let everything through when the troop says nothing", () => {

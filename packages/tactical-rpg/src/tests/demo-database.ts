@@ -1,52 +1,52 @@
-import { tacticalEncounter, tacticalRole, tacticalSkill, tacticalUnit } from "../core";
+import { tacticalEncounter, tacticalRole, tacticalSkill, tacticalUnit } from "../core/data";
 
 /**
- * Ember Oath: the demo content, declared in the RPGJS database like any other
- * game data (the plugin reads skills, units and encounters from there).
+ * Ember Oath: the content the tests play, declared in the RPGJS database like
+ * any other game data (the module reads skills, units and encounters from there).
  */
 export const emberDatabase = {
   // ------------------------------------------------------------ roles
   // warrior / archer / mage are built in; any other role is declared here.
   paladin: tacticalRole({ name: "Paladin", tactical: { attack: "melee", glyph: "✠", color: 0xffe29a } }),
-  occultist: tacticalRole({ name: "Occultiste", tactical: { attack: "magic", glyph: "☾", color: 0xd98cff } }),
-  crossbow: tacticalRole({ name: "Arbalétrier", tactical: { attack: "ranged", glyph: "➹", color: 0xa9e38c } }),
+  occultist: tacticalRole({ name: "Occultist", tactical: { attack: "magic", glyph: "☾", color: 0xd98cff } }),
+  crossbow: tacticalRole({ name: "Crossbowman", tactical: { attack: "ranged", glyph: "➹", color: 0xa9e38c } }),
 
   // ------------------------------------------------------------ skills
   "oath-breaker": tacticalSkill({
-    name: "Brise-serment",
-    description: "Une frappe lourde sur une seule cible.",
+    name: "Oath Breaker",
+    description: "A heavy blow on a single target.",
     spCost: 8, power: 42, tactical: { range: 1, shape: "single", visual: "slash", color: 0xffdb95 },
   }),
   "earth-shatter": tacticalSkill({
-    name: "Onde tellurique",
-    description: "Fracture le sol en croix autour de la cible.",
+    name: "Earth Shatter",
+    description: "Splits the ground in a cross around the target.",
     spCost: 12, power: 26, tactical: { range: 1, shape: "cross", visual: "shockwave", color: 0xffa86a },
   }),
   "astral-arrow": tacticalSkill({
-    name: "Flèche astrale",
-    description: "Traverse la cible et atteint la case suivante.",
+    name: "Astral Arrow",
+    description: "Goes through the target and hits the next cell.",
     spCost: 8, power: 32, tactical: { range: 3, shape: "pierce", visual: "arrow", color: 0x80e8d4 },
   }),
   starfall: tacticalSkill({
-    name: "Pluie d’étoiles",
-    description: "Une volée de flèches frappe une zone en croix.",
+    name: "Starfall",
+    description: "A volley of arrows hits a cross-shaped area.",
     spCost: 12, power: 22, tactical: { range: 4, shape: "cross", visual: "volley", color: 0xa1cfff },
   }),
   "ember-nova": tacticalSkill({
-    name: "Nova du brasier",
-    description: "Embrase une zone de 3 × 3 autour de la cible.",
+    name: "Ember Nova",
+    description: "Sets a 3 × 3 area around the target ablaze.",
     spCost: 14, power: 30, tactical: { range: 3, shape: "square", visual: "fire", color: 0xff995d },
   }),
   "frost-lance": tacticalSkill({
-    name: "Lance de givre",
-    description: "Un cristal de glace frappe une cible lointaine.",
+    name: "Frost Lance",
+    description: "An ice crystal strikes a distant target.",
     spCost: 8, power: 38, tactical: { range: 4, shape: "single", visual: "frost", color: 0x9be9ff },
   }),
 
   // ------------------------------------------------------------ units
   kael: tacticalUnit({
-    name: "Kaël",
-    description: "Un rempart entre ses compagnons et le brasier.",
+    name: "Kael",
+    description: "A wall between his companions and the blaze.",
     tactical: {
       role: "warrior",
       battler: "ember-hero",
@@ -56,8 +56,8 @@ export const emberDatabase = {
     },
   }),
   eryn: tacticalUnit({
-    name: "Éryn",
-    description: "Une flèche suffit à rompre le silence.",
+    name: "Eryn",
+    description: "One arrow is enough to break the silence.",
     tactical: {
       role: "archer",
       battler: "ember-hero",
@@ -69,7 +69,7 @@ export const emberDatabase = {
   }),
   lior: tacticalUnit({
     name: "Lior",
-    description: "Il entend encore la voix des cendres.",
+    description: "He still hears the voice of the ashes.",
     tactical: {
       role: "mage",
       battler: "ember-hero",
@@ -81,7 +81,7 @@ export const emberDatabase = {
   }),
   maren: tacticalUnit({
     name: "Maren",
-    description: "Son bouclier a déjà arrêté une coulée de lave.",
+    description: "Her shield once stopped a lava flow.",
     tactical: {
       role: "paladin",
       battler: "ember-hero",
@@ -90,9 +90,9 @@ export const emberDatabase = {
       skills: ["oath-breaker"],
     },
   }),
-  ombre: tacticalUnit({
-    name: "Ombre",
-    description: "Elle murmure et les braises lui répondent.",
+  shade: tacticalUnit({
+    name: "Shade",
+    description: "She whispers and the embers answer.",
     tactical: {
       role: "occultist",
       battler: "ember-sentinel",
@@ -102,9 +102,9 @@ export const emberDatabase = {
       skills: ["ember-nova"],
     },
   }),
-  carreau: tacticalUnit({
-    name: "Carreau",
-    description: "Il ne tire qu’une fois, mais de très loin.",
+  bolt: tacticalUnit({
+    name: "Bolt",
+    description: "He shoots only once, but from very far.",
     tactical: {
       role: "crossbow",
       battler: "ember-sentinel",
@@ -114,9 +114,9 @@ export const emberDatabase = {
       skills: ["astral-arrow"],
     },
   }),
-  cendre: tacticalUnit({
-    name: "Cendre",
-    description: "Une sentinelle liée au sanctuaire.",
+  cinder: tacticalUnit({
+    name: "Cinder",
+    description: "A sentinel bound to the sanctuary.",
     tactical: {
       role: "warrior",
       battler: "ember-sentinel",
@@ -126,9 +126,9 @@ export const emberDatabase = {
       skills: ["oath-breaker", "earth-shatter"],
     },
   }),
-  braise: tacticalUnit({
-    name: "Braise",
-    description: "Un regard immobile derrière les braises.",
+  ember: tacticalUnit({
+    name: "Ember",
+    description: "A still gaze behind the embers.",
     tactical: {
       role: "archer",
       battler: "ember-sentinel",
@@ -138,9 +138,9 @@ export const emberDatabase = {
       skills: ["astral-arrow", "starfall"],
     },
   }),
-  silex: tacticalUnit({
-    name: "Silex",
-    description: "Une présence nourrie de magie ancienne.",
+  flint: tacticalUnit({
+    name: "Flint",
+    description: "A presence fed by ancient magic.",
     tactical: {
       role: "mage",
       battler: "ember-sentinel",
@@ -153,12 +153,12 @@ export const emberDatabase = {
 
   // ------------------------------------------------------------ encounters
   // Four guardians (a paladin joins) against six sentinels, custom roles included.
-  rempart: tacticalEncounter({
-    name: "Le Rempart de braise",
+  rampart: tacticalEncounter({
+    name: "The Ember Rampart",
     tactical: {
       chapter: "PROLOGUE · II",
-      objective: "Tenez le rempart : éliminez les six sentinelles.",
-      intro: "Maren rejoint le serment. En face, les cendres ont levé leurs occultistes et leurs arbalétriers.",
+      objective: "Hold the rampart: defeat the six sentinels.",
+      intro: "Maren joins the oath. Across the field, the ashes have raised their occultists and crossbowmen.",
       board: { columns: 9, rows: 7, cellSize: 64, origin: { x: 672, y: 480 } },
       allies: [
         { unit: "kael", x: 4, y: 5 },
@@ -167,22 +167,22 @@ export const emberDatabase = {
         { unit: "maren", x: 3, y: 5 },
       ],
       enemies: [
-        { unit: "cendre", x: 4, y: 1 },
-        { unit: "cendre", x: 2, y: 1 },
-        { unit: "braise", x: 1, y: 0 },
-        { unit: "carreau", x: 7, y: 0 },
-        { unit: "ombre", x: 6, y: 1 },
-        { unit: "silex", x: 4, y: 0 },
+        { unit: "cinder", x: 4, y: 1 },
+        { unit: "cinder", x: 2, y: 1 },
+        { unit: "ember", x: 1, y: 0 },
+        { unit: "bolt", x: 7, y: 0 },
+        { unit: "shade", x: 6, y: 1 },
+        { unit: "flint", x: 4, y: 0 },
       ],
     },
   }),
-  // PvP (key P in the demo): the challenger leads the guardians, the other player the sentinels.
+  // PvP: the challenger leads the guardians, the other player the sentinels.
   duel: tacticalEncounter({
-    name: "Duel au sanctuaire",
+    name: "Duel at the Sanctuary",
     tactical: {
-      chapter: "ÉPREUVE",
-      objective: "Éliminez l’escadron adverse.",
-      intro: "Deux serments, une seule flamme. Le premier escadron à tomber rend les armes.",
+      chapter: "TRIAL",
+      objective: "Defeat the opposing squad.",
+      intro: "Two oaths, one flame. The first squad to fall lays down its arms.",
       board: { columns: 9, rows: 7, cellSize: 64, origin: { x: 672, y: 480 } },
       allies: [
         { unit: "kael", x: 4, y: 5 },
@@ -190,18 +190,18 @@ export const emberDatabase = {
         { unit: "lior", x: 6, y: 5 },
       ],
       enemies: [
-        { unit: "cendre", x: 4, y: 1 },
-        { unit: "braise", x: 2, y: 1 },
-        { unit: "silex", x: 6, y: 1 },
+        { unit: "cinder", x: 4, y: 1 },
+        { unit: "ember", x: 2, y: 1 },
+        { unit: "flint", x: 6, y: 1 },
       ],
     },
   }),
   sanctuary: tacticalEncounter({
-    name: "Le Sanctuaire des Cendres",
+    name: "The Sanctuary of Ashes",
     tactical: {
       chapter: "PROLOGUE · I",
-      objective: "Éliminez les trois gardiens adverses.",
-      intro: "Au-dessus du feu, un dernier serment. Guidez vos trois gardiens et reprenez le sanctuaire.",
+      objective: "Defeat the three opposing guardians.",
+      intro: "Above the fire, one last oath. Lead your three guardians and take back the sanctuary.",
       // The lava arena.
       board: { columns: 9, rows: 7, cellSize: 64, origin: { x: 672, y: 480 } },
       allies: [
@@ -210,9 +210,9 @@ export const emberDatabase = {
         { unit: "lior", x: 6, y: 5 },
       ],
       enemies: [
-        { unit: "cendre", x: 4, y: 1 },
-        { unit: "braise", x: 2, y: 1 },
-        { unit: "silex", x: 6, y: 1 },
+        { unit: "cinder", x: 4, y: 1 },
+        { unit: "ember", x: 2, y: 1 },
+        { unit: "flint", x: 6, y: 1 },
       ],
     },
   }),

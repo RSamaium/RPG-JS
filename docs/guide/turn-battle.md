@@ -53,7 +53,8 @@ await startTurnBattle({ players: [a], versus: [b], spectators: [c] });          
 | `getTurnBattle(playerOrId)` | The `TurnBattleHandle` of the battle a player fights in, or of a battle id. |
 | `watchTurnBattle(spectator, target)` | Watch the battle of a fighting player (or a battle id); resolves when the spectator leaves, `false` when refused. |
 | `stopTurnBattle(player)` | Take a player out of their battle, as a disconnection does. |
-| `getLimit`, `setLimit`, `getLimits`, `clearLimits` | The limit gauges, kept on the player between battles. |
+| `getLimit`, `setLimit`, `getLimits`, `clearLimits` | The limit gauges, kept on the player between battles (a running battle keeps its own; changes apply to the next one). |
+| `heroId(player)` | The combatant id of the player's own hero (`player:<id>`), to find it in `getTurnBattle(player).state()`. |
 
 ### `StartTurnBattleOptions` (third argument, or the group options)
 
@@ -85,7 +86,7 @@ defineModule<RpgServer>({
 });
 ```
 
-Record kinds: skills (default), `item`, `enemy`, `troop`, `weapon`, `summon` and `command`. The fields of each `turnBattle` object are typed and commented in `SkillBattleData`, `ItemBattleData`, `WeaponBattleData`, `EnemyBattleData`, `SummonBattleData` and `TroopBattleData`. A tactical battle reads the `tactical` field of the same records, so one skill can serve both.
+Record kinds and their helpers: skills (default, `turnBattleSkill`), `item` (`turnBattleItem`), `enemy` (`turnBattleEnemy`), `troop` (`turnBattleTroop`), `weapon` (`turnBattleWeapon`), `summon` (`turnBattleSummon`) and `command` (`turnBattleAction`, an action described as data). Each helper returns the record unchanged, with its `_type`. The fields of each `turnBattle` object are typed and commented in `SkillBattleData`, `ItemBattleData`, `WeaponBattleData`, `EnemyBattleData`, `SummonBattleData` and `TroopBattleData`. A tactical battle reads the `tactical` field of the same records, so one skill can serve both.
 
 ## Server options (`TurnBattleServerOptions`)
 
@@ -94,15 +95,15 @@ Record kinds: skills (default), `item`, `enemy`, `troop`, `weapon`, `summon` and
 | `skills`, `items`, `enemies`, `troops`, `summons` | Extra battle data by id, used before the database. |
 | `hero(player, ctx)` | How the player's own character looks and fights (`battler`, limit, fallback stats). `ctx` is a `PartyContext`: `players`, `index`, `side`, `pvp`. |
 | `party(player, ctx)` | Companions fighting next to the player, owned and commanded by the player. |
-| `turnTimer` | Seconds to pick a command before guarding automatically. Default: 30 in co-op, none in solo. `false` disables it. |
-| `nativeStats` | Read HP/SP and parameters from the `RpgPlayer` (default). Set `false` to use `hero().stats`. |
-| `formulas` | `"native"` (default: the map's `damagePhysic`, `damageSkill`, `damageCritical`, `damageGuard` when it has them), `"plugin"` (always the plugin's) or an object overriding some of them. |
+| `turnTimer` | Seconds to pick a command before guarding automatically. Default: 30 as soon as more than one player fights (co-op and player versus player), none in solo. `false` disables it. |
+| `nativeStats` | Read HP/SP and parameters from the `RpgPlayer` (default). Set `false` to use `hero().stats` (`DEFAULT_HERO_STATS` when it gives none). |
+| `formulas` | `"native"` (default: the map's `damagePhysic`, `damageSkill`, `damageCritical`, `damageGuard` when it has them), `"plugin"` (always the plugin's, `defaultFormulas`) or an object overriding some of them. |
 | `battlers` | Battler id of units whose record has none: `{ ally, enemy }`. |
 | `adapt` | Turns a record of another source into the shape the plugin reads, per kind (`enemy`, `troop`, `skill`, `item`, `weapon`, `summon`, `command`). Called with the raw record, its id and `lookup(id)` to read another record. |
-| `ai` | Named AI functions for enemies. |
+| `ai` | Named AI functions for enemies. `defaultAi` is the default brain, to fall back on. |
 | `weights` | Weights of the commands the default AI picks. |
 | `hooks` | `TurnBattleServerHooks` declared without a module. |
-| `commands` | Custom commands (see `turnBattleCommand`), given to units with `commands: [...]`. |
+| `commands` | Custom commands (`turnBattleCommand`), given to units with `commands: [...]`. They run on the server; the texts they show over a target are i18n keys (`act.text(target, "turnBattle.steal.fail")`). |
 | `runTrigger(player, call)` | Runs what a skill does besides the battle (`cast`, `impact`, `defeat`) for the player who used it, once the action is sent to players. Errors are logged and the battle goes on. |
 | `enemyCondition(player, condition)` | Tells whether a troop member that has a `condition` fights this time. |
 
@@ -129,6 +130,26 @@ defineModule<RpgServer>({
 
 `TurnBattleHandle` gives hooks the battle `id`, `player`, `players`, `versus`, `spectators()`, `troop` and `state()`.
 
+## Who owns what
+
+| | |
+|---|---|
+| **Server** | The whole battle: turn order, commands and their validation, damage, AI, the turn timer, rewards, and what is written on the players at the end. Hooks of `TurnBattleServerHooks` and the `turnBattle*` data run there. |
+| **Client** | Only the presentation: the battle scene, battlers, effects, sounds, menus and HUD, the countdown display, the speed and sound settings. Client hooks change what is shown, never the outcome. |
+| **Synchronised** | After each command the server sends every player (and spectator) the new battle state (`BattleView`) with the beats to play, through the GUI data of the battle GUI. A client sends back only the command it chose; the server checks it and answers an i18n error key when it refuses it. |
+
+It works the same in standalone RPG mode (the server runs in the browser) and in MMORPG mode. The limit gauges are saved on the player (prop `turnBattle`, not sent to the client).
+
+### Disconnection
+
+When a fighter disconnects (or `stopTurnBattle` takes them out), the battle goes on without them:
+
+- the AI takes over their units (hero and companions) until the end of the battle;
+- nothing is written on the player who left: no HP, SP, items, EXP, gold or drops, and `onEnd` does not run for them;
+- in player versus player, a side that has nobody left forfeits, and the other side wins.
+
+The other players keep fighting and get their result as usual. A spectator who leaves simply stops watching.
+
 ## Client options (`TurnBattleClientOptions`)
 
 | Option | Meaning |
@@ -137,7 +158,7 @@ defineModule<RpgServer>({
 | `resolveBattler(id)` | Builds the spritesheet of a battler the engine does not hold. Return `undefined` to leave it to the engine. |
 | `backdrops` | Backgrounds by troop `background` id (`default` otherwise): painted layers and ambient particles. |
 | `resolveBackdrop(id)` | Builds a background that `backdrops` does not hold. |
-| `fx` | Extra effect recipes by skill `fx` id. |
+| `fx` | Extra effect recipes by skill `fx` id (`FxFn`). `builtinFx` holds the plugin's recipes, `burst(color, options)` builds a particle burst. |
 | `sounds` | Maps battle cues (`cursor`, `confirm`, `back`, `attack`, `cast`, `hit`, `crit`, `hurt`, `break`, `heal`, `ko`, `limit`, `victory`, `dash`) to a sound id, `false` (silence) or a function `(engine, volume) => void`. Without it, small synthesized sounds are used. |
 | `muted` | Starts with the sounds off. |
 | `hideGuis` / `keepGuis` / `onBattleShown()` | How the battle shares the screen with the GUIs of the game, as in every RPGJS battle system (`BattleScreenOptions`): by default every GUI but the battle and the built-in dialogs is hidden; `keepGuis` keeps some (a chat); `onBattleShown` adapts a GUI of your own and returns what restores it. |
@@ -145,7 +166,7 @@ defineModule<RpgServer>({
 
 ### Texts
 
-The texts of the battle are `turnBattle.*` keys of the RPGJS i18n service (`TURN_BATTLE_I18N` holds the English and French defaults). A game overrides them, or adds a language, with the `i18n` of its own module:
+The texts of the battle are `turnBattle.*` keys of the RPGJS i18n service (`TURN_BATTLE_I18N` holds the English and French defaults, exported by both entries). The client shows the menus, HUD, `aria-label`s and errors with them; the server uses `turnBattle.player` and `turnBattle.hero` for a player or hero without a name. Texts with values are one key filled with params (`turnBattle.spCost`: `"{cost} MP"`), so a translation can order the words its own way. A game overrides them, or adds a language, with the `i18n` of its own module:
 
 ```ts
 defineModule<RpgClient>({ i18n: { en: { "turnBattle.attack": "Strike" }, de: { "turnBattle.attack": "Angriff" } } });
@@ -153,7 +174,7 @@ defineModule<RpgClient>({ i18n: { en: { "turnBattle.attack": "Strike" }, de: { "
 
 ### Controls
 
-The battle uses the keyboard controls of the game (`keyboardControls` of the client config: `up`, `down`, `left`, `right`, `action`, `escape`) and the gamepad mapping of the built-in GUIs: A confirms, B or Start goes back, the d-pad or the stick moves through the menu, R changes the speed. Every command also has a button for touch screens.
+The battle uses the keyboard controls of the game (`keyboardControls` of the client config: `up`, `down`, `left`, `right`, `action`, `escape`, and `tabNext` to change the speed) and the gamepad mapping of the built-in GUIs: A confirms, B or Start goes back, the d-pad or the stick moves through the menu, R changes the speed. Every command also has a button for touch screens. The help line of the menu (`turnBattle.keys`) names no key, since the keys are configurable.
 
 ### Client hooks
 

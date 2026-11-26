@@ -26,6 +26,10 @@ import {
   action, timeLeft, notice, myId, spectator, myTeam, allies, mode, staged, commit, route, pace, setPace, selectUnit, skillMenu, selectedSkill, pickSkill, planned, chooseCell, cancel, inspected, hoverCell, details, forecast,
 } from "../client/state";
 
+/** The i18n service of the engine with the English texts of the battle, parameters filled in. */
+const english = (key: string, params: Record<string, unknown> = {}) =>
+  ((TACTICAL_I18N.en as Record<string, string>)[key] ?? key).replace(/\{(\w+)\}/g, (m, name: string) => (name in params ? String(params[name]) : m));
+
 describe("client signals and transport", () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -291,7 +295,7 @@ describe("the objective the HUD says", () => {
     return state;
   };
   // The i18n service of the engine, with the default texts of the battle.
-  beforeEach(() => connectEngine({ t: (key: string) => (TACTICAL_I18N.en as Record<string, string>)[key] ?? key } as never));
+  beforeEach(() => connectEngine({ t: english } as never));
   afterEach(() => {
     battle.set(null);
   });

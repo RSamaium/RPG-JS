@@ -1,3 +1,5 @@
+import type { BattleHookArgs } from "@rpgjs/battle-kit/pure";
+import type { TurnBattleClientHooks } from "./index";
 import {
   bagOf,
   forbids,
@@ -69,7 +71,7 @@ export interface SessionHost {
   /** Battle music (engine.music.enter / leave); returns a restore function. */
   music(bgm: string | undefined): () => void;
   /** Client hooks `turnBattle.<name>` (option, then game modules). */
-  callHooks(name: string, ...args: unknown[]): Promise<unknown[]>;
+  callHooks<K extends keyof TurnBattleClientHooks & string>(name: K, ...args: BattleHookArgs<TurnBattleClientHooks, K>): Promise<unknown[]>;
 }
 
 export interface SessionOptions {
@@ -255,7 +257,7 @@ async function pump() {
     else if (s.latest.actor) nextTurn();
   } catch (error) {
     console.error("[TurnBattle] playback failed", error);
-    showToast(String(error));
+    showToast(t("turnBattle.error.playback"));
   } finally {
     s.pumping = false;
   }
@@ -334,13 +336,16 @@ function enterCommand() {
   openMenu("root");
 }
 
+/** The SP cost of a menu entry, as the hint shows it ("18 MP"). */
+const spCost = (cost: number) => t("turnBattle.spCost", { cost });
+
 function rootEntries(h: Combatant, view: BattleView): MenuEntry[] {
   const limitSkill = h.limit ? view.catalog.skills[h.limit.skill] : undefined;
   const entries: MenuEntry[] = [];
   if (h.limit && h.limit.value >= h.limit.max && limitSkill && !forbids(view, "limit"))
     entries.push({ id: "limit", label: limitSkill.name, icon: "✦", special: true, hint: t("turnBattle.limitReady"), detail: limitSkill.description });
-  // Custom commands ("Voler", "Analyse"…) come right after the skills.
-  const custom: MenuEntry[] = commandsOf(h, view, false).map((c) => commandEntry(c, h, view, t("turnBattle.sp")));
+  // Custom commands ("Steal", "Scan"…) come right after the skills.
+  const custom: MenuEntry[] = commandsOf(h, view, false).map((c) => commandEntry(c, h, view, spCost));
   entries.push(
     { id: "attack", label: t("turnBattle.attack"), icon: "⚔", detail: t("turnBattle.attackHint"), disabled: forbids(view, "attack") },
     { id: "skills", label: t("turnBattle.skills"), icon: "✧", disabled: (h.skills.length === 0 && commandsOf(h, view, true).length === 0) || forbids(view, "skill") },
@@ -375,7 +380,8 @@ function openMenu(level: "root" | "skills" | "items" | "options") {
           id: o.id,
           label: o.label,
           icon: o.icon,
-          hint: cost ? `${cost} ${t("turnBattle.sp")}` : undefined,
+          hint: cost ? spCost(cost) : undefined,
+          cost,
           detail: o.description,
           disabled: cost > h.sp || !!view.blocked?.includes(`${info.id}:${o.id}`),
         };
@@ -386,10 +392,10 @@ function openMenu(level: "root" | "skills" | "items" | "options") {
     menuEntries.set([
       ...h.skills.map((id) => {
         const s = view.catalog.skills[id];
-        return { id, label: s.name, hint: `${s.spCost ?? 0} ${t("turnBattle.sp")}`, detail: s.description, disabled: (s.spCost ?? 0) > h.sp };
+        return { id, label: s.name, hint: spCost(s.spCost ?? 0), cost: s.spCost ?? 0, detail: s.description, disabled: (s.spCost ?? 0) > h.sp };
       }),
       // The skills that do several things, recharge… are commands listed here
-      ...commandsOf(h, view, true).map((c) => commandEntry(c, h, view, t("turnBattle.sp"))),
+      ...commandsOf(h, view, true).map((c) => commandEntry(c, h, view, spCost)),
     ]);
   } else {
     menuTitle.set(t("turnBattle.items"));
@@ -398,7 +404,7 @@ function openMenu(level: "root" | "skills" | "items" | "options") {
         .filter(([, n]) => n > 0)
         .map(([id, n]) => {
           const it = view.catalog.items[id];
-          return { id, label: it.name, hint: `×${n}`, detail: it.description };
+          return { id, label: it.name, hint: t("turnBattle.quantity", { count: n }), detail: it.description };
         }),
     );
   }
@@ -452,8 +458,8 @@ export function chooseEntry(index: number) {
   if (e.disabled) {
     sfx("back");
     if (e.id.startsWith("cmd:") || menuLevel() === "options")
-      return showToast(e.hint && Number.parseInt(e.hint) > h.sp ? t("turnBattle.error.noSp") : t("turnBattle.error.unavailable"));
-    return showToast(e.hint && menuLevel() === "skills" ? t("turnBattle.error.noSp") : e.label);
+      return showToast((e.cost ?? 0) > h.sp ? t("turnBattle.error.noSp") : t("turnBattle.error.unavailable"));
+    return showToast(e.cost !== undefined && menuLevel() === "skills" ? t("turnBattle.error.noSp") : e.label);
   }
   sfx("confirm");
   menuIndex.set(index);
@@ -488,6 +494,7 @@ export function chooseEntry(index: number) {
         return surrender();
       case "limit": {
         const skill = view.catalog.skills[h.limit!.skill];
+        if (!skill) return showToast(t("turnBattle.error.unknownSkill"));
         return startTargeting(skill.scope, (target) => ({ type: "limit", target }));
       }
     }
@@ -502,14 +509,14 @@ export function chooseEntry(index: number) {
 
 let disarm: ReturnType<typeof setTimeout> | undefined;
 
-/** Keep the menu entry label in sync ("Abandonner" / "Confirmer l'abandon ?"). */
+/** Keep the menu entry label in sync ("Surrender" / "Confirm surrender?"). */
 function refreshSurrenderEntry() {
   if (menuLevel() !== "root" || (phase() !== "command" && phase() !== "target")) return;
   const label = surrenderArmed() ? t("turnBattle.surrenderConfirm") : t("turnBattle.surrender");
   menuEntries.set(menuEntries().map((e) => (e.id === "surrender" ? { ...e, label } : e)));
 }
 /**
- * PvP "Abandonner" (menu entry or button, at any time): a first press arms it,
+ * PvP "Surrender" (menu entry or button, at any time): a first press arms it,
  * a second one within 4 s gives up. The server ends the duel (forfeit).
  */
 export function surrender() {

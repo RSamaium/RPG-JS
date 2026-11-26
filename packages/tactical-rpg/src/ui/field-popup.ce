@@ -1,9 +1,12 @@
 <Text text={label} x={px} y={py} anchor={[0.5, 1]} scale={size} alpha={alpha} visible={shown} style={style} />
 
 <script>
+  import { battleFont } from '@rpgjs/battle-kit'
   import { computed } from 'canvasengine'
   import { popupMotion } from '@rpgjs/battle-kit/pure'
   import { field } from '../client/field'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
 
   // One pooled floating number (damage, K.O.), animated by the battle kit.
   const { index } = defineProps()
@@ -21,7 +24,7 @@
   const size = computed(() => (motion()?.scale ?? 1) * (slot()?.big ? 1.1 : 1))
   const alpha = computed(() => motion()?.alpha ?? 0)
   const style = computed(() => ({
-    fontFamily: 'Georgia, serif',
+    fontFamily: font,
     fontSize: slot()?.big ? 34 : 28,
     fontWeight: 'bold',
     fill: slot()?.color ?? 0xfff0c5,

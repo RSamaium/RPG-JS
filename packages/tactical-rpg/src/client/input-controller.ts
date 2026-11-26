@@ -32,10 +32,12 @@ import {
   itemOptions,
   itemIndex,
   pickItem,
+  danger,
 } from "./state";
+import { MENU_ENTRIES, tacticalBinds, type TacticalControl } from "./keys";
 
 /** A command of the tactical HUD, whatever key or button gave it. */
-export type TacticalCommand = "up" | "down" | "left" | "right" | "action" | "escape" | "nextUnit" | "endPhase" | `entry${1 | 2 | 3 | 4}`;
+export type TacticalCommand = TacticalControl;
 
 const DELTA: Partial<Record<TacticalCommand, [number, number]>> = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const FORWARD: TacticalCommand[] = ["down", "right"];
@@ -55,6 +57,8 @@ export function dispatch(command: TacticalCommand): void {
   }
   const state = battle();
   if (!state) return;
+  // The danger zone is only shown: anyone may toggle it, at any time.
+  if (command === "danger") return void danger.set(!danger());
   // A spectator only leaves or closes the result screen.
   if (spectator() && !state.winner) {
     if (command === "escape") leave();
@@ -105,7 +109,7 @@ export function dispatch(command: TacticalCommand): void {
   // The keys of the entries of the menu (2, 3…) follow what the menu offers; 1 goes back to the move.
   if (entry === 1) return void action("move");
   if (entry) {
-    const item = menuItems().find((i) => i.key === String(entry));
+    const item = menuItems().find((i) => i.slot === entry);
     if (item && !item.disabled) action(item.id);
     return;
   }
@@ -126,11 +130,21 @@ export function dispatch(command: TacticalCommand): void {
  * shared gamepad mapping of the RPGJS GUIs. A confirms (held during the
  * opposing turn: fast-forward), B or Start goes back, the d-pad or the stick
  * moves the cursor, R selects the next unit, Y ends the phase, X is the second
- * entry of the menu. A dialog shown over the battle, or a text field the
- * player writes in, keeps the keys.
+ * entry of the menu. The keys of the commands of the tactical battle are read
+ * from `keyboardControls` too (`endPhase`, `danger`, `entry1`…`entry6`, see
+ * `tacticalBinds`). A dialog shown over the battle, or a text field the player
+ * writes in, keeps the keys.
  */
 export function tacticalControls(engine: RpgClientEngine): Record<string, unknown> {
   const to = (command: TacticalCommand) => () => dispatch(command);
+  const binds = tacticalBinds((engine.globalConfig?.keyboardControls ?? {}) as Record<string, unknown>);
+  const entries = Object.fromEntries(
+    Array.from({ length: MENU_ENTRIES }, (_, i) => {
+      const name = `entry${i + 1}` as TacticalCommand;
+      // X (button 2) is the first entry after the move.
+      return [name, { bind: binds[name], ...(i === 1 ? { button: 2 } : {}), keyDown: to(name) }];
+    }),
+  );
   return battleControls(engine, {
     up: to("up"),
     down: to("down"),
@@ -145,11 +159,9 @@ export function tacticalControls(engine: RpgClientEngine): Record<string, unknow
     escape: to("escape"),
     tabNext: to("nextUnit"),
     extra: {
-      endPhase: { bind: "e", button: 3, keyDown: to("endPhase") },
-      entry1: { bind: "n1", keyDown: to("entry1") },
-      entry2: { bind: "n2", button: 2, keyDown: to("entry2") },
-      entry3: { bind: "n3", keyDown: to("entry3") },
-      entry4: { bind: "n4", keyDown: to("entry4") },
+      endPhase: { bind: binds.endPhase, button: 3, keyDown: to("endPhase") },
+      danger: { bind: binds.danger, keyDown: to("danger") },
+      ...entries,
     },
     paused: modalGuiShown,
   });

@@ -1,7 +1,7 @@
-<DOMContainer width="100%" height="100%" controls={keys}>
+<DOMContainer width="100%" height="100%" controls={hudControls}>
   <div class={['rpg-ui-tactical-shell', { 'rpg-ui-tactical-reduced': reduced() }]}>
     <div class="rpg-ui-tactical-vignette"></div>
-    <div class="rpg-ui-tactical-controls">@if (spectator()) { <div class="rpg-ui-tactical-watch-badge"><span>👁 {{ t('tactical.spectator') }}</span><button click={leave}>{{ t('tactical.leaveWatch') }} <kbd>ESC</kbd></button></div> }@if (showWatchers()) { <div class="rpg-ui-tactical-watchers" title={t('tactical.spectators')}>👁 {{ watcherCount() }}</div> }<button class="rpg-ui-tactical-speed" click={toggleSpeed} title={t('tactical.speed')}>{{ speedLabel() }}</button><button click={() => sound.set(!sound())} aria-pressed={sound()} title={t('tactical.sound')}>{{ sound() ? '♪' : '♩' }}</button></div>
+    <div class="rpg-ui-tactical-controls">@if (spectator()) { <div class="rpg-ui-tactical-watch-badge"><span>👁 {{ t('tactical.spectator') }}</span><button click={leave}>{{ t('tactical.leaveWatch') }} <kbd>{{ keys().escape }}</kbd></button></div> }@if (showWatchers()) { <div class="rpg-ui-tactical-watchers" title={t('tactical.spectators')} aria-label={t('tactical.spectators')}>👁 {{ watcherCount() }}</div> }<button class="rpg-ui-tactical-speed" click={toggleSpeed} title={t('tactical.speed', keys())} aria-label={t('tactical.speed', keys())}>{{ speedLabel() }}</button><button class="rpg-ui-tactical-danger-toggle" click={() => danger.set(!danger())} aria-pressed={danger()} title={t('tactical.danger', keys())} aria-label={t('tactical.danger', keys())}>⚠</button><button click={() => sound.set(!sound())} aria-pressed={sound()} title={t('tactical.sound')} aria-label={t('tactical.sound')}>{{ sound() ? '♪' : '♩' }}</button></div>
     @if (waiting()) {
       <div class="rpg-ui-tactical-loading"><div class="rpg-ui-tactical-loading-ring">✧</div><h2>{{ t('tactical.loading') }}</h2><p>{{ notice() || t('tactical.loadingHint') }}</p></div>
     }
@@ -18,7 +18,7 @@
     }
     @else {
       <aside class="rpg-ui-tactical-status">
-        <div class={['rpg-ui-tactical-phase', {enemy: battle()?.phase !== myTeam() && !spectator()}]}><b>{{ t('tactical.round') + ' ' + String(battle()?.round).padStart(2,'0') }}</b><span>{{ phaseLabel() }}</span>@if (timed()) { <time class={timerClass()} role="timer" aria-label={t('tactical.timeLeft')}>{{ timerLabel() }}</time> }</div>
+        <div class={['rpg-ui-tactical-phase', {enemy: battle()?.phase !== myTeam() && !spectator()}]}><b>{{ roundLabel() }}</b><span>{{ phaseLabel() }}</span>@if (timed()) { <time class={timerClass()} role="timer" aria-label={t('tactical.timeLeft')}>{{ timerLabel() }}</time> }</div>
         <p class="rpg-ui-tactical-objective-line"><span>◇</span> {{ objective() }}</p>
         @if (coop()) { <p class="rpg-ui-tactical-coop-line"><span>⚭</span> {{ coopLine() }}</p> }
       </aside>
@@ -33,7 +33,7 @@
           <button class={itemClass(2)} aria-disabled={itemOff(2)} click={() => pick(2)}><kbd>{{ entry(2)?.key }}</kbd><span>{{ entry(2)?.glyph }}</span>{{ entry(2)?.label }}<i>{{ countOf(2) }}</i></button>
           <button class={itemClass(3)} aria-disabled={itemOff(3)} click={() => pick(3)}><kbd>{{ entry(3)?.key }}</kbd><span>{{ entry(3)?.glyph }}</span>{{ entry(3)?.label }}<i>{{ countOf(3) }}</i></button>
           <button class={itemClass(4)} aria-disabled={itemOff(4)} click={() => pick(4)}><kbd>{{ entry(4)?.key }}</kbd><span>{{ entry(4)?.glyph }}</span>{{ entry(4)?.label }}<i>{{ countOf(4) }}</i></button>
-          <small><kbd>ESC</kbd> {{ t('tactical.back') }}</small>
+          <small><kbd>{{ keys().escape }}</kbd> {{ t('tactical.back') }}</small>
         </nav>
       }
       <footer class="rpg-ui-tactical-dock">
@@ -41,7 +41,7 @@
         <div class="rpg-ui-tactical-hint" role="status"><span>◇</span>{{ hint() }}</div>
         <section class="rpg-ui-tactical-order">
           @if (planned()) {
-            <button class="rpg-ui-tactical-gold-button" click={confirm} aria-disabled={busy()}>{{ t('tactical.confirm') }} <span>↵</span></button><button class="rpg-ui-tactical-text-button" click={cancel}>{{ t('tactical.cancel') }} <kbd>ESC</kbd></button>
+            <button class="rpg-ui-tactical-gold-button" click={confirm} aria-disabled={busy()}>{{ t('tactical.confirm') }} <kbd>{{ keys().action }}</kbd></button><button class="rpg-ui-tactical-text-button" click={cancel}>{{ t('tactical.cancel') }} <kbd>{{ keys().escape }}</kbd></button>
           } @else {
             <button class="rpg-ui-tactical-phase-button" click={endPhase} aria-disabled={!canPlay()}>{{ t('tactical.endPhase') }} <span>→</span></button><button class={surrenderClass()} click={surrender}>⚑ {{ t('tactical.surrender') }}</button><button class={fleeClass()} click={flee}>➶ {{ t('tactical.flee') }}</button>
           }
@@ -57,7 +57,8 @@
   import { computed, effect, mount, signal } from 'canvasengine'
   import { field } from '../client/field'
   import { inject, RpgClientEngine } from '@rpgjs/client'
-  import { connectEngine, receive, teardown, enter } from '../client/state'
+  import { connectEngine, receive, teardown, enter, timeLeft, keys } from '../client/state'
+  import { tacticalControls } from '../client/input-controller'
   connectEngine(inject(RpgClientEngine))
   // Battle packets arrive as the GUI data (server gui.open / gui.update).
   const { data } = defineProps()
@@ -69,11 +70,8 @@
       exit()
     }
   })
-  import { timeLeft } from '../client/state'
-  import { tacticalControls } from '../client/input-controller'
-  import { inject, RpgClientEngine } from '@rpgjs/client'
   // Keyboard and gamepad: the controls of the game, the gamepad mapping of the RPGJS GUIs.
-  const keys = signal(tacticalControls(inject(RpgClientEngine)))
+  const hudControls = signal(tacticalControls(inject(RpgClientEngine)))
   import { battle, selected, current, mode, planned, busy, loaded, notice, banner, flourish, cutin, bannerSide, help, reduced, sound, allies, enemies, canPlay, controls, forecast, hint, t, action, send, leave, meta, objectiveText, partners, waitingPartners, myId, spectator, myTeam, pvp, surrender, lastSurrender, roleInfo, sideRoles, menuItems, menuIndex, itemMenu, canFlee, flee, danger, pace, speed, setPace, confirm, cancel, endPhase, details, skillMenu, activeSkill, skillOptions } from '../client/state'
   import UnitDetail from './unit-detail.ce'
   import SkillMenu from './skill-menu.ce'
@@ -114,18 +112,21 @@
     const s = battle()
     if (!s) return ''
     // PvP: both sides, the local one first.
-    if (s.versus.length) return myTeam() === 'enemy' ? nameList(s.versus) + ' ⚔ ' + nameList(s.players) : nameList(s.players) + ' ⚔ ' + nameList(s.versus)
-    return spectator() ? nameList(s.players) : t('tactical.you') + ' + ' + partners().map((p) => p.name).join(', ')
+    if (s.versus.length) {
+      const mine = myTeam() === 'enemy' ? s.versus : s.players, theirs = myTeam() === 'enemy' ? s.players : s.versus
+      return t('tactical.versusLine', { left: nameList(mine), right: nameList(theirs) })
+    }
+    return spectator() ? nameList(s.players) : t('tactical.withPartners', { names: partners().map((p) => p.name).join(', ') })
   }
   const beginLocked = computed(() => { const locked = busy(), waiting = waitingPartners(), watching = spectator(); return locked || watching || waiting.length > 0 })
-  const beginLabel = () => spectator() ? t('tactical.spectatorWait') : waitingPartners().length ? t('tactical.waitingFor') + ' ' + waitingPartners().map((p) => p.name).join(', ') + '…' : t('tactical.begin')
+  const beginLabel = () => spectator() ? t('tactical.spectatorWait') : waitingPartners().length ? t('tactical.waitingFor', { names: waitingPartners().map((p) => p.name).join(', ') }) : t('tactical.begin')
   const beginClass = () => ['rpg-ui-tactical-gold-button', 'rpg-button', { waiting: waitingPartners().length > 0 || spectator() }]
   // Players see how many watch; spectators see their badge instead.
   const phaseLabel = () => spectator() ? (battle()?.phase === 'ally' ? t('tactical.allies') : t('tactical.opponents')) : battle()?.phase === myTeam() ? t('tactical.yourTurn') : t('tactical.enemyTurn')
   // Result seen from the local side; a spectator of a duel sees who won.
   const won = () => battle()?.winner === myTeam() && !spectator()
   const winnerNames = () => { const s = battle(); return ((s?.winner === 'enemy' ? s?.versus : s?.players) ?? []).map((p) => p.name).join(', ') }
-  const resultTitle = () => battle()?.escaped ? t('tactical.escaped') : pvp() && spectator() ? t('tactical.victory') + ' · ' + winnerNames() : t(won() || (spectator() && battle()?.winner === 'ally') ? 'tactical.victory' : 'tactical.defeat')
+  const resultTitle = () => battle()?.escaped ? t('tactical.escaped') : pvp() && spectator() ? t('tactical.victoryOf', { names: winnerNames() }) : t(won() || (spectator() && battle()?.winner === 'ally') ? 'tactical.victory' : 'tactical.defeat')
   const resultText = () => {
     if (battle()?.escaped) return t('tactical.escapedText')
     if (lastSurrender()) return lastSurrender()
@@ -145,8 +146,9 @@
   const countOf = (i) => { const n = menuItems()[i]?.count ?? 0; return n > 0 ? n : '' }
   const fleeClass = () => ['rpg-ui-tactical-text-button', 'rpg-ui-tactical-flee', { hidden: !canFlee() }]
   const pick = (i) => { const item = menuItems()[i]; if (item && !item.disabled) { menuIndex.set(i); action(item.id) } }
-  // Danger zone (R) and speed (×1 / ×2, ×3 while Space fast-forwards the enemy turn).
+  // Danger zone and speed (×1 / ×2, ×3 while Space fast-forwards the enemy turn).
   const speedLabel = () => '×' + pace()
+  const roundLabel = () => t('tactical.roundNumber', { round: String(battle()?.round ?? 1).padStart(2, '0') })
   const toggleSpeed = () => setPace(speed() === 1 ? 2 : 1)
   // The time left to the side that plays (several players): m:ss, red in its last ten seconds.
   const timed = computed(() => timeLeft() !== null)

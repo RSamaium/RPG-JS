@@ -14,5 +14,6 @@ export {
   type BattleParticipants,
 } from "./server/participants";
 export { BattleServerHooks } from "./server/hooks";
+export type { BattleHookArgs } from "./hook-args";
 export { databaseRecord, plainValue } from "./server/database";
 export { readBattlePlayer, writeBattlePlayer, type BattlePlayerOutcome, type BattlePlayerSnapshot } from "./server/player";

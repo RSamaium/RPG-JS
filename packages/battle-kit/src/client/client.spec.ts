@@ -25,6 +25,16 @@ describe("battle controls (client)", () => {
     expect(endTurn).toHaveBeenCalledOnce();
   });
 
+  it("switches tabs with the keys of the built-in menu, unless the game binds its own", () => {
+    const handlers = { tabPrev: () => {}, tabNext: () => {} };
+    const standard = battleControls(engine(), handlers) as Record<string, any>;
+    expect(standard.tabPrev.bind).toBe("page up");
+    expect(standard.tabNext.bind).toBe("page down");
+    const custom = battleControls(engine({ tabPrev: "q", tabNext: "w" }), handlers) as Record<string, any>;
+    expect(custom.tabPrev.bind).toBe("q");
+    expect(custom.tabNext.bind).toBe("w");
+  });
+
   it("leaves the keys to another GUI while paused", () => {
     const confirm = vi.fn();
     let paused = true;

@@ -5,12 +5,12 @@ import {
   BattleSessions,
   sameBattleMap,
   battleParticipants,
-  battlePlayerName,
   isBattleGroup,
   plainValue,
   type BattleGroupOptions,
   type BattleHandleBase,
   type BattleSession,
+  type BattleHookArgs,
 } from "@rpgjs/battle-kit/server";
 import {
   TURN_BATTLE_GUI,
@@ -54,11 +54,97 @@ import {
 } from "../core";
 import { commandFromDb, skillCommandFromDb, dbRecord, enemyFromDb, heroFromDb, itemFromDb, skillFromDb, summonFromDb, summonFromEnemy, troopFromDb, weaponFromDb, type EnemyDef, type HeroDef } from "./database";
 import { nativeFormulas } from "./native-formulas";
-import { commitPlayer, heroIdOf, readInventory, readPlayer } from "./snapshot";
+import { commitPlayer, heroIdOf, playerText, readInventory, readPlayer } from "./snapshot";
 
+// Public surface of `@rpgjs/turn-battle/server`: the data helpers, the texts and the types a game writes or reads in its
+// options and hooks. The battle engine itself (rules, turn order, synchronisation) stays internal.
 export { DEFAULT_HERO_STATS } from "./snapshot";
-export { WEAPON_STYLES, type EnemyDef, type HeroDef, type WeaponInfo } from "./database";
-export * from "../core";
+export type { EnemyDef, HeroDef } from "./database";
+export {
+  TURN_BATTLE_I18N,
+  defaultAi,
+  defaultFormulas,
+  turnBattleAction,
+  turnBattleCommand,
+  turnBattleEnemy,
+  turnBattleItem,
+  turnBattleSkill,
+  turnBattleSummon,
+  turnBattleTroop,
+  turnBattleWeapon,
+} from "../core";
+export type {
+  // Battle model (hooks, `getTurnBattle(...).state()`, results)
+  AttackStyle,
+  BattleResult,
+  BattleState,
+  BattleView,
+  Beat,
+  Catalog,
+  Combatant,
+  CombatantDef,
+  Command,
+  CommandEnvelope,
+  CommandInfo,
+  CommandOptionInfo,
+  CommandRule,
+  CommandType,
+  ForbiddenCommand,
+  Hit,
+  ItemDef,
+  Rewards,
+  Side,
+  SkillDef,
+  SkillKind,
+  SkillPhase,
+  SkillVisualEffects,
+  Snap,
+  StagePosition,
+  Stats,
+  SummonDef,
+  TargetScope,
+  TriggerCall,
+  TroopDef,
+  TroopMember,
+  // Rules: hooks, AI, formulas, custom commands
+  AiContext,
+  AiFn,
+  CommandActions,
+  CommandContext,
+  CustomCommand,
+  Formulas,
+  HitContext,
+  Loot,
+  Rng,
+  RulesHooks,
+  // Database records (`turnBattle*` helpers)
+  ActionEffect,
+  BattleActionRecord,
+  BattleParameters,
+  BuiltinFxName,
+  EffectTarget,
+  ElementName,
+  EnemyBattleData,
+  EnemyReward,
+  FxName,
+  FxPresetName,
+  ItemBattleData,
+  ParameterCurve,
+  SkillBattleData,
+  SummonBattleData,
+  SummonChoice,
+  TroopBattleData,
+  TurnBattleEnemyBattleRecord,
+  TurnBattleEnemyRecord,
+  TurnBattleItemRecord,
+  TurnBattleSkillRecord,
+  TurnBattleSummonRecord,
+  TurnBattleTroopBattleRecord,
+  TurnBattleTroopRecord,
+  TurnBattleWeaponRecord,
+  WeaponBattleData,
+  WeaponType,
+} from "../core";
 
 /**
  * A running turn-based battle, as the hooks and `getTurnBattle` see it.
@@ -146,7 +232,7 @@ export interface TurnBattleServerOptions {
   /** Hooks declared by the plugin user without a module. */
   hooks?: TurnBattleServerHooks;
   /**
-   * Custom commands ("Voler", "Analyse"…), given to units with `commands: [...]`
+   * Custom commands ("Steal", "Scan"…), given to units with `commands: [...]`
    * (hero, companions, enemies). See `turnBattleCommand`.
    */
   commands?: Record<string, CustomCommand>;
@@ -253,7 +339,8 @@ function moduleRuleHooks(player: RpgPlayer): RulesHooks[] {
 }
 
 /** Async hooks (option, then game modules): their results. */
-const callHooks = (player: RpgPlayer, name: keyof TurnBattleServerHooks & string, ...args: unknown[]) => hooks.call(player, name, ...args);
+const callHooks = <K extends keyof TurnBattleServerHooks & string>(player: RpgPlayer, name: K, ...args: BattleHookArgs<TurnBattleServerHooks, K>) =>
+  hooks.call(player, name, ...args);
 
 /** A record of the RPGJS database, converted by the `adapt` option of its kind when there is one. */
 function record(player: RpgPlayer, kind: keyof NonNullable<TurnBattleServerOptions["adapt"]>, id: string) {
@@ -443,38 +530,106 @@ function saveData(player: RpgPlayer, data: { limits?: Record<string, number> }) 
   read(() => (player as any).turnBattle?.set(JSON.stringify(data)));
 }
 
-/** Combatant id of a player's own hero (companions use the ids given by `party`). */
-export const heroId = heroIdOf;
+/**
+ * The combatant id of a player's own hero in a turn-based battle (`player:<player id>`). Companions use the ids given by
+ * the `party` option. Use it to find the hero in `getTurnBattle(player).state().combatants`, or to name the hero's limit
+ * gauge. Server only; standalone RPG and MMORPG.
+ *
+ * @title heroId
+ * @method heroId(player)
+ * @param {RpgPlayer} player - The player whose hero it is
+ * @returns {string} The combatant id of the hero
+ * @example
+ * ```ts
+ * import { getTurnBattle, heroId } from "@rpgjs/turn-battle/server";
+ *
+ * const hero = getTurnBattle(player)?.state().combatants.find((c) => c.id === heroId(player));
+ * ```
+ */
+export const heroId: (player: RpgPlayer) => string = heroIdOf;
 
 const unitId = (player: RpgPlayer, unit?: string) => (!unit || unit === "hero" ? heroId(player) : unit);
 
 /**
- * Limit gauges persist between battles (player prop `turnBattle`, saved with
- * the player). `unit` is `"hero"` (default) or a companion id from `party`.
+ * Reads the limit gauge of a unit of the player. Limit gauges persist between battles: they are stored on the player
+ * (prop `turnBattle`, saved with the player, not synchronised with the client). A battle in progress keeps its own
+ * gauges; what the battle charged is written back when it ends. Server only; standalone RPG and MMORPG.
  *
+ * @title getLimit
+ * @method getLimit(player, unit?)
+ * @param {RpgPlayer} player - The player who owns the unit
+ * @param {string} [unit] - `"hero"` (default) or the id of a companion given by the `party` option
+ * @returns {number} The value of the gauge (0 when it was never charged)
+ * @example
  * ```ts
- * getLimit(player);                          // hero gauge (0 when never charged)
- * setLimit(player, 100);                     // full: the Limit is ready next battle
- * setLimit(player, 50, `fina:${player.id}`); // a companion
- * getLimits(player);                         // { "player:abc": 100, "fina:abc": 50 }
+ * import { getLimit } from "@rpgjs/turn-battle/server";
+ *
+ * getLimit(player);                     // the hero's gauge
+ * getLimit(player, `fina:${player.id}`); // a companion's gauge
  * ```
- * A battle in progress keeps its own gauges; the change applies to the next one.
  */
 export function getLimit(player: RpgPlayer, unit?: string): number {
   return savedData(player).limits?.[unitId(player, unit)] ?? 0;
 }
 
+/**
+ * Sets the limit gauge of a unit of the player (a negative or invalid value is saved as 0). The change applies to the
+ * next battle: a battle in progress keeps its own gauges. Server only; standalone RPG and MMORPG.
+ *
+ * @title setLimit
+ * @method setLimit(player, value, unit?)
+ * @param {RpgPlayer} player - The player who owns the unit
+ * @param {number} value - The new value of the gauge (the limit is ready when it reaches the `max` of the unit's limit, 100 by default)
+ * @param {string} [unit] - `"hero"` (default) or the id of a companion given by the `party` option
+ * @returns {void}
+ * @example
+ * ```ts
+ * import { setLimit } from "@rpgjs/turn-battle/server";
+ *
+ * setLimit(player, 100);                     // the hero's limit is ready next battle
+ * setLimit(player, 50, `fina:${player.id}`); // a companion
+ * ```
+ */
 export function setLimit(player: RpgPlayer, value: number, unit?: string): void {
   const data = savedData(player);
   const v = Math.max(0, Number.isFinite(value) ? value : 0);
   saveData(player, { ...data, limits: { ...data.limits, [unitId(player, unit)]: v } });
 }
 
+/**
+ * Reads every limit gauge saved on the player (hero and companions), by combatant id. Server only; standalone RPG and
+ * MMORPG.
+ *
+ * @title getLimits
+ * @method getLimits(player)
+ * @param {RpgPlayer} player - The player
+ * @returns {Record<string, number>} The gauges by combatant id (a copy: changing it changes nothing)
+ * @example
+ * ```ts
+ * import { getLimits } from "@rpgjs/turn-battle/server";
+ *
+ * getLimits(player); // { "player:abc": 100, "fina:abc": 50 }
+ * ```
+ */
 export function getLimits(player: RpgPlayer): Record<string, number> {
   return { ...savedData(player).limits };
 }
 
-/** Reset every gauge of the player (hero and companions). */
+/**
+ * Resets every limit gauge of the player (hero and companions) to 0. The change applies to the next battle. Server only;
+ * standalone RPG and MMORPG.
+ *
+ * @title clearLimits
+ * @method clearLimits(player)
+ * @param {RpgPlayer} player - The player
+ * @returns {void}
+ * @example
+ * ```ts
+ * import { clearLimits } from "@rpgjs/turn-battle/server";
+ *
+ * clearLimits(player); // new game+: every gauge starts empty
+ * ```
+ */
 export function clearLimits(player: RpgPlayer): void {
   const { limits: _limits, ...rest } = savedData(player);
   saveData(player, rest);
@@ -622,8 +777,9 @@ async function runBattle(
     state: () => toView(state),
     spectators: () => watchers().map((s) => s.player),
   };
+  // A player without a name is "Player <n>" (the `turnBattle.player` key, in the language of that player).
   const names = Object.fromEntries(
-    everyone.map((p, i) => [p.id, battlePlayerName(p, i, p.t?.("turnBattle.player", { index: "{index}" }) ?? "Player {index}")]),
+    everyone.map((p, i) => [p.id, String(read(() => val((p as any).name)) || playerText(p, "turnBattle.player", { index: i + 1 }))]),
   );
 
   const sideOf = (p: RpgPlayer): Side => (players.includes(p) ? "ally" : "enemy");
@@ -685,13 +841,19 @@ async function runBattle(
   /** Commit a finished battle, or give the acting player `turnTimer` seconds once `beats` are played. */
   const arm = (beats: Beat[]) => {
     clearTimeout(timer);
-    if (state.result) return void finish();
+    // A failing `onEnd` hook must not leave a rejection nobody handles (it stops the server).
+    if (state.result) return void finish().catch((error) => console.error("[TurnBattle] end of battle failed", error));
     if (!turnTimer || !state.actor) return;
     const revision = state.revision;
     timer = setTimeout(() => {
-      if (state.revision !== revision) return;
-      // Too slow: the hero guards (keeps the coop moving).
-      apply(runAuto(state, battleRules, { type: "guard" }));
+      // In the queue of the commands: never between the checks and the result of one.
+      queue = queue
+        .then(() => {
+          if (state.revision !== revision || state.result) return;
+          // Too slow: the hero guards (keeps the coop moving).
+          apply(runAuto(state, battleRules, { type: "guard" }));
+        })
+        .catch((error) => console.error("[TurnBattle] turn timer failed", error));
     }, turnTimer * 1000 + playbackMs(beats));
   };
   /** The triggers skills asked for, run one after the other in the order of the battle. */
@@ -729,7 +891,7 @@ async function runBattle(
           if (changed.hp !== undefined || changed.sp !== undefined) apply(syncVitals(state, heroIdOf(player), changed));
         }
       }
-    });
+    }).catch((error) => console.error("[TurnBattle] triggers failed", error));
   };
   const apply = (out: { state: BattleState; beats: Beat[] }) => {
     if (out.state === state) return;
@@ -766,12 +928,17 @@ async function runBattle(
       return;
     }
     if (state.result) return;
-    // PvP: a side with nobody left forfeits; otherwise the AI plays for the missing player.
-    const mates = fighters().filter((f) => f.side === seat.side);
-    if (pvp && mates.every((f) => f.surrendered)) return apply(forfeit(state, seat.side));
-    state = setAuto(state, playerId, true);
-    const actor = state.combatants.find((c) => c.id === state.actor);
-    if (actor?.owner === playerId) apply(runAuto(state, battleRules));
+    // Called from a disconnection: a failing rule hook must not throw there.
+    try {
+      // PvP: a side with nobody left forfeits; otherwise the AI plays for the missing player.
+      const mates = fighters().filter((f) => f.side === seat.side);
+      if (pvp && mates.every((f) => f.surrendered)) return apply(forfeit(state, seat.side));
+      state = setAuto(state, playerId, true);
+      const actor = state.combatants.find((c) => c.id === state.actor);
+      if (actor?.owner === playerId) apply(runAuto(state, battleRules));
+    } catch (error) {
+      console.error("[TurnBattle] the AI could not take over", playerId, error);
+    }
   };
 
   const session: Session = {
@@ -819,6 +986,11 @@ async function runBattle(
   // Packets travel through the GUI data (gui.open / gui.update): the client
   // component receives them as its `data` signal, in both runtimes.
   for (const seat of seats.values()) {
+    // Disconnected during the `onStart` hooks: `battles.open` took them out already.
+    if (seat.left) {
+      seat.done = Promise.resolve();
+      continue;
+    }
     seat.gui.on<CommandEnvelope>("command", (env) => onCommand(seat, env));
     // PvP: give up at any time (not only on one's turn). A side forfeits once
     // every one of its players still here has surrendered.

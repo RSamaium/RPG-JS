@@ -5,30 +5,124 @@ import { getKeyboardControlBind, menuGamepadControls, type RpgClientEngine } fro
  * of the game (`keyboardControls` of the client config) and the gamepad uses
  * the mapping of the built-in GUIs (`menuGamepadControls`): A confirms
  * (`action`), B or Start goes back (`escape`), the d-pad or the stick moves,
- * L/R are `tabPrev` / `tabNext`.
+ * L/R are `tabPrev` / `tabNext`. Client only.
+ *
+ * Default keys when the game binds none: the arrows, `space` (`action`),
+ * `escape`, `page up` / `page down` (tabs).
+ *
+ * @title BattleControl
+ * @example
+ * ```ts
+ * const handlers: Partial<Record<BattleControl, () => void>> = { up: prev, down: next, action: confirm };
+ * ```
  */
 export type BattleControl = "up" | "down" | "left" | "right" | "action" | "escape" | "tabPrev" | "tabNext";
 
-/** A command of a battle screen that is not one of the standard ones (fast-forward, end the turn…). */
+/**
+ * A command of a battle screen that is not one of the standard ones
+ * (fast-forward, end the turn…), given in `extra` of `battleControls`.
+ * Client only.
+ *
+ * @title BattleExtraControl
+ * @example
+ * ```ts
+ * const fastForward: BattleExtraControl = {
+ *   bind: "f",
+ *   button: 2,
+ *   keyDown: () => (clock.boost = 4),
+ *   keyUp: () => (clock.boost = 1),
+ * };
+ * ```
+ */
 export interface BattleExtraControl {
-  /** Keyboard key(s), as CanvasEngine reads them (`"e"`, `"space"`, `["n1", "1"]`). */
+  /**
+   * Keyboard key(s), as CanvasEngine reads them (`"e"`, `"space"`, `["n1", "1"]`).
+   *
+   * @prop {string | string[]} bind
+   * @memberof BattleExtraControl
+   */
   bind: string | string[];
-  /** Gamepad button index of the standard layout (2 = X, 3 = Y) that also triggers it. */
+  /**
+   * Gamepad button index of the standard layout (2 = X, 3 = Y) that also
+   * triggers it. It replaces the built-in mapping of that button.
+   *
+   * @prop {number} [button]
+   * @memberof BattleExtraControl
+   */
   button?: number;
+  /**
+   * Called when the key or button is pressed.
+   *
+   * @method keyDown()
+   * @returns {void}
+   * @memberof BattleExtraControl
+   */
   keyDown(): void;
+  /**
+   * Called when the key or button is released (a key held to fast-forward).
+   *
+   * @method keyUp()
+   * @returns {void}
+   * @memberof BattleExtraControl
+   */
   keyUp?(): void;
-  /** Repeat while the key is held. */
+  /**
+   * Repeat `keyDown` while the key is held (at most every 150 ms).
+   *
+   * @prop {boolean} [repeat]
+   * @memberof BattleExtraControl
+   */
   repeat?: boolean;
 }
 
-/** What a standard command does: on press, or on press and on release (a key held to fast-forward). */
+/**
+ * What a standard command does: a function called on press, or
+ * `{ keyDown, keyUp }` to also act on release (a key held to fast-forward).
+ * Client only.
+ *
+ * @title BattleControlHandler
+ * @example
+ * ```ts
+ * const confirm: BattleControlHandler = () => choose();
+ * const hold: BattleControlHandler = { keyDown: () => (clock.boost = 4), keyUp: () => (clock.boost = 1) };
+ * ```
+ */
 export type BattleControlHandler = (() => void) | { keyDown(): void; keyUp?(): void };
 
-/** What a battle screen does on each command. */
+/**
+ * What a battle screen does on each command, given to `battleControls`: a
+ * handler per standard command (a command without handler is not bound), the
+ * extra commands, and a pause check. The directions repeat while held (at
+ * most every 150 ms). Client only.
+ *
+ * @title BattleControlHandlers
+ * @example
+ * ```ts
+ * const handlers: BattleControlHandlers = {
+ *   up: () => moveMenu(-1),
+ *   down: () => moveMenu(1),
+ *   action: confirm,
+ *   escape: back,
+ *   extra: { endTurn: { bind: "e", button: 3, keyDown: endTurn } },
+ *   paused: modalGuiShown,
+ * };
+ * ```
+ */
 export type BattleControlHandlers = Partial<Record<BattleControl, BattleControlHandler>> & {
-  /** Commands of this battle screen besides the standard ones, by name. */
+  /**
+   * Commands of this battle screen besides the standard ones, by name.
+   *
+   * @prop {Record<string, BattleExtraControl>} [extra]
+   * @memberof BattleControlHandlers
+   */
   extra?: Record<string, BattleExtraControl>;
-  /** When true, the battle leaves every key to another GUI (a dialog opened over the battle). */
+  /**
+   * When it returns true, the battle leaves every key to another GUI (a
+   * dialog opened over the battle): no handler runs. `modalGuiShown` fits.
+   *
+   * @prop {() => boolean} [paused]
+   * @memberof BattleControlHandlers
+   */
   paused?: () => boolean;
 };
 
@@ -50,6 +144,8 @@ export function typingInTextField(): boolean {
  * with `blockPlayerInput`, so the map never sees these keys; while the player
  * writes in a text field (the chat), the keys are left to it. Client only.
  *
+ * @title battleControls
+ * @method battleControls(engine, handlers)
  * @param engine - The client engine (its keyboard controls are read)
  * @param handlers - What each command does
  * @returns The controls object, to wrap in a `signal`
@@ -82,8 +178,9 @@ export function battleControls(engine: RpgClientEngine, handlers: BattleControlH
     right: keyboard.right ?? "right",
     action: getKeyboardControlBind(keyboard.action ?? "space"),
     escape: keyboard.escape ?? "escape",
-    tabPrev: "pageup",
-    tabNext: "tab",
+    // The keys of the tabs of the built-in menu, unless the game binds its own.
+    tabPrev: keyboard.tabPrev ?? "page up",
+    tabNext: keyboard.tabNext ?? "page down",
   };
   for (const name of Object.keys(binds) as BattleControl[]) {
     const handler = handlers[name];

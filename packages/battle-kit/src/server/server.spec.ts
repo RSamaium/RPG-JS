@@ -40,6 +40,29 @@ function fakeSession(id: string, fighters: RpgPlayer[]): BattleSession & { left:
 }
 
 describe("battle sessions (server)", () => {
+  it("takes out a player who disconnected while their battle was being prepared", () => {
+    const sessions = new BattleSessions("Test");
+    const alice = fakePlayer("alice");
+    const bob = fakePlayer("bob");
+    const release = sessions.reserve([alice, bob]);
+    // An `onStart` hook is awaited: Bob disconnects meanwhile.
+    sessions.disconnect(bob);
+    const session = fakeSession("b1", [alice, bob]);
+    sessions.open(session, [alice, bob]);
+    release();
+    expect(session.left).toEqual(["bob"]);
+    expect(sessions.isIn(bob)).toBe(false);
+    expect(sessions.isIn(alice)).toBe(true);
+    // A later battle of Bob is not taken out.
+    sessions.release(alice, session);
+    const again = sessions.reserve([bob]);
+    const next = fakeSession("b2", [bob]);
+    sessions.open(next, [bob]);
+    again();
+    expect(next.left).toEqual([]);
+    expect(sessions.isIn(bob)).toBe(true);
+  });
+
   it("reserves the players of a battle and refuses a second one", () => {
     const sessions = new BattleSessions("Test");
     const alice = fakePlayer("alice");
@@ -91,8 +114,8 @@ describe("battle participants (server)", () => {
   });
 
   it("names a guest without their id", () => {
-    expect(battlePlayerName(fakePlayer("x", { name: "Kael" }))).toBe("Kael");
-    expect(battlePlayerName(fakePlayer("x"), 1)).toBe("Player 2");
+    expect(battlePlayerName(fakePlayer("x", { name: "Kael" }), "Guest 1")).toBe("Kael");
+    expect(battlePlayerName(fakePlayer("x"), "Guest 2")).toBe("Guest 2");
   });
 
   it("reads a database record, a decorated class included", () => {

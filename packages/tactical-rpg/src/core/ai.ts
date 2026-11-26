@@ -1,7 +1,19 @@
 import { distance, reachable } from "./board";
 import { targetable } from "./rules";
 import type { BattleState, Command, Unit } from "./types";
-/** An AI: the next command of the side whose turn it is (null when nothing to do). */
+/**
+ * An AI: the next command of the side whose turn it is (`null` when it has nothing to do: the phase then ends). Server only: it
+ * plays the enemies of a battle against the AI (never in PvP).
+ *
+ * @example
+ * ```ts
+ * const passive: TacticalAi = (state) => {
+ *   const unit = state.units.find((u) => u.team === state.phase && u.hp > 0 && !u.acted);
+ *   return unit ? { type: "wait", unitId: unit.id } : null;
+ * };
+ * provideTacticalServer({ ai: passive });
+ * ```
+ */
 export type TacticalAi = (state: BattleState) => Command | null;
 
 /** Next unit of the side whose turn it is that has not acted yet. */

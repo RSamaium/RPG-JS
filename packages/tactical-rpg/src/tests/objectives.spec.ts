@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createEncounter } from "./fixture";
-import { emberDatabase } from "../demo/database";
+import { emberDatabase } from "./demo-database";
 import { createTacticalBattle } from "../core";
 import { transition } from "../core/rules";
 import { objectiveTypes, registerObjectiveType, unregisterObjectiveType } from "../core/objectives";

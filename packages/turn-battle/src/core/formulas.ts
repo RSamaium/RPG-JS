@@ -29,6 +29,28 @@ const variance = (rng: Rng) => 0.92 + rng.next() * 0.16;
 const avg = (list: Combatant[], k: "agi") =>
   list.reduce((s, c) => s + c.stats[k], 0) / Math.max(1, list.length);
 
+/**
+ * The damage, heal, stagger, limit and escape formulas of the plugin. With `formulas: "plugin"` (or when the map has no
+ * native formulas) the battle uses them; an object given to the `formulas` option overrides some of them, and can call
+ * these to adjust the default. Run on the server only.
+ *
+ * @title defaultFormulas
+ * @prop {Formulas} defaultFormulas
+ * @example
+ * ```ts
+ * import { defaultFormulas, provideTurnBattleServer } from "@rpgjs/turn-battle/server";
+ *
+ * provideTurnBattleServer({
+ *   formulas: {
+ *     // Bosses take a little less damage.
+ *     damage(ctx) {
+ *       const hit = defaultFormulas.damage(ctx);
+ *       return ctx.target.rewards?.exp && ctx.target.rewards.exp > 500 ? { ...hit, amount: Math.round(hit.amount * 0.8) } : hit;
+ *     },
+ *   },
+ * });
+ * ```
+ */
 export const defaultFormulas: Formulas = {
   damage({ attacker, target, skill, rng }) {
     const power = (skill?.power ?? 100) / 100;

@@ -1,8 +1,20 @@
 import { signal, type WritableSignal } from "canvasengine";
-import { Assets, type Container, type Texture } from "pixi.js";
-import { FxPlayer, ScreenEffects } from "@rpgjs/battle-kit";
+import type { Container } from "pixi.js";
+import { FxPlayer, ScreenEffects, imageSize } from "@rpgjs/battle-kit";
 import type { AttackStyle, BattleState, Board, Cell, Role, Team, Unit } from "../core/types";
 import { dangerZone, threatOf, type Threat } from "../core/danger";
+
+/** The parts of the HUD that take the pointer: a click on them never reaches the grid below. */
+const HUD_PANELS = [
+  ".rpg-ui-tactical-controls",
+  ".rpg-ui-tactical-loading",
+  ".rpg-ui-tactical-intro",
+  ".rpg-ui-tactical-status",
+  ".rpg-ui-tactical-unit-menu",
+  ".rpg-ui-tactical-skill-menu",
+  ".rpg-ui-tactical-dock",
+  ".rpg-ui-tactical-modal-backdrop",
+].join(", ");
 import { roleOf } from "../core/roles";
 import { distance, key, reachable, world } from "../core/board";
 import { targetable } from "../core/rules";
@@ -52,7 +64,17 @@ import {
  * Positions are world coordinates of the map.
  */
 
-
+/**
+ * Reactive view of a unit on the battlefield, as an `onPlay` hook gets it with
+ * `stage.unit(id)`: its position and look are signals the battlefield draws.
+ * Client only: changing it changes what is shown, never the battle.
+ *
+ * @example
+ * ```ts
+ * const view = stage.unit(event.unitId!);
+ * view?.anim.set("attack");
+ * ```
+ */
 export interface UnitView {
   id: string;
   team: Team;
@@ -240,10 +262,7 @@ class Field {
     const ids = [...new Set(state.units.map((u) => u.battler))];
     const missing = ids.filter((id) => !this.frames()[id]);
     if (!missing.length) {
-      if (!loaded()) {
-        loaded.set(true);
-        console.info("[Tactical] Assets ready");
-      }
+      if (!loaded()) loaded.set(true);
       return;
     }
     for (const id of missing) {
@@ -258,15 +277,17 @@ class Field {
         this.textures.set(id, new Set(Object.keys((sheet as { textures?: object }).textures ?? {})));
         let [w, h] = [48, 48];
         if (sheet.image) {
-          const texture = await Assets.load<Texture>(sheet.image);
-          w = (sheet.width ?? texture.width) / (sheet.framesWidth ?? 1);
-          h = (sheet.height ?? texture.height) / (sheet.framesHeight ?? 1);
+          const image = await imageSize(sheet.image);
+          w = (sheet.width ?? image.width) / (sheet.framesWidth ?? 1);
+          h = (sheet.height ?? image.height) / (sheet.framesHeight ?? 1);
         }
         this.frames.set({ ...this.frames(), [id]: { w, h } });
       })()
         .catch((error) => {
           console.warn(error);
           notice.set(t("tactical.error.load"));
+          // Drawn with the default size rather than never: one missing image must not keep the battle on its loading screen.
+          this.frames.set({ ...this.frames(), [id]: { w: 48, h: 48 } });
         })
         .finally(() => this.loading.delete(id));
     }
@@ -312,7 +333,7 @@ class Field {
   private listen() {
     this.listeners?.();
     const blocked = (event: PointerEvent) =>
-      help() || skillMenu() || !!(event.target as HTMLElement)?.closest?.("button, .t-panel, .t-modal, .t-intro, .rpg-ui-chat");
+      help() || skillMenu() || !!(event.target as HTMLElement)?.closest?.(`button, ${HUD_PANELS}, .rpg-ui-chat`);
     const click = (event: PointerEvent) => {
       if (blocked(event)) return;
       // Right click: back one step, like Escape.
@@ -321,7 +342,7 @@ class Field {
       if (cell) chooseCell(cell, { touch: event.pointerType === "touch" });
     };
     const menu = (event: MouseEvent) => {
-      if (battle()?.started && !(event.target as HTMLElement)?.closest?.(".t-modal")) event.preventDefault();
+      if (battle()?.started && !(event.target as HTMLElement)?.closest?.(".rpg-ui-tactical-modal-backdrop")) event.preventDefault();
     };
     const hover = (event: PointerEvent) => {
       if (event.pointerType === "touch") return;
