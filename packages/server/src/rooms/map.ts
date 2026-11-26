@@ -651,10 +651,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     const event = this.getEvent<RpgEvent>(otherEntity.uuid);
     const hook = phase === "in" ? "onInShape" : "onOutShape";
     if (player) {
-      player.execMethod(hook, [player, shape]);
+      void player.runHook(hook, [player, shape]);
     }
     if (event) {
-      event.execMethod(hook, [shape, player || event]);
+      void event.runHook(hook, [shape, player || event]);
     }
     return true;
   }
@@ -1289,7 +1289,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         .filter((event): event is RpgEvent => !!event && this.isEventVisibleForPlayer(event, player));
       if (events.length > 0) {
         events.forEach(event => {
-          event.execMethod('onAction', [player, action]);
+          void event.runHook('onAction', [player, action]);
         });
         // Tell the `onInput` hooks (an attack, for instance) that the action was used to interact
         if (action && typeof action === 'object' && events.some(event => event.interactive())) {
@@ -1297,7 +1297,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
         }
       }
     }
-    player.execMethod('onInput', [action]);
+    void player.runHook('onInput', [action]);
   }
 
   /**

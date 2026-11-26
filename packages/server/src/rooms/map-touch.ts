@@ -214,7 +214,7 @@ export class MapTouchCollisions {
       map: this.map,
     };
     const method = phase === "start" ? "onTouch" : "onTouchEnd";
-    void self.execMethod(method, [other, context]);
+    void self.runHook(method, [other, context]);
   }
 
   private dispatchTouchCollision(
@@ -231,7 +231,7 @@ export class MapTouchCollisions {
     if (playerA && eventB && this.map.isEventVisibleForPlayer(eventB, playerA)) {
       this.dispatchTouch(eventB, playerA, "player", phase, pairId, playerA);
       if (phase === "start") {
-        void eventB.execMethod("onPlayerTouch", [playerA]);
+        void eventB.runHook("onPlayerTouch", [playerA]);
       }
       return true;
     }
@@ -239,7 +239,7 @@ export class MapTouchCollisions {
     if (playerB && eventA && this.map.isEventVisibleForPlayer(eventA, playerB)) {
       this.dispatchTouch(eventA, playerB, "player", phase, pairId, playerB);
       if (phase === "start") {
-        void eventA.execMethod("onPlayerTouch", [playerB]);
+        void eventA.runHook("onPlayerTouch", [playerB]);
       }
       return true;
     }

@@ -672,7 +672,7 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
             val = this.param[MAXHP]
         }
         else if (val <= 0) {
-            this['execMethod']('onDead') 
+            void (this as any).runHook('onDead')
             val = 0
         }
         this.hpSignal.set(val)
@@ -782,7 +782,7 @@ export function WithParameterManager<TBase extends PlayerCtor>(Base: TBase) {
         }
         const hasNewLevel = val - lastLevel
         if (hasNewLevel > 0) {
-            this['execMethod']('onLevelUp', <any>[hasNewLevel])   
+            void (this as any).runHook('onLevelUp', [hasNewLevel])
         }
         this._level.set(val)
         this['refreshHotbar']?.()

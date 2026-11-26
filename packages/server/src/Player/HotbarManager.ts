@@ -356,7 +356,7 @@ export function WithHotbarManager<TBase extends PlayerCtor>(
       const gui = (this as any).getGui?.(PrebuiltGui.Hotbar);
       if (gui?.openId) gui.refresh?.();
       if (injectionContext || (this as any).context) {
-        void (this as any).execMethod?.("onHotbarChange", [{
+        void (this as any).runHook?.("onHotbarChange", [{
           ...payload,
           state: {
             ...next,
