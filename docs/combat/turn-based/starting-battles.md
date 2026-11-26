@@ -245,7 +245,7 @@ In a solo game the server runs inside the game, in the browser, and there is onl
 
 The server is shared, and a battle lives in the room of its map. Three rules hold for every group battle:
 
-1. **Everyone must be on the leader's map.** `startTurnBattle` throws otherwise. Pick partners and opponents among `player.getCurrentMap()?.getPlayers()`.
+1. **Everyone must be on the leader's map.** `startTurnBattle` throws otherwise. Pick partners and opponents among `player.getCurrentMap()?.getPlayers()`, and keep only those for which `sameBattleMap(p, leader)` is true: the list can hold a player who is still joining or leaving the map.
 2. **A player is in one battle at a time.** A player who fights or watches is busy: test `isInTurnBattle(p)` before adding them to a group.
 3. **Each player commands their own hero and companions.** The others' units are shown but cannot be commanded. A 30-second turn timer runs by default as soon as more than one player fights.
 
@@ -259,6 +259,7 @@ The players near the leader join the battle. `map.getPlayers()` lists the player
 
 ```ts
 import { type EventDefinition, type RpgPlayer } from "@rpgjs/server";
+import { sameBattleMap } from "@rpgjs/battle-kit/server";
 import { startTurnBattle, isInTurnBattle } from "@rpgjs/turn-battle/server";
 
 const RADIUS = 160; // pixels
@@ -268,7 +269,7 @@ function playersAround(leader: RpgPlayer): RpgPlayer[] {
   if (!map) return [];
   return map
     .getPlayers()
-    .filter((p) => p.id !== leader.id && !isInTurnBattle(p))
+    .filter((p) => p.id !== leader.id && sameBattleMap(p, leader) && !isInTurnBattle(p))
     .filter((p) => Math.hypot(p.x() - leader.x(), p.y() - leader.y()) <= RADIUS);
 }
 

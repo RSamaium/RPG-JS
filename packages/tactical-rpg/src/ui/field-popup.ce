@@ -5,6 +5,7 @@
   import { computed } from 'canvasengine'
   import { popupMotion } from '@rpgjs/battle-kit/pure'
   import { field } from '../client/field'
+  import { battle } from '../client/state'
   // The font of the game's GUIs (ui-css theme), never a hard-coded one.
   const font = battleFont()
 
@@ -20,8 +21,10 @@
   const shown = computed(() => !!motion() && !motion().done)
   const label = computed(() => slot()?.text ?? '')
   const px = computed(() => slot()?.x ?? 0)
-  const py = computed(() => (slot()?.y ?? 0) + (motion()?.y ?? 0))
-  const size = computed(() => (motion()?.scale ?? 1) * (slot()?.big ? 1.1 : 1))
+  // Numbers follow the size of the cells (the tile of the map), readable on small tiles.
+  const k = () => Math.max(0.55, (battle()?.board.cellSize ?? 64) / 64)
+  const py = computed(() => (slot()?.y ?? 0) + (motion()?.y ?? 0) * k())
+  const size = computed(() => (motion()?.scale ?? 1) * (slot()?.big ? 1.1 : 1) * k())
   const alpha = computed(() => motion()?.alpha ?? 0)
   const style = computed(() => ({
     fontFamily: font,

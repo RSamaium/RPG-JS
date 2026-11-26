@@ -287,10 +287,11 @@ function goalOf(goal: NonNullable<TacticalEncounterData["goal"]>, enemies: Place
 /** Build the initial battle state of an encounter. */
 export function createTacticalBattle(
   setup: EncounterSetup,
-  o: { id: string; origin?: Cell; players?: BattlePlayer[]; versus?: BattlePlayer[] },
+  o: { id: string; origin?: Cell; cellSize?: number; players?: BattlePlayer[]; versus?: BattlePlayer[] },
 ): BattleState {
   const { data } = setup;
-  const size = { ...DEFAULT_BOARD, ...data.board };
+  // The size of a cell: the encounter's, else the one given (the tile of the map), else the default.
+  const size = { ...DEFAULT_BOARD, ...(o.cellSize ? { cellSize: o.cellSize } : {}), ...data.board };
   const origin = data.board?.origin ??
     o.origin ?? { x: 0, y: 0 };
   const board: Board = { columns: size.columns, rows: size.rows, cellSize: size.cellSize, blocked: [...(size.blocked ?? [])], origin };

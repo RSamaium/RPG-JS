@@ -194,7 +194,10 @@ export function provideTacticalClient(options: TacticalClientOptions = {}) {
                 engine.setCameraFollow("tactical-camera");
                 // Keep the GUIs of the game hidden for the whole battle, even if the map shows them again.
                 const restore = hideGuisDuringBattle(TACTICAL_GUI, options);
+                // Only the battle is drawn on the map: its events and players are hidden for this client (they stay on the map).
+                const showMapObjects = engine.hideMapObjects({ events: true, players: true });
                 return () => {
+                  showMapObjects();
                   restore();
                   battlefield.clear();
                   engine.setCameraFollow(null);

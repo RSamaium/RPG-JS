@@ -97,7 +97,7 @@ A sentinel to defeat, an encounter that places the player's hero and the sentine
     }
     ```
 
-    Place the event on a map (see [Create an event](/guide/create-event)) and press the action key next to it. The grid is drawn around the player, unless the encounter or the `origin` option places it.
+    Place the event on a map (see [Create an event](/guide/create-event)) and press the action key next to it. The grid is drawn around the player, on the tiles of the map, unless the encounter or the `origin` option places it. The battle is drawn at the scale of the map: the characters keep their size, and the events and the other players of the map are hidden for the fighters while it lasts.
   </Step>
 </Steps>
 

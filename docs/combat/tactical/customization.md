@@ -15,7 +15,7 @@ The server options and hooks change the rules; the client options and hooks chan
 | `ai` | attack the weakest target in range, else close in | Enemy AI (`TacticalAi`). |
 | `enemyDelay` | `1650` | Delay between two enemy actions, in ms. |
 | `turnSeconds` | `60` | Seconds a side has to play its phase with several players; `0`: no limit. An encounter's own value wins. |
-| `hidePlayer` | `true` | Hide the player's map sprite during the battle. |
+| `hidePlayer` | `true` | Hide the player's map sprite during the battle, for everyone. The fighters' own screens hide every event and player of the map anyway (`engine.hideMapObjects`, see [Hide map objects](/guide/hide-map-objects)). |
 | `hero(player, { side, seat })` | — | How the hero of a player fights: `role`, `battler`, `stats.range`, `stats.move`… (see [the hero of a player](/combat/tactical/battle-data#the-hero-of-a-player)). |
 | `hooks` | — | Hooks declared without a module. |
 

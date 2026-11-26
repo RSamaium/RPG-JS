@@ -9,7 +9,7 @@
   import { battle } from '../client/state'
 
   // A cell is as big as the cells of the board (the tile of the map), a hair smaller so that neighbours stay apart.
-  const half = () => (battle()?.board.cellSize ?? 60) / 2 - 1
+  const half = () => (battle()?.board.cellSize ?? 64) / 2 - 1
 
   // Contextual grid: reachable cells, targets, skill area.
   const drawCells = (g) => {
@@ -33,11 +33,15 @@
     const c = field.cursorMark()
     const pulse = field.cursorPulse() // read before any early return (tracked dependency)
     if (!c) return
+    const h0 = half()
     if (c.kind === 'target') {
       const tint = c.valid ? 0xff7474 : 0x9c9caa
-      g.circle(c.x, c.y - 12, 23).stroke({ color: tint, width: 2.5, alpha: 0.95 })
+      // Sized on the cell: 23 px on a 64 px cell.
+      const k = (h0 + 1) / 32
+      const y = c.y - 12 * k
+      g.circle(c.x, y, 23 * k).stroke({ color: tint, width: 2.5, alpha: 0.95 })
       for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
-        g.moveTo(c.x + dx * 15, c.y - 12 + dy * 15).lineTo(c.x + dx * 33, c.y - 12 + dy * 33).stroke({ color: tint, width: 3 })
+        g.moveTo(c.x + dx * 15 * k, y + dy * 15 * k).lineTo(c.x + dx * 33 * k, y + dy * 33 * k).stroke({ color: tint, width: 3 })
       return
     }
     const h = half()

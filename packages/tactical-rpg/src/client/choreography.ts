@@ -37,7 +37,8 @@ export interface Stage {
  * Visual Effects of the Studio. Times are seconds of the event's own clock.
  */
 
-const CHEST = 34; // sprite chest above the tile centre
+/** Height of a sprite's chest above the tile centre, as a share of the cell (34 px on a 64 px cell). */
+const CHEST = 34 / 64;
 
 interface Cue {
   at: number;
@@ -120,13 +121,15 @@ export class Choreography {
     const unit = (id?: string) => (id ? state.units.find((u) => u.id === id) ?? before?.units.find((u) => u.id === id) : undefined);
     const origin = event.unitId ? before?.units.find((u) => u.id === event.unitId) : undefined;
     const pos = (c: Cell) => world(board, c);
-    const chest = (c: Cell) => ({ x: pos(c).x, y: pos(c).y - CHEST });
+    // Offsets follow the size of the cells (the tile of the map): 1 on a 64 px cell.
+    const k = board.cellSize / 64;
+    const chest = (c: Cell) => ({ x: pos(c).x, y: pos(c).y - CHEST * board.cellSize });
     const cues: Cue[] = [];
     const at = (time: number, run: () => void) => cues.push({ at: time, run });
 
     /** Plays a Visual Effect at `start` (seconds) and its sounds at their start on the event clock. */
     const effectAt = (start: number, effect: PlayableVisualEffect, aims: { from: { x: number; y: number }; to: { x: number; y: number } }[]) => {
-      at(start, () => aims.forEach(({ from: a, to: b }) => this.fx.playEffect(effect, a, b, { scale: 0.6 })));
+      at(start, () => aims.forEach(({ from: a, to: b }) => this.fx.playEffect(effect, a, b, { scale: 0.6 * k })));
       for (const cue of effectCues(effect))
         if (cue.type === "sound") at(start + cue.at / 1000, () => this.stage.sound?.(cue.sound, cue.volume));
     };
@@ -143,14 +146,14 @@ export class Choreography {
         if (!healed) continue;
         const c = chest(healed);
         at(timing.impact, () => {
-          if (heal.hp) this.stage.popup(`+${heal.hp}`, c.x, c.y - 40, { color: 0x8dffb4, big: true });
+          if (heal.hp) this.stage.popup(`+${heal.hp}`, c.x, c.y - 40 * k, { color: 0x8dffb4, big: true });
           if (heal.sp) this.stage.popup(`+${heal.sp}`, c.x, c.y - (heal.hp ? 62 : 40), { color: 0x8fd0ff });
         });
       }
       return cues;
     }
     if (event.kind === "guard" && origin) {
-      at(0, () => this.stage.popup("⛨", chest(origin).x, chest(origin).y - 40, { color: 0x9fd0ff }));
+      at(0, () => this.stage.popup("⛨", chest(origin).x, chest(origin).y - 40 * k, { color: 0x9fd0ff }));
       return cues;
     }
 
@@ -175,7 +178,7 @@ export class Choreography {
         const victim = unit(hit.unitId);
         if (!victim) continue;
         const c = chest(victim);
-        this.stage.popup(`${hit.damage}`, c.x, c.y - 40, { big: !!skill, color: skill ? 0xffe39a : 0xfff0c5 });
+        this.stage.popup(`${hit.damage}`, c.x, c.y - 40 * k, { big: !!skill, color: skill ? 0xffe39a : 0xfff0c5 });
         this.flashes.set(victim.id, this.clock + 140);
         if (this.reduced()) continue;
         const d = Math.hypot(c.x - from.x, c.y - from.y) || 1;
@@ -185,7 +188,7 @@ export class Choreography {
     at(timing.impact + 0.12, () => {
       for (const hit of hits.filter((h) => h.killed)) {
         const victim = unit(hit.unitId);
-        if (victim) this.stage.popup("K.O.", chest(victim).x, chest(victim).y - 72, { color: 0xff8a7a, big: true });
+        if (victim) this.stage.popup("K.O.", chest(victim).x, chest(victim).y - 72 * k, { color: 0xff8a7a, big: true });
       }
     });
     return cues;

@@ -1,4 +1,5 @@
 import { nativeDamageHook } from "../core/formulas";
+import { DEFAULT_BOARD } from "../core/board";
 import { createModule } from "@rpgjs/common";
 import { defineModule, type RpgPlayer, type RpgServer } from "@rpgjs/server";
 import {
@@ -407,14 +408,23 @@ function ruleHooks(player: RpgPlayer, battle: () => TacticalBattleHandle): Rules
 const callHooks = <K extends keyof TacticalServerHooks & string>(player: RpgPlayer, name: K, ...args: BattleHookArgs<TacticalServerHooks, K>) =>
   hooks.call(player, name, ...args);
 
-/** The grid centred on the player when the encounter does not place it. */
-function aroundPlayer(player: RpgPlayer, setup: EncounterSetup): Cell {
-  const cell = setup.data.board?.cellSize ?? 64;
-  const columns = setup.data.board?.columns ?? 9;
-  const rows = setup.data.board?.rows ?? 7;
+/** The width of a tile of the player's map: the size of a cell when the encounter gives none, so the battle is drawn at the scale of the map. */
+function mapTile(player: RpgPlayer): number | undefined {
+  const width = Number(read(() => val((player.getCurrentMap() as unknown as { tileWidth?: unknown } | null)?.tileWidth)));
+  return width > 0 ? width : undefined;
+}
+
+/** The grid centred on the player when the encounter does not place it, its cells on the tiles of the map. */
+function aroundPlayer(player: RpgPlayer, setup: EncounterSetup, cellSize?: number): Cell {
+  const cell = setup.data.board?.cellSize ?? cellSize ?? DEFAULT_BOARD.cellSize;
+  const columns = setup.data.board?.columns ?? DEFAULT_BOARD.columns;
+  const rows = setup.data.board?.rows ?? DEFAULT_BOARD.rows;
   const x = Number(read(() => val((player as any).x))) || 0;
   const y = Number(read(() => val((player as any).y))) || 0;
-  return { x: Math.round(x - (columns * cell) / 2), y: Math.round(y - (rows * cell) / 2) };
+  const tile = mapTile(player) ?? cell;
+  // The player's tile is the centre cell (or the one left/above it when the count is even).
+  const snap = (v: number) => Math.floor(v / tile) * tile;
+  return { x: snap(x) - Math.floor((columns - 1) / 2) * cell, y: snap(y) - Math.floor((rows - 1) / 2) * cell };
 }
 
 /**
@@ -568,9 +578,11 @@ async function run(
 ) {
   const leader = players[0];
   const setup = withHeroes(resolveEncounter(leader, encounter), players, versus);
+  const cellSize = mapTile(leader);
   let state = createTacticalBattle(setup, {
     id: `${leader.id}:${Date.now().toString(36)}`,
-    origin: start.origin ?? aroundPlayer(leader, setup),
+    cellSize,
+    origin: start.origin ?? aroundPlayer(leader, setup, cellSize),
     players: players.map((p, index) => ({ id: p.id, name: nameOf(p, index) })),
     versus: versus.map((p, index) => ({ id: p.id, name: nameOf(p, players.length + index) })),
   });

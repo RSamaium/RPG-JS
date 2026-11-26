@@ -54,6 +54,7 @@ import {
   skillMenu,
   t,
   selectedItem,
+  unitScales,
 } from "./state";
 
 /**
@@ -134,7 +135,6 @@ function put<T>(s: WritableSignal<T>, value: T) {
 interface Viewport extends Container {
   toWorld(x: number, y: number): Cell;
   moveCenter(x: number, y: number): void;
-  setZoom(zoom: number): void;
   plugins: { remove(name: string): void };
 }
 const viewportOf = (node: Container | null): Viewport | null => {
@@ -186,8 +186,8 @@ class Field {
   private root: Container | null = null;
   private vp: Viewport | null = null;
   private popupIndex = 0;
-  private zoom = 1;
-  private cam = { x: 960, y: 704 };
+  /** Camera centre; `null` until the first frame, which starts it on the arena. */
+  private cam: Cell | null = null;
   private facings = new Map<string, Facing>();
   private gridKey = "";
   private listeners: (() => void) | null = null;
@@ -247,6 +247,7 @@ class Field {
     this.screen.detach();
     this.root = null;
     this.vp = null;
+    this.cam = null;
     this.views.clear();
     this.facings.clear();
     this.unitIds.set([]);
@@ -303,7 +304,12 @@ class Field {
       .sort((a, b) => b.y - a.y)
       .find((u) => {
         const v = this.views.get(u.id);
-        return !!v && Math.abs(world.x - v.x()) < 30 && world.y > v.y() - 86 && world.y < v.y() + 8;
+        if (!v) return false;
+        // The sprite as the map draws it: as wide as a cell, as tall as its frame.
+        const half = (battle()?.board.cellSize ?? 64) / 2;
+        const frame = this.frames()[u.battler];
+        const height = (frame?.h ?? 48) * (unitScales[u.battler] ?? 1);
+        return Math.abs(world.x - v.x()) < half && world.y > v.y() - height && world.y < v.y() + half / 4;
       });
   }
 
@@ -380,26 +386,20 @@ class Field {
     const attacker = event?.unitId ? state.units.find((u) => u.id === event.unitId) : undefined;
     const target = event?.targetId ? state.units.find((u) => u.id === event.targetId) : undefined;
 
-    // Camera: frame the arena above the HUD, and stay there (no zoom on an action: the battle is seen as the map is).
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const mobile = width < 850;
-    // The HUD is a thin dock at the bottom (88 px) and a few controls at the top: the arena takes the rest.
-    const baseZoom = Math.min(
-      (width - (mobile ? 24 : 120)) / (b.columns * b.cellSize + 60),
-      (height - (mobile ? 190 : 170)) / (b.rows * b.cellSize + 60),
-    );
+    // Camera: centre the arena above the HUD, at the zoom of the map (the battle is drawn as the map is: no zoom of its own).
+    const mobile = window.innerWidth < 850;
+    const zoom = Math.abs(this.vp.scale.x) || 1;
     const center = world(b, { x: (b.columns - 1) / 2, y: (b.rows - 1) / 2 });
-    const lift = (mobile ? 40 : 28) / Math.max(0.28, baseZoom);
+    // The HUD is a thin dock at the bottom: lift the arena by half of it, in map pixels.
+    const lift = (mobile ? 40 : 28) / zoom;
     const targetX = center.x;
     const targetY = center.y + lift;
-    const desiredZoom = Math.max(0.28, baseZoom);
-    this.zoom += (desiredZoom - this.zoom) * (reduced() ? 1 : 0.09);
-    this.cam.x += (targetX - this.cam.x) * 0.09;
-    this.cam.y += (targetY - this.cam.y) * 0.09;
+    const ease = reduced() ? 1 : 0.09;
+    this.cam ??= { x: targetX, y: targetY };
+    this.cam.x += (targetX - this.cam.x) * ease;
+    this.cam.y += (targetY - this.cam.y) * ease;
     this.vp.plugins.remove("follow");
     this.vp.plugins.remove("animate");
-    this.vp.setZoom(this.zoom);
     const shake = this.screen.shakeOffset();
     this.vp.moveCenter(this.cam.x + shake.x, this.cam.y + shake.y);
 
@@ -413,7 +413,8 @@ class Field {
       const a = world(b, attacker);
       const v = world(b, target);
       const k = Math.min(1, (elapsed - 0.2) / 0.35);
-      this.projectile.set({ ax: a.x, ay: a.y - 30, x: a.x + (v.x - a.x) * k, y: a.y - 30 + (v.y - a.y) * k, color: attackerRole.color, size: attackerRole.attack === "magic" ? 10 : 4 });
+      const boltLift = (30 / 64) * b.cellSize;
+      this.projectile.set({ ax: a.x, ay: a.y - boltLift, x: a.x + (v.x - a.x) * k, y: a.y - boltLift + (v.y - a.y) * k, color: attackerRole.color, size: attackerRole.attack === "magic" ? 10 : 4 });
     } else if (this.projectile()) this.projectile.set(null);
   }
 

@@ -29,7 +29,7 @@ const result = await startTacticalBattle(player, "sanctuary", { origin: { x: 320
 
 | Option | Meaning |
 |---|---|
-| `origin` | World position of the grid's top-left corner (map pixels), when the encounter's `board` gives none. Without both, the grid is centred on the leader. |
+| `origin` | World position of the grid's top-left corner (map pixels), when the encounter's `board` gives none. Without both, the grid is centred on the leader's tile, its cells on the tiles of the map. |
 
 The group form (`TacticalBattleGroupOptions`) adds `players`, `encounter`, `versus` and `spectators`.
 
@@ -165,7 +165,7 @@ In a solo game the server runs inside the game, in the browser: call `startTacti
 
 A battle lives in the room of its map. For every group battle:
 
-1. **Everyone must be on the leader's map.** `startTacticalBattle` throws otherwise. Pick partners and opponents among `player.getCurrentMap()?.getPlayers()`.
+1. **Everyone must be on the leader's map.** `startTacticalBattle` throws otherwise. Pick partners and opponents among `player.getCurrentMap()?.getPlayers()`, and keep only those for which `sameBattleMap(p, leader)` is true: the list can hold a player who is still joining or leaving the map.
 2. **A player is in one tactical battle at a time.** Test `isInTacticalBattle(p)` before adding them to a group.
 3. **Each player commands the units of their seat.** The `seat` of a placement is the index of the commanding player in its side; without it, units are dealt in turn. A side has `turnSeconds` (60 by default) to play its phase.
 
@@ -200,6 +200,7 @@ Start it with the players around the leader (`map.getPlayers()`, see [RpgMap](/a
 
 ```ts
 import { type EventDefinition, type RpgPlayer } from "@rpgjs/server";
+import { sameBattleMap } from "@rpgjs/battle-kit/server";
 import { startTacticalBattle, isInTacticalBattle } from "@rpgjs/tactical-rpg/server";
 
 const RADIUS = 160; // pixels
@@ -209,7 +210,7 @@ export function CryptDoorEvent(): EventDefinition {
     async onAction(leader: RpgPlayer) {
       if (isInTacticalBattle(leader)) return;
       const partners = (leader.getCurrentMap()?.getPlayers() ?? [])
-        .filter((p) => p.id !== leader.id && !isInTacticalBattle(p))
+        .filter((p) => p.id !== leader.id && sameBattleMap(p, leader) && !isInTacticalBattle(p))
         .filter((p) => Math.hypot(p.x() - leader.x(), p.y() - leader.y()) <= RADIUS)
         .slice(0, 2);
       await startTacticalBattle({ players: [leader, ...partners], encounter: "crypt" });
