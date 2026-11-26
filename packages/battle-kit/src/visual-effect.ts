@@ -159,7 +159,7 @@ const clamp01 = (value: number | undefined) => Math.max(0, Math.min(1, typeof va
 
 /**
  * The cues of an effect, in order: its sounds at their start, the hit at
- * `hitAt`, the end at `duration`. Sounds without an id are dropped, a missing
+ * `hitAt`, the end at `duration` (or at `hitAt` when it is later). Sounds without an id are dropped, a missing
  * or invalid volume becomes 1 and a negative start becomes 0. Any runtime.
  *
  * @title effectCues
@@ -179,8 +179,10 @@ export function effectCues(effect: PlayableVisualEffect): VisualEffectCue[] {
       .filter((s) => typeof s?.sound === "string" && s.sound)
       .map((s) => ({ at: Math.max(0, s.start ?? 0), type: "sound" as const, sound: s.sound, volume: clamp01(s.volume) })),
     { at: effect.hitAt, type: "hit" },
-    { at: effect.duration, type: "end" },
+    // An effect lasts at least until its hit: `done` never resolves before `hit`.
+    { at: Math.max(effect.duration, effect.hitAt), type: "end" },
   ];
+  // Stable sort: at the same time, the hit comes before the end.
   return cues.sort((a, b) => a.at - b.at);
 }
 

@@ -7,6 +7,18 @@ import type { PlayableVisualEffect } from "./visual-effect";
 type Preset = Parameters<FxRuntime["preload"]>[0];
 
 /**
+ * The look of a preset, what `FxPlayer.preset` tunes: colour, size and speed,
+ * intensity and lifetime. Client only.
+ *
+ * @title FxPresetLook
+ * @example
+ * ```ts
+ * const look: FxPresetLook = { color: "#6dff4a", scale: 1.2 };
+ * ```
+ */
+export type FxPresetLook = Pick<PresetOptions, "color" | "scale" | "intensity" | "lifetime">;
+
+/**
  * Plays the CanvasEngine effect presets (`@canvasengine/presets`, the engine
  * behind the `<Fx>` component and `map.playVisualEffect`) inside a battle scene,
  * from code: any battle event can spawn `swordSlash`, `fireball`, `limitBurst`…
@@ -65,13 +77,13 @@ export class FxPlayer {
 
   /**
    * A built-in preset recoloured and resized with `customizeFx`, without
-   * playing it. `scale` multiplies both size and speed; `flip`, `rotation`
-   * and `loop` are ignored here.
+   * playing it. `scale` multiplies both size and speed. Where and how it is
+   * played (`flip`, `rotation`, `loop`) are options of `play`, not of the preset.
    *
    * @title preset
    * @method FxPlayer.preset(name, o?)
    * @param {string} name - Preset name (`"fireball"`)
-   * @param {PresetOptions} [o] - `color`, `scale`, `intensity`, `lifetime`
+   * @param {FxPresetLook} [o] - `color`, `scale`, `intensity`, `lifetime`
    * @returns {Preset | undefined} The tuned preset, undefined when the name is unknown
    * @memberof FxPlayer
    * @example
@@ -80,7 +92,7 @@ export class FxPlayer {
    * if (acid) fx.play(acid, x, y);
    * ```
    */
-  static preset(name: string, o: PresetOptions = {}): Preset | undefined {
+  static preset(name: string, o: FxPresetLook = {}): Preset | undefined {
     const base = getFxPreset(name);
     if (!base) return undefined;
     return customizeFx(base, {

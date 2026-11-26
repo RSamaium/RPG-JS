@@ -170,7 +170,7 @@ screen.shockwaveAt(x, y);
 screen.update(dtMs);
 ```
 
-`FxPlayer.has(name)` tells whether a preset name exists, and `FxPlayer.preset(name, options)` builds one. Options are `color`, `scale`, `intensity`, `lifetime`, `flip`, `rotation` and `loop`. In a `.ce` component, give the layer with `<Container pixiChildren={[fx.layer]} />`.
+`FxPlayer.has(name)` tells whether a preset name exists, and `FxPlayer.preset(name, look)` builds one with its look (`color`, `scale`, `intensity`, `lifetime`). `play` and `aimed` take the look too, plus where it is played: `flip`, `rotation` and `loop`. In a `.ce` component, give the layer with `<Container pixiChildren={[fx.layer]} />`.
 
 ### Sprite looks, screen filters and fonts (client)
 

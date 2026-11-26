@@ -49,6 +49,16 @@ describe("Visual Effects played by the battles", () => {
     expect(visualEffectsOf(undefined)).toEqual({});
   });
 
+  it("never ends before its hit, even when hitAt is after duration", async () => {
+    const { clock, events, playback } = play({ effect: "slash", duration: 200, hitAt: 400 });
+    const order: string[] = [];
+    void playback.hit.then(() => order.push("hit"));
+    void playback.done.then(() => order.push("done"));
+    await advance(clock, 450);
+    expect(order).toEqual(["hit", "done"]);
+    expect(events).toContain("hit@400");
+  });
+
   it("lists the sounds at their start, the hit and the end, in order", () => {
     expect(effectCues(fireball)).toEqual([
       { at: 0, type: "sound", sound: "whoosh", volume: 0.5 },

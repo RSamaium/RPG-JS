@@ -12,7 +12,7 @@
  * in `@rpgjs/battle-kit/pure`.
  */
 export * from "./pure";
-export { FxPlayer } from "./fx";
+export { FxPlayer, type FxPresetLook } from "./fx";
 export { ScreenEffects } from "./screen";
 export { BattlerLook, ScreenFilters, imageSize } from "./look";
 export { BattleClientHooks } from "./client/hooks";

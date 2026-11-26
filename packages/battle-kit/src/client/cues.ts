@@ -193,7 +193,8 @@ export class BattleCues<C extends string> {
     try {
       const sound = this.sounds[cue];
       if (sound === false) return;
-      if (typeof sound === "function") return sound(this.engine!, volume);
+      // A sound of the game (an id or a function) needs the engine; without it, the synthesized one plays.
+      if (typeof sound === "function" && this.engine) return sound(this.engine, volume);
       if (typeof sound === "string" && this.engine) return void Promise.resolve(this.engine.playSound(sound, { volume, channel: "sfx" })).catch(() => undefined);
       this.synthesized[cue]?.(volume);
     } catch {

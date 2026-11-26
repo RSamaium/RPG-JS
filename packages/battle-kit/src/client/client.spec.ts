@@ -62,6 +62,12 @@ describe("battle cues (client)", () => {
     expect(custom).toHaveBeenCalledOnce();
     expect(synth.back).not.toHaveBeenCalled();
 
+    // Without an engine, a sound of the game (a function too) leaves its place to the synthesized one.
+    cues.configure(undefined, { sounds: { cursor: custom } });
+    cues.play("cursor");
+    expect(custom).toHaveBeenCalledOnce();
+    expect(synth.cursor).toHaveBeenCalledWith(1);
+
     cues.configure(engine({}, playSound));
     cues.play("hit");
     expect(synth.hit).toHaveBeenCalledWith(1);
