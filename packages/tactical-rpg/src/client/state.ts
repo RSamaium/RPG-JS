@@ -499,7 +499,7 @@ export function selectUnit(unit: Unit) {
   skillMenu.set(false);selectedSkill.set('');itemMenu.set(false);selectedItem.set('');
   // Already moved (an earlier order): straight to its actions.
   mode.set(unit.moved ? "menu" : "move");
-  menuIndex.set(0);
+  focusMenu();
   notice.set("");
   cue("select");
 }
@@ -513,7 +513,7 @@ function stage(unit: Unit, cell: Cell, path: Cell[]) {
   }
   route.set([]);
   mode.set("menu");
-  menuIndex.set(0);
+  focusMenu();
   cue("select");
 }
 /** Actions offered next to the selected unit, with whether they can be used now. What the rules of the troop forbid is not offered. */
@@ -534,6 +534,23 @@ export const menuItems = computed(() => {
   // `entry1` goes back to the move: the entries take the keys that follow.
   return entries.map((entry, index) => ({ ...entry, slot: index + 2, key: keyOf(`entry${index + 2}` as TacticalControl) }));
 });
+/** Focus the first action that can be used (an attack without a target in range is not): confirming at once does something. */
+export function focusMenu() {
+  const index = menuItems().findIndex((item) => !item.disabled);
+  menuIndex.set(Math.max(0, index));
+}
+/** Move the focus of the action menu up or down, over the actions that cannot be used. */
+export function stepMenu(delta: 1 | -1) {
+  const items = menuItems();
+  const n = items.length;
+  if (!n) return;
+  let index = menuIndex();
+  for (let i = 0; i < n; i++) {
+    index = (index + delta + n) % n;
+    if (!items[index].disabled) break;
+  }
+  menuIndex.set(index);
+}
 /** The heroes may flee a battle when its troop lets them (never a duel: there they surrender). */
 export const canFlee = computed(() => {
   const state = battle();
@@ -692,7 +709,7 @@ export function chooseCell(cell: Cell, o: { touch?: boolean } = {}) {
     // Its own cell: act from here. A blue cell: walk there at once.
     if (cell.x === unit.x && cell.y === unit.y) {
       mode.set("menu");
-      menuIndex.set(0);
+      focusMenu();
       cue("select");
       return;
     }

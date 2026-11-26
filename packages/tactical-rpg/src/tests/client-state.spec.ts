@@ -23,6 +23,7 @@ import {
   send,
   controls,
   objectiveText,
+  menuItems, menuIndex, stepMenu, confirm,
   action, timeLeft, notice, myId, spectator, myTeam, allies, mode, staged, commit, route, pace, setPace, selectUnit, skillMenu, selectedSkill, pickSkill, planned, chooseCell, cancel, inspected, hoverCell, details, forecast,
 } from "../client/state";
 
@@ -236,6 +237,22 @@ describe("client signals and transport", () => {
     expect(staged()).toBeNull();
     await receive(waited);
     expect(battle()?.revision).toBe(waited.state.revision);
+  });
+  it('menu: the focus starts on an action that can be used, and the keys skip the others',async()=>{
+    const command = vi.fn();
+    connectHost({ command, pace: vi.fn(), close: vi.fn(), enter: () => () => {}, started: vi.fn(), ended: vi.fn() });
+    const state=transition(createEncounter(),{type:'start'},'ally').state;
+    await receive({state});busy.set(false);
+    selectUnit(state.units[0]);
+    chooseCell({x:4,y:4});
+    // Nobody in range: the attack cannot be used, so it is not where the focus starts.
+    expect(menuItems().find((i)=>i.id==='attack')?.disabled).toBe(true);
+    expect(menuItems()[menuIndex()].disabled).toBe(false);
+    for (let i=0;i<menuItems().length;i++){ stepMenu(1); expect(menuItems()[menuIndex()].disabled).toBe(false); }
+    stepMenu(-1); expect(menuItems()[menuIndex()].disabled).toBe(false);
+    // Confirming at once gives an order.
+    confirm();
+    expect(command).toHaveBeenCalledTimes(1);
   });
   it('queues packets arriving during an animation, in order',async()=>{
     const state=transition(createEncounter(),{type:'start'},'ally').state;

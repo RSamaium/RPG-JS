@@ -19,7 +19,7 @@ import {
   spectator,
   mode,
   menuItems,
-  menuIndex,
+  stepMenu,
   setPace,
   pace,
   speed,
@@ -99,8 +99,7 @@ export function dispatch(command: TacticalCommand): void {
   if (command === "action") return void confirm();
   // Action menu: up and down go through its entries (the grid cursor stays).
   if (mode() === "menu" && (command === "up" || command === "down")) {
-    const n = menuItems().length;
-    menuIndex.set((menuIndex() + (command === "up" ? n - 1 : 1)) % n);
+    stepMenu(command === "up" ? -1 : 1);
     cue("select");
     return;
   }
