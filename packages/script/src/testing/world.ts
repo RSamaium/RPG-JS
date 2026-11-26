@@ -3,6 +3,7 @@
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
 import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions, tagList } from "../game/impl";
+import type { HttpPort } from "../game/http";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
 export class SimPlayer implements PlayerPort {
@@ -496,6 +497,8 @@ export class SimWorld implements ScriptWorld {
   /** The database of the game: the records of each collection. */
   private readonly records: Record<string, { id: string; [field: string]: unknown }[]>;
   hook: Record<string, unknown> = {};
+  /** The connections of `$http`, with fake answers: set by `simulate` from its `http` option. */
+  http?: HttpPort;
   shared: SharedStore;
   effects: { name: string; params: unknown }[] = [];
   private seed: number;

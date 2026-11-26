@@ -32,6 +32,13 @@ export interface MethodDesc {
    * as they are; what it returns is given back as plain data (nothing for a `void` signature). The environment does it.
    */
   engine?: string;
+  /**
+   * The kind of reference its first argument is (`"http connection"`): a literal is checked against `catalog[ref]` when the script is
+   * compiled; a computed one is checked by the environment when the script runs.
+   */
+  ref?: string;
+  /** Signals whose listeners may not call it (`map.tick` for a call that waits on the network): refused when the script is compiled. */
+  notIn?: string[];
 }
 /** Members a handle takes by name (`$switch.door_open`, `$var.visits`): the description of the key, the type of the value, and whether a script may assign it. */
 export interface DynamicDesc { keyDoc: string; type: string; doc?: string; writable?: boolean }
@@ -138,6 +145,8 @@ export function apiInfo(desc: ApiDescription, catalog?: Record<string, string[]>
       methods: Object.keys(h.methods ?? {}),
       voidMethods: Object.entries(h.methods ?? {}).filter(([, m]) => returnsNothing(m.sig)).map(([k]) => k),
       syncMethods: Object.entries(h.methods ?? {}).filter(([, m]) => m.sync).map(([k]) => k),
+      refs: Object.fromEntries(Object.entries(h.methods ?? {}).flatMap(([k, m]) => (m.ref ? [[k, m.ref]] : []))),
+      notIn: Object.fromEntries(Object.entries(h.methods ?? {}).flatMap(([k, m]) => (m.notIn?.length ? [[k, m.notIn]] : []))),
       params: Object.fromEntries(Object.entries(h.methods ?? {}).flatMap(([k, m]) => {
         const params = signatureParams(m.sig);
         return params ? [[k, params]] : [];

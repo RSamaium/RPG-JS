@@ -35,7 +35,11 @@ export class RuntimeError extends Error {}
 export class BudgetExceeded extends Error {}
 
 /** The budget of one run of a script. Only `steps` and `iterations` are required; the others have defaults (texts 10 000 characters, lists and objects 1 000 entries, call depth 20). */
-export interface Limits { steps: number; iterations: number; maxString?: number; maxList?: number; depth?: number }
+export interface Limits {
+  steps: number; iterations: number; maxString?: number; maxList?: number; depth?: number;
+  /** `$http`: requests a handler run may make (3), characters of an answer at most (256 000), seconds a request is waited for (10, 60 at most). */
+  httpPerHandler?: number; httpBodyMax?: number; httpTimeout?: number;
+}
 const DEF = { maxString: 10_000, maxList: 1000, depth: 20 };
 
 /** What a script may touch at run time. Values given to a script are primitives, plain data or handles. */
@@ -51,7 +55,7 @@ export interface Host {
 
 /** What the compiler knows about the API, to refuse unknown names and collect permissions and references. */
 export interface ApiInfo {
-  handles: Record<string, { dynamic?: boolean; /** Its properties are declared with `shared({ ... })`, in this scope. */ declared?: "room" | "player"; members: string[]; /** The members that are other handles (`shared` of `$player`), by name. */ subHandles?: Record<string, string>; methods: string[]; voidMethods?: string[]; /** Methods that answer at once: a listener that calls only these can reply to its signal. */ syncMethods?: string[]; /** The parameters of each method, read from its signature. */ params?: Record<string, ApiParam[]> }>;
+  handles: Record<string, { dynamic?: boolean; /** Its properties are declared with `shared({ ... })`, in this scope. */ declared?: "room" | "player"; members: string[]; /** The members that are other handles (`shared` of `$player`), by name. */ subHandles?: Record<string, string>; methods: string[]; voidMethods?: string[]; /** Methods that answer at once: a listener that calls only these can reply to its signal. */ syncMethods?: string[]; /** The kind of reference the first argument of a method is, checked against the catalog when it is a literal. */ refs?: Record<string, string>; /** The signals whose listeners may not call a method. */ notIn?: Record<string, string[]>; /** The parameters of each method, read from its signature. */ params?: Record<string, ApiParam[]> }>;
   functions: Record<string, { ref?: string; void?: boolean; /** The parameters, read from the signature. */ params?: ApiParam[] }>;
   /** Refuses a call of the API with fewer arguments than its required parameters, more than it takes, or a literal of another
    *  kind than a `string`, `number` or `boolean` parameter. Set when a script is checked before it is saved. */
@@ -366,6 +370,8 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
   const known = new Set<string>([...hostGlobalNames, ...Object.keys(STD)]);
   const scopes: Set<string>[] = [new Set()];
   const declared = (n: string) => scopes.some((s) => s.has(n));
+  // The signal whose listener is being compiled: some calls are refused there (`notIn`)
+  let listening: string | undefined;
   const push = () => scopes.push(new Set());
   const pop = () => scopes.pop();
   const declare = (n: string) => scopes[scopes.length - 1].add(n);
@@ -629,6 +635,16 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       const obj = expr(callee.object), key = callee.property.name;
       isDenied(key, n);
       memberCheck(callee.object, key, n, true);
+      const handle = callee.object.type === "Identifier" && !declared(callee.object.name) && api?.handles[callee.object.name] ? callee.object.name : undefined;
+      if (handle) {
+        const info = api!.handles[handle];
+        const ref = info.refs?.[key];
+        if (ref && n.arguments[0]?.type === "Literal") {
+          const ids = api?.catalog?.[ref];
+          if (ids && !ids.includes(String(n.arguments[0].value))) fail(`unknown ${ref} "${String(n.arguments[0].value)}". Available: ${ids.join(", ") || "none"}`, n.arguments[0]);
+        }
+        if (listening && info.notIn?.[key]?.includes(listening)) fail(`"${handle}.${key}" cannot be called in a listener of ${listening}: it waits, and ${listening} runs for every player many times a second`, n);
+      }
       if (callee.object.type === "Identifier" && !declared(callee.object.name) && api?.handles[callee.object.name]?.voidMethods?.includes(key) && !statementCalls.has(n)) noValue(`"${callee.object.name}.${key}"`, n);
       if (callee.object.type === "Identifier" && !declared(callee.object.name)) {
         argumentsCheck(`"${callee.object.name}.${key}"`, api?.handles[callee.object.name]?.params?.[key], n);
@@ -1011,7 +1027,8 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
         const problem = validateFilter(filter, signal ? { ...signal, name: ev.value } : undefined);
         if (problem) fail(problem, args[1]);
       }
-      program.handlers.push({ event: ev.value, filter, fn: asFn(fn, `on:${ev.value}`) });
+      listening = ev.value;
+      try { program.handlers.push({ event: ev.value, filter, fn: asFn(fn, `on:${ev.value}`) }); } finally { listening = undefined; }
     } else if (n.type === "VariableDeclaration" && n.kind === "const" && n.declarations.every((d: AstNode) => d.id.type === "Identifier" && d.init && (d.init.type === "Literal" || d.init.type === "ArrayExpression" || d.init.type === "ObjectExpression" || d.init.type === "ArrowFunctionExpression"))) {
       for (const d of n.declarations) topConsts.push({ name: d.id.name, init: d.init });
     } else fail(`"${n.type}" is not available at the top level (functions, const data, event(...) and on(...))`, n);

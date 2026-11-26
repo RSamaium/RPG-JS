@@ -572,6 +572,70 @@ data with `_type` for its collection, as `@rpgjs/studio` loads it; a record that
 a copy of plain data: what a script changes of it changes nothing, and the next read is as the game has it. A collection that does
 not exist gives `undefined` and `[]`.
 
+### Outside services: `$http`
+
+A script reaches an outside service (a weather API, a leaderboard, a webhook) only through a **connection** the game declares. The
+script names the connection; the game keeps its address, its headers and its secrets, and does the networking. Without connections
+there is no `$http`: it is not described, and a script that uses it is refused.
+
+```js
+on("event.action", { where: { "event.name": "oracle" } }, () => {
+  const res = $http.request("meteo_api", { path: "/v1/forecast", query: { city: "Paris" } });
+  if (!res.ok) { $player.showNotification("The sky is silent"); return; }
+  $player.showText(`Tomorrow: ${res.json.summary}`);
+});
+```
+
+`$http.request(connection, { method?, path?, query?, body? })` waits for the answer, as `showChoices` does, and gives
+`{ ok, status, json?, text?, error? }`:
+
+- `path` starts with `/`, and holds no `//`, `..`, `?` or `#`: the query goes in `query`, a flat object of texts, numbers and
+  true/false. `method` is `GET` unless the connection allows another; `body` is plain data, sent as JSON. A request that breaks a
+  rule, names a connection the game does not declare, or uses a method it does not allow is an error of the script, and never
+  reaches the network. A literal connection name is checked when the script is.
+- `ok` is a status in 200–299. A JSON answer is in `json` (read-only data, as `$data` gives); any other in `text`.
+- It never throws for the network: `error` is `"network"`, `"timeout"`, `"refused"` or `"quota"` (given by the game),
+  `"too_large"` (an answer above `httpBodyMax`), or `"budget"` (a handler run makes `httpPerHandler` requests at most).
+- It is refused in a listener of `map.tick`, which runs for every player many times a second, even through a function.
+
+The game gives the connections with `provideScripts({ scripts, http })`. The transport receives the checked request and the context
+of the run (the script, the player, an `AbortSignal`, the size to read at most), and gives back the status and the body as text:
+
+```ts
+import { provideScripts, type HttpTransport } from "@rpgjs/script/server";
+
+const http: HttpTransport = {
+  connections: { meteo_api: { methods: ["GET"] } },
+  async send(request, { signal, maxBytes }) {
+    const url = new URL(request.path, "https://api.example.com");
+    for (const [key, value] of Object.entries(request.query ?? {})) url.searchParams.set(key, String(value));
+    const res = await fetch(url, { method: request.method, signal, redirect: "error", headers: { authorization: `Bearer ${process.env.METEO_KEY}` } });
+    return { status: res.status, body: (await res.text()).slice(0, maxBytes + 1), contentType: res.headers.get("content-type") ?? "" };
+  },
+};
+
+provideScripts({ scripts, http, limits: { steps: 10_000, iterations: 100, httpPerHandler: 3, httpBodyMax: 256_000, httpTimeout: 10 } });
+```
+
+The rules of the network belong to the transport: the base URL of each connection, refusing internal addresses and redirects,
+secrets, quotas, logs. What `send` throws never reaches the script, which gets `"network"`; the reason is written to the console of
+the server. `send` may give an error code of its own, `{ error: "quota" }`; a code other than `refused`, `quota`, `timeout` or
+`network` becomes `network`. `httpTimeout` (seconds, 10 by default, 60 at most) aborts the request through its `AbortSignal`.
+
+In `simulate()` and `runTests()`, `http` gives the connections and their fake answers, so nothing touches the network; each request
+that reaches the network is an `http` effect:
+
+```ts
+await simulate({
+  source,
+  emit: { signal: "event.action", payload: { event: { id: "oracle-1", name: "oracle", tags: [] } } },
+  http: { meteo_api: { status: 200, json: { summary: "sunny" } }, scores: { methods: ["POST"], status: 201 } },
+});
+```
+
+`checkScript(source, catalog, { http: { connections } })` and `describeGameApi(signals, { http: { connections } })` check and
+describe a script with the connections of the game.
+
 ### Helpers
 
 | Name | What it is |

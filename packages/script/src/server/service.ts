@@ -10,6 +10,7 @@ import { CompileError, CompileErrors, compileProgram, type AstNode, type Limits,
 import { SignalRegistry, type EmitReport } from "../core/signals";
 import { GAME_API_DESCRIPTION } from "../game/description";
 import { GAME_API_IMPL } from "../game/impl";
+import { httpCatalog, withHttpDescription, withHttpImpl, type HttpConnectionOptions, type HttpHostAnswer, type HttpPort, type HttpRequest } from "../game/http";
 import { parseScript } from "../parse";
 import { DEFAULT_SIGNAL_BINDINGS, type SignalBinding } from "./bindings";
 import { applyPlayerShared, createRpgjsWorld } from "./world";
@@ -41,8 +42,49 @@ export const MAX_SCRIPT_LOGS = 200;
 /** A script given to the game: its text, or the tree an editor already computed from it. The id and the version name it. */
 export type ScriptSource = { id: string; version?: number } & ({ source: string; tree?: undefined } | { tree: AstNode; source?: undefined });
 
+/** What the transport of the host knows of a request: the script and the player it runs for, when to stop, how much to read. */
+export interface HttpSendContext {
+  /** The id of the script that asks. */
+  script: string;
+  /** The player of the signal: for per-player quotas and logs. */
+  player: RpgPlayer;
+  /** Aborted when the script stops waiting (`httpTimeout`). */
+  signal: AbortSignal;
+  /** Characters of the body at most: a longer answer gives `too_large` to the script, so the transport may stop reading there. */
+  maxBytes: number;
+}
+
+/**
+ * The network of the scripts, owned by the host. `@rpgjs/script` never does networking: it checks each request of `$http.request`
+ * (a declared connection, a method it allows, a path that stays in it, a flat query, a plain body, the budget) and gives it to `send`.
+ * The host resolves the connection to its base URL, adds its secrets and headers, and applies its own rules (internal addresses,
+ * redirects, quotas, logs). What `send` throws never reaches the script: it gets `{ ok: false, error: "network" }`, and the reason is
+ * written to the console of the server.
+ *
+ * @example
+ * ```ts
+ * const http: HttpTransport = {
+ *   connections: { meteo_api: { methods: ["GET"] } },
+ *   async send(request, { signal, maxBytes }) {
+ *     const url = new URL(request.path, "https://api.open-meteo.com");
+ *     for (const [k, v] of Object.entries(request.query ?? {})) url.searchParams.set(k, String(v));
+ *     const res = await fetch(url, { method: request.method, signal, redirect: "error" });
+ *     return { status: res.status, body: await res.text(), contentType: res.headers.get("content-type") ?? "" };
+ *   },
+ * };
+ * provideScripts({ scripts, http });
+ * ```
+ */
+export interface HttpTransport {
+  /** The connections scripts may use, by name. A script never sees more than the name. */
+  connections: Record<string, HttpConnectionOptions>;
+  send(request: HttpRequest, context: HttpSendContext): Promise<HttpHostAnswer>;
+}
+
 /** What a `ScriptService` starts with: the scripts to install, the signals a plugin adds, and the budget of each handler. */
 export interface ScriptServiceOptions {
+  /** The network of `$http`. Without it, `$http` does not exist and a script that uses it is refused. */
+  http?: HttpTransport;
   scripts?: ScriptSource[];
   /** Signals a plugin adds to the ones of the game: scripts can listen to them and `emit` can send them. */
   signals?: Record<string, SignalDesc>;
@@ -84,6 +126,8 @@ export class ScriptService {
   /** The hooks that emit signals: the ones of the game, then the ones that were added. */
   readonly bindings: SignalBinding[];
   private registry: SignalRegistry;
+  private readonly http?: HttpTransport;
+  private readonly limits?: Limits;
   /** The properties of each player the installed scripts declare (`scope: "player"`), by name, with the script that declared it first. */
   private playerShared = new Map<string, { script: string; decl: SharedDecl }>();
   private states = new Map<string, Map<string, unknown>>();
@@ -102,8 +146,10 @@ export class ScriptService {
   constructor(options: ScriptServiceOptions = {}) {
     this.bindings = [...DEFAULT_SIGNAL_BINDINGS, ...(options.bindings ?? [])];
     const described = Object.fromEntries(this.bindings.flatMap((b) => (b.describe ? [[b.signal, b.describe]] : [])));
-    this.description = { ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...described, ...options.signals } };
-    this.registry = new SignalRegistry({ description: this.description, impl: GAME_API_IMPL, limits: options.limits });
+    this.http = options.http;
+    this.limits = options.limits;
+    this.description = withHttpDescription({ ...GAME_API_DESCRIPTION, signals: { ...GAME_API_DESCRIPTION.signals, ...described, ...options.signals } }, this.http?.connections);
+    this.registry = new SignalRegistry({ description: this.description, impl: this.http ? withHttpImpl(GAME_API_IMPL) : GAME_API_IMPL, limits: options.limits });
     this.stateStore = options.stateStore;
     this.onLog = options.onLog;
     for (const script of options.scripts ?? []) this.install(script);
@@ -111,7 +157,8 @@ export class ScriptService {
 
   private compile(script: ScriptSource): Program {
     const tree = script.tree ?? parseScript(script.source);
-    return compileProgram(tree, globalNames(this.description), apiInfo(this.description));
+    const catalog = httpCatalog(this.http?.connections);
+    return compileProgram(tree, globalNames(this.description), apiInfo(this.description, Object.keys(catalog).length ? catalog : undefined));
   }
 
   /**
@@ -196,7 +243,7 @@ export class ScriptService {
     const hook = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
     if (this.loading.size > 0) await Promise.all(this.loading.values());
     const report = await this.registry.emit(signal, payload, (script, program) =>
-      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit, log: (message) => this.log(script, message) }),
+      this.worldOf(signal, script, program, context, hook),
     String(context.player?.id ?? ""));
     this.reportFailures(signal, report);
     return report;
@@ -212,10 +259,43 @@ export class ScriptService {
     const accepted = this.description.signals?.[signal]?.reply ?? [];
     // a $state that is still loading is read as it is: a hook that cannot wait does not wait for the store
     const { reply, report } = this.registry.emitSync(signal, payload, accepted, (script, program) =>
-      createRpgjsWorld({ ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit, log: (message) => this.log(script, message) }),
+      this.worldOf(signal, script, program, context, hook),
     String(context.player?.id ?? ""));
     void report.then((done) => this.reportFailures(signal, done));
     return reply;
+  }
+
+  /** The world of one run of a listener: a new one each time, so `$http` counts the requests of this run only. */
+  private worldOf(signal: string, script: string, program: Program, context: SignalContext, hook: Record<string, unknown>) {
+    return createRpgjsWorld({
+      ...context, shared: program.shared, hook, state: this.stateOf(script), emit: this.worldEmit, log: (message) => this.log(script, message),
+      http: this.http ? this.httpPort(signal, script, context.player) : undefined,
+    });
+  }
+
+  /** The network of a run: the transport of the host, for this script and this player. What it throws is logged, never given. */
+  private httpPort(signal: string, script: string, player: RpgPlayer): HttpPort {
+    const transport = this.http!;
+    return {
+      connections: transport.connections,
+      signal,
+      limits: this.limits,
+      send: async (request, { timeout, maxBytes }) => {
+        const controller = new AbortController();
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const late = new Promise<HttpHostAnswer>((resolve) => {
+          timer = setTimeout(() => { controller.abort(); resolve({ error: "timeout" }); }, timeout * 1000);
+        });
+        try {
+          return await Promise.race([transport.send(request, { script, player, signal: controller.signal, maxBytes }), late]);
+        } catch (error) {
+          console.error(`[script] "${script}": the http transport failed for "${request.connection}" ${request.method} ${request.path}: ${error instanceof Error ? error.message : String(error)}`);
+          return { error: "network" };
+        } finally {
+          clearTimeout(timer);
+        }
+      },
+    };
   }
 
   /** What the world of a script emits (an event it walked arrives): a signal like the ones of the hooks. */
