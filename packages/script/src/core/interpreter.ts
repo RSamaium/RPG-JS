@@ -51,7 +51,7 @@ export interface Host {
 
 /** What the compiler knows about the API, to refuse unknown names and collect permissions and references. */
 export interface ApiInfo {
-  handles: Record<string, { dynamic?: boolean; declared?: boolean; members: string[]; methods: string[]; voidMethods?: string[]; /** Methods that answer at once: a listener that calls only these can reply to its signal. */ syncMethods?: string[]; /** The parameters of each method, read from its signature. */ params?: Record<string, ApiParam[]> }>;
+  handles: Record<string, { dynamic?: boolean; /** Its properties are declared with `shared({ ... })`, in this scope. */ declared?: "room" | "player"; members: string[]; /** The members that are other handles (`shared` of `$player`), by name. */ subHandles?: Record<string, string>; methods: string[]; voidMethods?: string[]; /** Methods that answer at once: a listener that calls only these can reply to its signal. */ syncMethods?: string[]; /** The parameters of each method, read from its signature. */ params?: Record<string, ApiParam[]> }>;
   functions: Record<string, { ref?: string; void?: boolean; /** The parameters, read from the signature. */ params?: ApiParam[] }>;
   /** Refuses a call of the API with fewer arguments than its required parameters, more than it takes, or a literal of another
    *  kind than a `string`, `number` or `boolean` parameter. Set when a script is checked before it is saved. */
@@ -67,8 +67,12 @@ export interface ApiParam { name: string; type: string; optional: boolean; rest:
 /** The literals a parameter of a primitive type accepts: a text for `string`, a number for `number`, true/false for `boolean`. */
 const PRIMITIVE_TYPES = new Set(["string", "number", "boolean"]);
 
-/** A property shared by the players of a map, declared by a script with `shared({ name: { initial, client, persist } })`. */
-export interface SharedDecl { name: string; initial: string | number | boolean | null; client: boolean; persist: boolean }
+/**
+ * A property declared by a script with `shared({ name: { initial, scope, client, persist } })`: one value for the players of the room
+ * (`scope: "room"`, the default, read with `$shared.name`), or one value for each player (`scope: "player"`, read with
+ * `$player.shared.name`).
+ */
+export interface SharedDecl { name: string; initial: string | number | boolean | null; client: boolean; persist: boolean; scope: "room" | "player" }
 /** A page of an event written as a script: `page({ trigger, when?, run })`. */
 export interface Page { graphic?: string; trigger: string; when?: ScriptFn; run: ScriptFn }
 /** An event written as a script: `event({ name, x, y, pages: [page({ ... })] })`. */
@@ -404,17 +408,37 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
   };
 
   const isDenied = (k: string, node: AstNode) => { if (DENIED.has(k)) fail(`access to "${k}" is not allowed`, node); };
+  // The handle an expression is, as written: `$player`, or a member of a handle that is another one (`$player.shared`)
+  const handleOf = (objNode: AstNode): { name: string; label: string } | undefined => {
+    if (!api) return undefined;
+    if (objNode.type === "Identifier") return api.handles[objNode.name] && !declared(objNode.name) ? { name: objNode.name, label: objNode.name } : undefined;
+    if (objNode.type !== "MemberExpression" || objNode.computed || objNode.optional) return undefined;
+    const parent = handleOf(objNode.object);
+    const sub = parent && api.handles[parent.name].subHandles?.[objNode.property.name];
+    return sub ? { name: sub, label: `${parent.label}.${objNode.property.name}` } : undefined;
+  };
+  const sharedHint = (scope: "room" | "player", key: string) => {
+    const other = program.shared.find((d) => d.name === key && d.scope !== scope);
+    if (other?.scope === "player") return `"${key}" is a property of each player: use $player.shared.${key}`;
+    if (other) return `"${key}" is shared by the room: use $shared.${key}`;
+    const names = program.shared.filter((d) => d.scope === scope).map((d) => d.name);
+    const example = scope === "player" ? `shared({ ${key}: { initial: 0, scope: "player" } })` : `shared({ ${key}: { initial: 0 } })`;
+    return `Declare it with ${example}. Declared: ${names.join(", ") || "none"}`;
+  };
   const memberCheck = (objNode: AstNode, key: string, node: AstNode, method: boolean) => {
-    if (objNode.type !== "Identifier" || !api) return;
-    const h = api.handles[objNode.name];
-    if (!h || declared(objNode.name)) return;
+    const found = handleOf(objNode);
+    if (!found) return;
+    const h = api!.handles[found.name];
     if (h.declared && !method) {
-      if (!program.shared.some((d) => d.name === key)) fail(`"${objNode.name}.${key}" is not declared. Declare it with shared({ ${key}: { initial: 0 } }). Declared: ${program.shared.map((d) => d.name).join(", ") || "none"}`, node);
+      if (!program.shared.some((d) => d.name === key && d.scope === h.declared)) {
+        const hint = sharedHint(h.declared, key);
+        fail(hint.startsWith("Declare") ? `"${found.label}.${key}" is not declared. ${hint}` : `"${found.label}.${key}": ${hint}`, node);
+      }
     } else if (!h.dynamic) {
       const list = method ? h.methods : h.members;
-      if (!list.includes(key)) fail(`"${objNode.name}.${key}" does not exist. Available ${method ? "methods" : "members"} of ${objNode.name}: ${list.join(", ") || "none"}`, node);
+      if (!list.includes(key)) fail(`"${found.label}.${key}" does not exist. Available ${method ? "methods" : "members"} of ${found.label}: ${list.join(", ") || "none"}`, node);
     }
-    program.permissions.add(`${objNode.name.replace(/^\$/, "")}.${h.dynamic ? "*" : key}`);
+    program.permissions.add(`${found.label.replace(/^\$/, "")}.${h.dynamic ? "*" : key}`);
   };
 
   // ---- patterns (destructuring)
@@ -936,7 +960,7 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
     program.events.push(decl);
   };
 
-  // ---- shared properties: shared({ name: { initial, client, persist } }), collected before anything else is compiled
+  // ---- shared properties: shared({ name: { initial, scope, client, persist } }), collected before anything else is compiled
   const sharedDecl = (call: AstNode) => {
     const o = call.arguments[0];
     if (!o || o.type !== "ObjectExpression") fail("shared({ name: { initial: 0, client: true, persist: false } })", call);
@@ -949,7 +973,9 @@ export function compileProgram(ast: AstNode, hostGlobalNames: string[], api?: Ap
       const initial = get("initial") ?? null;
       if (initial !== null && !["number", "string", "boolean"].includes(typeof initial)) fail(`"initial" of "${name}" must be a number, a text, true/false or null`, p);
       if (typeof initial === "string" && initial.length > 500) fail(`"initial" of "${name}" is longer than 500 characters`, p);
-      program.shared.push({ name, initial, client: get("client") !== false, persist: get("persist") === true });
+      const scope = get("scope") ?? "room";
+      if (scope !== "room" && scope !== "player") fail(`"scope" of "${name}" must be "room" or "player"`, p);
+      program.shared.push({ name, initial, client: get("client") !== false, persist: get("persist") === true, scope: scope as SharedDecl["scope"] });
     }
     if (program.shared.length > 20) fail("a script may declare at most 20 shared properties", call);
   };

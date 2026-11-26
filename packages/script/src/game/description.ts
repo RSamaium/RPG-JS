@@ -177,6 +177,11 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
         ...CHARACTER_MEMBERS,
         canMove: { type: "boolean", writable: true, doc: "Whether the player moves with its inputs. Set it to false during a cutscene, and back to true after: nothing gives it back by itself." },
         exp: { type: "number", writable: true, doc: "Experience points. Assign them with = or +=: they never go below 0, and the player levels up as they grow (player.levelUp)." },
+        shared: {
+          type: "object",
+          handle: "$playerShared",
+          doc: 'The properties of this player declared with shared({ name: { initial, scope: "player" } }): each player has its own value ($player.shared.wood += 1 changes the wood of this player only). They are properties of the player in the game, script_<name>: with client: true (the default) the clients of the map receive them (a GUI reads getEntityProp(player, "script_wood")), with persist: true they are saved with the player.',
+        },
       },
       methods: {
         getItem: { sync: true, sig: "(id: string): { id: string; name: string; quantity: number } | undefined", doc: "A copy of an item of the inventory, or undefined when the player has none." },
@@ -379,12 +384,24 @@ export const GAME_API_DESCRIPTION: ApiDescription = {
       members: { id: { type: "string" }, name: { type: "string", doc: "Empty when the event has none." }, x: { type: "number" }, y: { type: "number" }, direction: { type: '"up" | "down" | "left" | "right"', doc: "Where the event faces." } },
     },
     $shared: {
-      doc: "Properties shared by all the players of the map, declared with shared({ ... }). Assignments (=, +=, -=) are applied at once; use take() to test and decrease in one step.",
-      declared: true,
+      doc: 'Properties shared by all the players of the map, declared with shared({ ... }) (scope: "room", the default). Assignments (=, +=, -=) are applied at once; use take() to test and decrease in one step. A property of each player is declared with scope: "player" and read with $player.shared.',
+      declared: "room",
       methods: {
         take: {
           sig: "(name: string, amount: number, options?: { min?: number }): boolean",
           doc: "Decrease a number by amount only if it stays at or above min (0 by default). Returns false and changes nothing otherwise. Atomic: two players cannot both take the last one.",
+        },
+      },
+      dynamic: { keyDoc: "name: string", type: "number | string | boolean | null", writable: true },
+    },
+    $playerShared: {
+      doc: "The properties of the player of the script declared with scope: \"player\", reached as $player.shared.",
+      nested: true,
+      declared: "player",
+      methods: {
+        take: {
+          sig: "(name: string, amount: number, options?: { min?: number }): boolean",
+          doc: "Decrease a number of this player by amount only if it stays at or above min (0 by default). Returns false and changes nothing otherwise.",
         },
       },
       dynamic: { keyDoc: "name: string", type: "number | string | boolean | null", writable: true },

@@ -506,6 +506,45 @@ neither, and a script that uses shared properties there gets an error that says 
 `client: true` sends the value to the clients. `$shared.take(name, amount)` tests and decreases in one step: two players cannot both
 take the last one.
 
+#### A value of each player: `scope: "player"`
+
+With `scope: "player"`, each player has its own value, read and changed with `$player.shared.<name>`: the wood a player has chopped,
+the hearts of a HUD drawn by a plugin.
+
+```js
+shared({
+  wood: { initial: 0, scope: "player", persist: true },
+  life: { initial: 20, scope: "player" },
+});
+
+on("event.action", { where: { "event.tags": { has: "tree" } } }, () => {
+  $player.shared.wood += 1; // the wood of this player only
+});
+```
+
+- The value is a synchronized property of the player, `script_<name>` (`player.setSync`). Every player has it from its arrival
+  (connection and each map it enters), with its `initial` value, before any script runs for it.
+- `client: true` (the default) sends it to the clients of the map: the other players receive it too, as they receive the rest of the
+  player. Use `client: false` for a value only the server needs.
+- `persist: true` saves it with the player (`player.save()` and the save slots), and loading the save brings it back; with
+  `persist: false` it is not in the save.
+- The rules are the ones of `$shared`: a number, a text, true/false or null, of one kind, with `=`, `+=` and `-=`, and
+  `$player.shared.take(name, amount)`. `$shared.wood` and `$player.shared.stock` are refused when the script is checked: the scope
+  of the declaration says which one to use.
+- The properties of the players are shared by the scripts: two scripts may declare the same name with the same options; a script
+  that declares it with other options (initial value, `client`, `persist`) is refused, with the reason.
+
+A GUI of a plugin reads it like any synchronized property of the player, and updates when it changes, without `updateGui` or
+`map.tick`:
+
+```js
+const engine = inject(RpgClientEngine);
+const wood = getEntityProp(engine.scene.currentPlayer, "script_wood");
+```
+
+In `simulate()`, the world gives the starting values with `player: { shared: { wood: 5 } }`, the result has them in
+`state.player.shared`, and each change is a `sync` effect with `scope: "player"`.
+
 `$state` is data kept by the script, in memory: assign a whole value, `$state.crafted = { ...$state.crafted, potion: 1 }`.
 
 ### The database: `$data`
@@ -711,7 +750,8 @@ ones of the map: `createDynamicEvent`, `removeEvent`, `createShape`, `removeShap
 The behavior of every name is written once over a port, `ScriptWorld`, that has the shape of the API of RPGJS (`getItem`, `addItem`,
 `getVariable`, `showText`, `showChoices`, and a `MapPort` for the map). `createRpgjsWorld({ player, map?, room?, event?, shared?, hook? })`
 implements it with the API of RPGJS, and `SimWorld` in memory. A host with its own vocabulary, such as a block editor, implements it
-with its own operations, and gets the same behavior.
+with its own operations, and gets the same behavior. `playerSharedProps` (the properties of `scope: "player"`) is optional: a world
+without it runs every script that does not use `$player.shared`.
 
 | Entry | For |
 | --- | --- |

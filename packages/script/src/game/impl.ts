@@ -375,8 +375,13 @@ export interface ScriptWorld {
   /** Writes a line of the script where its author reads it (the console of the server, the logs of the service). */
   log(message: string): void;
   rand(min: number, max: number): number;
-  /** Properties shared by the players of a map. `set` receives the new value, the operator and its operand. */
-  sharedProps: { has(name: string): boolean; get(name: string): unknown; set(name: string, value: unknown, op: string, operand: unknown): void };
+  /** Properties shared by the players of a map (`scope: "room"`). `set` receives the new value, the operator and its operand. */
+  sharedProps: SharedProps;
+  /**
+   * Properties of the player of the script (`scope: "player"`), read as `$player.shared.xxx`. A world without them (one written
+   * before they existed) runs every script that does not use them; one that does gets an error that says so.
+   */
+  playerSharedProps?: SharedProps;
   /** The database of the game. */
   data: DataPort;
   /** Persistent data of the script's plugin. */
@@ -801,6 +806,43 @@ function characterMirror(kind: "methods" | "members", name: string) {
   return { target: `event.${entry.engine.slice("player.".length)}`, entry };
 }
 
+/** The properties a script declares with `shared({ ... })`, in one scope: the room, or the player of the script. */
+export interface SharedProps { has(name: string): boolean; get(name: string): unknown; set(name: string, value: unknown, op: string, operand: unknown): void }
+
+/** The properties of the player in a world that keeps none: using them says so. */
+const NO_PLAYER_SHARED: SharedProps = {
+  has: () => { throw new Error("this world keeps no properties of the player: $player.shared needs a world with playerSharedProps"); },
+  get: () => undefined,
+  set: () => undefined,
+};
+
+/** `$shared` and `$player.shared`: the same rules (plain values of one kind, =, += and -=, take) over the properties of one scope. */
+const sharedHandle = (props: (w: ScriptWorld) => SharedProps): HandleImpl<ScriptWorld> => ({
+  methods: {
+    take: (w, [name, amount, o]) => {
+      const k = String(name), cur = props(w).has(k) ? props(w).get(k) : undefined, min = Number(opts(o).min ?? 0);
+      if (typeof cur !== "number") throw new Error(`"${k}" is not a declared number`);
+      if (cur - Number(amount) < min) return false;
+      props(w).set(k, cur - Number(amount), "-=", Number(amount));
+      return true;
+    },
+  },
+  dynamic: {
+    read: (w, k) => { if (!props(w).has(k)) throw new Error(`"${k}" is not declared`); return props(w).get(k); },
+    write: (w, k, op, v) => {
+      if (!props(w).has(k)) throw new Error(`"${k}" is not declared`);
+      const cur = props(w).get(k);
+      if (!["=", "+=", "-="].includes(op)) throw new Error("a shared property accepts only =, += and -=");
+      const next = op === "=" ? v : op === "+=" ? (cur as any) + (v as any) : (cur as any) - (v as any);
+      if (cur !== null && typeof next !== typeof cur) throw new Error(`"${k}" holds ${typeof cur}, not ${typeof next}`);
+      if (typeof next === "number" && !Number.isFinite(next)) throw new Error(`"${k}" must stay a finite number`);
+      if (typeof next === "string" && next.length > 500) throw new Error(`"${k}" is limited to 500 characters`);
+      if (next !== null && !["number", "string", "boolean"].includes(typeof next)) throw new Error("a shared property holds a number, a text, true/false or null");
+      props(w).set(k, next, op, v);
+    },
+  },
+});
+
 /**
  * What each name of `GAME_API_DESCRIPTION` does, over a `ScriptWorld`. Written once: the game and a simulation provide a world, and the
  * behavior (checks, limits, what is refused) is the same in both.
@@ -991,31 +1033,8 @@ const BASE_API_IMPL: ApiImpl<ScriptWorld> = {
     },
     $room: { members: { kind: { read: (w) => w.room.kind }, id: { read: (w) => w.room.id } } },
     $event: { members: { id: { read: (w) => w.event.id }, name: { read: (w) => w.event.name }, x: { read: (w) => w.event.x }, y: { read: (w) => w.event.y }, direction: { read: (w) => w.event.direction } } },
-    $shared: {
-      methods: {
-        take: (w, [name, amount, o]) => {
-          const k = String(name), cur = w.sharedProps.has(k) ? w.sharedProps.get(k) : undefined, min = Number(opts(o).min ?? 0);
-          if (typeof cur !== "number") throw new Error(`"${k}" is not a declared number`);
-          if (cur - Number(amount) < min) return false;
-          w.sharedProps.set(k, cur - Number(amount), "-=", Number(amount));
-          return true;
-        },
-      },
-      dynamic: {
-        read: (w, k) => { if (!w.sharedProps.has(k)) throw new Error(`"${k}" is not declared`); return w.sharedProps.get(k); },
-        write: (w, k, op, v) => {
-          if (!w.sharedProps.has(k)) throw new Error(`"${k}" is not declared`);
-          const cur = w.sharedProps.get(k);
-          if (!["=", "+=", "-="].includes(op)) throw new Error("a shared property accepts only =, += and -=");
-          const next = op === "=" ? v : op === "+=" ? (cur as any) + (v as any) : (cur as any) - (v as any);
-          if (cur !== null && typeof next !== typeof cur) throw new Error(`"${k}" holds ${typeof cur}, not ${typeof next}`);
-          if (typeof next === "number" && !Number.isFinite(next)) throw new Error(`"${k}" must stay a finite number`);
-          if (typeof next === "string" && next.length > 500) throw new Error(`"${k}" is limited to 500 characters`);
-          if (next !== null && !["number", "string", "boolean"].includes(typeof next)) throw new Error("a shared property holds a number, a text, true/false or null");
-          w.sharedProps.set(k, next, op, v);
-        },
-      },
-    },
+    $shared: sharedHandle((w) => w.sharedProps),
+    $playerShared: sharedHandle((w) => w.playerSharedProps ?? NO_PLAYER_SHARED),
     $hook: { dynamic: { read: (w, k) => w.hook[k] } },
     $state: {
       dynamic: {
