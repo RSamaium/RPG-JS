@@ -93,8 +93,8 @@ const CHARACTER_METHODS: Record<string, MethodDesc> = {
   autoChangeMap: engine("player.autoChangeMap", "(nextPosition: { x: number; y: number }): boolean", "In a world of maps, moves the character to the map next to it when the position is beyond the edge."),
   getShapes: engine("player.getShapes", "(): { name: string; x: number; y: number; width: number; height: number }[]", "The zones attached to the character.", true),
   getInShapes: engine("player.getInShapes", "(): { name: string; x: number; y: number; width: number; height: number }[]", "The zones the character is in.", true),
-  showAttachedGui: engine("player.showAttachedGui", "(): void", "Shows the GUIs attached to the sprite of the character, to every player."),
-  hideAttachedGui: engine("player.hideAttachedGui", "(): void"),
+  showAttachedGui: engine("player.showAttachedGui", "(targets?: string | string[]): void", "Shows to the player the GUIs attached to a sprite (a GUI the client adds with attachToSprite: a name tag, a badge): on its own sprite without argument, or on the sprites of the players given by id (the ids of $map.getPlayers() for everyone). An id that is not a player of the map is ignored. Does nothing when the client has no attached GUI."),
+  hideAttachedGui: engine("player.hideAttachedGui", "(targets?: string | string[]): void", "Hides from the player the GUIs attached to its own sprite, or to the sprites of the players given by id."),
   getParamItem: engine("player.getParamItem", "(name: string): number", "What the equipment adds to a parameter.", true),
   replayRoutes: engine("player.replayRoutes", "(): void"),
 };
