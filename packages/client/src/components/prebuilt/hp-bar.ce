@@ -43,7 +43,7 @@
 </Container>
 
 <script>
-import { computed, animatedSignal, effect } from "canvasengine";
+import { computed, animatedSignal, effect, untracked } from "canvasengine";
 
 const { object } = defineProps();
 const sprite = object();
@@ -138,7 +138,9 @@ const animatedPercent = animatedSignal(hpPercent(), {
 // Update animated value when HP changes
 effect(() => {
   const newPercent = hpPercent();
-  animatedPercent.set(newPercent);
+  // Starting an animation reads its own state: outside dependency collection, the effect only follows the HP
+  // and is not run again by every frame of the animation it starts.
+  untracked(() => animatedPercent.set(newPercent));
 });
 
 // ====================

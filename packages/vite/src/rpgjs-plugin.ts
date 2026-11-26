@@ -1,4 +1,6 @@
 import canvasengine from "@canvasengine/compiler";
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { Plugin } from "vite";
 import { replaceConfigImport } from "./replace-config-import";
 import { serverPlugin, type RpgjsDevServerOptions } from "./server-plugin";
@@ -7,6 +9,27 @@ import { mmorpgBuildPlugin } from "./mmorpg-build-plugin";
 import { devBannerPlugin } from "./dev-banner";
 
 const runtimeDedupe = ["@canvasengine/presets", "canvasengine", "pixi.js"];
+/**
+ * The reactive runtime must have one copy in the application: signals of two copies of `@signe/reactive` do not track
+ * each other. The RPGJS packages and canvasengine import it instead of bundling it, so the package manager already
+ * installs one copy when the versions match. It is deduped as well when the application can resolve it from its root
+ * (a direct dependency, or a hoisted `node_modules`): Vite resolves a deduped package from the root only, so a package
+ * that the root cannot resolve must be left to the normal resolution.
+ */
+const reactiveRuntime = ["@signe/reactive"];
+
+/** The packages of `names` that a `node_modules` folder of `root`, or of one of its parents, contains. */
+export function resolvableFromRoot(root: string, names: string[]): string[] {
+  return names.filter((name) => {
+    let dir = path.resolve(root);
+    while (true) {
+      if (existsSync(path.join(dir, "node_modules", name, "package.json"))) return true;
+      const parent = path.dirname(dir);
+      if (parent === dir) return false;
+      dir = parent;
+    }
+  });
+}
 const runtimeOptimizeDepsExclude = [
   ...runtimeDedupe,
   "@rpgjs/client",
@@ -61,10 +84,10 @@ export function rpgjs({
   return [
     {
       name: "rpgjs:runtime-dedupe",
-      config() {
+      config(userConfig?: { root?: string }) {
         return {
           resolve: {
-            dedupe: runtimeDedupe,
+            dedupe: [...runtimeDedupe, ...resolvableFromRoot(userConfig?.root ?? process.cwd(), reactiveRuntime)],
           },
           optimizeDeps: {
             exclude: runtimeOptimizeDepsExclude,

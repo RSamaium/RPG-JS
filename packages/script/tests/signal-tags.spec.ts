@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createModule, defineModule } from "@rpgjs/common";
 import { EventData, RpgEvent, type RpgPlayer, type RpgServer } from "@rpgjs/server";
 import { testing, type TestingFixture } from "@rpgjs/testing";
+import { GAME_API_DESCRIPTION } from "../src/game/description";
 import { GAME_SIGNALS } from "../src/game/signals";
+import { describeGameApi } from "../src/testing/tools";
 import { provideScripts, type ScriptSource } from "../src/server";
 
 const Relic = { id: "Relic", name: "Relic", _type: "item" as const, tags: ["relic", "quest"] };
@@ -126,7 +128,36 @@ describe("the tags of events, maps and records in the signals", () => {
     await settled(() => expect(player.getVariable(`learned_${n}`)).toEqual(["learn", "Fireball", ["fire"]]));
   });
 
+  it("gives the tags of the events in $map.getEvents() and $map.getEvent(), to find the events of a kind", async () => {
+    const { player, map } = await start([{
+      id: "sheriffs",
+      source: `on("event.action", { where: { "event.name": "bell" } }, () => {
+        const sheriffs = $map.getEvents().filter((e) => e.tags.includes("sheriff")).map((e) => e.id).sort();
+        const one = $map.getEvent("sheriff-1_${n}");
+        const none = $map.getEvent("decoy_${n}");
+        $player.setVariable("sheriffs_${n}", [sheriffs, one.tags, none.tags]);
+      });`,
+    }]);
+    await map.createDynamicEvent({ id: `sheriff-1_${n}`, x: 150, y: 100, event: { name: "Shérif", tags: ["sheriff", "npc", "sheriff"] } as any });
+    await map.createDynamicEvent({ id: `sheriff-2_${n}`, x: 200, y: 100, event: { name: "Marshal", tags: ["sheriff"] } as any });
+    // Named like a sheriff, but not one
+    await map.createDynamicEvent({ id: `decoy_${n}`, x: 250, y: 100, event: { name: "Shérif de carton" } as any });
+    const bell = (await map.createDynamicEvent({ id: `bell_${n}`, x: 300, y: 100, event: { name: "bell" } as any }))!;
+
+    await map.getEvent(bell)!.execMethod("onAction", [player, { action: "action" }]);
+
+    await settled(() => expect(plain(player.getVariable(`sheriffs_${n}`))).toEqual([
+      [`sheriff-1_${n}`, `sheriff-2_${n}`],
+      ["sheriff", "npc"],
+      [],
+    ]));
+  });
+
   it("describes the new fields to the scripts and the Studio agent", () => {
+    for (const method of ["getEvent", "getEvents"]) {
+      expect((GAME_API_DESCRIPTION.handles.$map.methods as any)[method].sig, method).toContain("tags: string[]");
+    }
+    expect(describeGameApi()).toContain('e.tags.includes("sheriff")');
     expect(GAME_SIGNALS["event.action"].payload.event.fields?.tags?.type).toBe("string[]");
     expect(GAME_SIGNALS["event.touch"].payload.event.fields?.tags?.type).toBe("string[]");
     for (const signal of ["player.joinMap", "player.leaveMap", "player.joinRoom", "player.leaveRoom"]) {

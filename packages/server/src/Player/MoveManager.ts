@@ -557,6 +557,674 @@ export const Move = new MoveList();
  * ```
  */
 /**
+ * Movement strategy of `moveRoutes()`: walks a character through its routes, one target at a time.
+ *
+ * Declared once for the module. Declared inside `moveRoutes()`, a new class was created at every call, that is at every
+ * cycle of an infinite route for every event: the engine could then not optimize `update()`, which runs at every
+ * physics step.
+ */
+class RouteMovementStrategy implements MovementStrategy {
+  private routeIndex = 0;
+  private currentTarget: { x: number; y: number } | null = null; // Center position for physics
+  private currentTargetTopLeft: { x: number; y: number } | null = null; // Top-left position for player.x() comparison
+  private currentDirection: { x: number; y: number } = { x: 0, y: 0 };
+  private finished = false;
+  private waitingForPromise = false;
+  private promiseStartTime = 0;
+  private promiseDuration = 0;
+  private readonly routes: Routes;
+  private readonly player: PlayerWithMixins;
+  private readonly onComplete: (success: boolean) => void;
+  private readonly tileSize: number;
+  private readonly tolerance: number;
+  private readonly onStuck?: MoveRoutesOptions['onStuck'];
+  private readonly stuckTimeout: number;
+  private readonly stuckThreshold: number;
+  private remainingDistance = 0;
+  private segmentDirection: Direction | null = null;
+  private segmentStep = 0;
+
+  // Frequency wait state
+  private waitingForFrequency = false;
+  private frequencyWaitStartTime = 0;
+  private ratioFrequency = 15;
+
+  // Stuck detection state
+  private lastPosition: { x: number; y: number } | null = null;
+  private lastPositionTime: number = 0;
+  private stuckCheckStartTime: number = 0;
+  private lastDistanceToTarget: number | null = null;
+  private isCurrentlyStuck: boolean = false;
+  private stuckCheckInitialized: boolean = false;
+
+  // Last arrival threshold, with what it was computed from
+  private thresholdSpeed: number | undefined = undefined;
+  private thresholdMap: unknown = undefined;
+  private thresholdScalar: unknown = undefined;
+  private thresholdValue = 0;
+
+  constructor(
+    routes: Routes,
+    player: PlayerWithMixins,
+    onComplete: (success: boolean) => void,
+    options?: MoveRoutesOptions
+  ) {
+    this.routes = routes;
+    this.player = player;
+    this.onComplete = onComplete;
+    this.tileSize = player.nbPixelInTile || 32;
+    this.tolerance = 0.5; // Tolerance in pixels for reaching target (reduced for precision)
+    this.onStuck = options?.onStuck;
+    this.stuckTimeout = options?.stuckTimeout ?? 500; // Default 500ms
+    this.stuckThreshold = options?.stuckThreshold ?? 1; // Default 1 pixel
+    this.ratioFrequency =
+      typeof options?.frequencyRatio === 'number' && options.frequencyRatio >= 0
+        ? options.frequencyRatio
+        : 15;
+
+    // Process initial route
+    this.processNextRoute();
+  }
+
+  private debugLog(message: string | (() => string), data?: any): void {
+    // Debug logging disabled - enable if needed for troubleshooting
+  }
+
+  private setRouteClamp(entity?: any): void {
+    if (!this.currentTargetTopLeft) {
+      this.clearRouteClamp(entity);
+      return;
+    }
+
+    // update() calls this at every step: the clamp is kept while the target and the direction object are the same
+    const player = this.player as any;
+    let clamp = player.__routeMovementClamp;
+    if (
+      !clamp
+      || clamp.targetTopLeft !== this.currentTargetTopLeft
+      || clamp.direction !== this.currentDirection
+    ) {
+      clamp = {
+        targetTopLeft: this.currentTargetTopLeft,
+        direction: this.currentDirection,
+      };
+      player.__routeMovementClamp = clamp;
+    }
+    if (entity && entity.__routeMovementClamp !== clamp) {
+      entity.__routeMovementClamp = clamp;
+    }
+  }
+
+  private clearRouteClamp(entity?: any): void {
+    // Set to undefined instead of deleted: `delete` moves the player and its entity to a slower
+    // representation of their properties, for every later access.
+    const player = this.player as any;
+    if (player.__routeMovementClamp !== undefined) {
+      player.__routeMovementClamp = undefined;
+    }
+    if (entity && entity.__routeMovementClamp !== undefined) {
+      entity.__routeMovementClamp = undefined;
+    }
+  }
+
+  private processNextRoute(): void {
+    this.clearRouteClamp();
+    // Reset frequency wait state when processing a new route
+    this.waitingForFrequency = false;
+    this.frequencyWaitStartTime = 0;
+    this.remainingDistance = 0;
+    this.segmentDirection = null;
+    this.segmentStep = 0;
+
+    // Check if we've completed all routes
+    if (this.routeIndex >= this.routes.length) {
+      this.debugLog('COMPLETE all routes finished');
+      this.finished = true;
+      this.clearRouteClamp();
+      this.onComplete(true);
+      return;
+    }
+
+    const currentRoute = this.routes[this.routeIndex];
+    this.routeIndex++;
+
+    if (currentRoute === undefined) {
+      this.processNextRoute();
+      return;
+    }
+
+    try {
+      // Handle different route types
+      if (typeof currentRoute === 'object' && 'then' in currentRoute) {
+        // Handle Promise (like Move.wait())
+        this.debugLog(`WAIT for promise (route ${this.routeIndex}/${this.routes.length})`);
+        this.waitingForPromise = true;
+        this.promiseStartTime = Date.now();
+
+        // Try to get duration from promise if possible (for Move.wait())
+        // Move.wait() creates a promise that resolves after a delay
+        // We'll use a default duration and let the promise resolve naturally
+        this.promiseDuration = 1000; // Default 1 second, will be updated when promise resolves
+
+        // Set up promise resolution handler
+        (currentRoute as Promise<void>).then(() => {
+          this.debugLog('WAIT promise resolved');
+          this.waitingForPromise = false;
+          this.processNextRoute();
+        }).catch(() => {
+          this.debugLog('WAIT promise rejected');
+          this.waitingForPromise = false;
+          this.processNextRoute();
+        });
+      } else if (typeof currentRoute === 'string' && currentRoute.startsWith('turn-')) {
+        // Handle turn commands - just change direction, no movement
+        const directionStr = currentRoute.replace('turn-', '');
+        let direction: Direction = Direction.Down;
+
+        switch (directionStr) {
+          case 'up':
+          case Direction.Up:
+            direction = Direction.Up;
+            break;
+          case 'down':
+          case Direction.Down:
+            direction = Direction.Down;
+            break;
+          case 'left':
+          case Direction.Left:
+            direction = Direction.Left;
+            break;
+          case 'right':
+          case Direction.Right:
+            direction = Direction.Right;
+            break;
+        }
+
+        this.debugLog(`TURN to ${directionStr}`);
+        if (this.player.changeDirection) {
+          this.player.changeDirection(direction);
+        }
+        // Turn is instant, continue immediately
+        this.processNextRoute();
+      } else if (typeof currentRoute === 'number' || typeof currentRoute === 'string') {
+        // Handle Direction enum values (number or string) - calculate target position
+        const moveDirection = currentRoute as unknown as Direction;
+        const map = this.player.getCurrentMap() as any;
+        if (!map) {
+          this.finished = true;
+          this.clearRouteClamp();
+          this.onComplete(false);
+          return;
+        }
+
+        // Get current position (top-left from player, which is what player.x() returns)
+        // We calculate target based on top-left position to match player.x() expectations
+        const currentTopLeftX = typeof this.player.x === 'function' ? this.player.x() : this.player.x;
+        const currentTopLeftY = typeof this.player.y === 'function' ? this.player.y() : this.player.y;
+
+        // Get player speed
+        let playerSpeed = (this.player as any).speed
+
+        // Use player speed as distance, not tile size
+        let distance = playerSpeed;
+
+        // Merge consecutive routes of same direction
+        const initialDistance = distance;
+        const initialRouteIndex = this.routeIndex;
+        while (this.routeIndex < this.routes.length) {
+          const nextRoute = this.routes[this.routeIndex];
+          if (nextRoute === currentRoute) {
+            distance += playerSpeed;
+            this.routeIndex++;
+          } else {
+            break;
+          }
+        }
+
+        // Prepare segmented movement (per tile)
+        this.remainingDistance = distance;
+        this.segmentDirection = moveDirection;
+        this.segmentStep = this.getTileStepDistance(playerSpeed);
+        this.setNextSegmentTarget(currentTopLeftX, currentTopLeftY);
+        
+        if (this.currentTargetTopLeft) {
+          this.debugLog(() => `MOVE direction=${moveDirection} from=(${currentTopLeftX.toFixed(1)}, ${currentTopLeftY.toFixed(1)}) to=(${this.currentTargetTopLeft!.x.toFixed(1)}, ${this.currentTargetTopLeft!.y.toFixed(1)}) dist=${distance.toFixed(1)}`);
+        }
+        
+        // Reset stuck detection when starting a new movement
+        this.lastPosition = null;
+        this.isCurrentlyStuck = false;
+        this.stuckCheckStartTime = 0;
+        this.lastDistanceToTarget = null;
+        this.stuckCheckInitialized = false;
+        // Reset frequency wait state when starting a new movement
+        this.waitingForFrequency = false;
+        this.frequencyWaitStartTime = 0;
+      } else if (Array.isArray(currentRoute)) {
+        // Handle array of directions - insert them into routes
+        for (let i = currentRoute.length - 1; i >= 0; i--) {
+          this.routes.splice(this.routeIndex, 0, currentRoute[i]);
+        }
+        this.processNextRoute();
+      } else {
+        // Unknown route type, skip
+        this.processNextRoute();
+      }
+    } catch (error) {
+      console.warn('Error processing route:', error);
+      this.processNextRoute();
+    }
+  }
+
+  update(body: MovementBody, dt: number): void {
+    // Don't process if waiting for promise
+    if (this.waitingForPromise) {
+      body.setVelocity({ x: 0, y: 0 });
+      // Check if promise wait time has elapsed (fallback)
+      if (Date.now() - this.promiseStartTime > this.promiseDuration) {
+        this.waitingForPromise = false;
+        this.processNextRoute();
+      }
+      return;
+    }
+
+    // Don't process if waiting for frequency delay
+    if (this.waitingForFrequency) {
+      body.setVelocity({ x: 0, y: 0 });
+      const playerFrequency = this.player.frequency;
+      const frequencyMs = playerFrequency || 0;
+
+      if (frequencyMs > 0 && Date.now() - this.frequencyWaitStartTime >= frequencyMs * this.ratioFrequency) {
+        this.waitingForFrequency = false;
+        if (this.remainingDistance > 0) {
+          const currentTopLeftX = this.player.x();
+          const currentTopLeftY = this.player.y();
+          this.setNextSegmentTarget(currentTopLeftX, currentTopLeftY);
+        } else {
+          this.processNextRoute();
+        }
+      }
+      return;
+    }
+
+    // If no target, try to process next route
+    if (!this.currentTarget) {
+      if (!this.finished) {
+        this.processNextRoute();
+      }
+      if (!this.currentTarget) {
+        body.setVelocity({ x: 0, y: 0 });
+        // Reset stuck detection when no target
+        this.lastPosition = null;
+        this.isCurrentlyStuck = false;
+        this.lastDistanceToTarget = null;
+        this.stuckCheckInitialized = false;
+        this.currentTargetTopLeft = null;
+        this.clearRouteClamp();
+        return;
+      }
+    }
+
+    const entity = body.getEntity?.();
+    if (!entity) {
+      this.finished = true;
+      this.clearRouteClamp(entity);
+      this.onComplete(false);
+      return;
+    }
+
+    // Read in place: copied only where a copy is kept (stuck detection) or given away (`onStuck`)
+    const currentPosition = entity.position;
+
+    // Check distance using player's top-left position (what player.x() returns)
+    // This ensures we match the test expectations which compare player.x()
+    const currentTopLeftX = this.player.x();
+    const currentTopLeftY = this.player.y()
+    const currentMap = this.player.getCurrentMap() as any;
+
+    // Calculate direction and distance using top-left position if available
+    let dx: number, dy: number, distance: number;
+    if (this.currentTargetTopLeft) {
+      dx = this.currentTargetTopLeft.x - currentTopLeftX;
+      dy = this.currentTargetTopLeft.y - currentTopLeftY;
+      distance = Math.hypot(dx, dy);
+      const arrivalThreshold = this.getArrivalThreshold(
+        currentMap,
+        (this.player as any).speed
+      );
+
+      // Snap to the target when the physics step overshoots the discrete route distance.
+      if (distance <= arrivalThreshold) {
+        currentMap?.setBodyPosition?.(this.player.id, this.currentTargetTopLeft.x, this.currentTargetTopLeft.y, "top-left");
+
+        // Target reached, wait for frequency before processing next route
+        this.debugLog(() => `TARGET reached at (${currentTopLeftX.toFixed(1)}, ${currentTopLeftY.toFixed(1)})`);
+        this.currentTarget = null;
+        this.currentTargetTopLeft = null;
+        this.currentDirection = { x: 0, y: 0 };
+        this.clearRouteClamp(entity);
+        body.setVelocity({ x: 0, y: 0 });
+        // Reset stuck detection
+        this.lastPosition = null;
+        this.isCurrentlyStuck = false;
+        this.lastDistanceToTarget = null;
+        this.stuckCheckInitialized = false;
+
+        // Wait for frequency before processing next route or segment
+        if (!this.finished) {
+          const playerFrequency = this.player.frequency;
+          if (playerFrequency && playerFrequency > 0) {
+            this.waitingForFrequency = true;
+            this.frequencyWaitStartTime = Date.now();
+          } else if (this.remainingDistance > 0) {
+            const nextTopLeftX = this.player.x();
+            const nextTopLeftY = this.player.y();
+            this.setNextSegmentTarget(nextTopLeftX, nextTopLeftY);
+          } else {
+            // No frequency delay, process immediately
+            this.processNextRoute();
+          }
+        }
+        return;
+      }
+    } else {
+      // Fallback: use center position distance if top-left target not available
+      dx = this.currentTarget.x - currentPosition.x;
+      dy = this.currentTarget.y - currentPosition.y;
+      distance = Math.hypot(dx, dy);
+      const arrivalThreshold = this.getArrivalThreshold(
+        currentMap,
+        (this.player as any).speed
+      );
+
+      // Check if we've reached the target (using center position as fallback)
+      if (distance <= arrivalThreshold) {
+        entity.position.set(this.currentTarget.x, this.currentTarget.y);
+        entity.notifyPositionChange?.();
+
+        // Target reached, wait for frequency before processing next route
+        this.currentTarget = null;
+        this.currentTargetTopLeft = null;
+        this.currentDirection = { x: 0, y: 0 };
+        this.clearRouteClamp(entity);
+        body.setVelocity({ x: 0, y: 0 });
+        // Reset stuck detection
+        this.lastPosition = null;
+        this.isCurrentlyStuck = false;
+        this.lastDistanceToTarget = null;
+        this.stuckCheckInitialized = false;
+
+        // Wait for frequency before processing next route or segment
+        if (!this.finished) {
+          const playerFrequency = this.player.frequency;
+          if (playerFrequency && playerFrequency > 0) {
+            this.waitingForFrequency = true;
+            this.frequencyWaitStartTime = Date.now();
+          } else if (this.remainingDistance > 0) {
+            const nextTopLeftX = this.player.x();
+            const nextTopLeftY = this.player.y();
+            this.setNextSegmentTarget(nextTopLeftX, nextTopLeftY);
+          } else {
+            // No frequency delay, process immediately
+            this.processNextRoute();
+          }
+        }
+        return;
+      }
+    }
+
+    // Stuck detection: check if player is making progress
+    if (this.onStuck && this.currentTarget) {
+      // Initialize tracking on first update
+      const currentTime = Date.now();
+      if (!this.stuckCheckInitialized) {
+        this.lastPosition = { x: currentPosition.x, y: currentPosition.y };
+        this.lastDistanceToTarget = distance;
+        this.stuckCheckInitialized = true;
+        // Update tracking and continue (don't return early)
+        this.lastPositionTime = currentTime;
+      } else if (this.lastPosition && this.lastDistanceToTarget !== null) {
+        // We have a target, so we're trying to move (regardless of current velocity,
+        // which may be zero due to physics engine collision handling)
+        const positionChanged = Math.hypot(
+          currentPosition.x - this.lastPosition.x,
+          currentPosition.y - this.lastPosition.y
+        ) > this.stuckThreshold;
+
+        const distanceImproved = distance < (this.lastDistanceToTarget - this.stuckThreshold);
+
+        // Player is stuck if: not moving AND not getting closer to target
+        if (!positionChanged && !distanceImproved) {
+          // Player is not making progress
+          if (!this.isCurrentlyStuck) {
+            // Start stuck timer
+            this.stuckCheckStartTime = currentTime;
+            this.isCurrentlyStuck = true;
+          } else {
+            // Check if stuck timeout has elapsed
+            if (currentTime - this.stuckCheckStartTime >= this.stuckTimeout) {
+              // Player is stuck, call onStuck callback
+              this.debugLog(() => `STUCK detected at (${currentPosition.x.toFixed(1)}, ${currentPosition.y.toFixed(1)}) target=(${this.currentTarget!.x.toFixed(1)}, ${this.currentTarget!.y.toFixed(1)})`);
+              const shouldContinue = this.onStuck(
+                this.player as any,
+                this.currentTarget,
+                { x: currentPosition.x, y: currentPosition.y }
+              );
+
+              if (shouldContinue === false) {
+                // Cancel the route
+                this.debugLog('STUCK cancelled route');
+                this.finished = true;
+                this.clearRouteClamp(entity);
+                this.onComplete(false);
+                body.setVelocity({ x: 0, y: 0 });
+                return;
+              }
+
+              // Continue route: abandon the current target and move on.
+              //
+              // ## Why?
+              // When random movement hits an obstacle, the physics engine can keep the entity
+              // at the same position while this strategy keeps trying to reach the same target,
+              // resulting in an infinite "stuck loop". By dropping the current target here,
+              // we allow the route to advance and (in the common case of `infiniteMoveRoute`)
+              // re-evaluate `Move.tileRandom()` on the next cycle, producing a new direction.
+              this.currentTarget = null;
+              this.currentTargetTopLeft = null;
+              this.currentDirection = { x: 0, y: 0 };
+              this.clearRouteClamp(entity);
+              body.setVelocity({ x: 0, y: 0 });
+
+              // Reset stuck detection to start fresh on the next target
+              this.isCurrentlyStuck = false;
+              this.stuckCheckStartTime = 0;
+              this.lastPosition = null;
+              this.lastDistanceToTarget = null;
+              this.stuckCheckInitialized = false;
+
+              // The route goes on after the wait of the frequency, as after a move that is done:
+              // a blocked character stands still instead of trying a new direction every 500 ms
+              this.remainingDistance = 0;
+              const stuckFrequency = this.player.frequency;
+              if (stuckFrequency && stuckFrequency > 0) {
+                this.waitingForFrequency = true;
+                this.frequencyWaitStartTime = Date.now();
+              } else {
+                this.processNextRoute();
+              }
+              return;
+            }
+          }
+        } else {
+          // Player is making progress, reset stuck detection
+          this.isCurrentlyStuck = false;
+          this.stuckCheckStartTime = 0;
+        }
+
+        // Update tracking variables
+        this.lastPosition.x = currentPosition.x;
+        this.lastPosition.y = currentPosition.y;
+        this.lastPositionTime = currentTime;
+        this.lastDistanceToTarget = distance;
+      }
+    }
+
+    // Get speed scalar from map (default 50 if not found)
+    const map = currentMap;
+    const speedScalar = map?.speedScalar ?? 50;
+
+    // Calculate direction and speed
+    // Use the distance calculated above (from top-left if available, center otherwise)
+    if (distance > 0) {
+      // In place: the route clamp keeps this object, and sees the new direction
+      this.currentDirection.x = dx / distance;
+      this.currentDirection.y = dy / distance;
+    } else {
+      // If distance is 0 or negative, we've reached or passed the target
+      this.currentTarget = null;
+      this.currentTargetTopLeft = null;
+      this.currentDirection = { x: 0, y: 0 };
+      this.clearRouteClamp(entity);
+      body.setVelocity({ x: 0, y: 0 });
+      if (!this.finished) {
+        const playerFrequency = this.player.frequency;
+        if (playerFrequency && playerFrequency > 0) {
+          this.waitingForFrequency = true;
+          this.frequencyWaitStartTime = Date.now();
+        } else if (this.remainingDistance > 0) {
+          const nextTopLeftX = this.player.x();
+          const nextTopLeftY = this.player.y();
+          this.setNextSegmentTarget(nextTopLeftX, nextTopLeftY);
+        } else {
+          // No frequency delay, process immediately
+          this.processNextRoute();
+        }
+      }
+      return;
+    }
+
+    // Convert vector direction to cardinal direction (like moveBody does)
+    const absX = Math.abs(this.currentDirection.x);
+    const absY = Math.abs(this.currentDirection.y);
+    let cardinalDirection: Direction;
+
+    if (absX >= absY) {
+      cardinalDirection = this.currentDirection.x >= 0 ? Direction.Right : Direction.Left;
+    } else {
+      cardinalDirection = this.currentDirection.y >= 0 ? Direction.Down : Direction.Up;
+    }
+
+    this.setRouteClamp(entity);
+    map.movePlayer(this.player as any, cardinalDirection)
+  }
+
+  isFinished(): boolean {
+    return this.finished;
+  }
+
+  onFinished(): void {
+    this.clearRouteClamp();
+    this.onComplete(true);
+  }
+
+  private getTileStepDistance(playerSpeed: number): number {
+    if (!Number.isFinite(playerSpeed) || playerSpeed <= 0) {
+      return this.tileSize;
+    }
+    const stepsPerTile = Math.max(1, Math.floor(this.tileSize / playerSpeed));
+    return stepsPerTile * playerSpeed;
+  }
+
+  private getArrivalThreshold(map: any, playerSpeed: number): number {
+    // Asked at every step: it only changes with the speed of the character, or with its map
+    const scalar = map?.speedScalar;
+    if (
+      playerSpeed === this.thresholdSpeed
+      && map === this.thresholdMap
+      && scalar === this.thresholdScalar
+    ) {
+      return this.thresholdValue;
+    }
+    this.thresholdSpeed = playerSpeed;
+    this.thresholdMap = map;
+    this.thresholdScalar = scalar;
+    return (this.thresholdValue = this.computeArrivalThreshold(map, playerSpeed));
+  }
+
+  private computeArrivalThreshold(map: any, playerSpeed: number): number {
+    const speed = Number(playerSpeed);
+    if (!Number.isFinite(speed) || speed <= 0) {
+      return this.tolerance;
+    }
+    const speedScalar = Number(map?.speedScalar ?? 50);
+    const timeStep = Number(map?.physic?.getWorld?.().getTimeStep?.() ?? 1 / 60);
+    const physicsStepDistance =
+      Number.isFinite(speedScalar) && speedScalar > 0 &&
+      Number.isFinite(timeStep) && timeStep > 0
+        ? speed * speedScalar * timeStep
+        : speed;
+    return Math.max(this.tolerance, speed, physicsStepDistance + 2);
+  }
+
+  private setNextSegmentTarget(currentTopLeftX: number, currentTopLeftY: number): void {
+    if (!this.segmentDirection || this.remainingDistance <= 0) {
+      return;
+    }
+
+    const map = this.player.getCurrentMap() as any;
+    if (!map) {
+      this.finished = true;
+      this.clearRouteClamp();
+      this.onComplete(false);
+      return;
+    }
+
+    const entity = map.physic.getEntityByUUID(this.player.id);
+    if (!entity) {
+      this.finished = true;
+      this.clearRouteClamp();
+      this.onComplete(false);
+      return;
+    }
+
+    const segmentDistance = Math.min(this.segmentStep || this.remainingDistance, this.remainingDistance);
+    let targetTopLeftX = currentTopLeftX;
+    let targetTopLeftY = currentTopLeftY;
+
+    switch (this.segmentDirection) {
+      case Direction.Right:
+      case 'right' as any:
+        targetTopLeftX = currentTopLeftX + segmentDistance;
+        break;
+      case Direction.Left:
+      case 'left' as any:
+        targetTopLeftX = currentTopLeftX - segmentDistance;
+        break;
+      case Direction.Down:
+      case 'down' as any:
+        targetTopLeftY = currentTopLeftY + segmentDistance;
+        break;
+      case Direction.Up:
+      case 'up' as any:
+        targetTopLeftY = currentTopLeftY - segmentDistance;
+        break;
+    }
+
+    const hitbox = this.player.hitbox();
+    const hitboxWidth = hitbox?.w ?? 32;
+    const hitboxHeight = hitbox?.h ?? 32;
+
+    const targetX = targetTopLeftX + hitboxWidth / 2;
+    const targetY = targetTopLeftY + hitboxHeight / 2;
+
+    this.currentTarget = { x: targetX, y: targetY };
+    this.currentTargetTopLeft = { x: targetTopLeftX, y: targetTopLeftY };
+    this.currentDirection = { x: 0, y: 0 };
+    this.remainingDistance -= segmentDistance;
+  }
+}
+
+/**
  * Move Manager Mixin
  * 
  * Provides comprehensive movement management capabilities to any class. This mixin handles
@@ -701,10 +1369,10 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
 
     clearMovements(): void {
       const map = (this as unknown as PlayerWithMixins).getCurrentMap() as any;
-      delete (this as any).__routeMovementClamp;
+      if ((this as any).__routeMovementClamp !== undefined) (this as any).__routeMovementClamp = undefined;
       const body = map?.getBody?.((this as unknown as PlayerWithMixins).id) as any;
       if (body) {
-        delete body.__routeMovementClamp;
+        if (body.__routeMovementClamp !== undefined) body.__routeMovementClamp = undefined;
       }
       if (!map) return;
 
@@ -1211,628 +1879,6 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
           return;
         }
 
-        // Create a movement strategy that handles all routes
-        class RouteMovementStrategy implements MovementStrategy {
-          private routeIndex = 0;
-          private currentTarget: { x: number; y: number } | null = null; // Center position for physics
-          private currentTargetTopLeft: { x: number; y: number } | null = null; // Top-left position for player.x() comparison
-          private currentDirection: { x: number; y: number } = { x: 0, y: 0 };
-          private finished = false;
-          private waitingForPromise = false;
-          private promiseStartTime = 0;
-          private promiseDuration = 0;
-          private readonly routes: Routes;
-          private readonly player: PlayerWithMixins;
-          private readonly onComplete: (success: boolean) => void;
-          private readonly tileSize: number;
-          private readonly tolerance: number;
-          private readonly onStuck?: MoveRoutesOptions['onStuck'];
-          private readonly stuckTimeout: number;
-          private readonly stuckThreshold: number;
-          private remainingDistance = 0;
-          private segmentDirection: Direction | null = null;
-          private segmentStep = 0;
-
-          // Frequency wait state
-          private waitingForFrequency = false;
-          private frequencyWaitStartTime = 0;
-          private ratioFrequency = 15;
-
-          // Stuck detection state
-          private lastPosition: { x: number; y: number } | null = null;
-          private lastPositionTime: number = 0;
-          private stuckCheckStartTime: number = 0;
-          private lastDistanceToTarget: number | null = null;
-          private isCurrentlyStuck: boolean = false;
-          private stuckCheckInitialized: boolean = false;
-
-          constructor(
-            routes: Routes,
-            player: PlayerWithMixins,
-            onComplete: (success: boolean) => void,
-            options?: MoveRoutesOptions
-          ) {
-            this.routes = routes;
-            this.player = player;
-            this.onComplete = onComplete;
-            this.tileSize = player.nbPixelInTile || 32;
-            this.tolerance = 0.5; // Tolerance in pixels for reaching target (reduced for precision)
-            this.onStuck = options?.onStuck;
-            this.stuckTimeout = options?.stuckTimeout ?? 500; // Default 500ms
-            this.stuckThreshold = options?.stuckThreshold ?? 1; // Default 1 pixel
-            this.ratioFrequency =
-              typeof options?.frequencyRatio === 'number' && options.frequencyRatio >= 0
-                ? options.frequencyRatio
-                : 15;
-
-            // Process initial route
-            this.processNextRoute();
-          }
-
-          private debugLog(message: string, data?: any): void {
-            // Debug logging disabled - enable if needed for troubleshooting
-          }
-
-          private setRouteClamp(entity?: any): void {
-            if (!this.currentTargetTopLeft) {
-              this.clearRouteClamp(entity);
-              return;
-            }
-
-            const clamp = {
-              targetTopLeft: this.currentTargetTopLeft,
-              direction: this.currentDirection,
-            };
-            (this.player as any).__routeMovementClamp = clamp;
-            if (entity) {
-              entity.__routeMovementClamp = clamp;
-            }
-          }
-
-          private clearRouteClamp(entity?: any): void {
-            delete (this.player as any).__routeMovementClamp;
-            if (entity) {
-              delete entity.__routeMovementClamp;
-            }
-          }
-
-          private processNextRoute(): void {
-            this.clearRouteClamp();
-            // Reset frequency wait state when processing a new route
-            this.waitingForFrequency = false;
-            this.frequencyWaitStartTime = 0;
-            this.remainingDistance = 0;
-            this.segmentDirection = null;
-            this.segmentStep = 0;
-
-            // Check if we've completed all routes
-            if (this.routeIndex >= this.routes.length) {
-              this.debugLog('COMPLETE all routes finished');
-              this.finished = true;
-              this.clearRouteClamp();
-              this.onComplete(true);
-              return;
-            }
-
-            const currentRoute = this.routes[this.routeIndex];
-            this.routeIndex++;
-
-            if (currentRoute === undefined) {
-              this.processNextRoute();
-              return;
-            }
-
-            try {
-              // Handle different route types
-              if (typeof currentRoute === 'object' && 'then' in currentRoute) {
-                // Handle Promise (like Move.wait())
-                this.debugLog(`WAIT for promise (route ${this.routeIndex}/${this.routes.length})`);
-                this.waitingForPromise = true;
-                this.promiseStartTime = Date.now();
-
-                // Try to get duration from promise if possible (for Move.wait())
-                // Move.wait() creates a promise that resolves after a delay
-                // We'll use a default duration and let the promise resolve naturally
-                this.promiseDuration = 1000; // Default 1 second, will be updated when promise resolves
-
-                // Set up promise resolution handler
-                (currentRoute as Promise<void>).then(() => {
-                  this.debugLog('WAIT promise resolved');
-                  this.waitingForPromise = false;
-                  this.processNextRoute();
-                }).catch(() => {
-                  this.debugLog('WAIT promise rejected');
-                  this.waitingForPromise = false;
-                  this.processNextRoute();
-                });
-              } else if (typeof currentRoute === 'string' && currentRoute.startsWith('turn-')) {
-                // Handle turn commands - just change direction, no movement
-                const directionStr = currentRoute.replace('turn-', '');
-                let direction: Direction = Direction.Down;
-
-                switch (directionStr) {
-                  case 'up':
-                  case Direction.Up:
-                    direction = Direction.Up;
-                    break;
-                  case 'down':
-                  case Direction.Down:
-                    direction = Direction.Down;
-                    break;
-                  case 'left':
-                  case Direction.Left:
-                    direction = Direction.Left;
-                    break;
-                  case 'right':
-                  case Direction.Right:
-                    direction = Direction.Right;
-                    break;
-                }
-
-                this.debugLog(`TURN to ${directionStr}`);
-                if (this.player.changeDirection) {
-                  this.player.changeDirection(direction);
-                }
-                // Turn is instant, continue immediately
-                this.processNextRoute();
-              } else if (typeof currentRoute === 'number' || typeof currentRoute === 'string') {
-                // Handle Direction enum values (number or string) - calculate target position
-                const moveDirection = currentRoute as unknown as Direction;
-                const map = this.player.getCurrentMap() as any;
-                if (!map) {
-                  this.finished = true;
-                  this.clearRouteClamp();
-                  this.onComplete(false);
-                  return;
-                }
-
-                // Get current position (top-left from player, which is what player.x() returns)
-                // We calculate target based on top-left position to match player.x() expectations
-                const currentTopLeftX = typeof this.player.x === 'function' ? this.player.x() : this.player.x;
-                const currentTopLeftY = typeof this.player.y === 'function' ? this.player.y() : this.player.y;
-
-                // Get player speed
-                let playerSpeed = (this.player as any).speed
-
-                // Use player speed as distance, not tile size
-                let distance = playerSpeed;
-
-                // Merge consecutive routes of same direction
-                const initialDistance = distance;
-                const initialRouteIndex = this.routeIndex;
-                while (this.routeIndex < this.routes.length) {
-                  const nextRoute = this.routes[this.routeIndex];
-                  if (nextRoute === currentRoute) {
-                    distance += playerSpeed;
-                    this.routeIndex++;
-                  } else {
-                    break;
-                  }
-                }
-
-                // Prepare segmented movement (per tile)
-                this.remainingDistance = distance;
-                this.segmentDirection = moveDirection;
-                this.segmentStep = this.getTileStepDistance(playerSpeed);
-                this.setNextSegmentTarget(currentTopLeftX, currentTopLeftY);
-                
-                if (this.currentTargetTopLeft) {
-                  this.debugLog(`MOVE direction=${moveDirection} from=(${currentTopLeftX.toFixed(1)}, ${currentTopLeftY.toFixed(1)}) to=(${this.currentTargetTopLeft.x.toFixed(1)}, ${this.currentTargetTopLeft.y.toFixed(1)}) dist=${distance.toFixed(1)}`);
-                }
-                
-                // Reset stuck detection when starting a new movement
-                this.lastPosition = null;
-                this.isCurrentlyStuck = false;
-                this.stuckCheckStartTime = 0;
-                this.lastDistanceToTarget = null;
-                this.stuckCheckInitialized = false;
-                // Reset frequency wait state when starting a new movement
-                this.waitingForFrequency = false;
-                this.frequencyWaitStartTime = 0;
-              } else if (Array.isArray(currentRoute)) {
-                // Handle array of directions - insert them into routes
-                for (let i = currentRoute.length - 1; i >= 0; i--) {
-                  this.routes.splice(this.routeIndex, 0, currentRoute[i]);
-                }
-                this.processNextRoute();
-              } else {
-                // Unknown route type, skip
-                this.processNextRoute();
-              }
-            } catch (error) {
-              console.warn('Error processing route:', error);
-              this.processNextRoute();
-            }
-          }
-
-          update(body: MovementBody, dt: number): void {
-            // Don't process if waiting for promise
-            if (this.waitingForPromise) {
-              body.setVelocity({ x: 0, y: 0 });
-              // Check if promise wait time has elapsed (fallback)
-              if (Date.now() - this.promiseStartTime > this.promiseDuration) {
-                this.waitingForPromise = false;
-                this.processNextRoute();
-              }
-              return;
-            }
-
-            // Don't process if waiting for frequency delay
-            if (this.waitingForFrequency) {
-              body.setVelocity({ x: 0, y: 0 });
-              const playerFrequency = this.player.frequency;
-              const frequencyMs = playerFrequency || 0;
-
-              if (frequencyMs > 0 && Date.now() - this.frequencyWaitStartTime >= frequencyMs * this.ratioFrequency) {
-                this.waitingForFrequency = false;
-                if (this.remainingDistance > 0) {
-                  const currentTopLeftX = this.player.x();
-                  const currentTopLeftY = this.player.y();
-                  this.setNextSegmentTarget(currentTopLeftX, currentTopLeftY);
-                } else {
-                  this.processNextRoute();
-                }
-              }
-              return;
-            }
-
-            // If no target, try to process next route
-            if (!this.currentTarget) {
-              if (!this.finished) {
-                this.processNextRoute();
-              }
-              if (!this.currentTarget) {
-                body.setVelocity({ x: 0, y: 0 });
-                // Reset stuck detection when no target
-                this.lastPosition = null;
-                this.isCurrentlyStuck = false;
-                this.lastDistanceToTarget = null;
-                this.stuckCheckInitialized = false;
-                this.currentTargetTopLeft = null;
-                this.clearRouteClamp();
-                return;
-              }
-            }
-
-            const entity = body.getEntity?.();
-            if (!entity) {
-              this.finished = true;
-              this.clearRouteClamp(entity);
-              this.onComplete(false);
-              return;
-            }
-
-            const currentPosition = { x: entity.position.x, y: entity.position.y };
-            const currentTime = Date.now();
-
-            // Check distance using player's top-left position (what player.x() returns)
-            // This ensures we match the test expectations which compare player.x()
-            const currentTopLeftX = this.player.x();
-            const currentTopLeftY = this.player.y()
-            const currentMap = this.player.getCurrentMap() as any;
-
-            // Calculate direction and distance using top-left position if available
-            let dx: number, dy: number, distance: number;
-            if (this.currentTargetTopLeft) {
-              dx = this.currentTargetTopLeft.x - currentTopLeftX;
-              dy = this.currentTargetTopLeft.y - currentTopLeftY;
-              distance = Math.hypot(dx, dy);
-              const arrivalThreshold = this.getArrivalThreshold(
-                currentMap,
-                (this.player as any).speed
-              );
-
-              // Snap to the target when the physics step overshoots the discrete route distance.
-              if (distance <= arrivalThreshold) {
-                currentMap?.setBodyPosition?.(this.player.id, this.currentTargetTopLeft.x, this.currentTargetTopLeft.y, "top-left");
-
-                // Target reached, wait for frequency before processing next route
-                this.debugLog(`TARGET reached at (${currentTopLeftX.toFixed(1)}, ${currentTopLeftY.toFixed(1)})`);
-                this.currentTarget = null;
-                this.currentTargetTopLeft = null;
-                this.currentDirection = { x: 0, y: 0 };
-                this.clearRouteClamp(entity);
-                body.setVelocity({ x: 0, y: 0 });
-                // Reset stuck detection
-                this.lastPosition = null;
-                this.isCurrentlyStuck = false;
-                this.lastDistanceToTarget = null;
-                this.stuckCheckInitialized = false;
-
-                // Wait for frequency before processing next route or segment
-                if (!this.finished) {
-                  const playerFrequency = this.player.frequency;
-                  if (playerFrequency && playerFrequency > 0) {
-                    this.waitingForFrequency = true;
-                    this.frequencyWaitStartTime = Date.now();
-                  } else if (this.remainingDistance > 0) {
-                    const nextTopLeftX = this.player.x();
-                    const nextTopLeftY = this.player.y();
-                    this.setNextSegmentTarget(nextTopLeftX, nextTopLeftY);
-                  } else {
-                    // No frequency delay, process immediately
-                    this.processNextRoute();
-                  }
-                }
-                return;
-              }
-            } else {
-              // Fallback: use center position distance if top-left target not available
-              dx = this.currentTarget.x - currentPosition.x;
-              dy = this.currentTarget.y - currentPosition.y;
-              distance = Math.hypot(dx, dy);
-              const arrivalThreshold = this.getArrivalThreshold(
-                currentMap,
-                (this.player as any).speed
-              );
-
-              // Check if we've reached the target (using center position as fallback)
-              if (distance <= arrivalThreshold) {
-                entity.position.set(this.currentTarget.x, this.currentTarget.y);
-                entity.notifyPositionChange?.();
-
-                // Target reached, wait for frequency before processing next route
-                this.currentTarget = null;
-                this.currentTargetTopLeft = null;
-                this.currentDirection = { x: 0, y: 0 };
-                this.clearRouteClamp(entity);
-                body.setVelocity({ x: 0, y: 0 });
-                // Reset stuck detection
-                this.lastPosition = null;
-                this.isCurrentlyStuck = false;
-                this.lastDistanceToTarget = null;
-                this.stuckCheckInitialized = false;
-
-                // Wait for frequency before processing next route or segment
-                if (!this.finished) {
-                  const playerFrequency = player.frequency;
-                  if (playerFrequency && playerFrequency > 0) {
-                    this.waitingForFrequency = true;
-                    this.frequencyWaitStartTime = Date.now();
-                  } else if (this.remainingDistance > 0) {
-                    const nextTopLeftX = this.player.x();
-                    const nextTopLeftY = this.player.y();
-                    this.setNextSegmentTarget(nextTopLeftX, nextTopLeftY);
-                  } else {
-                    // No frequency delay, process immediately
-                    this.processNextRoute();
-                  }
-                }
-                return;
-              }
-            }
-
-            // Stuck detection: check if player is making progress
-            if (this.onStuck && this.currentTarget) {
-              // Initialize tracking on first update
-              if (!this.stuckCheckInitialized) {
-                this.lastPosition = { ...currentPosition };
-                this.lastDistanceToTarget = distance;
-                this.stuckCheckInitialized = true;
-                // Update tracking and continue (don't return early)
-                this.lastPositionTime = currentTime;
-              } else if (this.lastPosition && this.lastDistanceToTarget !== null) {
-                // We have a target, so we're trying to move (regardless of current velocity,
-                // which may be zero due to physics engine collision handling)
-                const positionChanged = Math.hypot(
-                  currentPosition.x - this.lastPosition.x,
-                  currentPosition.y - this.lastPosition.y
-                ) > this.stuckThreshold;
-
-                const distanceImproved = distance < (this.lastDistanceToTarget - this.stuckThreshold);
-
-                // Player is stuck if: not moving AND not getting closer to target
-                if (!positionChanged && !distanceImproved) {
-                  // Player is not making progress
-                  if (!this.isCurrentlyStuck) {
-                    // Start stuck timer
-                    this.stuckCheckStartTime = currentTime;
-                    this.isCurrentlyStuck = true;
-                  } else {
-                    // Check if stuck timeout has elapsed
-                    if (currentTime - this.stuckCheckStartTime >= this.stuckTimeout) {
-                      // Player is stuck, call onStuck callback
-                      this.debugLog(`STUCK detected at (${currentPosition.x.toFixed(1)}, ${currentPosition.y.toFixed(1)}) target=(${this.currentTarget.x.toFixed(1)}, ${this.currentTarget.y.toFixed(1)})`);
-                      const shouldContinue = this.onStuck(
-                        this.player as any,
-                        this.currentTarget,
-                        currentPosition
-                      );
-
-                      if (shouldContinue === false) {
-                        // Cancel the route
-                        this.debugLog('STUCK cancelled route');
-                        this.finished = true;
-                        this.clearRouteClamp(entity);
-                        this.onComplete(false);
-                        body.setVelocity({ x: 0, y: 0 });
-                        return;
-                      }
-
-                      // Continue route: abandon the current target and move on.
-                      //
-                      // ## Why?
-                      // When random movement hits an obstacle, the physics engine can keep the entity
-                      // at the same position while this strategy keeps trying to reach the same target,
-                      // resulting in an infinite "stuck loop". By dropping the current target here,
-                      // we allow the route to advance and (in the common case of `infiniteMoveRoute`)
-                      // re-evaluate `Move.tileRandom()` on the next cycle, producing a new direction.
-                      this.currentTarget = null;
-                      this.currentTargetTopLeft = null;
-                      this.currentDirection = { x: 0, y: 0 };
-                      this.clearRouteClamp(entity);
-                      body.setVelocity({ x: 0, y: 0 });
-
-                      // Reset stuck detection to start fresh on the next target
-                      this.isCurrentlyStuck = false;
-                      this.stuckCheckStartTime = 0;
-                      this.lastPosition = null;
-                      this.lastDistanceToTarget = null;
-                      this.stuckCheckInitialized = false;
-
-                      // The route goes on after the wait of the frequency, as after a move that is done:
-                      // a blocked character stands still instead of trying a new direction every 500 ms
-                      this.remainingDistance = 0;
-                      const stuckFrequency = this.player.frequency;
-                      if (stuckFrequency && stuckFrequency > 0) {
-                        this.waitingForFrequency = true;
-                        this.frequencyWaitStartTime = Date.now();
-                      } else {
-                        this.processNextRoute();
-                      }
-                      return;
-                    }
-                  }
-                } else {
-                  // Player is making progress, reset stuck detection
-                  this.isCurrentlyStuck = false;
-                  this.stuckCheckStartTime = 0;
-                }
-
-                // Update tracking variables
-                this.lastPosition = { ...currentPosition };
-                this.lastPositionTime = currentTime;
-                this.lastDistanceToTarget = distance;
-              }
-            }
-
-            // Get speed scalar from map (default 50 if not found)
-            const map = currentMap;
-            const speedScalar = map?.speedScalar ?? 50;
-
-            // Calculate direction and speed
-            // Use the distance calculated above (from top-left if available, center otherwise)
-            if (distance > 0) {
-              this.currentDirection = { x: dx / distance, y: dy / distance };
-            } else {
-              // If distance is 0 or negative, we've reached or passed the target
-              this.currentTarget = null;
-              this.currentTargetTopLeft = null;
-              this.currentDirection = { x: 0, y: 0 };
-              this.clearRouteClamp(entity);
-              body.setVelocity({ x: 0, y: 0 });
-              if (!this.finished) {
-                const playerFrequency = this.player.frequency;
-                if (playerFrequency && playerFrequency > 0) {
-                  this.waitingForFrequency = true;
-                  this.frequencyWaitStartTime = Date.now();
-                } else if (this.remainingDistance > 0) {
-                  const nextTopLeftX = this.player.x();
-                  const nextTopLeftY = this.player.y();
-                  this.setNextSegmentTarget(nextTopLeftX, nextTopLeftY);
-                } else {
-                  // No frequency delay, process immediately
-                  this.processNextRoute();
-                }
-              }
-              return;
-            }
-
-            // Convert vector direction to cardinal direction (like moveBody does)
-            const absX = Math.abs(this.currentDirection.x);
-            const absY = Math.abs(this.currentDirection.y);
-            let cardinalDirection: Direction;
-
-            if (absX >= absY) {
-              cardinalDirection = this.currentDirection.x >= 0 ? Direction.Right : Direction.Left;
-            } else {
-              cardinalDirection = this.currentDirection.y >= 0 ? Direction.Down : Direction.Up;
-            }
-
-            this.setRouteClamp(entity);
-            map.movePlayer(this.player as any, cardinalDirection)
-          }
-
-          isFinished(): boolean {
-            return this.finished;
-          }
-
-          onFinished(): void {
-            this.clearRouteClamp();
-            this.onComplete(true);
-          }
-
-          private getTileStepDistance(playerSpeed: number): number {
-            if (!Number.isFinite(playerSpeed) || playerSpeed <= 0) {
-              return this.tileSize;
-            }
-            const stepsPerTile = Math.max(1, Math.floor(this.tileSize / playerSpeed));
-            return stepsPerTile * playerSpeed;
-          }
-
-          private getArrivalThreshold(map: any, playerSpeed: number): number {
-            const speed = Number(playerSpeed);
-            if (!Number.isFinite(speed) || speed <= 0) {
-              return this.tolerance;
-            }
-            const speedScalar = Number(map?.speedScalar ?? 50);
-            const timeStep = Number(map?.physic?.getWorld?.().getTimeStep?.() ?? 1 / 60);
-            const physicsStepDistance =
-              Number.isFinite(speedScalar) && speedScalar > 0 &&
-              Number.isFinite(timeStep) && timeStep > 0
-                ? speed * speedScalar * timeStep
-                : speed;
-            return Math.max(this.tolerance, speed, physicsStepDistance + 2);
-          }
-
-          private setNextSegmentTarget(currentTopLeftX: number, currentTopLeftY: number): void {
-            if (!this.segmentDirection || this.remainingDistance <= 0) {
-              return;
-            }
-
-            const map = this.player.getCurrentMap() as any;
-            if (!map) {
-              this.finished = true;
-              this.clearRouteClamp();
-              this.onComplete(false);
-              return;
-            }
-
-            const entity = map.physic.getEntityByUUID(this.player.id);
-            if (!entity) {
-              this.finished = true;
-              this.clearRouteClamp();
-              this.onComplete(false);
-              return;
-            }
-
-            const segmentDistance = Math.min(this.segmentStep || this.remainingDistance, this.remainingDistance);
-            let targetTopLeftX = currentTopLeftX;
-            let targetTopLeftY = currentTopLeftY;
-
-            switch (this.segmentDirection) {
-              case Direction.Right:
-              case 'right' as any:
-                targetTopLeftX = currentTopLeftX + segmentDistance;
-                break;
-              case Direction.Left:
-              case 'left' as any:
-                targetTopLeftX = currentTopLeftX - segmentDistance;
-                break;
-              case Direction.Down:
-              case 'down' as any:
-                targetTopLeftY = currentTopLeftY + segmentDistance;
-                break;
-              case Direction.Up:
-              case 'up' as any:
-                targetTopLeftY = currentTopLeftY - segmentDistance;
-                break;
-            }
-
-            const hitbox = this.player.hitbox();
-            const hitboxWidth = hitbox?.w ?? 32;
-            const hitboxHeight = hitbox?.h ?? 32;
-
-            const targetX = targetTopLeftX + hitboxWidth / 2;
-            const targetY = targetTopLeftY + hitboxHeight / 2;
-
-            this.currentTarget = { x: targetX, y: targetY };
-            this.currentTargetTopLeft = { x: targetTopLeftX, y: targetTopLeftY };
-            this.currentDirection = { x: 0, y: 0 };
-            this.remainingDistance -= segmentDistance;
-          }
-        }
-
         // Create and add the route movement strategy
         const routeStrategy = new RouteMovementStrategy(
           finalRoutes,
@@ -1884,11 +1930,11 @@ export function WithMoveManager<TBase extends PlayerCtor>(Base: TBase) {
 
     breakRoutes(force: boolean = false): void {
       this._isInfiniteRouteActive = false;
-      delete (this as any).__routeMovementClamp;
+      if ((this as any).__routeMovementClamp !== undefined) (this as any).__routeMovementClamp = undefined;
       const map = (this as unknown as PlayerWithMixins).getCurrentMap() as any;
       const body = map?.getBody?.((this as unknown as PlayerWithMixins).id) as any;
       if (body) {
-        delete body.__routeMovementClamp;
+        if (body.__routeMovementClamp !== undefined) body.__routeMovementClamp = undefined;
       }
 
       if (force) {

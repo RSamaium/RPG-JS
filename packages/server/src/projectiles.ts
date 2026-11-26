@@ -426,6 +426,41 @@ function toNetworkProjectile(projectile: ProjectileServerState, config?: Pending
   return network;
 }
 
+/** A spawn as it is sent: the fields that have their default value are left out. */
+type NetworkProjectileSpawn = Omit<NetworkProjectile, "delay" | "index" | "count" | "trajectory">
+  & Partial<Pick<NetworkProjectile, "delay" | "index" | "count" | "trajectory">>;
+
+const roundTo = (value: number, decimals: number): number => {
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+};
+
+/**
+ * What a client needs to draw a projectile, in fewer bytes: most shots are a single linear projectile without delay.
+ *
+ * - `delay: 0`, `index: 0` and `count: 1` are the defaults of the client.
+ * - A linear trajectory that only repeats `speed` and `range` is the default of the client.
+ * - The direction keeps 5 decimals (less than 0.01 px of drift over 1000 px) and the origin 2.
+ */
+function toCompactSpawn(projectile: NetworkProjectile): NetworkProjectileSpawn {
+  const { delay, index, count, trajectory, ...rest } = projectile;
+  const spawn: NetworkProjectileSpawn = {
+    ...rest,
+    origin: { x: roundTo(projectile.origin.x, 2), y: roundTo(projectile.origin.y, 2) },
+    direction: { x: roundTo(projectile.direction.x, 5), y: roundTo(projectile.direction.y, 5) },
+  };
+  if (delay) spawn.delay = delay;
+  if (index) spawn.index = index;
+  if (count !== 1) spawn.count = count;
+  const plainLinear = trajectory.type === "linear"
+    && Object.keys(trajectory).every((key) => key === "type"
+      || (key === "speed" && trajectory.speed === projectile.speed)
+      || (key === "range" && trajectory.range === projectile.range)
+      || (key === "ttl" && trajectory.ttl === projectile.ttl));
+  if (!plainLinear) spawn.trajectory = trajectory;
+  return spawn;
+}
+
 function isWall(entity: Entity): boolean {
   return typeof (entity as any).isStatic === "function" && (entity as any).isStatic();
 }
@@ -468,7 +503,9 @@ export class RpgMapProjectiles {
   private readonly pending: PendingProjectile[] = [];
   private readonly runtime = new Map<string, ProjectileServerState>();
   private readonly networkRuntime = new Map<string, NetworkProjectile>();
-  private readonly spawnQueue: NetworkProjectile[] = [];
+  private readonly spawnQueue: NetworkProjectileSpawn[] = [];
+  /** Seconds simulated since the queued messages were last sent */
+  private sinceFlush = 0;
   private readonly impactQueue: NetworkProjectileImpact[] = [];
   private readonly destroyQueue: NetworkProjectileDestroy[] = [];
   private readonly updateQueue: NetworkProjectileUpdate[] = [];
@@ -497,7 +534,7 @@ export class RpgMapProjectiles {
       this.runtime.set(state.id, state);
       const networkProjectile = toNetworkProjectile(state, pending.config);
       this.networkRuntime.set(state.id, networkProjectile);
-      this.spawnQueue.push(networkProjectile);
+      this.spawnQueue.push(toCompactSpawn(networkProjectile));
       this.callHook("server-projectiles-onEmit", {
         projectile: state,
         owner,
@@ -510,7 +547,7 @@ export class RpgMapProjectiles {
         this.pending.push(pending);
       }
     }
-    this.flush();
+    // Sent with the next flush of `step()`: the shots of one sync interval share one message
     return states;
   }
 
@@ -528,7 +565,14 @@ export class RpgMapProjectiles {
     }
     this.system.step(dt);
     this.stepLinger(dt);
-    this.flush();
+    // One flush per sync interval of the map, so that the number of messages follows the sync rate and not the number
+    // of shots, and the messages are large enough to be compressed. A map without throttle flushes at every step.
+    this.sinceFlush += dt;
+    const interval = (Number(this.map.throttleSync) || 0) / 1000;
+    if (this.sinceFlush + 1e-9 >= interval) {
+      this.sinceFlush = 0;
+      this.flush();
+    }
   }
 
   clear(): void {
@@ -539,6 +583,7 @@ export class RpgMapProjectiles {
     this.impactQueue.length = 0;
     this.destroyQueue.length = 0;
     this.updateQueue.length = 0;
+    this.sinceFlush = 0;
     this.active.clear();
     this.system.clear();
     this.map.$broadcast({
@@ -1041,12 +1086,24 @@ export class RpgMapProjectiles {
         },
       });
     }
-    if (this.impactQueue.length > 0) {
+    // A projectile that stops on its hit carries the impact in its destroy entry: the client plays it from there
+    const stopped = new Map<string, NetworkProjectileDestroy>();
+    for (const destroyed of this.destroyQueue) {
+      if (destroyed.reason === "hit" && destroyed.x !== undefined) stopped.set(destroyed.id, destroyed);
+    }
+    const impacts = this.impactQueue.splice(0).filter((impact) => {
+      const destroyed = stopped.get(impact.id);
+      return !destroyed
+        || destroyed.targetId !== impact.targetId
+        || destroyed.x !== impact.x
+        || destroyed.y !== impact.y;
+    });
+    if (impacts.length > 0) {
       this.map.$broadcast({
         type: "projectile:impactBatch",
         value: {
           mapId: this.map.id,
-          impacts: this.impactQueue.splice(0),
+          impacts,
         },
       });
     }

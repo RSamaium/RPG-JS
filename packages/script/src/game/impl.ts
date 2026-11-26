@@ -33,7 +33,19 @@ export type DirectionName = "up" | "down" | "left" | "right";
 export const DIRECTIONS: readonly DirectionName[] = ["up", "down", "left", "right"];
 
 /** What a script gets of an event of the map: a copy, whose changes change nothing. */
-export interface EventSnapshot { id: string; name: string; x: number; y: number; direction: string }
+export interface EventSnapshot {
+  id: string;
+  name: string;
+  /** What kind of event it is (`sheriff`, `chest`): scripts find the events of a kind by their tags, never by their name. */
+  tags: string[];
+  x: number;
+  y: number;
+  direction: string;
+}
+
+/** The tags of a thing of the game: a new list of strings, each once. */
+export const tagList = (value: unknown): string[] =>
+  Array.isArray(value) ? [...new Set(value.filter((tag): tag is string => typeof tag === "string" && tag.length > 0))] : [];
 /** What a script gets of a player of the map. */
 export interface PlayerSnapshot { id: string; name: string }
 /** An event a script makes, described by plain data: the game builds the real event. */

@@ -131,7 +131,7 @@
 </DOMContainer>
 
 <script>
-    import { signal, computed, effect, mount } from "canvasengine";
+    import { signal, computed, effect, mount, untracked } from "canvasengine";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
     import SaveLoadComponent from "../save-load.ce";
@@ -218,7 +218,8 @@
         if (!available.length) return;
         const current = selectedMenu();
         if (!available.includes(current)) {
-            selectedMenu.set(available[0]);
+            // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+            untracked(() => selectedMenu.set(available[0]));
         }
     });
 

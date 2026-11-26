@@ -302,6 +302,8 @@ export class ProjectileManager {
       }
       if (destroyed.reason === "hit") {
         const current = this.toProps(projectile, now);
+        // The server sends the impact of a projectile that stops on its hit only here
+        const firstImpact = !projectile.impact && !projectile.stopAt;
         this.setImpact(projectile, {
           id: destroyed.id,
           targetId: destroyed.targetId ?? projectile.impact?.targetId,
@@ -310,6 +312,9 @@ export class ProjectileManager {
           distance: destroyed.distance ?? projectile.impact?.distance ?? current?.distance,
           surface: destroyed.surface ?? projectile.impact?.surface,
         }, now);
+        if (firstImpact) {
+          this.hooks.callHooks("client-projectiles-onImpact", this.toProps(projectile, now)).subscribe();
+        }
       } else if (destroyed.reason === "land" && !projectile.impact && !projectile.stopAt) {
         // A landing that hit nothing still plays an impact, on the ground.
         const current = this.toProps(projectile, now);

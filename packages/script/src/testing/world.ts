@@ -2,7 +2,7 @@
  * A game without the game: a player, an event and some shared state, enough to run a script and see what it did. Every operation
  * a script asks for is applied to in-memory state and recorded in `effects`, so a test can say what the script did.
  */
-import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type DialogOptions, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type GuiOptions, type ItemSnapshot, type LightingTransition, type MapPort, type NotificationOptions, type PlayerPort, type PlayerSnapshot, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions, tagList } from "../game/impl";
 import type { HttpPort } from "../game/http";
 
 /** The player of a simulation: the state of the player in memory, and what the script asked for recorded as it happens. */
@@ -207,15 +207,15 @@ export class SimMap implements MapPort {
     const id = options.id ?? `script-event-${++this.counter}`;
     if (this.events.has(id)) throw new Error(`an event "${id}" is already on the map`);
     this.record("createDynamicEvent", options);
-    this.events.set(id, { id, name: options.name ?? "", x: options.x, y: options.y, direction: "down" });
+    this.events.set(id, { id, name: options.name ?? "", tags: [], x: options.x, y: options.y, direction: "down" });
     this.made.add(id);
     return id;
   }
   getEvent(id: string): EventSnapshot | undefined {
     const event = this.events.get(id);
-    return event ? { ...event } : undefined;
+    return event ? { ...event, tags: [...event.tags] } : undefined;
   }
-  getEvents(): EventSnapshot[] { return [...this.events.values()].map((e) => ({ ...e })); }
+  getEvents(): EventSnapshot[] { return [...this.events.values()].map((e) => ({ ...e, tags: [...e.tags] })); }
   removeEvent(id: string): boolean {
     if (!this.made.has(id)) return false;
     this.record("removeEvent", { id });
@@ -356,7 +356,7 @@ export class SimMap implements MapPort {
     const id = options.id ?? `script-enemy-${++this.counter}`;
     if (this.events.has(id)) throw new Error(`an event "${id}" is already on the map`);
     this.record("spawnEnemy", options);
-    this.events.set(id, { id, name: options.name ?? options.enemy, x: options.x, y: options.y, direction: "down" });
+    this.events.set(id, { id, name: options.name ?? options.enemy, tags: [], x: options.x, y: options.y, direction: "down" });
     this.made.add(id);
     return id;
   }
@@ -464,7 +464,7 @@ export interface WorldInit {
   /** Zones of the game that are on the map: scripts can read them, and cannot remove them. */
   shapes?: { name: string; x?: number; y?: number; width?: number; height?: number }[];
   /** Events of the game that are on the map: scripts can read them, and cannot remove them. */
-  events?: { id: string; name?: string; x?: number; y?: number; direction?: string }[];
+  events?: { id: string; name?: string; tags?: string[]; x?: number; y?: number; direction?: string }[];
   /** The records of the database of the game, by collection: a script reads them with `$data`. Each has an `id`. */
   data?: Record<string, { id: string; [field: string]: unknown }[]>;
   /** The event the script runs for. */
@@ -533,7 +533,7 @@ export class SimWorld implements ScriptWorld {
     if (this.room.kind === "map") {
       this.map = new SimMap(this.room.id, this.player, (name, params) => this.effects.push({ name, params }));
       for (const s of init.shapes ?? []) this.map.shapes.set(s.name, { name: s.name, x: s.x ?? 0, y: s.y ?? 0, width: s.width ?? 1, height: s.height ?? 1 });
-      for (const e of init.events ?? []) this.map.events.set(e.id, { id: e.id, name: e.name ?? "", x: e.x ?? 0, y: e.y ?? 0, direction: e.direction ?? "down" });
+      for (const e of init.events ?? []) this.map.events.set(e.id, { id: e.id, name: e.name ?? "", tags: tagList(e.tags), x: e.x ?? 0, y: e.y ?? 0, direction: e.direction ?? "down" });
       for (const t of init.tiles ?? []) this.map.tiles.set(`${t.x},${t.y}`, { collision: !!t.collision, properties: clone(t.properties ?? {}) });
       if (init.tileSize) this.map.tileSize = init.tileSize;
       this.map.walls = clone(init.walls ?? []);
