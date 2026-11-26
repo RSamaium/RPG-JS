@@ -23,6 +23,22 @@
     {
       "source": "/commands/components",
       "destination": "/api/player/components"
+    },
+    {
+      "source": "/guide/battle-ai",
+      "destination": "/combat/action-battle"
+    },
+    {
+      "source": "/guide/turn-battle",
+      "destination": "/combat/turn-based"
+    },
+    {
+      "source": "/guide/tactical-rpg",
+      "destination": "/combat/tactical"
+    },
+    {
+      "source": "/guide/battle-kit",
+      "destination": "/combat/battle-kit"
     }
   ],
   "navigation": {
@@ -87,13 +103,9 @@
               "guide/items",
               "guide/loot",
               "guide/hotbar",
-              "guide/battle-kit",
-              "guide/turn-battle",
-              "guide/tactical-rpg",
               "guide/save-load",
               "guide/i18n",
               "guide/synchronization",
-              "guide/battle-ai",
               "guide/create-sounds",
               "guide/sounds",
               "guide/testing",
@@ -134,6 +146,53 @@
               "advanced/latency-simulation",
               "advanced/packet-loss-simulation",
               "advanced/remote-smoothing"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Combat",
+        "groups": [
+          {
+            "group": "Overview",
+            "root": "combat/index",
+            "pages": [
+              "combat/index"
+            ]
+          },
+          {
+            "group": "Action Battle System",
+            "pages": [
+              "combat/action-battle/index",
+              "combat/action-battle/player-combat",
+              "combat/action-battle/skills-and-weapons",
+              "combat/action-battle/enemies-and-ai",
+              "combat/action-battle/factions-and-multiplayer",
+              "combat/action-battle/customization"
+            ]
+          },
+          {
+            "group": "Turn-based battle",
+            "pages": [
+              "combat/turn-based/index",
+              "combat/turn-based/starting-battles",
+              "combat/turn-based/battle-data",
+              "combat/turn-based/customization"
+            ]
+          },
+          {
+            "group": "Tactical battle",
+            "pages": [
+              "combat/tactical/index",
+              "combat/tactical/starting-battles",
+              "combat/tactical/battle-data",
+              "combat/tactical/customization"
+            ]
+          },
+          {
+            "group": "Build your own",
+            "pages": [
+              "combat/battle-kit"
             ]
           }
         ]

@@ -17,7 +17,7 @@ const guideMenu = [{
     { text: "Cinematic videos", link: "/guide/cinematics" },
     { text: "Weather", link: "/guide/weather" },
     { text: "Synchronization", link: "/guide/synchronization" },
-    { text: "Battle AI", link: "/guide/battle-ai" },
+    { text: "Action Battle System", link: "/combat/action-battle" },
     { text: "Event Modes", link: "/guide/event-modes" },
     { text: "Testing", link: "/guide/testing" },
     { text: "V4 Compatibility", link: "/guide/v4-compatibility" },

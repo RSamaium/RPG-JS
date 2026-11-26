@@ -5,7 +5,7 @@ description: "The foundation shared by the RPGJS battle systems: battle sessions
 
 # Battle kit
 
-`@rpgjs/battle-kit` is the foundation shared by the battle systems of RPGJS: [`@rpgjs/turn-battle`](./turn-battle.md), [`@rpgjs/tactical-rpg`](./tactical-rpg.md), and the one you write. It holds what every battle shown in its own scene has to do the same way, whatever its rules, so that the battle systems take the same options and hooks and behave alike in standalone RPG mode and in MMORPG mode.
+`@rpgjs/battle-kit` is the foundation shared by the battle systems of RPGJS: [`@rpgjs/turn-battle`](/combat/turn-based), [`@rpgjs/tactical-rpg`](/combat/tactical), and the one you write. It holds what every battle shown in its own scene has to do the same way, whatever its rules, so that the battle systems take the same options and hooks and behave alike in standalone RPG mode and in MMORPG mode.
 
 ```bash
 npm install @rpgjs/battle-kit
