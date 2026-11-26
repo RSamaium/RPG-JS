@@ -40,7 +40,11 @@ export default defineConfig({
       external: [
         ...nodeBuiltins,
         /^node:/,
-        '@signe/room/cloudflare'
+        // One copy of the reactive runtime for the whole application, shared with `@rpgjs/common`, `@rpgjs/client`
+        // and canvasengine: `@signe/*` and `rxjs` are resolved by the application, not bundled here.
+        /^@signe\//,
+        'rxjs',
+        /^rxjs\//
       ]
     }
   },
