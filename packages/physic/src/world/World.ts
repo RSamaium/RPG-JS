@@ -9,7 +9,7 @@ import { SpatialPartition } from './SpatialPartition';
 import { Vector2 } from '../core/math/Vector2';
 import { AABB } from '../core/math/AABB';
 import { Ray, RaycastHit } from '../collision/Ray';
-import type { EntityConfig } from '../physics/Entity';
+import type { EntityConfig, EntityPositionBatch } from '../physics/Entity';
 import { sweepEntities, type SweepResult } from '../collision/sweep';
 import { invalidateCollider } from '../collision/collider-cache';
 import { sortByCollationKey } from './collision-order';
@@ -79,10 +79,13 @@ export interface WorldConfig {
  */
 export class World {
   private entities: Set<Entity> = new Set();
+  /** First entity added for each UUID, so that a lookup does not scan every entity */
+  private entitiesByUUID: Map<Entity['uuid'], Entity> = new Map();
   // Separate collections for performance
   private staticEntities: Set<Entity> = new Set();
   private dynamicEntities: Set<Entity> = new Set();
   private integrator: Integrator;
+  private readonly positionBatch: EntityPositionBatch = { active: false, dirty: new Set() };
   private resolver: CollisionResolver;
   private spatialPartition: SpatialPartition;
   private events: EventSystem;
@@ -93,6 +96,15 @@ export class World {
   private sleepThreshold: number;
   private sleepVelocityThreshold: number;
   private previousCollisions: Map<string, CollisionInfo> = new Map();
+  /**
+   * Sleeping entities that did not change since the previous step. Nothing can change for them unless an awake entity
+   * reaches them, so the step does not synchronize them again and they do not start a collision query.
+   */
+  private restingEntities: Set<Entity> = new Set();
+  /** Dynamic entities that are not resting in the current step, followed by the resting ones that an entity reached */
+  private activeEntities: Entity[] = [];
+  /** False for the next step when an entity was added or a static entity changed: every entity is then checked. */
+  private restAllowed = false;
   // Reused set for spatial queries to avoid allocation
   private queryResults: Set<Entity> = new Set();
   private readonly positionQuantizationStep: number | null;
@@ -184,6 +196,11 @@ export class World {
    */
   public addEntity(entity: Entity): Entity {
     this.entities.add(entity);
+    if (!this.entitiesByUUID.has(entity.uuid)) {
+      this.entitiesByUUID.set(entity.uuid, entity);
+    }
+    entity.positionBatch = this.positionBatch;
+    this.restAllowed = false;
     this.syncEntityCollection(entity);
     this.spatialPartition.insert(entity);
     this.events.emitEntityAdded(entity);
@@ -203,14 +220,14 @@ export class World {
       return;
     }
     invalidateCollider(entity);
+    this.restAllowed = false;
     this.syncEntity(entity);
   }
 
   private syncEntity(entity: Entity): void {
     this.syncEntityCollection(entity);
     this.spatialPartition.update(entity);
-    if (entity.isStatic()) this.rememberStatic(entity);
-    else this.staticSignatures.delete(entity);
+    this.rememberSynced(entity);
   }
 
   /**
@@ -259,8 +276,21 @@ export class World {
    */
   public removeEntity(entity: Entity): void {
     if (this.entities.delete(entity)) {
+      entity.positionBatch = null;
+      this.positionBatch.dirty.delete(entity);
+      if (this.entitiesByUUID.get(entity.uuid) === entity) {
+        this.entitiesByUUID.delete(entity.uuid);
+        // Another entity can share the UUID: it becomes the one that a lookup returns
+        for (const other of this.entities) {
+          if (other.uuid === entity.uuid) {
+            this.entitiesByUUID.set(other.uuid, other);
+            break;
+          }
+        }
+      }
       this.staticEntities.delete(entity);
       this.dynamicEntities.delete(entity);
+      this.restingEntities.delete(entity);
       this.spatialPartition.remove(entity);
       this.events.emitEntityRemoved(entity);
     }
@@ -282,12 +312,7 @@ export class World {
    * @returns Entity or undefined
    */
   public getEntityByUUID(uuid: string): Entity | undefined {
-    for (const entity of this.entities) {
-      if (entity.uuid === uuid) {
-        return entity;
-      }
-    }
-    return undefined;
+    return this.entitiesByUUID.get(uuid);
   }
 
   /**
@@ -296,45 +321,52 @@ export class World {
    * Updates all entities, detects and resolves collisions.
    */
   public step(): void {
-    // Pick up direct position/state mutations made since the previous step.
-    this.refreshEntitiesInPartition();
+    // The integrator and the resolver can move an entity several times in one step:
+    // position handlers are called once per entity, after the resolution.
+    let firstPassCollisions: CollisionInfo[] = [];
+    this.positionBatch.active = true;
+    try {
+      // Pick up direct position/state mutations made since the previous step.
+      this.refreshEntitiesInPartition();
 
-    // Clear forces and integrate
-    for (const entity of this.dynamicEntities) {
-      if (!entity.isSleeping()) {
-        const startPos = entity.position.clone();
-        this.integrator.integrate(entity);
+      // Clear forces and integrate
+      for (const entity of this.dynamicEntities) {
+        if (!entity.isSleeping()) {
+          const startPos = entity.position.clone();
+          this.integrator.integrate(entity);
 
-        // Check for tile change
-        this.updateEntityTile(entity, startPos);
+          // Check for tile change
+          this.updateEntityTile(entity, startPos);
 
-        // CCD: Check for tunneling if enabled
-        if (entity.continuous) {
-          this.performCCD(entity);
+          // CCD: Check for tunneling if enabled
+          if (entity.continuous) {
+            this.performCCD(entity);
+          }
         }
       }
-    }
 
-    // Broad-phase queries below must use post-integration positions.
-    this.refreshDynamicEntitiesInPartition();
-
-    let firstPassCollisions: CollisionInfo[] = [];
-    for (let iteration = 0; iteration < this.resolverIterations; iteration++) {
-      const collisions = this.detectCollisions();
-      if (iteration === 0) {
-        firstPassCollisions = collisions;
-      }
-      if (collisions.length === 0) {
-        break;
-      }
-      this.sortCollisionsForDeterminism(collisions);
-      this.resolver.resolveAll(collisions);
+      // Broad-phase queries below must use post-integration positions.
       this.refreshDynamicEntitiesInPartition();
-    }
 
-    if (this.positionQuantizationStep !== null || this.velocityQuantizationStep !== null) {
-      this.quantizeEntities();
-      this.refreshDynamicEntitiesInPartition();
+      for (let iteration = 0; iteration < this.resolverIterations; iteration++) {
+        const collisions = this.detectCollisions();
+        if (iteration === 0) {
+          firstPassCollisions = collisions;
+        }
+        if (collisions.length === 0) {
+          break;
+        }
+        this.sortCollisionsForDeterminism(collisions);
+        this.resolver.resolveAll(collisions);
+        this.refreshDynamicEntitiesInPartition();
+      }
+
+      if (this.positionQuantizationStep !== null || this.velocityQuantizationStep !== null) {
+        this.quantizeEntities();
+        this.refreshDynamicEntitiesInPartition();
+      }
+    } finally {
+      this.flushPositionChanges();
     }
 
     this.handleCollisionEvents(firstPassCollisions);
@@ -358,7 +390,14 @@ export class World {
     const collisions: CollisionInfo[] = [];
 
     // Only dynamic entities initiate collision checks
-    for (const entity of this.dynamicEntities) {
+    const resting = this.restingEntities;
+    const active = this.activeEntities;
+    // A resting entity is only reached by an entity that moves, which starts the check itself
+    for (let i = 0; i < active.length; i++) {
+      const entity = active[i]!;
+      if (resting.has(entity)) {
+        continue;
+      }
       // Query nearby entities using reused set
       const nearby = this.spatialPartition.query(entity, this.queryResults);
 
@@ -366,7 +405,8 @@ export class World {
         // Avoid duplicate checks for dynamic-dynamic pairs
         // For dynamic-dynamic: only check if entity.uuid < other.uuid
         // For dynamic-static: always check (since static won't initiate)
-        if (other.isDynamic() && entity.uuid > other.uuid) {
+        // For dynamic-resting: always check (since resting won't initiate)
+        if (other.isDynamic() && entity.uuid > other.uuid && !resting.has(other)) {
           continue;
         }
 
@@ -374,6 +414,10 @@ export class World {
         const collision = testCollision(entity, other);
         if (collision) {
           collisions.push(collision);
+          // The resolver can push a resting entity: keep its cells right for the rest of the step
+          if (resting.has(other) && !active.includes(other)) {
+            active.push(other);
+          }
         }
       }
     }
@@ -418,6 +462,11 @@ export class World {
     // Check for exit collisions
     for (const [pairKey, collision] of this.previousCollisions) {
       if (!currentCollisions.has(pairKey)) {
+        // Neither side moved nor was checked in this step: the collision still holds
+        if (this.isUnchecked(collision.entityA) && this.isUnchecked(collision.entityB)) {
+          currentCollisions.set(pairKey, collision);
+          continue;
+        }
         this.events.emitCollisionExit(collision);
         collision.entityA.notifyCollisionExit(collision, collision.entityB);
         collision.entityB.notifyCollisionExit(collision, collision.entityA);
@@ -463,14 +512,24 @@ export class World {
    */
   public clear(): void {
     for (const entity of this.entities) {
+      entity.positionBatch = null;
       this.events.emitEntityRemoved(entity);
     }
+    this.positionBatch.dirty.clear();
     this.entities.clear();
+    this.entitiesByUUID.clear();
     this.staticEntities.clear();
     this.dynamicEntities.clear();
     this.spatialPartition.clear();
     this.queryResults.clear();
     this.previousCollisions.clear();
+    this.restingEntities.clear();
+    this.activeEntities.length = 0;
+  }
+
+  /** Whether the collisions of an entity were left as they were in this step: a resting entity, or a static one. */
+  private isUnchecked(entity: Entity): boolean {
+    return this.restingEntities.has(entity) || (this.staticEntities.has(entity) && this.entities.has(entity));
   }
 
   private quantizeEntities(): void {
@@ -486,13 +545,30 @@ export class World {
     }
   }
 
+  private flushPositionChanges(): void {
+    const batch = this.positionBatch;
+    batch.active = false;
+    if (batch.dirty.size === 0) {
+      return;
+    }
+    for (const entity of batch.dirty) {
+      entity.flushPositionChange();
+    }
+    batch.dirty.clear();
+  }
+
   private quantizeValue(value: number, step: number): number {
     return Math.round(value / step) * step;
   }
 
   private refreshDynamicEntitiesInPartition(): void {
-    for (const entity of this.dynamicEntities) {
+    const active = this.activeEntities;
+    for (let i = 0; i < active.length; i++) {
+      const entity = active[i]!;
+      // Most entities do not move between two refreshes of a step: their cells are already right
+      if (this.isSynced(entity)) continue;
       this.spatialPartition.update(entity);
+      this.rememberSynced(entity);
     }
   }
 
@@ -502,17 +578,38 @@ export class World {
    * size or rotation was changed directly (`updateEntity` also forces it).
    */
   private refreshEntitiesInPartition(): void {
+    const resting = this.restingEntities;
+    resting.clear();
+    let restAllowed = this.restAllowed;
+    this.restAllowed = true;
     for (const entity of this.entities) {
-      if (entity.isStatic() && this.isSyncedStatic(entity)) continue;
+      if (entity.isStatic()) {
+        if (this.isSynced(entity) && this.staticEntities.has(entity)) continue;
+        // A static entity that appears or moves can reach resting entities: check all of them in this step
+        restAllowed = false;
+      } else if (this.isSynced(entity) && this.dynamicEntities.has(entity)) {
+        if (entity.isSleeping()) resting.add(entity);
+        continue;
+      }
       this.syncEntity(entity);
+    }
+    if (!restAllowed) resting.clear();
+
+    const active = this.activeEntities;
+    active.length = 0;
+    for (const entity of this.dynamicEntities) {
+      if (!resting.has(entity)) active.push(entity);
     }
   }
 
-  /** Position, rotation and size of a static entity when it was last synchronized (numbers: no allocation per step). */
-  private staticSignatures: WeakMap<Entity, Float64Array> = new WeakMap();
+  /**
+   * Position, rotation and size of an entity when it was last synchronized with the partition (numbers: no allocation
+   * per step). A change of shape that these values do not show must go through `updateEntity()`.
+   */
+  private syncedSignatures: WeakMap<Entity, Float64Array> = new WeakMap();
 
-  private isSyncedStatic(entity: Entity): boolean {
-    const signature = this.staticSignatures.get(entity);
+  private isSynced(entity: Entity): boolean {
+    const signature = this.syncedSignatures.get(entity);
     return signature !== undefined
       && signature[0] === entity.position.x
       && signature[1] === entity.position.y
@@ -520,14 +617,15 @@ export class World {
       && signature[3] === entity.width
       && signature[4] === entity.height
       && signature[5] === entity.radius
-      && this.staticEntities.has(entity);
+      && signature[6] === (entity.capsule?.radius ?? -1)
+      && signature[7] === (entity.capsule?.height ?? -1);
   }
 
-  private rememberStatic(entity: Entity): void {
-    let signature = this.staticSignatures.get(entity);
+  private rememberSynced(entity: Entity): void {
+    let signature = this.syncedSignatures.get(entity);
     if (!signature) {
-      signature = new Float64Array(6);
-      this.staticSignatures.set(entity, signature);
+      signature = new Float64Array(8);
+      this.syncedSignatures.set(entity, signature);
     }
     signature[0] = entity.position.x;
     signature[1] = entity.position.y;
@@ -535,6 +633,8 @@ export class World {
     signature[3] = entity.width;
     signature[4] = entity.height;
     signature[5] = entity.radius;
+    signature[6] = entity.capsule?.radius ?? -1;
+    signature[7] = entity.capsule?.height ?? -1;
   }
 
   private syncEntityCollection(entity: Entity): void {

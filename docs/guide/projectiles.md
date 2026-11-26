@@ -15,6 +15,13 @@ single local raycast at spawn time to avoid drawing projectiles past obvious
 client-side hitboxes while it waits for the server impact, and renders each
 projectile with a registered CanvasEngine component.
 
+The batches follow the sync rate of the map, not the number of shots: what
+`emit()` queues is sent once per sync interval (`throttleSync`, 50 ms by
+default), so the shots of one interval share one message and a shot is drawn up
+to one interval after `emit()`. A projectile that stops on its hit sends its
+impact once, in its destroy entry; the client still calls `projectiles.onImpact`
+for it.
+
 When a projectile uses a custom server-side `canHit` filter, the client keeps
 predicting movement but skips local impact raycast clamping by default because
 arbitrary server gameplay rules cannot be represented safely on the client. If

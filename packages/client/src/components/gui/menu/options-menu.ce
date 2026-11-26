@@ -54,7 +54,7 @@
 </DOMContainer>
 
 <script>
-    import { signal, computed, effect, mount } from "canvasengine";
+    import { signal, computed, effect, mount, untracked } from "canvasengine";
     import { configurableControls, movementPreferences } from "../../../services/movementPreferences";
     import { inject } from "../../../core/inject";
     import { getKeyboardControlBind } from "../../../services/actionInput";
@@ -65,7 +65,11 @@
     const { t } = engine.i18n();
     const preferences = movementPreferences(engine);
     const language = signal(engine.getLocalePreference());
-    effect(() => { language.set(engine.getLocalePreference()); });
+    effect(() => {
+        const preference = engine.getLocalePreference();
+        // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+        untracked(() => language.set(preference));
+    });
     const locales = engine.getAvailableLocales().map(id => {
         let name = id;
         try { name = new Intl.DisplayNames([id], { type: "language" }).of(id) || id; } catch { /* Non-BCP47 catalogue ids. */ }

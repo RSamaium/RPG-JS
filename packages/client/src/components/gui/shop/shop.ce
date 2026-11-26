@@ -201,7 +201,7 @@
     </DOMContainer>
 
 <script>
-    import { mount, signal, computed, createTabindexNavigator, effect } from "canvasengine";
+    import { mount, signal, computed, createTabindexNavigator, effect, untracked } from "canvasengine";
     import { guiTransition, lockGuiInput } from "../lifecycle";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
@@ -426,7 +426,8 @@
     effect(() => {
         const count = filteredItems().length
         if (selectedItem() >= count) {
-            selectedItem.set(Math.max(0, count - 1))
+            // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+            untracked(() => selectedItem.set(Math.max(0, count - 1)))
         }
     })
 

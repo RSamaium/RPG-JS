@@ -21,6 +21,11 @@ export default defineConfig({
       entry: 'src/index.ts',
       formats: ['es'],
       fileName: 'index'
+    },
+    rollupOptions: {
+      // One copy of the reactive runtime for the whole application: a `batch()` only defers the computed signals of
+      // its own copy of `@signe/reactive`, and signals of two copies do not track each other.
+      external: [/^@signe\//, 'rxjs', /^rxjs\//]
     }
   },
 })

@@ -45,13 +45,13 @@ describe("projectile trajectories", () => {
       onEnd,
     });
 
+    run(projectiles, 0.55);
     expect(messages("projectile:spawnBatch")[0].value.projectiles[0].trajectory).toEqual({
       type: "arc",
       range: 100,
       duration: 0.5,
       height: 40,
     });
-    run(projectiles, 0.55);
     expect(onHit).not.toHaveBeenCalled();
     expect(onLand).toHaveBeenCalledWith(expect.objectContaining({ reason: "land" }));
     expect(onLand.mock.calls[0][0].x).toBeCloseTo(100, 0);
@@ -82,8 +82,8 @@ describe("projectile trajectories", () => {
     });
 
     // The arc stops on its target instead of flying its whole range.
-    expect(messages("projectile:spawnBatch")[0].value.projectiles[0].trajectory.range).toBe(60);
     run(projectiles, 0.4);
+    expect(messages("projectile:spawnBatch")[0].value.projectiles[0].trajectory.range).toBe(60);
     expect(onHit).toHaveBeenCalledTimes(1);
     expect(onHit.mock.calls[0][0].hit.entity.uuid).toBe("slime");
     expect(onLand.mock.calls[0][0].x).toBeCloseTo(60, 0);
@@ -143,6 +143,38 @@ describe("projectile trajectories", () => {
     expect(onHit.mock.calls.map(([context]) => context.hit.entity.uuid).sort()).toEqual(["a", "b"]);
   });
 
+  test("a projectile that goes on after its hit sends this impact, one that stops sends it in its end only", () => {
+    const piercing = createMap();
+    enemy(piercing.physic, "slime", 50);
+    piercing.projectiles.emit({
+      type: "arrow",
+      origin: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      trajectory: { type: "linear", speed: 300, range: 200 },
+      pierce: true,
+    });
+    run(piercing.projectiles, 1);
+    expect(piercing.messages("projectile:impactBatch")).toHaveLength(1);
+    expect(piercing.messages("projectile:impactBatch")[0].value.impacts[0]).toMatchObject({ targetId: "slime" });
+    expect(piercing.messages("projectile:destroyBatch")[0].value.projectiles[0]).toMatchObject({ reason: "range" });
+
+    const stopping = createMap();
+    enemy(stopping.physic, "slime", 50);
+    stopping.projectiles.emit({
+      type: "arrow",
+      origin: { x: 0, y: 0 },
+      direction: { x: 1, y: 0 },
+      trajectory: { type: "linear", speed: 300, range: 200 },
+    });
+    run(stopping.projectiles, 1);
+    expect(stopping.messages("projectile:impactBatch")).toHaveLength(0);
+    expect(stopping.messages("projectile:destroyBatch")[0].value.projectiles[0]).toMatchObject({
+      reason: "hit",
+      targetId: "slime",
+      surface: "target",
+    });
+  });
+
   test("a delayed projectile leaves after its wind-up", () => {
     const { physic, projectiles, messages } = createMap();
     enemy(physic, "slime", 30);
@@ -157,8 +189,8 @@ describe("projectile trajectories", () => {
       onHit,
     });
 
-    expect(messages("projectile:spawnBatch")[0].value.projectiles[0].delay).toBeCloseTo(0.2);
     run(projectiles, 0.15);
+    expect(messages("projectile:spawnBatch")[0].value.projectiles[0].delay).toBeCloseTo(0.2);
     expect(onHit).not.toHaveBeenCalled();
     run(projectiles, 0.3);
     expect(onHit).toHaveBeenCalledTimes(1);

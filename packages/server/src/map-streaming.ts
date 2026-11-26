@@ -2,6 +2,7 @@ import {
   MAP_STREAM_EVENT,
   defineModule,
   getMapChunkCoordinates,
+  getMapChunkKey,
   getMapInterestKeys,
   type MapStreamDefinition,
   type MapStreamPacket,
@@ -15,7 +16,23 @@ export interface ServerMapStreamingOptions {
   loadRadius?: number;
   /** Chunks retained client-side to avoid churn at grid boundaries. Defaults to 3. */
   retainRadius?: number;
+  /**
+   * Which events of the map are simulated (routes, movements, physics).
+   *
+   * - `'interest'` (default): only the events in a chunk retained by at least one player. The others are paused where
+   *   they are, keep their state, and go on when a player comes near. The server cost then grows with what players
+   *   can see, not with the size of the map.
+   * - `'always'`: every event, wherever the players are.
+   *
+   * An event with `alwaysSimulated = true` is simulated in both modes.
+   */
+  eventSimulation?: "interest" | "always";
 }
+
+/** Fixed steps between two checks of the events to pause or to resume (10 times per second at 60 Hz). */
+const EVENT_SIMULATION_CHECK_STEPS = 6;
+/** Fixed steps between two checks of the paused events when the retained chunks did not change (once per second). */
+const PAUSED_EVENT_CHECK_STEPS = 60;
 
 /** Adapter that compiles a private source map into serializable public chunks. */
 export interface ServerMapStreamingAdapter<TMapData = unknown, TManifestData = unknown, TChunkData = unknown> {
@@ -30,6 +47,8 @@ type PlayerInterest = {
   centerKey?: string;
   retained: Set<string>;
   projectiles: Set<string>;
+  /** Revision of the flying projectiles that this player was last compared with */
+  projectileRevision?: number;
 };
 
 export type MapStreamingVisibleEntityIds = {
@@ -37,10 +56,37 @@ export type MapStreamingVisibleEntityIds = {
   events: Set<string>;
 };
 
+type NetworkProjectile = ReturnType<NonNullable<RpgMap["projectiles"]>["getActiveNetworkProjectiles"]>[number];
+
+/** A flying projectile and the key of the chunk it is in, by projectile id. */
+type FlyingProjectiles = Map<string, { projectile: NetworkProjectile; chunkKey: string }>;
+
+type MapStreamingEntityIndex = {
+  players: Map<string, string[]>;
+  events: Map<string, string[]>;
+};
+
 class ServerMapStreamingRuntime {
   private readonly players = new Map<string, PlayerInterest>();
   private readonly loadRadius: number;
   private readonly retainRadius: number;
+  private readonly eventSimulation: "interest" | "always";
+  /** Chunks (`row * columns + column`) retained by at least one player; rebuilt when `interestChanged` */
+  private readonly retainedByAnyPlayer = new Set<number>();
+  private interestChanged = true;
+  private stepsBeforeEventCheck = 0;
+  private stepsBeforePausedCheck = 0;
+  private entityIndex?: MapStreamingEntityIndex;
+  /** Index of the flying projectiles of the refresh in progress, shared by every player */
+  private flyingProjectiles?: FlyingProjectiles;
+  private refreshing = false;
+  /** Chunk key of each flying projectile at the last revision, and the number of that revision */
+  private readonly flyingChunkKeys = new Map<string, string>();
+  private flyingRevision = 0;
+  /** Chunk keys of the origins of a spawn packet, by its array of projectiles */
+  private readonly spawnChunkKeys = new WeakMap<object, string[]>();
+  /** Events paused because no player retains their chunk */
+  private pausedEvents = new Set<string>();
 
   constructor(
     private readonly map: RpgMap,
@@ -49,6 +95,7 @@ class ServerMapStreamingRuntime {
   ) {
     this.loadRadius = Math.max(0, Math.floor(options.loadRadius ?? 2));
     this.retainRadius = Math.max(this.loadRadius, Math.floor(options.retainRadius ?? 3));
+    this.eventSimulation = options.eventSimulation ?? "interest";
   }
 
   sendInitial(player: RpgPlayer): void {
@@ -56,17 +103,93 @@ class ServerMapStreamingRuntime {
     // renderer/physics state is empty. Never reuse the previous connection's
     // retained chunks or projectile visibility for an initial delivery.
     this.players.delete(player.id);
+    this.interestChanged = true;
     this.sendForPosition(player, true);
   }
 
   refreshPlayers(): void {
-    for (const player of this.map.getPlayers()) {
-      this.sendForPosition(player, false);
+    this.flyingProjectiles = this.indexFlyingProjectiles();
+    this.trackFlyingChanges(this.flyingProjectiles);
+    this.refreshing = true;
+    try {
+      for (const player of this.map.getPlayers()) {
+        this.sendForPosition(player, false);
+      }
+    } finally {
+      this.refreshing = false;
+      this.flyingProjectiles = undefined;
     }
+    this.updateEventSimulation();
   }
 
   removePlayer(player: RpgPlayer): void {
     this.players.delete(player.id);
+    this.interestChanged = true;
+  }
+
+  /** Resume every event this runtime paused. Called when the runtime is replaced or removed. */
+  dispose(): void {
+    for (const id of this.pausedEvents) {
+      this.map.moveManager.resume(id);
+    }
+    this.pausedEvents.clear();
+  }
+
+  /**
+   * Pause the events that no player can see, resume those a player comes near.
+   *
+   * A paused event does not move. The events that are simulated are checked a few times per second (one walks out of
+   * the retained area, or is created). The paused ones are checked when the retained chunks change, and once per
+   * second in case a script moved one.
+   */
+  private updateEventSimulation(): void {
+    if (this.eventSimulation !== "interest") return;
+    this.stepsBeforeEventCheck -= 1;
+    this.stepsBeforePausedCheck -= 1;
+    if (!this.interestChanged && this.stepsBeforeEventCheck > 0) return;
+    this.stepsBeforeEventCheck = EVENT_SIMULATION_CHECK_STEPS;
+
+    const { chunkWidth, chunkHeight, columns, rows } = this.definition.manifest;
+    const retained = this.retainedByAnyPlayer;
+    const checkPaused = this.interestChanged || this.stepsBeforePausedCheck <= 0;
+    if (checkPaused) this.stepsBeforePausedCheck = PAUSED_EVENT_CHECK_STEPS;
+    if (this.interestChanged) {
+      this.interestChanged = false;
+      retained.clear();
+      for (const state of this.players.values()) {
+        for (const key of state.retained) {
+          const chunk = this.definition.chunks[key];
+          if (chunk) retained.add(chunk.y * columns + chunk.x);
+        }
+      }
+    }
+
+    const moveManager = this.map.moveManager;
+    const previous = this.pausedEvents;
+    const paused = new Set<string>();
+    for (const event of this.map.getEvents()) {
+      const id = event?.id;
+      if (!id) continue;
+      const wasPaused = previous.has(id);
+      if (wasPaused && !checkPaused) {
+        paused.add(id);
+        continue;
+      }
+      if (event.alwaysSimulated) continue;
+      // Same cell as `getMapChunkCoordinates()`, without an object and a string per event
+      const column = Math.max(0, Math.min(columns - 1, Math.floor(event.x() / chunkWidth)));
+      const row = Math.max(0, Math.min(rows - 1, Math.floor(event.y() / chunkHeight)));
+      if (retained.has(row * columns + column)) continue;
+      paused.add(id);
+      // The body is created again when the physics of the map is reset: put it back to sleep
+      if (!wasPaused || this.map.physic.getEntityByUUID(id)?.isSleeping() === false) {
+        moveManager.pause(id);
+      }
+    }
+    for (const id of previous) {
+      if (!paused.has(id)) moveManager.resume(id);
+    }
+    this.pausedEvents = paused;
   }
 
   isPositionVisible(player: RpgPlayer, x: number, y: number): boolean {
@@ -79,36 +202,57 @@ class ServerMapStreamingRuntime {
     return getMapInterestKeys(center, this.loadRadius, manifest).has(targetKey);
   }
 
+  /**
+   * Ids of the players and of the events of the map, by chunk key.
+   *
+   * The positions are the same for every client of one sync broadcast: the index is built for the first client and
+   * read by the others, then dropped at the end of the task so that the next broadcast reads the new positions.
+   */
+  private getEntityIndex(): MapStreamingEntityIndex {
+    if (this.entityIndex) return this.entityIndex;
+    const { chunkWidth, chunkHeight, columns, rows } = this.definition.manifest;
+    const index: MapStreamingEntityIndex = { players: new Map(), events: new Map() };
+    const add = (into: Map<string, string[]>, objects: Record<string, { x(): number; y(): number } | undefined>) => {
+      for (const id of Object.keys(objects)) {
+        const object = objects[id];
+        if (!object) continue;
+        // Same cell as `getMapChunkCoordinates()`, without an object per entity
+        const column = Math.max(0, Math.min(columns - 1, Math.floor(object.x() / chunkWidth)));
+        const row = Math.max(0, Math.min(rows - 1, Math.floor(object.y() / chunkHeight)));
+        const key = getMapChunkKey(column, row);
+        const ids = into.get(key);
+        if (ids) ids.push(id);
+        else into.set(key, [id]);
+      }
+    };
+    add(index.players, this.map.players());
+    add(index.events, this.map.events());
+    this.entityIndex = index;
+    queueMicrotask(() => {
+      this.entityIndex = undefined;
+    });
+    return index;
+  }
+
   getVisibleEntityIds(player: RpgPlayer): MapStreamingVisibleEntityIds {
     const players = new Set<string>([player.id]);
     const events = new Set<string>();
-    const retained = this.players.get(player.id)?.retained;
-    if (!retained || retained.size === 0) return { players, events };
+    // Before the first chunks are sent, the player sees its load window, like `isPositionVisible()`
+    const retained = this.players.get(player.id)?.retained
+      ?? getMapInterestKeys(
+        getMapChunkCoordinates(player.x(), player.y(), this.definition.manifest),
+        this.loadRadius,
+        this.definition.manifest,
+      );
+    if (retained.size === 0) return { players, events };
 
-    const visibleChunks = [...retained]
-      .map((key) => this.definition.chunks[key])
-      .filter((chunk) => !!chunk);
-    if (visibleChunks.length === 0) return { players, events };
-
-    const left = Math.min(...visibleChunks.map((chunk) => chunk.bounds.x));
-    const top = Math.min(...visibleChunks.map((chunk) => chunk.bounds.y));
-    const right = Math.max(...visibleChunks.map((chunk) => chunk.bounds.x + chunk.bounds.width));
-    const bottom = Math.max(...visibleChunks.map((chunk) => chunk.bounds.y + chunk.bounds.height));
-    const mapPlayers = this.map.players();
-    const mapEvents = this.map.events();
-
-    for (const entity of this.map.queryHitbox({
-      x: left,
-      y: top,
-      width: right - left,
-      height: bottom - top,
-    })) {
-      const id = entity?.id;
-      if (!id || !this.isPositionVisible(player, entity.x(), entity.y())) continue;
-      if (mapPlayers[id]) players.add(id);
-      else if (mapEvents[id]) events.add(id);
+    const index = this.getEntityIndex();
+    for (const key of retained) {
+      const playerIds = index.players.get(key);
+      if (playerIds) for (const id of playerIds) players.add(id);
+      const eventIds = index.events.get(key);
+      if (eventIds) for (const id of eventIds) events.add(id);
     }
-
     return { players, events };
   }
 
@@ -117,9 +261,21 @@ class ServerMapStreamingRuntime {
     this.players.set(player.id, state);
     const value = packet?.value;
     if (packet?.type === "projectile:spawnBatch") {
-      const projectiles = (value?.projectiles ?? []).filter((projectile: any) => {
-        const visible = projectile.ownerId === player.id
-          || this.isPositionVisible(player, projectile.origin?.x ?? 0, projectile.origin?.y ?? 0);
+      const spawned: any[] = value?.projectiles ?? [];
+      // The same packet is filtered for every client: the chunk of each origin is computed once
+      let chunkKeys = this.spawnChunkKeys.get(spawned);
+      if (!chunkKeys) {
+        const manifest = this.definition.manifest;
+        chunkKeys = spawned.map((projectile) => {
+          const origin = projectile.origin;
+          const chunk = getMapChunkCoordinates(origin?.x ?? 0, origin?.y ?? 0, manifest);
+          return getMapChunkKey(chunk.x, chunk.y);
+        });
+        this.spawnChunkKeys.set(spawned, chunkKeys);
+      }
+      const keys = chunkKeys;
+      const projectiles = spawned.filter((projectile: any, index: number) => {
+        const visible = projectile.ownerId === player.id || state.retained.has(keys[index]!);
         if (visible) state.projectiles.add(projectile.id);
         return visible;
       });
@@ -151,7 +307,7 @@ class ServerMapStreamingRuntime {
     const previous = this.players.get(player.id);
 
     if (!includeManifest && previous?.centerKey === centerKey) {
-      this.sendEnteringProjectiles(player, previous.projectiles);
+      this.sendEnteringProjectiles(player, previous, false);
       return;
     }
 
@@ -176,40 +332,94 @@ class ServerMapStreamingRuntime {
     };
     player.emit(MAP_STREAM_EVENT, packet);
     const projectiles = previous?.projectiles ?? new Set<string>();
-    this.players.set(player.id, { centerKey, retained, projectiles });
-    this.sendEnteringProjectiles(player, projectiles);
+    const state: PlayerInterest = { centerKey, retained, projectiles };
+    this.players.set(player.id, state);
+    this.interestChanged = true;
+    this.sendEnteringProjectiles(player, state);
   }
 
-  private sendEnteringProjectiles(player: RpgPlayer, visibleIds: Set<string>): void {
+  /**
+   * Flying projectiles, with the chunk of their position at the current tick.
+   *
+   * The position of a projectile is the same for every player: it is computed once per refresh, and each player only
+   * looks its chunk up in the chunks it retains.
+   */
+  private indexFlyingProjectiles(): FlyingProjectiles | undefined {
     const active = this.map.projectiles?.getActiveNetworkProjectiles?.() ?? [];
-    const activeById = new Map(active.map((projectile) => [projectile.id, projectile]));
-    const positionAtCurrentTick = (projectile: (typeof active)[number]) => {
-      const elapsed = Math.max(0, (this.map.getTick() - projectile.spawnTick) / 60 - projectile.delay);
-      return {
-        x: projectile.origin.x + projectile.direction.x * projectile.speed * elapsed,
-        y: projectile.origin.y + projectile.direction.y * projectile.speed * elapsed,
-      };
-    };
-    const leaving = [...visibleIds].filter((id) => {
-      const projectile = activeById.get(id);
-      if (!projectile || projectile.ownerId === player.id) return false;
-      const position = positionAtCurrentTick(projectile);
-      return !this.isPositionVisible(player, position.x, position.y);
-    });
-    if (leaving.length > 0) {
-      leaving.forEach((id) => visibleIds.delete(id));
+    if (active.length === 0) return undefined;
+    const { chunkWidth, chunkHeight, columns, rows } = this.definition.manifest;
+    const tick = this.map.getTick();
+    const flying: FlyingProjectiles = new Map();
+    for (const projectile of active) {
+      const elapsed = Math.max(0, (tick - projectile.spawnTick) / 60 - projectile.delay);
+      const x = projectile.origin.x + projectile.direction.x * projectile.speed * elapsed;
+      const y = projectile.origin.y + projectile.direction.y * projectile.speed * elapsed;
+      // Same cell as `getMapChunkCoordinates()`, without an object per projectile
+      const column = Math.max(0, Math.min(columns - 1, Math.floor(x / chunkWidth)));
+      const row = Math.max(0, Math.min(rows - 1, Math.floor(y / chunkHeight)));
+      flying.set(projectile.id, { projectile, chunkKey: getMapChunkKey(column, row) });
+    }
+    return flying;
+  }
+
+  /**
+   * Count a new revision when a projectile appeared, ended or moved to another chunk since the previous refresh.
+   * Between two revisions, a player whose retained chunks did not change sees the same projectiles.
+   */
+  private trackFlyingChanges(flying: FlyingProjectiles | undefined): void {
+    const previous = this.flyingChunkKeys;
+    let changed = (flying?.size ?? 0) !== previous.size;
+    if (!changed && flying) {
+      for (const [id, entry] of flying) {
+        if (previous.get(id) !== entry.chunkKey) {
+          changed = true;
+          break;
+        }
+      }
+    }
+    if (!changed) return;
+    this.flyingRevision += 1;
+    previous.clear();
+    if (flying) {
+      for (const [id, entry] of flying) previous.set(id, entry.chunkKey);
+    }
+  }
+
+  private sendEnteringProjectiles(player: RpgPlayer, state: PlayerInterest, retainedChanged = true): void {
+    const visibleIds = state.projectiles;
+    // During a refresh the index is shared by every player; `sendInitial()` builds its own
+    const flying = this.refreshing ? this.flyingProjectiles : this.indexFlyingProjectiles();
+    if (this.refreshing) {
+      // Same projectiles in the same chunks, and same retained chunks: nothing enters or leaves
+      if (!retainedChanged && state.projectileRevision === this.flyingRevision) return;
+      state.projectileRevision = this.flyingRevision;
+    }
+    if (!flying) return;
+    const retained = state.retained;
+
+    let leaving: string[] | undefined;
+    for (const id of visibleIds) {
+      const entry = flying.get(id);
+      // An ended projectile is removed from the set by its destroy packet
+      if (!entry || entry.projectile.ownerId === player.id || retained.has(entry.chunkKey)) continue;
+      (leaving ??= []).push(id);
+    }
+    if (leaving) {
+      for (const id of leaving) visibleIds.delete(id);
       player.emit("projectile:destroyBatch", {
         mapId: this.map.id,
         projectiles: leaving.map((id) => ({ id, reason: "interest" })),
       });
     }
-    const entering = active.filter((projectile) => {
-      if (visibleIds.has(projectile.id)) return false;
-      const position = positionAtCurrentTick(projectile);
-      return projectile.ownerId === player.id || this.isPositionVisible(player, position.x, position.y);
-    });
-    if (entering.length === 0) return;
-    entering.forEach((projectile) => visibleIds.add(projectile.id));
+
+    let entering: NetworkProjectile[] | undefined;
+    for (const [id, entry] of flying) {
+      if (visibleIds.has(id)) continue;
+      if (entry.projectile.ownerId !== player.id && !retained.has(entry.chunkKey)) continue;
+      visibleIds.add(id);
+      (entering ??= []).push(entry.projectile);
+    }
+    if (!entering) return;
     player.emit("projectile:spawnBatch", {
       mapId: this.map.id,
       projectiles: entering,
@@ -240,12 +450,14 @@ export function installMapStreaming(
   definition: MapStreamDefinition,
   options: ServerMapStreamingOptions = {},
 ): void {
+  getRuntime(map)?.dispose();
   const runtime = new ServerMapStreamingRuntime(map, definition, options);
   setRuntime(map, runtime);
   map.getPlayers().forEach((player) => runtime.sendInitial(player));
 }
 
 export function clearMapStreaming(map: RpgMap): void {
+  getRuntime(map)?.dispose();
   delete (map as any)[MAP_STREAMING_RUNTIME];
 }
 
@@ -281,7 +493,10 @@ export function isMapStreamingPositionVisible(
   return getRuntime(map)?.isPositionVisible(player, x, y) ?? true;
 }
 
-/** Resolve nearby synchronized entities through the map physics spatial index. */
+/**
+ * Ids of the players and of the events whose position is in a chunk retained by the player, or `undefined` when the
+ * map is not streamed. The entities are indexed by chunk once per sync broadcast, not once per client.
+ */
 export function getMapStreamingVisibleEntityIds(
   map: RpgMap,
   player: RpgPlayer,
@@ -300,7 +515,7 @@ export function filterMapStreamingProjectilePacket(map: RpgMap, player: RpgPlaye
  * the Node.js room adapter and on a Cloudflare Durable Object.
  *
  * @param adapter - Server compiler for the installed map format.
- * @param options - Interest and retention radii expressed in chunks.
+ * @param options - Interest and retention radii expressed in chunks, and which events are simulated.
  * @returns A composable server module installed with `createServer()`.
  *
  * @example
@@ -310,6 +525,9 @@ export function filterMapStreamingProjectilePacket(map: RpgMap, player: RpgPlaye
  *     return compileMyPrivateMap(mapData)
  *   },
  * }, { loadRadius: 2, retainRadius: 3 })
+ *
+ * // Keep simulating every event of the map, even far from the players
+ * provideServerMapStreaming(adapter, { eventSimulation: 'always' })
  * ```
  */
 export function provideServerMapStreaming<TMapData, TManifestData, TChunkData>(

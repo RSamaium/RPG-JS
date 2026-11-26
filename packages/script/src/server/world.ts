@@ -6,7 +6,7 @@
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import { AreaShape, MAXHP, MAXSP, Vector2 } from "@rpgjs/common";
 import { Components, Move } from "@rpgjs/server";
-import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions } from "../game/impl";
+import { type EnginePort, type CameraOptions, type EnemySpawnOptions, MAX_SCRIPT_TIMERS, type TimerOptions, MAX_MOVE_SECONDS, MAX_SCRIPT_EVENTS, MAX_SCRIPT_MOVERS, MAX_SCRIPT_SHAPES, type AttachedShapeOptions, type BattleOptions, type BattleOutcome, type DirectionName, type DistanceOptions, type MoveEventOptions, type MoveTarget, type TileSnapshot, type Choice, type DataPort, type DataRecord, type EventOptions, type EventSnapshot, type HotbarEntryOptions, type LightingTransition, type MapPort, type PlayerPort, type ProjectileLaunchOptions, type ScriptWorld, type ShakeOptions, type ShapeOptions, type ShapeSnapshot, type SoundOptions, type VariableValue, type VisualEffectPlayOptions, type SkillUseOptions, tagList } from "../game/impl";
 import type { SharedDecl } from "../core/interpreter";
 
 /** A value that RPGJS keeps in a signal is read by calling it. */
@@ -42,9 +42,6 @@ const ARRIVE_DISTANCE = 52;
 const MOVE_CHECK_MS = 50;
 const KEEP_CHECK_MS = 200;
 
-/** The tags of a thing of the game: a list of strings, each once. */
-const tagList = (value: unknown): string[] =>
-  Array.isArray(value) ? [...new Set(value.filter((tag): tag is string => typeof tag === "string" && tag.length > 0))] : [];
 
 /** The center of a player or an event, in pixels: its physics body, otherwise its top-left plus half its hitbox. */
 function centerOf(map: any, object: any): { x: number; y: number } {
@@ -217,6 +214,13 @@ function enginePortOf(player: RpgPlayer, map: RpgMap | null): EnginePort {
     if (method === "getShapes" || method === "getInShapes") {
       return (object[method]() as any[]).map((shape) => ({ name: String(shape.name), x: number(shape.x), y: number(shape.y), width: number(shape.width), height: number(shape.height) }));
     }
+    if (method === "showAttachedGui" || method === "hideAttachedGui") {
+      if (args[0] === undefined) return object[method]();
+      // ids become the players of the map: a script never holds a player, and cannot name one of another map
+      const ids = Array.isArray(args[0]) ? args[0] : [args[0]];
+      const targets = [...new Set(ids.map(String))].map((id) => m?.getPlayer?.(id)).filter(Boolean);
+      return targets.length ? object[method](targets) : undefined;
+    }
     if (method === "autoChangeMap") { const p = args[0] as { x: number; y: number }; return object.autoChangeMap(new Vector2(p.x, p.y)); }
     if (method === "applyDamage") {
       const attacker = m?.getEvent?.(String(args[0])) ?? m?.getPlayer?.(String(args[0]));
@@ -281,7 +285,7 @@ function mapPortOf(map: RpgMap, player: RpgPlayer, emit?: WorldEmit): MapPort {
   const attached = attachedByScripts.get(map) ?? attachedByScripts.set(map, new Map()).get(map)!;
   const controls = controlsByMap.get(map) ?? controlsByMap.set(map, new Map()).get(map)!;
   const shapeSnapshot = (s: any): ShapeSnapshot => ({ name: String(s.name), x: number(s.x), y: number(s.y), width: number(s.width), height: number(s.height) });
-  const snapshot = (e: any): EventSnapshot => ({ id: String(e.id ?? ""), name: String(read(e.name) ?? ""), x: number(read(e.x)), y: number(read(e.y)), direction: String(read(e.direction) ?? "down") });
+  const snapshot = (e: any): EventSnapshot => ({ id: String(e.id ?? ""), name: String(read(e.name) ?? ""), tags: tagList(e.tags), x: number(read(e.x)), y: number(read(e.y)), direction: String(read(e.direction) ?? "down") });
   const eventOf = (id: string): any => {
     const event = m.getEvent(id);
     if (!event) throw new Error(`there is no event "${id}" on the map`);

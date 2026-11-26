@@ -32,7 +32,8 @@ export default defineConfig({
       fileName: (format, entryName) => `${entryName}.js`
     },
     rollupOptions: {
-      external: [/@rpgjs/, 'esbuild', 'canvasengine', '@canvasengine/presets', 'rxjs', 'pixi.js'],
+      // `@signe/*` stays external so that the application has one copy of the reactive runtime, shared with `@rpgjs/common`
+      external: [/@rpgjs/, /^@signe\//, 'esbuild', 'canvasengine', '@canvasengine/presets', 'rxjs', /^rxjs\//, 'pixi.js'],
       output: {
         preserveModules: true,
         preserveModulesRoot: 'src'
