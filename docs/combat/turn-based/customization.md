@@ -90,7 +90,7 @@ Given to `provideTurnBattleClient(options)`:
 | `hideGuis` / `keepGuis` / `onBattleShown()` | How the battle shares the screen with the GUIs of the game, as in every RPGJS battle system (`BattleScreenOptions`): by default every GUI but the battle and the built-in dialogs is hidden; `keepGuis` keeps some (a chat); `onBattleShown` adapts a GUI of your own and returns what restores it. |
 | `hooks` | `TurnBattleClientHooks` declared without a module. |
 
-A battler is an RPGJS spritesheet registered like any other (`defineModule<RpgClient>({ spritesheets: [...] })`) and referenced by id; its battle hints sit in a `battle` field of the spritesheet, or in the `battlers` option.
+A battler is an RPGJS spritesheet registered like any other (`defineModule<RpgClient>({ spritesheets: [...] })`) and referenced by id; its battle hints sit in a `battle` field of the spritesheet, or in the `battlers` option. A spritesheet of the map works as is (`Presets.RMSpritesheet`, with `stand` and `walk`): without an `idle` texture, the battler stands facing its side, and the battle animations it lacks (`attack`, `hurt`, `dead`…) use that pose. Give it battle textures (`idle`, `attack`, `skill`, `hurt`, `dead`, `victory`) or map them with `battle.anims` for a livelier fight.
 
 ```ts
 provideTurnBattleClient({

@@ -216,7 +216,7 @@ export class BattlerModel {
 
   idle() {
     if (this.dead()) return;
-    this.anim.set(this.broken() ? `${animName(this.info, "staggered")}@hold` : "idle");
+    this.anim.set(this.broken() ? `${animName(this.info, "staggered")}@hold` : animName(this.info, "idle"));
   }
 }
 

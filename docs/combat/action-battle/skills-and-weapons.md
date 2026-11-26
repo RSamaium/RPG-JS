@@ -383,23 +383,23 @@ game.
 ## Use skills for attacks
 
 ```ts
-import { Skill } from "@rpgjs/database";
+import { type SkillObject } from "@rpgjs/server";
 
-@Skill({
+// Registered in the database of a server module: `database: { slash }`
+export const slash: SkillObject = {
   name: "Slash",
   spCost: 5,
   power: 25,
   hitRate: 0.95
-})
-export class Slash {}
+};
 
 onInit() {
   this.hp = 100;
   this.sp = 50;
-  this.learnSkill(Slash);
+  this.learnSkill("slash");
 
   new BattleAi(this, {
-    attackSkill: Slash
+    attackSkill: "slash"
   });
 }
 ```

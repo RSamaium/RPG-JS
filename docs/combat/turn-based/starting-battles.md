@@ -132,18 +132,20 @@ export default defineModule<RpgServer>({
 The `onUse` hook of an item runs on the server when the player uses it (see [Items](/guide/items)):
 
 ```ts
-import { type RpgPlayer } from "@rpgjs/server";
-import { Item } from "@rpgjs/database";
+import { type ItemObject } from "@rpgjs/server";
 import { startTurnBattle, isInTurnBattle } from "@rpgjs/turn-battle/server";
 
-@Item({ name: "Monster lure", description: "Calls the monsters around", consumable: true })
-export class MonsterLure {
-  onUse(player: RpgPlayer) {
+// Registered as `database: { "monster-lure": monsterLure }`
+export const monsterLure: ItemObject = {
+  name: "Monster lure",
+  description: "Calls the monsters around",
+  consumable: true,
+  onUse(player) {
     if (isInTurnBattle(player)) return;
     // Not awaited: the use of the item ends now, the battle runs on its own.
     void startTurnBattle(player, "slimes");
-  }
-}
+  },
+};
 ```
 
 ### From a script

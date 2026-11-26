@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { battlerAnims, readTexture, TICK_MS, type BattleSpritesheet } from "../client/sheets";
+import { Presets } from "@rpgjs/client";
+import { animName, battlerAnims, readTexture, TICK_MS, type BattleSpritesheet, type BattlerInfo } from "../client/sheets";
 
 /** A hand-written RPGJS spritesheet, as a game would register it. */
 const slime: BattleSpritesheet = {
@@ -40,7 +41,19 @@ describe("RPGJS spritesheets as battlers", () => {
     expect(anims.has("bounce")).toBe(true); // textures keep their own name too
     // Without hints: every texture is an animation, impact around 45 %.
     const bare = battlerAnims({ ...slime, battle: undefined });
-    expect([...bare.keys()]).toEqual(["stand", "bounce", "melt"]);
+    // `stand` also gives the idle pose a sheet without `idle` lacks.
+    expect([...bare.keys()]).toEqual(["stand", "bounce", "melt", "idle"]);
     expect(bare.get("bounce")!.impact).toBe(1);
+  });
+
+  it("plays a spritesheet of the map (RMSpritesheet) as is: it stands facing its side", () => {
+    const sheet = { id: "female", image: "/female.png", ...Presets.RMSpritesheet(3, 4) } as unknown as BattleSpritesheet;
+    const anims = battlerAnims(sheet, { facing: "left" });
+    // `stand` of the left row (frameY 1) becomes the looping idle pose.
+    expect(anims.get("idle")).toMatchObject({ loop: true, frames: [{ x: 1, y: 1 }] });
+    const info = { anims } as BattlerInfo;
+    // The battle animations it lacks fall back to that pose.
+    expect(animName(info, "attack")).toBe("idle");
+    expect(animName(info, "dead")).toBe("idle");
   });
 });

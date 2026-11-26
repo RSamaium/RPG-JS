@@ -1,7 +1,9 @@
 /**
  * Battlers are ordinary RPGJS spritesheets, registered like any other
  * (`defineModule<RpgClient>({ spritesheets: [...] })`) and referenced by id
- * (`battler: "hero-knight"`). Battle hints (facing, impact frame, animation
+ * (`battler: "hero-knight"`). A spritesheet of the map (`Presets.RMSpritesheet`)
+ * works as is: without an `idle` texture, the battler stands (`stand`, else
+ * `walk`) facing its side, and the battle animations it lacks use that pose. Battle hints (facing, impact frame, animation
  * names…) sit in a `battle` field of the spritesheet, or in the client option
  * `battlers`. Timings come from the texture frames (`time`, in 60 fps ticks).
  *
@@ -92,6 +94,9 @@ const ALIASES: Record<string, string[]> = {
   attack: ["attack", "idle"],
 };
 export const TICK_MS = 1000 / 60;
+/** Texture names of the map animations (`Animation.Stand`, `Animation.Walk` of `@rpgjs/common`). */
+const MAP_STAND = "stand";
+const MAP_WALK = "walk";
 
 /** Resolve an animation name with fallbacks (enemies rarely have "victory"). */
 export function animName(info: BattlerInfo, name: string): string {
@@ -148,6 +153,12 @@ export function battlerAnims(sheet: BattleSpritesheet, hints: BattlerHints = {})
   };
   for (const texture of Object.keys(sheet.textures)) build(texture, texture);
   for (const [name, texture] of Object.entries(hints.anims ?? {})) if (texture) build(name, texture);
+  // A spritesheet of the map (`Presets.RMSpritesheet`: `stand`, `walk`) has no battle pose: it stands in battle, looking
+  // the way it faces, and every missing battle animation falls back to that pose.
+  if (!anims.has("idle")) {
+    const pose = anims.get(MAP_STAND) ?? anims.get(MAP_WALK);
+    if (pose) anims.set("idle", { ...pose, loop: true });
+  }
   return anims;
 }
 
