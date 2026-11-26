@@ -116,7 +116,8 @@ export interface TacticalClientOptions extends BattleScreenOptions {
 const BATTLEFIELD = "tactical-battlefield";
 /** 1 × 1 transparent PNG: the player's graphic during a battle. */
 const TRANSPARENT = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-const still = { animations: () => [[{ time: 0, frameX: 0, frameY: 0 }]] };
+// One frame held for a second (an end marker): an animation of zero length would keep the sprite busy forever.
+const still = { animations: () => [[{ time: 0, frameX: 0, frameY: 0 }, { time: 60 }]] };
 const hiddenSheet = {
   id: TACTICAL_HIDDEN_GRAPHIC,
   image: TRANSPARENT,

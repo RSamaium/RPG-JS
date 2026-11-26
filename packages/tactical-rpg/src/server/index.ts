@@ -320,9 +320,12 @@ function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterS
   const classRole = classId ? dbRecord<{ tactical?: { role?: string } }>(player, classId)?.tactical?.role : undefined;
   const maxHp = me.params.maxHp || own.stats?.hp || 100;
   const maxSp = me.params.maxSp || own.stats?.sp || 20;
-  // The HP of the player when they have some (`readBattlePlayer` reads a missing value as 0).
-  const rawHp = (read(() => val((player as unknown as { hp?: unknown }).hp)) as unknown) ?? undefined;
-  const hpNow = rawHp !== undefined && rawHp !== null && Number.isFinite(Number(rawHp)) ? Math.min(maxHp, Math.max(0, Number(rawHp))) : maxHp;
+  // The HP and SP of the player, when the player has native ones (a `maxHp` / `maxSp` parameter, from a class): a knocked-out
+  // player (0 HP) then joins knocked out. A player without them (no class) fights with full HP and SP, like the turn-based battle.
+  const rawHp = Number(read(() => val((player as unknown as { hp?: unknown }).hp)));
+  const rawSp = Number(read(() => val((player as unknown as { sp?: unknown }).sp)));
+  const hpNow = me.params.maxHp > 0 && Number.isFinite(rawHp) ? Math.min(maxHp, Math.max(0, rawHp)) : maxHp;
+  const spNow = me.params.maxSp > 0 && Number.isFinite(rawSp) ? Math.min(maxSp, Math.max(0, rawSp)) : maxSp;
   const skills = [...new Set([...(own.skills ?? []), ...me.skills])].filter((id) => {
     const skill = skillRecord(player, id);
     if (skill) setup.skills[id] = skill;
@@ -357,7 +360,7 @@ function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterS
       items,
       params: { ...me.params, ...own.params },
       // A knocked-out player (0 HP) joins knocked out: a battle is no free revival.
-      current: { hp: hpNow, sp: Math.max(0, me.sp) },
+      current: { hp: hpNow, sp: spNow },
       player: player.id,
     },
   };
@@ -498,7 +501,7 @@ const nameOf = (player: RpgPlayer, index = 0) => battlePlayerName(player, player
  * transparent graphic, not an empty list: the client keeps the previous sprite
  * when the list is emptied. Returns the restore function.
  */
-function hidePlayer(player: RpgPlayer): () => void {
+function hidePlayer(player: RpgPlayer): (now?: boolean) => void {
   const currentGraphics = () => [...((read(() => val((player as any).graphics)) as string[] | undefined) ?? [])];
   const isHidden = (g: string[]) => g.length === 1 && g[0] === TACTICAL_HIDDEN_GRAPHIC;
   // Right after another battle, its restore is still pending: take its graphics.
@@ -511,12 +514,21 @@ function hidePlayer(player: RpgPlayer): () => void {
     if (now.length) graphics = now;
     read(() => player.setGraphic(TACTICAL_HIDDEN_GRAPHIC));
   }, 250);
-  return () => {
+  let restored = false;
+  return (now = false) => {
+    if (restored) return;
+    restored = true;
     clearInterval(hidden);
     if (!graphics.length) return;
-    // Restored on the next tick, unless a new battle started meanwhile (no
-    // flicker between two battles).
     const restore = graphics;
+    // A player who leaves (disconnection, stop) gets their graphics back at once: their session is saved right after, and
+    // must not keep the hidden graphic.
+    if (now) {
+      stashed.delete(player.id);
+      read(() => player.setGraphic(restore));
+      return;
+    }
+    // Otherwise restored on the next tick, unless a new battle started meanwhile (no flicker between two battles).
     stashed.set(player.id, restore);
     setTimeout(() => {
       if (battles.isIn(player)) return;
@@ -536,7 +548,7 @@ interface Seat {
   /** Duel: the animation speed of this player (each one has their own). */
   pace: number;
   done: Promise<void>;
-  restore: () => void;
+  restore: (now?: boolean) => void;
 }
 
 /** A spectator: their GUI (read-only HUD). */
@@ -544,6 +556,7 @@ interface Watcher {
   player: RpgPlayer;
   gui: ReturnType<RpgPlayer["gui"]>;
   done: Promise<void>;
+  restore: (now?: boolean) => void;
 }
 
 async function run(
@@ -795,10 +808,14 @@ async function run(
    */
   const leave = (player: RpgPlayer) => {
     const watcher = watchers.get(player.id);
-    if (watcher) return void watcher.gui.close(null);
+    if (watcher) {
+      watcher.restore(true);
+      return void watcher.gui.close(null);
+    }
     const seat = seats.get(player.id);
     if (!seat?.present) return;
     seat.present = false;
+    seat.restore(true);
     battles.release(player, session);
     seat.gui.close(null);
     if (!present().length) {
@@ -851,12 +868,12 @@ async function run(
       // Seated before the (async) veto: no double watch.
       if (!battles.seat(spectator, session)) return false;
       let done: () => void = () => {};
-      const watcher: Watcher = { player: spectator, gui: spectator.gui(TACTICAL_GUI), done: new Promise<void>((r) => (done = r)) };
+      const watcher: Watcher = { player: spectator, gui: spectator.gui(TACTICAL_GUI), done: new Promise<void>((r) => (done = r)), restore: () => {} };
       try {
         const refused = (await callHooks(spectator, "onSpectate", spectator, handle)).includes(false);
         if (refused || !present().length) return false;
         watchers.set(spectator.id, watcher);
-        const restore = options.hidePlayer !== false ? hidePlayer(spectator) : () => {};
+        if (options.hidePlayer !== false) watcher.restore = hidePlayer(spectator);
         // A spectator can leave at any time.
         watcher.gui.on("close", () => watcher.gui.close(null));
         state = { ...state, spectators: watchers.size };
@@ -865,7 +882,7 @@ async function run(
           await watcher.gui.open({ state: shown() } satisfies BattlePacket, { waitingAction: true, blockPlayerInput: true });
         } finally {
           watchers.delete(spectator.id);
-          restore();
+          watcher.restore();
           state = { ...state, spectators: watchers.size };
           send({});
         }

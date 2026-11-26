@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
-import { provideTacticalServer, startTacticalBattle, tacticalEncounter, tacticalItem, tacticalSkill, tacticalUnit } from "../server";
+import { provideTacticalServer, startTacticalBattle, stopTacticalBattle, tacticalEncounter, tacticalItem, tacticalSkill, tacticalUnit } from "../server";
 import type { BattlePacket } from "../core/types";
 
 afterEach(() => vi.useRealTimers());
@@ -105,6 +105,20 @@ describe("the hero of a player in a tactical battle", () => {
     expect(packets.at(-1)!.state.units.find((u) => u.player === player.id)!.hp).toBe(0);
   });
 
+  it("fights with full HP and SP when the player has no native ones (no class: maxHp 0)", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer();
+    const { player, packets } = heroPlayer();
+    player.hp = 0;
+    player.sp = 0;
+    player.param = { maxHp: 0, maxSp: 0, str: 22 };
+    void startTacticalBattle(player as never, "guard-room");
+    await vi.advanceTimersByTimeAsync(0);
+    const hero = packets.at(-1)!.state.units.find((u) => u.player === player.id)!;
+    expect(hero.hp).toBe(hero.maxHp);
+    expect(hero.sp).toBe(hero.maxSp);
+  });
+
   it("writes HP, SP and the items spent back on the player at the end", async () => {
     vi.useFakeTimers();
     provideTacticalServer({ hero: () => ({ stats: { hp: 0, sp: 0, power: 22, range: 1, move: 3 } }) });
@@ -147,5 +161,17 @@ describe("the hero of a player in a tactical battle", () => {
     const state = packets.at(-1)!.state;
     expect(state.phase).toBe("ally");
     expect(state.round).toBe(2);
+  });
+
+  it("gives a player who leaves their graphic back at once, before their session is saved", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer();
+    const { player } = heroPlayer();
+    void startTacticalBattle(player as never, "guard-room");
+    await vi.advanceTimersByTimeAsync(0);
+    expect(player.setGraphic).toHaveBeenLastCalledWith("tactical-hidden");
+    void stopTacticalBattle(player as never);
+    // Synchronously: no timer has run yet.
+    expect(player.setGraphic).toHaveBeenLastCalledWith(["aria"]);
   });
 });
