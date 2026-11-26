@@ -105,6 +105,13 @@ const read = <T>(fn: () => T): T | undefined => {
   }
 };
 
+/** Is the player connected? A player without the flag (a test double, an older server) counts as connected. */
+const connected = (player: RpgPlayer) => {
+  const flag = read(() => (player as unknown as { isConnected?: unknown }).isConnected);
+  const value = typeof flag === "function" ? read(() => (flag as () => unknown).call(player)) : flag;
+  return value !== false;
+};
+
 const mapOf = (player: RpgPlayer) => read(() => player.getCurrentMap()) as { id?: unknown } | null | undefined;
 const mapId = (map: { id?: unknown } | null | undefined) => {
   const id = typeof map?.id === "function" ? read(() => (map.id as () => unknown)()) : map?.id;
@@ -160,15 +167,18 @@ export function battlePlayerName(player: RpgPlayer, guestLabel: string): string 
 
 /**
  * Checks who takes part in a battle: removes duplicates, keeps a player on one
- * side only (the first one), drops spectators who fight, and requires every
- * fighter to be on the leader's map. Server only.
+ * side only (the first one), drops spectators who fight or are disconnected,
+ * and requires every fighter to be connected and on the leader's map. In
+ * MMORPG, a player who disconnects stays on the map for a while (their
+ * session waits for a reconnection), so `map.getPlayers()` can list them:
+ * filter partners with `p.isConnected()`. Server only.
  *
  * @title battleParticipants
  * @method battleParticipants(label, group)
  * @param label - Name used in error messages (`[TurnBattle] …`)
  * @param group - Players, opponents and spectators asked for
  * @returns The checked participants
- * @throws When there is no player, or a player is not on the leader's map
+ * @throws When there is no player, or a fighter is disconnected or not on the leader's map
  *
  * @example
  * ```ts
@@ -180,8 +190,10 @@ export function battleParticipants(label: string, group: BattleGroupOptions): Ba
   const versus = unique(group.versus ?? []).filter((p) => !players.some((q) => q.id === p.id));
   if (!players.length) throw new Error(`[${label}] No player`);
   const everyone = [...players, ...versus];
+  const offline = everyone.find((p) => !connected(p));
+  if (offline) throw new Error(`[${label}] Player ${offline.id} is disconnected`);
   const away = everyone.find((p) => !sameBattleMap(p, players[0]));
   if (away) throw new Error(`[${label}] Player ${away.id} is not on the same map as ${players[0].id}`);
-  const spectators = unique(group.spectators ?? []).filter((p) => !everyone.some((q) => q.id === p.id));
+  const spectators = unique(group.spectators ?? []).filter((p) => connected(p) && !everyone.some((q) => q.id === p.id));
   return { players, versus, everyone, spectators };
 }

@@ -165,7 +165,7 @@ In a solo game the server runs inside the game, in the browser: call `startTacti
 
 A battle lives in the room of its map. For every group battle:
 
-1. **Everyone must be on the leader's map.** `startTacticalBattle` throws otherwise. Pick partners and opponents among `player.getCurrentMap()?.getPlayers()`, and keep only those for which `sameBattleMap(p, leader)` is true: the list can hold a player who is still joining or leaving the map.
+1. **Everyone must be connected and on the leader's map.** `startTacticalBattle` throws otherwise. Pick partners and opponents among `player.getCurrentMap()?.getPlayers()`, and keep only those for which `p.isConnected()` and `sameBattleMap(p, leader)` are true: a player who disconnects stays in that list for a few minutes (their session waits for a reconnection), and the list can hold a player who is still joining or leaving the map.
 2. **A player is in one tactical battle at a time.** Test `isInTacticalBattle(p)` before adding them to a group.
 3. **Each player commands the units of their seat.** The `seat` of a placement is the index of the commanding player in its side; without it, units are dealt in turn. A side has `turnSeconds` (60 by default) to play its phase.
 
@@ -210,7 +210,7 @@ export function CryptDoorEvent(): EventDefinition {
     async onAction(leader: RpgPlayer) {
       if (isInTacticalBattle(leader)) return;
       const partners = (leader.getCurrentMap()?.getPlayers() ?? [])
-        .filter((p) => p.id !== leader.id && sameBattleMap(p, leader) && !isInTacticalBattle(p))
+        .filter((p) => p.id !== leader.id && p.isConnected() && sameBattleMap(p, leader) && !isInTacticalBattle(p))
         .filter((p) => Math.hypot(p.x() - leader.x(), p.y() - leader.y()) <= RADIUS)
         .slice(0, 2);
       await startTacticalBattle({ players: [leader, ...partners], encounter: "crypt" });
@@ -251,7 +251,7 @@ async function challenge(challenger: RpgPlayer, rival: RpgPlayer) {
     { text: "Decline", value: "no" },
   ]);
   if (answer?.value !== "yes") return;
-  if (!sameBattleMap(challenger, rival) || isInTacticalBattle(challenger) || isInTacticalBattle(rival)) return;
+  if (!rival.isConnected() || !sameBattleMap(challenger, rival) || isInTacticalBattle(challenger) || isInTacticalBattle(rival)) return;
 
   const result = await startTacticalBattle({ players: [challenger], versus: [rival], encounter: "arena" });
   await challenger.showText(result.winners.includes(challenger.id) ? "You won the duel!" : "You lost the duel.");

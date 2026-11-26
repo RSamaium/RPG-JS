@@ -113,6 +113,15 @@ describe("battle participants (server)", () => {
     expect(() => battleParticipants("Test", { players: [] })).toThrow("[Test] No player");
   });
 
+  it("keeps a disconnected player out (MMORPG: their session waits on the map for a reconnection)", () => {
+    const leader = fakePlayer("a", { map: "m1" });
+    const gone = Object.assign(fakePlayer("g", { map: "m1" }), { isConnected: () => false }) as RpgPlayer;
+    const here = Object.assign(fakePlayer("h", { map: "m1" }), { isConnected: () => true }) as RpgPlayer;
+    expect(() => battleParticipants("Test", { players: [leader, gone] })).toThrow("[Test] Player g is disconnected");
+    expect(() => battleParticipants("Test", { players: [leader], versus: [gone] })).toThrow("[Test] Player g is disconnected");
+    expect(battleParticipants("Test", { players: [leader, here], spectators: [gone] }).spectators).toEqual([]);
+  });
+
   it("names a guest without their id", () => {
     expect(battlePlayerName(fakePlayer("x", { name: "Kael" }), "Guest 1")).toBe("Kael");
     expect(battlePlayerName(fakePlayer("x"), "Guest 2")).toBe("Guest 2");

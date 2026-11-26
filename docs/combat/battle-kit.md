@@ -42,7 +42,7 @@ const battles = new BattleSessions<MyHandle>("MyBattle");
 
 export async function startMyBattle(a: RpgPlayer | MyGroupOptions) {
   const group = isBattleGroup(a) ? a : { players: [a] };
-  const { players, versus, everyone, spectators } = battleParticipants("MyBattle", group); // same map, no duplicates
+  const { players, versus, everyone, spectators } = battleParticipants("MyBattle", group); // connected, same map, no duplicates
   const release = battles.reserve(everyone);                                              // throws when one is busy
   const session = createSession(players, versus);   // a BattleSession: handle, plays, leave, watch, closed
   try {
@@ -66,7 +66,7 @@ export const stopMyBattle = (player: RpgPlayer) => battles.stop(player);
 |---|---|
 | `BattleSessions` | `reserve`, `open`, `close`, `seat` / `release`, `isIn`, `get(playerOrId)`, `watch`, `stop`, `disconnect`. A player is busy from `reserve` until `release(player, session)`: release every player and `close` the session when the battle ends. A player who disconnects between `reserve` and `open` leaves the battle as soon as it is opened (`session.leave`). |
 | `BattleHandleBase` | What every battle handle gives the hooks: `id`, `player`, `players`, `versus`, `spectators()`. |
-| `battleParticipants(label, group)` / `isBattleGroup` | Checks who takes part (`players`, `versus`, `spectators`): no duplicates, one side per player, everyone on the leader's map. |
+| `battleParticipants(label, group)` / `isBattleGroup` | Checks who takes part (`players`, `versus`, `spectators`): no duplicates, one side per player, every fighter connected and on the leader's map; a disconnected spectator is dropped. |
 | `sameBattleMap(a, b)` | Are two players in the same room? A spectator watches from the map of the battle. |
 | `battlePlayerName(player, guestLabel)` | The name a battle shows: the player's name, or `guestLabel` (a translated text of the battle system) for a guest, never their id. |
 
