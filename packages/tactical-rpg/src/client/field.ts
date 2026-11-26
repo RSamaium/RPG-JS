@@ -20,6 +20,7 @@ import { distance, key, reachable, world } from "../core/board";
 import { targetable } from "../core/rules";
 import { skillArea } from "../core/skills";
 import { Choreography } from "./choreography";
+import { battlerFaces, cutFace, type FaceSheet } from "./portraits";
 import { facingBetween, movementAt, movementFacing, type Facing } from "./motion";
 import {
   aimed,
@@ -283,6 +284,11 @@ class Field {
           h = (sheet.height ?? image.height) / (sheet.framesHeight ?? 1);
         }
         this.frames.set({ ...this.frames(), [id]: { w, h } });
+        // A unit without a portrait shows its character of the map: cut once per battler, it never delays the battle.
+        if (!battlerFaces()[id])
+          void cutFace(sheet as FaceSheet)
+            .then((face) => face && battlerFaces.set({ ...battlerFaces(), [id]: face }))
+            .catch(() => {});
       })()
         .catch((error) => {
           console.warn(error);
