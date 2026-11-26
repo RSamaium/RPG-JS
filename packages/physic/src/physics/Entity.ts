@@ -286,6 +286,14 @@ export class Entity {
   private collisionEnterHandlers: Set<EntityCollisionHandler>;
   private collisionExitHandlers: Set<EntityCollisionHandler>;
   private positionSyncHandlers: Set<EntityPositionSyncHandler>;
+  /**
+   * Batch shared with the world that owns the entity. While the world steps, position
+   * notifications are collected here and sent once per entity at the end of the step.
+   * @internal
+   */
+  public positionBatch: EntityPositionBatch | null = null;
+  private lastNotifiedX = NaN;
+  private lastNotifiedY = NaN;
   private directionSyncHandlers: Set<EntityDirectionSyncHandler>;
   private movementChangeHandlers: Set<EntityMovementChangeHandler>;
   private enterTileHandlers: Set<EntityTileHandler>;
@@ -471,6 +479,8 @@ export class Entity {
    *
    * - **Purpose:** allow external code to trigger position sync hooks when position is modified directly.
    * - **Design:** can be called after direct position modifications (e.g., `entity.position.set()`).
+   *   Handlers run immediately, except while the world that owns the entity is stepping:
+   *   they then run once at the end of the step, with the final position.
    *
    * @example
    * ```typescript
@@ -483,11 +493,37 @@ export class Entity {
       return;
     }
 
-    const payload: EntityPositionSyncEvent = {
-      entity: this,
-      x: this.position.x,
-      y: this.position.y,
-    };
+    // During a world step, the integrator and the collision resolver can move the entity
+    // several times: the handlers are called once, with the final position of the step.
+    const batch = this.positionBatch;
+    if (batch !== null && batch.active) {
+      batch.dirty.add(this);
+      return;
+    }
+
+    this.emitPositionChange();
+  }
+
+  /**
+   * Sends the position notification collected during a world step, unless the entity
+   * is back at the position that the handlers already received.
+   *
+   * @internal
+   */
+  public flushPositionChange(): void {
+    if (this.position.x === this.lastNotifiedX && this.position.y === this.lastNotifiedY) {
+      return;
+    }
+    this.emitPositionChange();
+  }
+
+  private emitPositionChange(): void {
+    const x = this.position.x;
+    const y = this.position.y;
+    this.lastNotifiedX = x;
+    this.lastNotifiedY = y;
+
+    const payload: EntityPositionSyncEvent = { entity: this, x, y };
 
     for (const handler of this.positionSyncHandlers) {
       handler(payload);
@@ -1314,6 +1350,17 @@ export interface EntityPositionSyncEvent {
 }
 
 export type EntityPositionSyncHandler = (event: EntityPositionSyncEvent) => void;
+
+/**
+ * Position notifications collected during a world step.
+ * @internal
+ */
+export interface EntityPositionBatch {
+  /** Whether a world step is running */
+  active: boolean;
+  /** Entities whose position was notified during the step */
+  dirty: Set<Entity>;
+}
 
 export interface EntityDirectionSyncEvent {
   entity: Entity;

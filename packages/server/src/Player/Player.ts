@@ -2049,6 +2049,32 @@ export class RpgEvent extends RpgPlayer {
    */
   tags: string[] = [];
 
+  /**
+   * Keeps the event simulated (routes, movements, physics) when no player is near.
+   *
+   * On a streamed map (`provideServerMapStreaming`), an event in a chunk that no player retains is paused: it stays
+   * where it is and goes on when a player comes near. Set this to `true` for an event that must keep moving
+   * everywhere, such as a patrol that players meet at a fixed time, or a boss that walks across the map. Each such
+   * event costs server time at every step, whether a player sees it or not. Server only; it has no effect on a map
+   * that is not streamed, where every event is simulated.
+   *
+   * @title alwaysSimulated
+   * @prop {boolean} alwaysSimulated
+   * @default false
+   * @memberof RpgEvent
+   * @example
+   * ```ts
+   * @EventData({ name: 'patrol' })
+   * class PatrolEvent extends RpgEvent {
+   *   onInit() {
+   *     this.alwaysSimulated = true
+   *     this.infiniteMoveRoute([Move.tileRight(10), Move.tileLeft(10)])
+   *   }
+   * }
+   * ```
+   */
+  alwaysSimulated: boolean = false;
+
   constructor() {
     super();
     this.initializeDefaultStats()

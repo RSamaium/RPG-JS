@@ -261,6 +261,7 @@ The player of the signal, with the names of `RpgPlayer`.
 | `changeMap(map, { x, y }?)` | moves the player to a map |
 | `useSkill(skillId, { target }?)` | uses a skill the player knows, as `player.useSkill` does; gives `false` when it cannot be used now. With Action Battle on the map, a skill with an `action` follows the battle rules: its projectile, damage formula, factions, states, SP cost and cooldown. `target` is the id of an event or a player of the map; without it, Action Battle aims at the nearest enemy within the reach of the action, whatever the player faces |
 | `openGui(id, data?, options?)`, `updateGui(id, data)`, `closeGui(id, data?)` | a GUI of the client, as `player.gui(id).open(data, options)`, `.update(data)` and `player.removeGui(id, data)` do. See [GUIs](#guis-of-the-client) |
+| `showAttachedGui(targets?)`, `hideAttachedGui(targets?)` | shows to the player, or hides, the GUIs attached to a sprite (`attachToSprite`), as `player.showAttachedGui(players)` does: on its own sprite without argument, or on the sprites of the players given by id. See [GUIs attached to a sprite](#guis-attached-to-a-sprite) |
 
 RPGJS has variables, not switches: a flag is a variable (`$player.setVariable("tournament", true)`). A private switch of an event is
 a variable of the player named after the event (`$event.id + "_opened"`), as the chest of the playground does.
@@ -285,6 +286,27 @@ on("gui.action", { where: { gui: "quests_panel", event: "accept" } }, (e) => {
 - `data` is plain data of at most 2 000 characters, copied; the component receives it as `data`.
 - `blockPlayerInput` is the only option. The script **does not wait** for the GUI (`waitingAction` has no place in a script): it listens to `gui.action`.
 - `gui.action` fires for every interaction of every GUI, including the ones of the game, and whether or not the server listens to the event with `player.gui(id).on(name, ...)`. The server hook behind it is `player.onGuiInteraction(player, { guiId, name, data })`.
+
+### GUIs attached to a sprite
+
+A GUI that the client adds with `attachToSprite: true` (a name tag, a status badge, see [Attach a GUI to a sprite](/guide/gui/attach-gui)) is
+drawn on a sprite only once the server shows it to a player. A script does it with `showAttachedGui` and `hideAttachedGui`:
+
+```js
+on("player.joinMap", () => {
+  $player.showAttachedGui();                                      // my own tag, for me
+  $player.showAttachedGui($map.getPlayers().map((p) => p.id));    // the tags of everyone on the map, for me
+});
+
+on("player.leaveMap", () => {
+  $player.hideAttachedGui();
+});
+```
+
+- Without argument, it is the sprite of the player of the script. With an id or a list of ids, it is the sprites of these players.
+- An id that is not a player of the same map is ignored: a script never holds a player, and cannot show the GUI of a player of another map.
+- Only the player of the script sees the change. To show the tags of everyone to everyone, each player calls it when it joins.
+- Without an attached GUI on the client, the call does nothing.
 
 ### Where the script is: `$room`, `$event`
 
@@ -314,7 +336,7 @@ on("player.inShape", { where: { "shape.name": "well-area" } }, () => {
 | Name | What it does |
 | --- | --- |
 | `createDynamicEvent(options)` | makes an event and gives its id. Plain data: `id` (letters, digits, `_`, `.`, `-`), `x` and `y`, and optionally `name`, `graphic` (the id of a graphic), `hitbox: { width, height }`, `through`, `forPlayer` (the event exists for the player of the script only: the others neither see nor touch it, it goes when that player leaves the map, and its id is made unique for the player). It is a real event: it listens to `event.action` and `event.touch` like the others, and has no look beyond its graphic |
-| `getEvent(id)`, `getEvents()` | copies `{ id, name, x, y, direction }` of the events of the map, the ones of the game too |
+| `getEvent(id)`, `getEvents()` | copies `{ id, name, tags, x, y, direction }` of the events of the map, the ones of the game too. `tags` is what kind of event it is (empty list when none, and for the events a script makes): find the events of a kind with `$map.getEvents().filter((e) => e.tags.includes("sheriff"))`, never by their name |
 | `removeEvent(id)` | removes an event **a script made**; an event of the game stays and it gives `false` |
 | `getPlayers()` | `{ id, name }` of the players on the map |
 

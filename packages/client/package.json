@@ -23,16 +23,16 @@
   "license": "MIT",
   "peerDependencies": {
     "@canvasengine/presets": "^2.6.0",
-    "canvasengine": "^2.5.2",
+    "canvasengine": "^2.6.0",
     "pixi.js": "^8.9.2"
   },
   "dependencies": {
     "@rpgjs/common": "workspace:*",
     "@rpgjs/server": "workspace:*",
     "@rpgjs/ui-css": "workspace:*",
-    "@signe/di": "3.1.0",
-    "@signe/room": "3.2.1",
-    "@signe/sync": "3.1.1",
+    "@signe/di": "3.1.1",
+    "@signe/room": "3.3.0",
+    "@signe/sync": "3.2.0",
     "pixi-filters": "^6.1.5",
     "rxjs": "^7.8.2"
   },

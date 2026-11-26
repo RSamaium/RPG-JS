@@ -71,8 +71,18 @@ describe("a module hook replies to a projectile hitting an event", () => {
     });
     const onEnd = vi.fn();
     const impacts: unknown[] = [];
+    const planted = new Set<string>();
     const broadcast = vi.spyOn(map as any, "$broadcast").mockImplementation((message: any) => {
       if (message?.type === "projectile:impactBatch") impacts.push(...(message.value?.impacts ?? []));
+      // A planted projectile stays visible instead of playing its impact
+      if (message?.type === "projectile:updateBatch") {
+        for (const update of message.value?.projectiles ?? []) if (update.stopAt) planted.add(update.id);
+      }
+      // A projectile that stops on its hit sends its impact in its destroy entry
+      if (message?.type === "projectile:destroyBatch") {
+        impacts.push(...(message.value?.projectiles ?? []).filter((entry: any) =>
+          entry.reason === "hit" && entry.x !== undefined && !planted.has(entry.id)));
+      }
     });
     map.projectiles.emit({
       type: "arrow",

@@ -26,7 +26,7 @@
 </DOMContainer>
 
 <script>
-    import { signal, computed, effect } from "canvasengine";
+    import { signal, computed, effect, untracked } from "canvasengine";
     import { PrebuiltGui } from "@rpgjs/common";
     import { inject } from "../../core/inject";
     import { RpgClientEngine } from "../../RpgClientEngine";
@@ -87,7 +87,8 @@
         if (!available.length) return;
         const current = selectedEntry();
         if (!available.includes(current)) {
-            selectedEntry.set(available[0]);
+            // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+            untracked(() => selectedEntry.set(available[0]));
         }
     });
 

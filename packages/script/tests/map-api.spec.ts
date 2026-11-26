@@ -21,9 +21,39 @@ describe("$map: the map the script runs in, with the names of RpgMap", () => {
       return [id, found, listed, removed, $map.getEvent(id)];
     `);
 
-    expect(r.value).toEqual(["shop-1", { id: "shop-1", name: "shop", x: 150, y: 100, direction: "down" }, ["shop-1"], true, undefined]);
+    expect(r.value).toEqual(["shop-1", { id: "shop-1", name: "shop", tags: [], x: 150, y: 100, direction: "down" }, ["shop-1"], true, undefined]);
     expect(r.effects.map((e) => e.name)).toEqual(["createDynamicEvent", "removeEvent"]);
     expect(r.effects[0].params).toEqual({ id: "shop-1", x: 150, y: 100, name: "shop", graphic: "merchant", hitbox: { width: 40, height: 40 }, through: false });
+  });
+
+  it("gives the tags of the events of the world, to find the events of a kind", async () => {
+    const world = {
+      events: [
+        { id: "sheriff-1", name: "Shérif", tags: ["sheriff", "npc"], x: 10, y: 20 },
+        { id: "decoy", name: "Shérif de carton", x: 30, y: 40 },
+        { id: "sheriff-2", name: "Marshal", tags: ["sheriff"] },
+      ],
+    };
+    const r = await run(`
+      const sheriffs = $map.getEvents().filter((e) => e.tags.includes("sheriff")).map((e) => e.id);
+      const enemy = $map.spawnEnemy({ enemy: "slime", x: 1, y: 2 });
+      return [sheriffs, $map.getEvent("sheriff-1").tags, $map.getEvent("decoy").tags, $map.getEvent(enemy).tags];
+    `, world);
+
+    expect(r.value).toEqual([["sheriff-1", "sheriff-2"], ["sheriff", "npc"], [], []]);
+  });
+
+  it("gives the tags read-only: a script changes its own copy, never the event", async () => {
+    const world = { events: [{ id: "sheriff-1", tags: ["sheriff"] }] };
+    await expect(run(`$map.getEvent("sheriff-1").tags.push("outlaw");`, world)).rejects.toThrow("read-only");
+
+    const r = await run(`
+      const mine = [...$map.getEvents()[0].tags];
+      mine.push("outlaw");
+      return [mine, $map.getEvent("sheriff-1").tags];
+    `, world);
+
+    expect(r.value).toEqual([["sheriff", "outlaw"], ["sheriff"]]);
   });
 
   it("gives an id to an event that has none, and a name of its own", async () => {

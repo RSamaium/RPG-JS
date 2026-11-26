@@ -70,18 +70,23 @@ describe("RpgMapProjectiles", () => {
       },
     });
     expect(broadcasts[0].value.projectiles[0].payload).toBeUndefined();
-    const impactMessage = broadcasts.find((message) => message.type === "projectile:impactBatch");
+    const spawned = broadcasts[0].value.projectiles[0];
+    // A single shot without delay, on a plain linear trajectory: the defaults of the client are left out
+    expect(spawned).not.toHaveProperty("delay");
+    expect(spawned).not.toHaveProperty("index");
+    expect(spawned).not.toHaveProperty("count");
+    expect(spawned).not.toHaveProperty("trajectory");
+    // The projectile stops on its hit: the impact is sent once, in the destroy entry
     const destroyMessage = broadcasts.find((message) => message.type === "projectile:destroyBatch");
-    expect(impactMessage).toBeTruthy();
+    expect(broadcasts.find((message) => message.type === "projectile:impactBatch")).toBeUndefined();
     expect(destroyMessage).toBeTruthy();
-    const impact = impactMessage.value.impacts[0];
     expect(destroyMessage.value.projectiles[0]).toMatchObject({
-      id: impact.id,
+      id: spawned.id,
       reason: "hit",
-      targetId: impact.targetId,
-      x: impact.x,
-      y: impact.y,
-      distance: impact.distance,
+      targetId: "target",
+      x: expect.any(Number),
+      y: expect.any(Number),
+      distance: expect.any(Number),
     });
     expect(onImpact).toHaveBeenCalledWith(expect.objectContaining({
       projectile: expect.objectContaining({
@@ -113,16 +118,23 @@ describe("RpgMapProjectiles", () => {
       },
     });
 
+    // Nothing is sent before the step: the shots of one sync interval share one message
+    expect(broadcasts).toHaveLength(0);
+    projectiles.step(1 / 60);
+
     expect(broadcasts[0]).toMatchObject({
       type: "projectile:spawnBatch",
       value: {
         projectiles: [
-          expect.objectContaining({ index: 0, count: 3, delay: 0 }),
+          expect.objectContaining({ count: 3 }),
           expect.objectContaining({ index: 1, count: 3, delay: 0.05 }),
           expect.objectContaining({ index: 2, count: 3, delay: 0.1 }),
         ],
       },
     });
+    // `index: 0` and `delay: 0` are the defaults of the client
+    expect(broadcasts[0].value.projectiles[0]).not.toHaveProperty("index");
+    expect(broadcasts[0].value.projectiles[0]).not.toHaveProperty("delay");
   });
 
   test("applies top-level precision spread to projectile directions", () => {
@@ -142,6 +154,7 @@ describe("RpgMapProjectiles", () => {
       },
     });
 
+    projectiles.step(1 / 60);
     const direction = broadcasts[0].value.projectiles[0].direction;
     expect(direction.x).toBeCloseTo(Math.cos((10 * Math.PI) / 180), 4);
     expect(direction.y).toBeCloseTo(Math.sin((10 * Math.PI) / 180), 4);
@@ -167,6 +180,7 @@ describe("RpgMapProjectiles", () => {
       canHit: () => true,
     });
 
+    projectiles.step(1 / 60);
     expect(broadcasts[0].value.projectiles[0]).toMatchObject({
       type: "filtered",
       collisionMask: 2,
@@ -194,9 +208,33 @@ describe("RpgMapProjectiles", () => {
       canHit: () => true,
     });
 
+    projectiles.step(1 / 60);
     expect(broadcasts[0].value.projectiles[0]).toMatchObject({
       type: "filtered",
       predictImpact: true,
     });
+  });
+
+  test("sends the shots of one sync interval in one message", () => {
+    vi.restoreAllMocks();
+    const { map, broadcasts } = createMapStub();
+    (map as any).throttleSync = 50;
+    const projectiles = new RpgMapProjectiles(map as any);
+    const shoot = () => projectiles.emit({
+      type: "arrow",
+      origin: { x: 0, y: 500 },
+      direction: { x: 0, y: 1 },
+      trajectory: { type: "linear", speed: 100, range: 1000 },
+    });
+
+    // 6 steps of 60 Hz are two sync intervals of 50 ms, with one shot per step
+    for (let step = 0; step < 6; step++) {
+      shoot();
+      projectiles.step(1 / 60);
+    }
+
+    const spawns = broadcasts.filter((message) => message.type === "projectile:spawnBatch");
+    expect(spawns).toHaveLength(2);
+    expect(spawns.map((message) => message.value.projectiles.length)).toEqual([3, 3]);
   });
 });
