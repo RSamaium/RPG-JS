@@ -208,6 +208,11 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
    */
   database = signal({}) as unknown as RpgWritableSignal<Record<string, any>>;
 
+  /** Whether `updateMap()` has loaded the map in this room instance. */
+  private mapRuntimeLoaded = false;
+  /** Rebuild from the stored source in progress, shared by concurrent callers. */
+  private mapRuntimeRestore?: Promise<void>;
+
   variables: RpgWritableSignal<Record<string, unknown>> = type(
     signal<Record<string, unknown>>({}) as never,
     "variables",
@@ -354,8 +359,21 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     return typeof token === "string" && token.length > 0 ? token : undefined;
   }
 
+  /**
+   * Rebuild the map from its stored source when this room instance has not
+   * loaded it yet, e.g. after a restart or hibernation. A map already loaded
+   * by `updateMap()` is left untouched, and concurrent callers share one
+   * rebuild instead of resetting the map twice.
+   */
   private async restoreMapStreamingRuntime(): Promise<void> {
-    if (hasMapStreamingRuntime(this)) return;
+    if (this.mapRuntimeLoaded || hasMapStreamingRuntime(this)) return;
+    this.mapRuntimeRestore ??= this.rebuildMapFromStoredSource().finally(() => {
+      this.mapRuntimeRestore = undefined;
+    });
+    await this.mapRuntimeRestore;
+  }
+
+  private async rebuildMapFromStoredSource(): Promise<void> {
     const storedMap = await readMapSource(this.partyRoom) as any;
     if (!storedMap?.id) return;
     const token = this.getRuntimeMapUpdateToken();
@@ -1166,6 +1184,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   }
 
   async onSessionRestore(payload: { userSnapshot: any; user?: RpgPlayer }) {
+    // The snapshot references database ids (items, skills, states, class).
+    // After a restart the map, and so its database, must be rebuilt from its
+    // stored source before they are resolved.
+    await this.restoreMapStreamingRuntime();
     return await BaseRoom.prototype.onSessionRestore.call(this, payload);
   }
 
@@ -1603,6 +1625,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     await this.reloadMapEvents(map)
 
     this.dataIsReady$.complete()
+    this.mapRuntimeLoaded = true
 
     // Execute global map hooks (from RpgServer.map)
     await lastValueFrom(this.hooks.callHooks("server-map-onLoad", this))

@@ -222,6 +222,7 @@ async function execute(program: Program, spec: RunSpec, cover: Set<number>): Pro
   }
   const world = new SimWorld(init);
   world.shared.declare(program.shared);
+  world.declarePlayerShared(program.shared);
   Object.assign(world.shared.values, presets ?? {});
   const description = descriptionWith(spec.signals, connectionsOf(spec.http));
   const impl = spec.http ? withHttpImpl(GAME_API_IMPL) : GAME_API_IMPL;

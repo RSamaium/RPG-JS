@@ -421,8 +421,9 @@ function segmentHitsRect(a: { x: number; y: number }, b: { x: number; y: number 
 export class SharedStore {
   values: Record<string, unknown> = {};
   decl: Record<string, { client: boolean; persist: boolean }> = {};
-  declare(list: { name: string; initial: unknown; client: boolean; persist: boolean }[]) {
-    for (const d of list) if (!(d.name in this.values)) { this.values[d.name] = d.initial; this.decl[d.name] = { client: d.client, persist: d.persist }; }
+  /** Declares the properties of the room: the ones of each player (`scope: "player"`) live on the player (`SimWorld.playerShared`). */
+  declare(list: { name: string; initial: unknown; client: boolean; persist: boolean; scope?: string }[]) {
+    for (const d of list) if (d.scope !== "player" && !(d.name in this.values)) { this.values[d.name] = d.initial; this.decl[d.name] = { client: d.client, persist: d.persist }; }
   }
 }
 
@@ -431,6 +432,8 @@ export interface WorldInit {
   player?: {
     gold?: number; level?: number; name?: string; items?: Record<string, number>;
     x?: number; y?: number; direction?: string; hp?: number; sp?: number; maxHp?: number; maxSp?: number;
+    /** Values of the properties of the player declared with `shared({ name: { scope: "player" } })`, read as `$player.shared.name`. */
+    shared?: Record<string, unknown>;
   };
   /** What the player has of its character sheet: experience, states, skills, the items that can be equipped and the ones that are, the items that can be used (every item when not given). */
   sheet?: { exp?: number; states?: string[]; skills?: string[]; equipment?: string[]; equipped?: string[]; usable?: string[] };
@@ -519,6 +522,7 @@ export class SimWorld implements ScriptWorld {
     this.player.equipped = new Set(sheet.equipped ?? []);
     this.player.usable = new Set(sheet.usable ?? []);
     for (const [k, v] of Object.entries(init.player?.items ?? {})) this.player.items.set(k, v);
+    this.playerSharedPresets = clone(init.player?.shared ?? {});
     for (const [k, v] of Object.entries(init.vars ?? {})) this.player.vars.set(k, v);
     Object.assign(this.state, JSON.parse(JSON.stringify(init.state ?? {})));
     Object.assign(this.hook, init.hook ?? {});
@@ -562,6 +566,25 @@ export class SimWorld implements ScriptWorld {
       this.effects.push({ name: target, params: target.startsWith("event.") ? { id: args[0], value } : { value } });
       this.engineValues.set(key, clone(value));
     },
+  };
+
+  /** The values of the properties of the player (`scope: "player"`), by name: only the declared ones exist. */
+  playerShared: Record<string, unknown> = {};
+  private playerSharedPresets: Record<string, unknown> = {};
+
+  /** Declares the properties of the player of the simulation, starting from the values the world gives it. */
+  declarePlayerShared(list: { name: string; initial: unknown; scope?: string }[]) {
+    for (const d of list) {
+      if (d.scope !== "player" || d.name in this.playerShared) continue;
+      this.playerShared[d.name] = d.name in this.playerSharedPresets ? clone(this.playerSharedPresets[d.name]) : d.initial;
+    }
+  }
+
+  /** The properties of the player, as the game API sees them: every change is recorded as a `sync` effect with `scope: "player"`. */
+  readonly playerSharedProps: ScriptWorld["playerSharedProps"] = {
+    has: (name) => name in this.playerShared,
+    get: (name) => this.playerShared[name],
+    set: (name, value, op, operand) => { this.playerShared[name] = value; this.effects.push({ name: "sync", params: { name, op, value: operand, scope: "player" } }); },
   };
 
   /** The properties shared by the players, as the game API sees them: every change is recorded as a `sync` effect. */
@@ -613,6 +636,7 @@ export class SimWorld implements ScriptWorld {
         x: this.player.x, y: this.player.y, hp: this.player.hp, sp: this.player.sp, exp: this.player.exp, canMove: this.player.canMove,
         timers: Object.fromEntries(this.player.timers),
         states: [...this.player.states], skills: [...this.player.skills], equipped: [...this.player.equipped],
+        shared: this.playerShared,
       },
       /** The events of the map, by id: where they are, where they face, and whether they follow or flee the player. */
       events: Object.fromEntries([...(this.map?.events.values() ?? [])].map((e) => [e.id, { ...e, moving: this.map?.moving.get(e.id) ?? null }])),

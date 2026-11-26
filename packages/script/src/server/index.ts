@@ -8,7 +8,7 @@ import { ScriptService, type ScriptServiceOptions } from "./service";
 
 export { ScriptService, MAX_SCRIPT_LOGS, type ScriptServiceOptions, type ScriptSource, type ScriptError, type SignalContext, type ScriptStateStore, type ScriptLog, type HttpTransport, type HttpSendContext } from "./service";
 export type { HttpConnectionOptions, HttpRequest, HttpHostAnswer, HttpAnswer, HttpErrorCode, HttpMethod } from "../game/http";
-export { createRpgjsWorld, sharedPropsOf, SHARED_PREFIX, type RpgjsWorldOptions, type WorldEmit, enemyIdOf } from "./world";
+export { createRpgjsWorld, sharedPropsOf, playerSharedPropsOf, applyPlayerShared, SHARED_PREFIX, type RpgjsWorldOptions, type WorldEmit, enemyIdOf } from "./world";
 export { scriptHooks } from "./hooks";
 export { actionBattleHooks } from "./action-battle";
 export { DEFAULT_SIGNAL_BINDINGS, signalBinding, type HookScope, type SignalBinding, type BattleHookContext, type SignalEmission, type SignalEmissions } from "./bindings";

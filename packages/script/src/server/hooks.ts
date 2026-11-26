@@ -3,7 +3,7 @@
  * signal. This is a module like any other (`player`, `event`… hooks), so it sees every player and every event without changing
  * any of them. Several bindings may listen to the same hook.
  */
-import type { RpgServer } from "@rpgjs/server";
+import type { RpgPlayer, RpgServer } from "@rpgjs/server";
 import type { HookScope, SignalBinding, SignalEmissions } from "./bindings";
 import type { ScriptService } from "./service";
 
@@ -63,6 +63,15 @@ export function scriptHooks(service: ScriptService): RpgServer {
           void service.emit(binding.signal, emission.payload, emission.context).finally(() => running.delete(key));
         }
       }
+    };
+  }
+  // The properties of each player declared by the scripts are on the player from its arrival, before the signals of these hooks
+  const players = (module.player ??= {});
+  for (const hook of ["onConnected", "onJoinMap"]) {
+    const signals = players[hook];
+    players[hook] = (player: unknown, ...rest: unknown[]) => {
+      service.preparePlayer(player as RpgPlayer);
+      return signals?.(player, ...rest);
     };
   }
   return module as unknown as RpgServer;

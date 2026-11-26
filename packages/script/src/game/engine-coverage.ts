@@ -293,7 +293,7 @@ export const ENGINE_COVERAGE: Record<"player" | "event" | "map" | "gui" | "mapPr
         "isPhysicsSyncingSignals", "isPositiveNumber", "isStandalone", "listSaveSlots", "loadPhysic", "loadSlot", "mapView",
         "nextTick", "nextTickAsync", "normalizeTickDelta", "off", "on", "onAction", "onInput", "onJoin", "onLeave",
         "onMapStreamRequest", "onPing", "onRestore", "onSessionRestore", "onStart", "pauseLoopWhileEmpty", "players",
-        "processInput",
+        "processInput", "rebuildMapFromStoredSource",
         "refreshCharacterHitboxes", "reloadMapEvents", "removeScenarioEventsForPlayer", "runFixedTicks", "runFixedTicksAsync",
         "runPostTickUpdates", "runQueuedServerTick", "runServerTick", "saveSlot", "setAutoTick", "setEventRuntimeMetadata",
         "setPlayerLocale", "setSync", "setupCollisionDetection", "spawnScenarioEventsForPlayer", "startServerTickLoop",

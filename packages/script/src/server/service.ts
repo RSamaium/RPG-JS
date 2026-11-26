@@ -6,14 +6,14 @@
 import type { RpgEvent, RpgMap, RpgPlayer, RpgPlayerRoom } from "@rpgjs/server";
 import { apiInfo, globalNames, type ApiDescription } from "../core/api";
 import type { SignalDesc } from "../core/filter";
-import { CompileError, CompileErrors, compileProgram, type AstNode, type Limits, type Program } from "../core/interpreter";
+import { CompileError, CompileErrors, compileProgram, type AstNode, type Limits, type Program, type SharedDecl } from "../core/interpreter";
 import { SignalRegistry, type EmitReport } from "../core/signals";
 import { GAME_API_DESCRIPTION } from "../game/description";
 import { GAME_API_IMPL } from "../game/impl";
 import { httpCatalog, withHttpDescription, withHttpImpl, type HttpConnectionOptions, type HttpHostAnswer, type HttpPort, type HttpRequest } from "../game/http";
 import { parseScript } from "../parse";
 import { DEFAULT_SIGNAL_BINDINGS, type SignalBinding } from "./bindings";
-import { createRpgjsWorld } from "./world";
+import { applyPlayerShared, createRpgjsWorld } from "./world";
 
 /**
  * Where the `$state` of the scripts is kept between two starts of the server: one record of plain data per script id. The game
@@ -128,6 +128,8 @@ export class ScriptService {
   private registry: SignalRegistry;
   private readonly http?: HttpTransport;
   private readonly limits?: Limits;
+  /** The properties of each player the installed scripts declare (`scope: "player"`), by name, with the script that declared it first. */
+  private playerShared = new Map<string, { script: string; decl: SharedDecl }>();
   private states = new Map<string, Map<string, unknown>>();
   private readonly stateStore?: ScriptStateStore;
   private readonly onLog?: (log: ScriptLog) => void;
@@ -165,7 +167,9 @@ export class ScriptService {
    */
   install(script: ScriptSource): boolean {
     try {
-      this.registry.install(script.id, this.compile(script));
+      const program = this.compile(script);
+      this.claimPlayerShared(script.id, program.shared);
+      this.registry.install(script.id, program);
       this.loadState(script.id);
       this.errors = this.errors.filter((e) => e.script !== script.id);
       this.forgetReported(script.id);
@@ -175,6 +179,7 @@ export class ScriptService {
         error instanceof CompileErrors ? error.errors.map((e) => e.message).join("; ")
         : error instanceof CompileError ? error.message
         : error instanceof Error && "loc" in error ? `syntax error at line ${(error as any).loc?.line}: ${error.message}`
+        : error instanceof Error ? error.message
         : String(error);
       this.errors = [...this.errors.filter((e) => e.script !== script.id), { script: script.id, message }];
       console.error(`[script] "${script.id}" was refused: ${message}`);
@@ -184,9 +189,37 @@ export class ScriptService {
 
   uninstall(id: string): void {
     this.registry.uninstall(id);
+    for (const [name, owner] of this.playerShared) if (owner.script === id) this.playerShared.delete(name);
     // with a store the state stays in memory too: a script installed again finds it, saved or not
     if (!this.stateStore) this.states.delete(id);
     this.forgetReported(id);
+  }
+
+  /**
+   * Records the properties of each player a script declares. They are properties of the player, shared by every script: a script
+   * that declares a name another one declared with other options (initial value, client, persist) is refused, with the reason.
+   */
+  private claimPlayerShared(script: string, declarations: readonly SharedDecl[]) {
+    const mine = declarations.filter((d) => d.scope === "player");
+    for (const d of mine) {
+      const owner = this.playerShared.get(d.name);
+      if (!owner || owner.script === script) continue;
+      const same = owner.decl.initial === d.initial && owner.decl.client === d.client && owner.decl.persist === d.persist;
+      if (!same) {
+        throw new Error(`"${d.name}" is already declared for each player by "${owner.script}" with other options (initial: ${JSON.stringify(owner.decl.initial)}, client: ${owner.decl.client}, persist: ${owner.decl.persist}): declare it with the same options`);
+      }
+    }
+    for (const [name, owner] of this.playerShared) if (owner.script === script && !mine.some((d) => d.name === name)) this.playerShared.delete(name);
+    for (const d of mine) if (!this.playerShared.has(d.name)) this.playerShared.set(d.name, { script, decl: d });
+  }
+
+  /**
+   * Gives a player the properties of each player the installed scripts declare (`shared({ name: { scope: "player" } })`), so that
+   * its client reads them from its arrival, before any script runs for it. The hooks of the game call it when a player connects and
+   * when it enters a map.
+   */
+  preparePlayer(player: RpgPlayer): void {
+    applyPlayerShared(player, [...this.playerShared.values()].map((owner) => owner.decl));
   }
 
   private forgetReported(script: string) {
