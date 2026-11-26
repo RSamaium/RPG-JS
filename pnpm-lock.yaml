@@ -118,7 +118,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: ^2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/client':
         specifier: workspace:^
         version: link:../client
@@ -129,8 +129,8 @@ importers:
         specifier: workspace:^
         version: link:../server
       canvasengine:
-        specifier: ^2.5.1
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi-filters:
         specifier: ^6.1.5
         version: 6.1.5(pixi.js@8.19.0)
@@ -477,7 +477,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: ^2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/battle-kit':
         specifier: workspace:^
         version: link:../battle-kit
@@ -494,8 +494,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.1
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
     devDependencies:
       '@canvasengine/compiler':
         specifier: 2.5.0
@@ -579,7 +579,7 @@ importers:
     dependencies:
       '@canvasengine/presets':
         specifier: ^2.6.0
-        version: 2.6.0(canvasengine@2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
+        version: 2.6.0(canvasengine@2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7))(pixi.js@8.19.0)
       '@rpgjs/battle-kit':
         specifier: workspace:^
         version: link:../battle-kit
@@ -596,8 +596,8 @@ importers:
         specifier: workspace:^
         version: link:../vite
       canvasengine:
-        specifier: ^2.5.1
-        version: 2.5.2(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
+        specifier: ^2.6.0
+        version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
       pixi-filters:
         specifier: ^6.1.5
         version: 6.1.5(pixi.js@8.19.0)

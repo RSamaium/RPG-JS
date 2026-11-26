@@ -3,12 +3,10 @@
  * cinematic banners and the surfaces of its panels. Built on the ui-css
  * tokens: a game theme restyles the tactical HUD too.
  */
-/* tactical */
-installTacticalStyles`). */
-export default `/* The sheet is loaded in the game of every project that plugs the module: it styles the HUD (\`.rpg-ui-tactical-shell\`) and nothing else. */
+/* The sheet is loaded in the game of every project that plugs the module: it styles the HUD (`.rpg-ui-tactical-shell`) and nothing else. */
 .rpg-ui-tactical-shell {
   color-scheme: dark;
-  /* Every colour and font of the HUD comes from the theme of the game (\`@rpgjs/ui-css\`, \`--rpg-ui-*\`); the second value is the fallback
+  /* Every colour and font of the HUD comes from the theme of the game (`@rpgjs/ui-css`, `--rpg-ui-*`); the second value is the fallback
      when the theme sheet is not loaded. */
   --gold: var(--rpg-ui-selection, #d9b779);
   --cream: var(--rpg-ui-text, #f4e8cc);
@@ -1521,9 +1519,7 @@ body:has(.rpg-ui-tactical-shell) .rpg-ui-notifications {
   font: 12px var(--rpg-ui-font-display);
 }
 
-/* cinematic-hud */
-installTacticalStyles`). */
-export default `/* Contextual command stage. Artwork deliberately breaks out of the stage. */
+/* Contextual command stage. Artwork deliberately breaks out of the stage. */
 .rpg-ui-tactical-bottom{left:0;right:0;bottom:0;padding:0 30px 14px;isolation:isolate}
 .rpg-ui-tactical-bottom.has-character:before{content:"";position:absolute;z-index:-1;inset:35px 0 0;background:linear-gradient(110deg,color-mix(in srgb, var(--ink) 92%, transparent),color-mix(in srgb, var(--ink) 96%, transparent) 65%,color-mix(in srgb, var(--ink) 87%, transparent));border-top:1px solid color-mix(in srgb, color-mix(in srgb, var(--gold), black 20%) 36%, transparent);clip-path:polygon(0 0,76% 0,81% 24%,92% 24%,95% 36%,100% 36%,100% 100%,0 100%)}
 .rpg-ui-tactical-command-deck,.rpg-ui-tactical-command-deck.is-idle{display:flex;justify-content:flex-end;align-items:flex-end;gap:30px;min-height:80px}
@@ -1594,9 +1590,7 @@ export default `/* Contextual command stage. Artwork deliberately breaks out of 
 }
 @media(max-height:600px) and (min-width:701px){.rpg-ui-tactical-detail-art{height:235px}.rpg-ui-tactical-unit-detail,.rpg-ui-tactical-detail-copy{height:210px}.rpg-ui-tactical-detail-copy p.rpg-ui-tactical-detail-bio,.rpg-ui-tactical-detail-note{display:none}.rpg-ui-tactical-action-buttons button{min-height:36px;padding-block:5px}.rpg-ui-tactical-action-buttons button small{display:none}.rpg-ui-tactical-actions{padding:0}.rpg-ui-tactical-skill-menu{bottom:230px;max-height:calc(100dvh - 250px);overflow:auto}}
 
-/* hud */
-installTacticalStyles`). */
-export default `/*
+/*
  * The HUD of a battle, laid over the map: a phase chip and the controls at the top, a dock at the bottom that never moves (the card of
  * the unit, what to do, the end of the phase). It comes after the older sheets and replaces their top bar, objective card and bottom panel.
  */
@@ -1862,11 +1856,9 @@ export default `/*
   animation: none;
 }
 
-/* theme-surfaces */
-installTacticalStyles`). */
-export default `/*
- * Panels and buttons of the battle drawn like the other interfaces of the game (\`@rpgjs/ui-css\`): the same surface, border, radius, shadow
- * and font tokens as \`.rpg-ui-panel\` and the controls, so the chat, the menus and the HUD of a battle look like one interface and a theme
+/*
+ * Panels and buttons of the battle drawn like the other interfaces of the game (`@rpgjs/ui-css`): the same surface, border, radius, shadow
+ * and font tokens as `.rpg-ui-panel` and the controls, so the chat, the menus and the HUD of a battle look like one interface and a theme
  * restyles them all. It comes last: it replaces the look of the surfaces of the older sheets and keeps their layout.
  */
 .rpg-ui-tactical-shell :is(.rpg-ui-tactical-panel, .rpg-ui-tactical-modal, .rpg-ui-tactical-skill-menu, .rpg-ui-tactical-unit-menu, .rpg-ui-tactical-dock-card, .rpg-ui-tactical-item-menu) {

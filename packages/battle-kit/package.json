@@ -39,7 +39,7 @@
     "@rpgjs/client": "workspace:^",
     "@rpgjs/common": "workspace:^",
     "@rpgjs/server": "workspace:^",
-    "canvasengine": "^2.5.1",
+    "canvasengine": "^2.6.0",
     "pixi-filters": "^6.1.5",
     "pixi.js": "^8.9.2"
   },
