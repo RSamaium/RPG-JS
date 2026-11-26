@@ -79,6 +79,34 @@ describe("the player, through the names that mirror RpgPlayer", () => {
     await settled(() => expect(player.getVariable(`shop_${n}`)).toEqual([30, 2, 7, "string"]));
   });
 
+  it("shows and hides the GUIs attached to sprites: its own, or those of players of the map given by id", async () => {
+    const { player, map } = await start([onLevelUp("attached", `
+      const me = $map.getPlayers()[0].id;
+      $player.showAttachedGui();
+      $player.showAttachedGui([me, "ana"]);
+      $player.showAttachedGui(["nobody", "ana", "ana"]);
+      $player.showAttachedGui("nobody");
+      $player.hideAttachedGui("ana");
+      $player.hideAttachedGui();
+    `)]);
+    // another player of the map, known by its id only
+    const ana = { id: "ana" };
+    const getPlayer = map.getPlayer.bind(map);
+    vi.spyOn(map, "getPlayer").mockImplementation((id: string) => (id === "ana" ? ana : getPlayer(id)));
+    const emitted = vi.spyOn(player as any, "emit");
+    await levelUp(player);
+    const tooltips = () => emitted.mock.calls.filter(([type]) => type === "gui.tooltip").map(([, value]) => value);
+    await settled(() => expect(tooltips()).toHaveLength(5));
+    expect(tooltips()).toEqual([
+      { players: [player.id], display: true },
+      { players: [player.id, "ana"], display: true },
+      // an id that is not a player of the map is ignored, an id given twice counts once, and nothing is sent for nobody
+      { players: ["ana"], display: true },
+      { players: ["ana"], display: false },
+      { players: [player.id], display: false },
+    ]);
+  });
+
   it("reports a wrong argument with the name of the parameter, and the game goes on", async () => {
     const error = errors();
     const { player } = await start([onLevelUp("bad", `$player.flash({ type: "blink" });`)]);

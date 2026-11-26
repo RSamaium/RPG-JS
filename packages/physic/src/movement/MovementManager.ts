@@ -154,6 +154,8 @@ export interface ProjectileMovementHelperOptions extends MovementHelperOptions, 
 export class MovementManager {
   private readonly entries: Map<string, MovementEntry> = new Map();
   private readonly entityWrappers = new WeakMap<Entity, EntityMovementBody>();
+  /** Identifiers of the bodies whose strategies are not updated (see {@link pause}) */
+  private readonly paused: Set<string> = new Set();
 
   constructor(
     private readonly resolveEntity?: EntityResolver,
@@ -524,6 +526,54 @@ export class MovementManager {
   }
 
   /**
+   * Pauses the strategies of an entity: they stay registered, keep their state, and are no longer updated.
+   *
+   * Use it for an entity that nothing observes (an NPC far from every player): its route costs nothing while it is
+   * paused, and it goes on from where it stopped after {@link resume}. No time passes for a paused strategy, so a
+   * timed movement (a dash, a knockback) does not expire. When the entity is known, it is put to sleep so that the
+   * velocity set by the last update does not keep moving it.
+   *
+   * Pausing an identifier with no entity or no strategy is allowed: strategies added later are paused too.
+   *
+   * @param target - Entity, movement body, or identifier
+   *
+   * @example
+   * ```ts
+   * manager.pause(npc);
+   * manager.update(1 / 60); // the route of the NPC is not advanced
+   * manager.resume(npc);
+   * ```
+   */
+  pause(target: Entity | MovementBody | string): void {
+    this.paused.add(this.resolveKey(target));
+    this.resolveKnownEntity(target)?.sleep();
+  }
+
+  /**
+   * Resumes the strategies of an entity paused with {@link pause}, and wakes the entity up.
+   *
+   * @param target - Entity, movement body, or identifier
+   * @returns True when the entity was paused
+   */
+  resume(target: Entity | MovementBody | string): boolean {
+    const wasPaused = this.paused.delete(this.resolveKey(target));
+    if (wasPaused) {
+      this.resolveKnownEntity(target)?.wakeUp();
+    }
+    return wasPaused;
+  }
+
+  /**
+   * Checks if the strategies of an entity are paused.
+   *
+   * @param target - Entity, movement body, or identifier
+   * @returns True when the entity was paused with {@link pause}
+   */
+  isPaused(target: Entity | MovementBody | string): boolean {
+    return this.paused.has(this.resolveKey(target));
+  }
+
+  /**
    * Checks if an entity has active strategies.
    *
   * @param target - Entity or identifier
@@ -568,6 +618,10 @@ export class MovementManager {
 
       if (strategies.length === 0) {
         this.entries.delete(key);
+        continue;
+      }
+
+      if (this.paused.has(key)) {
         continue;
       }
 
@@ -661,6 +715,24 @@ export class MovementManager {
     }
     const body = this.resolveEntity?.(target);
     return body?.getEntity?.() ?? undefined;
+  }
+
+  /** Identifier of a target, without requiring the entity to exist. */
+  private resolveKey(target: Entity | MovementBody | string): string {
+    if (typeof target === 'string') {
+      return target;
+    }
+    return target instanceof Entity ? target.uuid : target.id;
+  }
+
+  /** Entity of a target when there is one; never throws. */
+  private resolveKnownEntity(target: Entity | MovementBody | string): Entity | undefined {
+    if (target instanceof Entity) {
+      return target;
+    }
+    const body = typeof target === 'string' ? this.resolveEntity?.(target) : target;
+    const entity = (body as { getEntity?: () => Entity | undefined } | undefined)?.getEntity?.();
+    return entity ?? undefined;
   }
 
   private resolveTarget(target: Entity | MovementBody | string): MovementBody {

@@ -458,6 +458,11 @@ export interface CreateStudioMapUpdatePayloadOptions {
         loadRadius?: number;
         /** Radius retained by the client to avoid boundary churn. Defaults to 3. */
         retainRadius?: number;
+        /**
+         * `'interest'` (default) pauses the events in a chunk that no player retains; `'always'` simulates every event.
+         * An event with `alwaysSimulated = true` is simulated in both modes.
+         */
+        eventSimulation?: "interest" | "always";
       };
 }
 

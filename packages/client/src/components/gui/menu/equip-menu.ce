@@ -98,7 +98,7 @@
 </DOMContainer>
 
 <script>
-    import { signal, computed, createTabindexNavigator, effect } from "canvasengine";
+    import { signal, computed, createTabindexNavigator, effect, untracked } from "canvasengine";
     import { selectionSound } from "../lifecycle";
     import { inject } from "../../../core/inject";
     import { RpgClientEngine } from "../../../RpgClientEngine";
@@ -148,7 +148,8 @@
                 next[item.id] = item.equipped;
             }
         });
-        equippedOverrides.set(next);
+        // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+        untracked(() => equippedOverrides.set(next));
     });
 
     const itemEquipped = (item) => {
@@ -413,12 +414,13 @@
 
     effect(() => {
         const count = listEntries().length;
+        // Outside dependency collection: what this write makes others read must not become a dependency of this effect
         if (!count) {
-            selectedItem.set(0);
+            untracked(() => selectedItem.set(0));
             return;
         }
         if (selectedItem() >= count) {
-            selectedItem.set(count - 1);
+            untracked(() => selectedItem.set(count - 1));
         }
     });
 </script>

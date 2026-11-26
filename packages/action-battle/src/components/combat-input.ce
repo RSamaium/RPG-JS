@@ -1,7 +1,7 @@
 <Container controls={controls} />
 
 <script>
-  import { computed, effect, signal } from "canvasengine";
+  import { computed, effect, signal, untracked } from "canvasengine";
   import { inject, RpgClientEngine } from "@rpgjs/client";
   import { getKeyboardControlBind } from "@rpgjs/client";
   import {
@@ -149,6 +149,8 @@
   const controls = signal(buildControls());
 
   effect(() => {
-    controls.set(buildControls());
+    const next = buildControls();
+    // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+    untracked(() => controls.set(next));
   });
 </script>

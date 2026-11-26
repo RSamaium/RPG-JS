@@ -10,7 +10,7 @@
 </Container>
 
 <script>
-    import { animatedSignal, computed, effect, signal } from "canvasengine";
+    import { animatedSignal, computed, effect, signal, untracked } from "canvasengine";
     import { resolveSpritesheet } from "../spritesheet-utils";
 
     const { x, y, object, onFinish, text, icon } = defineProps()
@@ -36,7 +36,8 @@
         const iconValue = icon?.();
         const iconId = getIconId(iconValue);
         if (!iconId) {
-            iconSheet.set(null);
+            // Outside dependency collection: what this write makes others read must not become a dependency of this effect
+            untracked(() => iconSheet.set(null));
             return;
         }
         resolveSpritesheet(iconId).then((definition) => {
