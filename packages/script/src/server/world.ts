@@ -217,6 +217,13 @@ function enginePortOf(player: RpgPlayer, map: RpgMap | null): EnginePort {
     if (method === "getShapes" || method === "getInShapes") {
       return (object[method]() as any[]).map((shape) => ({ name: String(shape.name), x: number(shape.x), y: number(shape.y), width: number(shape.width), height: number(shape.height) }));
     }
+    if (method === "showAttachedGui" || method === "hideAttachedGui") {
+      if (args[0] === undefined) return object[method]();
+      // ids become the players of the map: a script never holds a player, and cannot name one of another map
+      const ids = Array.isArray(args[0]) ? args[0] : [args[0]];
+      const targets = [...new Set(ids.map(String))].map((id) => m?.getPlayer?.(id)).filter(Boolean);
+      return targets.length ? object[method](targets) : undefined;
+    }
     if (method === "autoChangeMap") { const p = args[0] as { x: number; y: number }; return object.autoChangeMap(new Vector2(p.x, p.y)); }
     if (method === "applyDamage") {
       const attacker = m?.getEvent?.(String(args[0])) ?? m?.getPlayer?.(String(args[0]));

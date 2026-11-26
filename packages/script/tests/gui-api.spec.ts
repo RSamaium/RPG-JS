@@ -41,3 +41,29 @@ describe("a script opens, updates and closes the GUIs of a game, as player.gui(i
     await expect(run(`$player.openGui("quests_panel", {}, { waitingAction: true });`)).rejects.toThrow(/blockPlayerInput/);
   });
 });
+
+describe("a script shows and hides the GUIs attached to a sprite, as player.showAttachedGui does in RPGJS", () => {
+  it("records the calls: its own sprite, one player, or a list of players", async () => {
+    const r = await run(`
+      $player.showAttachedGui();
+      $player.showAttachedGui("ana");
+      $player.showAttachedGui(["ana", "bob"]);
+      $player.hideAttachedGui(["bob"]);
+      $player.hideAttachedGui();
+    `);
+
+    expect(r.effects).toEqual([
+      { name: "player.showAttachedGui", params: { args: [] } },
+      { name: "player.showAttachedGui", params: { args: ["ana"] } },
+      { name: "player.showAttachedGui", params: { args: [["ana", "bob"]] } },
+      { name: "player.hideAttachedGui", params: { args: [["bob"]] } },
+      { name: "player.hideAttachedGui", params: { args: [] } },
+    ]);
+  });
+
+  it("refuses targets that are not ids, and a list that is too long", async () => {
+    await expect(run(`$player.showAttachedGui(3);`)).rejects.toThrow(/targets/);
+    await expect(run(`$player.hideAttachedGui([{ id: "ana" }]);`)).rejects.toThrow(/targets/);
+    await expect(run(`const ids = []; for (let i = 0; i < 1001; i++) { ids.push("p" + i); } $player.showAttachedGui(ids);`)).rejects.toThrow();
+  });
+});
