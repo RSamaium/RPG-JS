@@ -291,6 +291,8 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
   });
   /** Enable/disable automatic tick processing (useful for unit tests) */
   private _autoTickEnabled: boolean = true;
+  /** Whether the loop was stopped because the last connection left, and not by a call to `setAutoTick(false)` */
+  private _loopPausedWhileEmpty: boolean = false;
   /** Runtime templates for scenario events to instantiate per player */
   private _scenarioEventTemplates: EventPosOption[] = [];
   /** Runtime registry of event mode by id */
@@ -376,6 +378,19 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
 
   private hasActiveConnections(): boolean {
     return Array.from(this.partyRoom.getConnections()).length > 0;
+  }
+
+  /**
+   * Stop the loop when no connection is left on the room, and remember that it was stopped for that reason, so that
+   * the next player or the next map update starts it again.
+   *
+   * @returns Whether the room is empty
+   */
+  private pauseLoopWhileEmpty(): boolean {
+    if (this.hasActiveConnections()) return false;
+    if (this._autoTickEnabled) this._loopPausedWhileEmpty = true;
+    this.setAutoTick(false);
+    return true;
   }
 
   protected emitPhysicsInit(context: MapPhysicsInitContext): void {
@@ -959,7 +974,13 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     // entity cache. Force the next sync packet to include every visible entity.
     this.spatialVisibleEventIds.delete(player.id);
     this.spatialVisiblePlayerIds.delete(player.id);
+    // A room instance created again from its storage (an evicted Durable Object, a restarted process) has not
+    // loaded its map: rebuild it before the player enters, without waiting for the client to ask for the map stream.
+    if (!this.data()?.id) {
+      await this.restoreMapStreamingRuntime();
+    }
     if (this.data()?.id) {
+      this._loopPausedWhileEmpty = false;
       this.setAutoTick(true);
     }
     const alignPlayerBodyWithSignals = () => {
@@ -1106,9 +1127,7 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
     player.lastProcessedInputTick = null;
     player.lastProcessedInputServerTick = null;
     player._lastFramePositions = null;
-    if (!this.hasActiveConnections()) {
-      this.setAutoTick(false);
-    }
+    this.pauseLoopWhileEmpty();
     await dispatchPlayerDisconnected(this.hooks, player, conn);
   }
 
@@ -1593,8 +1612,10 @@ export class RpgMap extends RpgCommonMap<RpgPlayer> {
       await (this as any)._onLoad();
     }
 
-    if (!this.hasActiveConnections()) {
-      this.setAutoTick(false);
+    // A map loaded while a player is connected runs its loop, even if the loop was stopped when the room was empty
+    if (!this.pauseLoopWhileEmpty() && this._loopPausedWhileEmpty) {
+      this._loopPausedWhileEmpty = false;
+      this.setAutoTick(true);
     }
 
     // TODO: Update map
