@@ -93,10 +93,12 @@ function advance(state: BattleState, hooks: RulesHooks[] = []) {
 export function hold(previous: BattleState, unitId: string, cell: Cell | null, team: Team, actor: string): BattleState {
   if (!previous.started || previous.winner || previous.phase !== team) throw new Error("tactical.error.turn");
   const unit = previous.units.find((u) => u.id === unitId);
-  if (!unit || unit.team !== team || unit.hp <= 0 || unit.acted) throw new Error("tactical.error.unit");
+  if (!unit || unit.team !== team) throw new Error("tactical.error.unit");
   if (unit.owner && unit.owner !== actor) throw new Error("tactical.error.owner");
   const others = (previous.holds ?? []).filter((h) => h.unitId !== unitId);
+  // Letting go is always allowed: a unit that acted or fell meanwhile must not keep a cell from the others.
   if (!cell) return { ...previous, holds: others };
+  if (unit.hp <= 0 || unit.acted) throw new Error("tactical.error.unit");
   if (heldByOther(previous, unit, cell)) throw new Error("tactical.error.held");
   if (unit.moved || !inside(previous.board, cell) || !reachable(previous, unit).get(key(cell))?.length) throw new Error("tactical.error.move");
   return { ...previous, holds: [...others, { unitId, x: cell.x, y: cell.y, owner: actor }] };
@@ -149,7 +151,10 @@ export function transition(
   }
   const commands = (u: Unit) => !actor || !u.owner || u.owner === actor;
   if (command.type === "endPhase") {
-    state.units.filter((u) => u.team === team && commands(u)).forEach((u) => (u.acted = true));
+    const ending = state.units.filter((u) => u.team === team && commands(u));
+    ending.forEach((u) => (u.acted = true));
+    // Their turn is over: the cells they were about to move to are free again for the partners still playing.
+    if (state.holds?.length) state.holds = state.holds.filter((h) => !ending.some((u) => u.id === h.unitId));
     advance(state, hooks);
     state.revision++;
     return done({ kind: "phase" });

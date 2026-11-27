@@ -14,7 +14,7 @@ The server options and hooks change the rules; the client options and hooks chan
 | `units`, `skills`, `items`, `roles`, `encounters` | — | Data kept outside the RPGJS database (the database is read otherwise). |
 | `ai` | attack the weakest target in range, else close in | Enemy AI (`TacticalAi`). |
 | `enemyDelay` | `1650` | Delay between two enemy actions, in ms. |
-| `turnSeconds` | `60` | Seconds a side has to play its phase with several players; `0`: no limit. An encounter's own value wins. |
+| `turnSeconds` | `60` | Seconds a side has to play its phase with several players; `0`: no limit. Once a player pressed Begin, the battle also starts after that time without the partners who did not. An encounter's own value wins. |
 | `hidePlayer` | `true` | Hide the player's map sprite during the battle, for everyone. The fighters' own screens hide every event and player of the map anyway (`engine.hideMapObjects`, see [Hide map objects](/guide/hide-map-objects)). |
 | `hero(player, { side, seat })` | — | How the hero of a player fights: `role`, `battler`, `stats.range`, `stats.move`… (see [the hero of a player](/combat/tactical/battle-data#the-hero-of-a-player)). |
 | `hooks` | — | Hooks declared without a module. |
@@ -117,7 +117,7 @@ defineModule<RpgClient>({
 });
 ```
 
-`onPlay` runs before each event: return `false` to play its effects yourself (the units still move). `stage` gives `fx` (battle-kit `FxPlayer`), `screen` (`ScreenEffects`), `popup(text, x, y, { color, big })`, `world(cell)` (cell centre in map pixels) and `unit(id)` (reactive view of a unit). The hooks change what is shown, never the outcome: the server owns the rules.
+`onPlay` runs before each event: return `false` to play its effects yourself (the units still move). A move the player walked on their own screen before sending it reaches `onPlay` when the server confirms it, and what the hook returns is not used for it. `stage` gives `fx` (battle-kit `FxPlayer`), `screen` (`ScreenEffects`), `popup(text, x, y, { color, big })`, `world(cell)` (cell centre in map pixels) and `unit(id)` (reactive view of a unit). The hooks change what is shown, never the outcome: the server owns the rules.
 
 ## Public API
 

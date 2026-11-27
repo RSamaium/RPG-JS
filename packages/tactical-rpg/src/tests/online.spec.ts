@@ -51,6 +51,16 @@ describe("a cell held for the move a player prepares", () => {
     expect(over.holds).toBeUndefined();
     expect(bob.id).not.toBe(alice.id);
   });
+  it("is free again when its player ends their part of the phase while a partner still plays", () => {
+    const state = coopState();
+    const { alice, cell } = sharedCell(state);
+    const held = hold(state, alice.id, cell, "ally", "a");
+    const ended = transition(held, { type: "endPhase" }, "ally", [], "a").state;
+    expect(ended.phase).toBe("ally");
+    expect(ended.holds ?? []).toEqual([]);
+    // The let-go the screen sends after an order is accepted even once the unit acted.
+    expect(hold({ ...held, units: held.units.map((u) => (u.id === alice.id ? { ...u, acted: true } : u)) }, alice.id, null, "ally", "a").holds).toEqual([]);
+  });
   it("is refused on the unit of a partner and outside the reach of the unit", () => {
     const state = coopState();
     const { alice } = sharedCell(state);

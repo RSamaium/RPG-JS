@@ -11,6 +11,7 @@ vi.mock("@rpgjs/common", async (original) => ({
   createModule: (_name: string, value: unknown) => value,
 }));
 import { play, settle, type Player } from "./scenario-harness";
+import { stopTacticalBattle } from "../server";
 
 /**
  * Scenarios played by two players with the keyboard, as in the game: a real battle on the server and a client per
@@ -155,6 +156,49 @@ describe("co-op: two players against the AI", () => {
     // HP is written as at least 1; nothing for the player who left.
     expect(a.player.hp).toBe(1);
     expect(b.player.hp).toBe(100);
+  });
+});
+
+describe("a player alone", () => {
+  it("a move and an attack in one order: the next order is taken as soon as the screen is ready, and onPlay sees the move", async () => {
+    const { a, result } = await play("solo", { solo: true });
+    const played: string[] = [];
+    a.state.connectEventHook(async (event) => {
+      played.push(event.kind);
+      return false;
+    });
+    await a.keys("nextUnit", "action", "escape", "up", "up", "action");
+    expect(a.menu()[0]).toBe(">attack");
+    await a.keys("action", "up", "action");
+    // The screen is ready once the attack has played: the end of the phase is taken at once, not refused as too early.
+    for (let i = 0; i < 100 && a.state.busy(); i++) await settle(20);
+    expect(a.state.busy()).toBe(false);
+    expect(a.view().units.find((u) => u.team === "enemy")!.hp).toBeGreaterThan(0);
+    // The ally still has to play: the end of the phase is an order of its own.
+    expect(a.view().phase).toBe("ally");
+    await a.keys("endPhase", "action");
+    await settle(20);
+    expect(a.state.notice()).not.toBe("Wait for the action to finish.");
+    expect(a.view().phase).toBe("enemy");
+    // The hook of the game saw the move the player walked, then the attack.
+    expect(played.slice(0, 2)).toEqual(["move", "attack"]);
+    await stopTacticalBattle(a.player as never);
+    await result.catch(() => {});
+  });
+});
+
+describe("co-op: the start of the battle", () => {
+  it("a partner who never presses Begin does not hold the other: the battle starts after the time of a phase", async () => {
+    const { a, b } = await play("melee", { bobAway: true });
+    // Alice pressed Begin when she entered (3 s ago): 60 s by default.
+    expect(a.view().ready).toEqual([a.player.id]);
+    await settle(55_000);
+    expect(a.view().started).toBe(false);
+    await settle(3_000);
+    expect(a.view().started).toBe(true);
+    expect(b.view().started).toBe(true);
+    await stopTacticalBattle(a.player as never);
+    await stopTacticalBattle(b.player as never);
   });
 });
 

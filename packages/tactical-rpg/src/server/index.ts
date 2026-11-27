@@ -674,6 +674,7 @@ async function run(
     ended = true;
     clearTimeout(timer);
     clearTimeout(clock);
+    clearTimeout(readyClock);
     commit();
     for (const seat of present()) await callHooks(seat.player, "onEnd", seat.player, handle, result(seat.team));
   };
@@ -772,6 +773,22 @@ async function run(
 
   // Orders one at a time, whoever gives them (veto hooks are async).
   let queue = Promise.resolve();
+  /** Started once a player is ready and the others are not (`turnSeconds`): the battle then starts without them. */
+  let readyClock: ReturnType<typeof setTimeout> | undefined;
+  const startAnyway = (seat: Seat) =>
+    (queue = queue
+      .then(async () => {
+        if (ended || state.started || state.winner || !present().length) return;
+        const who = seat.present ? seat : present()[0];
+        const out = transition(state, { type: "start" }, who.team, hooks, who.player.id);
+        state = { ...out.state, ready: [] };
+        wait(out.event, 1200, 300);
+        arm();
+        send({ event: out.event });
+        if (state.winner) await finish();
+        else schedule();
+      })
+      .catch((error) => console.error("[Tactical] start failed", error)));
   const order = (seat: Seat, env: CommandEnvelope) =>
     (queue = queue.then(async () => {
       if (!seat.present) return;
@@ -792,11 +809,18 @@ async function run(
           // Coop: the battle starts once every player is ready.
           if (state.started) throw new Error("tactical.error.started");
           state = { ...state, ready: [...new Set([...state.ready, seat.player.id])] };
-          if (present().some((s) => !state.ready.includes(s.player.id))) return send({});
+          if (present().some((s) => !state.ready.includes(s.player.id))) {
+            // A partner who never presses Begin does not hold the others: the battle starts after the time of a phase.
+            if (limit > 0 && !readyClock) readyClock = setTimeout(() => startAnyway(seat), limit * 1000);
+            return send({});
+          }
         }
         const out = transition(state, env.command, seat.team, hooks, seat.player.id);
         state = { ...out.state, ready: [] };
-        wait(out.event, env.command.type === "move" ? 900 : 1200, 300);
+        if (env.command.type === "start") clearTimeout(readyClock);
+        // A move sent with its action was already walked on the screen of the player who gave it: alone, nobody else plays it,
+        // so the server waits only for the action (the next order would be refused as too early).
+        if (!(env.then && env.command.type === "move" && !coop)) wait(out.event, env.command.type === "move" ? 900 : 1200, 300);
         arm();
         send({ event: out.event });
         // The action that follows a move, in the same order: clients queue its

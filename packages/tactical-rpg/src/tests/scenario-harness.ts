@@ -40,6 +40,11 @@ export const database: Record<string, unknown> = {
   "no-seat": tacticalEncounter({ name: "No seat", tactical: { allies: [{ hero: true, x: 3, y: 5 }, { hero: true, x: 4, y: 5 }], enemies: [{ unit: "sentinel", x: 4, y: 0 }] } }),
   // One hero placement for two players.
   "one-hero": tacticalEncounter({ name: "One hero", tactical: { allies: [{ hero: true, x: 3, y: 5 }], enemies: [{ unit: "sentinel", x: 4, y: 0 }] } }),
+  // One hero, an ally still to play, and a tough enemy three cells up: a move of two cells and an attack in one order.
+  solo: tacticalEncounter({
+    name: "Solo",
+    tactical: { allies: [{ hero: true, x: 3, y: 5 }, { unit: "post", x: 6, y: 6 }], enemies: [{ unit: "sentinel", x: 3, y: 2 }] },
+  }),
   arena: tacticalEncounter({ name: "Arena", tactical: { allies: [{ hero: true, x: 4, y: 6 }], enemies: [{ hero: true, x: 4, y: 0 }] } }),
 };
 
@@ -144,20 +149,25 @@ async function makeSide(name: string, loadout?: Loadout) {
 export const settle = (ms = 3000) => vi.advanceTimersByTimeAsync(ms);
 
 /** Two players, A and B, in a co-op battle against the AI, or in a duel (A against B). Both enter it. */
-export async function play(encounter: string, o: { a?: Loadout; b?: Loadout; duel?: boolean; server?: Parameters<typeof provideTacticalServer>[0] } = {}) {
+export async function play(
+  encounter: string,
+  o: { a?: Loadout; b?: Loadout; duel?: boolean; solo?: boolean; bobAway?: boolean; server?: Parameters<typeof provideTacticalServer>[0] } = {},
+) {
   vi.useFakeTimers();
   provideTacticalServer(o.server);
   const a = await makeSide("Alice", o.a);
   const b = await makeSide("Bob", o.b);
   const result = startTacticalBattle(
-    o.duel ? { players: [a.player as never], versus: [b.player as never], encounter } : { players: [a.player as never, b.player as never], encounter },
+    o.duel
+      ? { players: [a.player as never], versus: [b.player as never], encounter }
+      : { players: (o.solo ? [a.player] : [a.player, b.player]) as never, encounter },
   ) as Promise<TacticalResult>;
   // A battle that does not open rejects before the test awaits it: not an unhandled rejection.
   result.catch(() => {});
   await settle(0);
-  // "Enter the battle" on both screens.
+  // "Enter the battle" on both screens (Bob stays on the intro when he is away).
   await a.keys("action");
-  await b.keys("action");
+  if (!o.solo && !o.bobAway) await b.keys("action");
   await settle();
   const leave = (side: Player) => stopTacticalBattle(side.player as never);
   return { a, b, result, leave };

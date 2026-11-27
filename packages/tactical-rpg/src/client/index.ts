@@ -72,7 +72,10 @@ export interface TacticalStage {
 export interface TacticalClientHooks {
   /** The first state of a battle is shown. */
   onStart?(state: BattleState): void | Promise<void>;
-  /** Every event, before it is played: return `false` to play its effects yourself (the units still move). */
+  /**
+   * Every event, before it is played: return `false` to play its effects yourself (the units still move). A move the local player
+   * walked before sending it is given when the server confirms it, and what is returned is not used for it.
+   */
   onPlay?(event: BattleEvent, state: BattleState, stage: TacticalStage): boolean | void | Promise<boolean | void>;
   /** The HUD closes on a battle. */
   onEnd?(state: BattleState): void | Promise<void>;

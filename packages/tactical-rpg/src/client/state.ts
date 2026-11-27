@@ -371,6 +371,8 @@ async function play(packet: BattlePacket) {
     packet.event?.kind === "move" && move && packet.event.unitId === move.unitId &&
     packet.event.path?.at(-1)?.x === move.cell.x && packet.event.path?.at(-1)?.y === move.cell.y
   ) {
+    // The hooks see it too (it was walked before being sent: what they return is not used).
+    await eventHook(packet.event, packet.state);
     battle.set(packet.state);
     staged.set(null);
     animation = null;

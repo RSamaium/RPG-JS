@@ -93,7 +93,7 @@ export const database = {
 | `objective` | Display text only: what the HUD says the heroes have to do. Without it, the HUD shows the text of the `goal` type (`tactical.objective.<type>`). It decides nothing. |
 | `board` | Grid size and position; `origin` (map pixels) defaults to around the player. |
 | `rules` | What the heroes may do (everything by default). |
-| `turnSeconds` | Seconds a side has to play its phase when several players are in the battle (0: no limit). |
+| `turnSeconds` | Seconds a side has to play its phase when several players are in the battle (0: no limit). It also bounds the wait at the start: once a player pressed Begin, the battle starts after that time even if a partner did not. |
 | `goal` | The objective type that decides the battle: `type` is `eliminate` (default), `boss` (`enemy`: index of the chief among `enemies`), `survive` (`turns`), `reach` (`cell`) or a type added with `registerObjectiveType`; `limit` is the number of rounds the heroes have. The heroes always lose when none of them stands, and win when no enemy stands. **Ignored in PvP**: a duel is won when the other side is down or surrenders. |
 
 `board` takes `columns`, `rows`, `cellSize` (a 9 × 7 grid by default, whose cells are the tiles of the map: 64 pixels when the map has no tile size), `origin` and `blocked` (cells written `"x,y"`). `rules` takes `canAttack`, `canUseSkills`, `canUseItems`, `canGuard` and `canEscape`.
