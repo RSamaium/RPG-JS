@@ -214,6 +214,31 @@ export class BattlerModel {
     p.resolve();
   }
 
+  /**
+   * Back home and at rest, standing or fallen as its HP says: after a choreography cut short (a beat skipped), nothing stays where
+   * the animation left it.
+   */
+  settle() {
+    const pending = this.pending;
+    this.pending = null;
+    pending?.resolve();
+    this.offX.set(0);
+    this.offY.set(0);
+    this.flash.set(0);
+    this.blur.set(0);
+    this.targeted.set(false);
+    const fallen = this.hp() <= 0;
+    this.dead.set(fallen);
+    if (!fallen) {
+      this.alpha.set(1);
+      return this.idle();
+    }
+    this.anim.set(`${animName(this.info, "dead")}@hold`);
+    // A fallen monster has dissolved; a player's character lies down.
+    if (this.side === "enemy" && !this.owned && !this.summoned) this.alpha.set(0);
+    if (this.summoned) this.alpha.set(0);
+  }
+
   idle() {
     if (this.dead()) return;
     this.anim.set(this.broken() ? `${animName(this.info, "staggered")}@hold` : animName(this.info, "idle"));
@@ -278,6 +303,12 @@ export class Scene {
     this.reveal.set(0);
     this.fade.set(0);
     this.active.set(true);
+  }
+
+  /** Every battler back home and at rest (see `BattlerModel.settle`). */
+  settleBattlers() {
+    this.setTargets([]);
+    for (const b of this.battlers()) b.settle();
   }
 
   stop() {

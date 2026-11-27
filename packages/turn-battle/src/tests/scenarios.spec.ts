@@ -147,6 +147,12 @@ describe("co-op: two players against a troop", () => {
     await fightToEnd(battle);
     for (const s of [a, b]) expect(s.state.result()?.outcome).toBe("victory");
     expect(errors).toHaveBeenCalled();
+    // Nothing stayed where an animation stopped: every battler is home, the fallen ones lie as fallen.
+    for (const s of [a, b])
+      for (const battler of s.scene.battlers()) {
+        expect([battler.id, Math.abs(battler.offX()), Math.abs(battler.offY())]).toEqual([battler.id, 0, 0]);
+        expect(battler.dead()).toBe(battler.hp() <= 0);
+      }
     await closeResult(a, b);
     expect((await result).outcome).toBe("victory");
     errors.mockRestore();

@@ -6,6 +6,7 @@ import {
   candidates,
   isMultiTarget,
   previewTimeline,
+  snapshot,
   DEFAULT_WEIGHTS,
   type Beat,
   type BattlePacket,
@@ -254,6 +255,9 @@ async function pump() {
         // server and the battle goes on.
         console.error("[TurnBattle] playback failed", error);
         showToast(t("turnBattle.error.playback"));
+        // The numbers of the server, and every battler back home: nothing stays where the animation stopped.
+        s.director.applySnap(snapshot(packet.state));
+        scene.settleBattlers();
         if (packet.state.result && !result()) result.set(packet.state.result);
       }
       s.latest = packet.state;
