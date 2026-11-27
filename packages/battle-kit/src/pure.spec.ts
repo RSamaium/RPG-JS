@@ -75,6 +75,19 @@ describe("battle kit (pure parts)", () => {
     errors.mockRestore();
   });
 
+  it("ends on flush a tween started by the last update of another one", async () => {
+    const clock = new Clock();
+    let chained: Promise<void> | undefined;
+    let seen = 0;
+    void clock.tween(100, (t) => {
+      if (t === 1) chained = clock.tween(200, (k) => (seen = k));
+    });
+    clock.flush();
+    expect(clock.busy).toBe(false);
+    await chained;
+    expect(seen).toBe(1);
+  });
+
   it("aims directional presets and converts colours", () => {
     expect(aim({ x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ flip: false, rotation: 0 });
     expect(aim({ x: 10, y: 0 }, { x: 0, y: 0 }).flip).toBe(true);

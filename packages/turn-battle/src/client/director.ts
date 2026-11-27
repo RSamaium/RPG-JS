@@ -156,10 +156,18 @@ export class Director {
    * removed), each back home and at rest, its numbers, and its result with the counters of the result screen.
    */
   resync(state: BattleView) {
+    // A battler gone from the server (a summon that left) takes its looping effects with it, as in `leave`.
+    for (const b of this.scene.battlers())
+      if (!state.combatants.some((c) => c.id === b.id)) {
+        stopLoop(`stun:${b.id}`);
+        stopLoop(`guard:${b.id}`);
+      }
     this.scene.settleBattlers(state.combatants);
     this.display = structuredClone(state);
     this.applySnap(snapshot(state));
     if (state.result && !result()) {
+      // As at the end of a battle played to its end: no status effect loops behind the result screen.
+      Director.clearLoops();
       result.set(state.result);
       rollCounters(state.result.exp, state.result.gold);
     }

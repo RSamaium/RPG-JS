@@ -185,6 +185,41 @@ describe("co-op: two players against a troop", () => {
     expect([fallen.dead(), fallen.visible(), fallen.alpha()]).toEqual([false, true, 1]);
   });
 
+  it("after a beat cut short, a summon that left takes its looping shield with it, and a victory leaves no status effect looping", async () => {
+    const battle = await play();
+    const { b } = battle;
+    expect(await nextTurn(battle)).toBeTruthy();
+    // The looping effects on Bob's screen (a shield, a stun), as the stage plays them.
+    const looping = new Set<object>();
+    b.scene.particles = (_preset, _x, _y, o) => {
+      if (!o?.loop) return () => {};
+      const token = {};
+      looping.add(token);
+      return () => looping.delete(token);
+    };
+    // The director of Bob's screen (the modules of the last client loaded are Bob's).
+    const { Director } = await import("../client/director");
+    const state = structuredClone(b.latest());
+    const hero = state.combatants.find((c) => c.side === "ally")!;
+    const summon = { ...structuredClone(hero), id: "summon:1", owner: undefined, summon: "fairy", guarding: true };
+    const withSummon = { ...state, combatants: [...state.combatants, summon] } as typeof state;
+    const director = new Director(b.scene as never, structuredClone(withSummon), { fx: {} } as never);
+    director.resync(withSummon);
+    expect(looping.size).toBe(1);
+    // Its `leave` beat was cut short: the server no longer has it.
+    director.resync(state);
+    expect(b.scene.actor("summon:1")).toBeUndefined();
+    expect(looping.size).toBe(0);
+    // A hero guards when the beat of the victory is cut short: the result screen comes without the shield looping behind it.
+    const won = structuredClone(state);
+    won.combatants.find((c) => c.id === hero.id)!.guarding = true;
+    director.resync(won);
+    expect(looping.size).toBe(1);
+    b.state.result.set(null);
+    director.resync({ ...won, result: { outcome: "victory", exp: 1, gold: 1, items: [], bonuses: [], turns: 1 } } as typeof won);
+    expect(looping.size).toBe(0);
+  });
+
   it("a battler without a spritesheet does not block the battle: it is drawn invisible and the battle plays to its end", async () => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     // Bob's hero is drawn with the "mage" sheet, which the game did not register.
