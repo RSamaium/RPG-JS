@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { nativeDamageHook, paramsOf } from "../core/formulas";
+import { damageTable } from "../core/rules";
+import { createEncounter } from "./fixture";
 
 const params = (atk: number, pdef: number) => ({ atk, str: atk, int: 0, dex: 0, agi: 0, pdef, sdef: pdef, maxHp: 100, maxSp: 10 });
 const ctx = (extra: Record<string, unknown> = {}) => ({ state: {} as any, attacker: { params: params(30, 5) } as any, target: { params: params(10, 8) } as any, amount: 99, ...extra });
@@ -30,5 +32,16 @@ describe("the damage of the formulas of RPGJS in a tactical battle", () => {
 
   it("reads the parameters of a fighter with the names of RPGJS, the strength apart from the attack", () => {
     expect(paramsOf({ maxHp: 90, maxSp: 4, atk: 25, def: 6, mag: 9, mdef: 3, agi: 7, luk: 2, str: 20, int: 9, dex: 2 })).toEqual({ atk: 5, str: 20, int: 9, dex: 2, agi: 7, pdef: 6, sdef: 3, maxHp: 90, maxSp: 4 });
+  });
+
+  it("gives the forecast of the side that plays only the damage the formulas change: nothing to send without formulas", () => {
+    const state = createEncounter();
+    for (const unit of state.units) unit.params = params(30, 5);
+    expect(damageTable(state, [nativeDamageHook(() => undefined)])).toEqual({});
+    const table = damageTable(state, [nativeDamageHook((name) => formulas[name])]);
+    const allies = state.units.filter((u) => u.team === state.phase);
+    const enemies = state.units.filter((u) => u.team !== state.phase && u.hp > 0);
+    expect(Object.keys(table).sort()).toEqual(allies.map((u) => u.id).sort());
+    expect(table[allies[0].id][enemies[0].id][""]).toBe(25);
   });
 });

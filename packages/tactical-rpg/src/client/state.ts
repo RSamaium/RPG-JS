@@ -832,13 +832,16 @@ export const forecast = computed(() => {
     command = aimed();
   if (!state || !unit || !command || !("targetId" in command)) return null;
   const target = state.units.find((u) => u.id === command.targetId)!;
-  // What the rules take: half on guard, never the last HP of an invincible unit (the server's damage hooks are not known here).
-  const amount = taken(target, damage(state, unit, command.type === "skill" ? command.skillId : false));
+  const skill = command.type === "skill" ? command.skillId : false;
+  // The damage of the map's formulas when the server sent it (they run on the server only), otherwise the power of the rules; then
+  // what the rules take: half on guard, never the last HP of an invincible unit. The damage hooks of the game are not known here.
+  const formula = state.damage?.[unit.id]?.[target.id]?.[skill || ""];
+  const amount = taken(target, formula ?? damage(state, unit, skill));
   return {
     target,
     amount,
     remaining: target.hp - amount,
-    hits: affected(state, unit, target, command.type === "skill"?command.skillId:false).length,
+    hits: affected(state, unit, target, skill).length,
   };
 });
 // Keep the target's sheet visible while the pointer moves to Confirm.

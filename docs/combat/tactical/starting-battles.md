@@ -298,7 +298,7 @@ if (isInTacticalBattle(player)) await stopTacticalBattle(player);
 |---|---|
 | **Server** | The battle state, the rules, the AI, the objectives, the timer of a phase, the hooks of `TacticalServerHooks`, the heroes read from the players and the outcome written back on them. Every order of a player is checked by the server before it is played. |
 | **Synchronised** | The state of the battle and each event (a move, an attack…) go to every player and spectator through the GUI of the battle; a player sends their orders, the cell a unit is about to move to (so a partner does not aim at it) and the speed they want. The data is plain serialisable JSON. |
-| **Client only** | The HUD, the grid and the animations drawn on the map, the cursor, the menus, the preview of a move, the forecast, the danger zone, the sound cues, the speed and the reduced motion, and the client hooks (`TacticalClientHooks`). They change what is shown, never the outcome. |
+| **Client only** | The HUD, the grid and the animations drawn on the map, the cursor, the menus, the preview of a move, the forecast (with the damage of the map's formulas the server sends), the danger zone, the sound cues, the speed and the reduced motion, and the client hooks (`TacticalClientHooks`). They change what is shown, never the outcome. |
 
 It works the same in standalone RPG mode (the server runs in the browser) and in MMORPG mode (an authoritative server). Without `provideTacticalServer`, `startTacticalBattle` is not available; without `provideTacticalClient`, the battle has no HUD and no grid on the client.
 

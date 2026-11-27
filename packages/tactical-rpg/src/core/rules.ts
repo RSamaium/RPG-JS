@@ -1,6 +1,6 @@
 import { distance, key, reachable, lineClear, inside, validPath, heldByOther } from "./board";
-import type { BattleState, Unit, Command, BattleEvent, Team, SkillDef, Cell } from "./types";
-import { skillFor, skillArea, skillUnavailable } from "./skills";
+import type { BattleState, Unit, Command, BattleEvent, Team, SkillDef, Cell, DamageTable } from "./types";
+import { skillFor, skillsOf, skillArea, skillUnavailable } from "./skills";
 import { outcome } from "./objectives";
 
 /**
@@ -57,6 +57,36 @@ export function affected(state: BattleState, source: Unit, target: Unit, skill: 
 /** Base damage of an attack or skill (before hooks). */
 export const damage = (state: BattleState, unit: Unit, skill: boolean | string) =>
   skill ? skillOf(state, unit, skill)?.power ?? 0 : unit.power;
+
+/** The damage of an attack or skill once the `onDamage` hooks adjusted it (before guard and invincibility). */
+export function hookedDamage(state: BattleState, attacker: Unit, target: Unit, skill: SkillDef | undefined, hooks: RulesHooks[] = []): number {
+  let amount = damage(state, attacker, skill?.id ?? false);
+  for (const h of hooks) {
+    const next = h.onDamage?.({ state, attacker, target, skill, amount });
+    if (typeof next === "number" && Number.isFinite(next)) amount = Math.max(0, Math.round(next));
+  }
+  return amount;
+}
+
+/**
+ * What `hooks` make of the damage of each unit of the side that plays, against each standing enemy, for its attack and each of its
+ * skills: only the amounts the hooks change (an empty table when they change none). The server sends it with the state.
+ */
+export function damageTable(state: BattleState, hooks: RulesHooks[]): DamageTable {
+  const table: DamageTable = {};
+  const enemies = (unit: Unit) => state.units.filter((u) => u.hp > 0 && u.team !== unit.team);
+  for (const unit of state.units.filter((u) => u.team === state.phase && u.hp > 0 && !u.acted)) {
+    for (const skill of [undefined, ...skillsOf(state, unit)]) {
+      const base = damage(state, unit, skill?.id ?? false);
+      for (const target of enemies(unit)) {
+        const amount = hookedDamage(state, unit, target, skill, hooks);
+        if (amount === base) continue;
+        ((table[unit.id] ??= {})[target.id] ??= {})[skill?.id ?? ""] = amount;
+      }
+    }
+  }
+  return table;
+}
 
 /** The HP a unit loses to `amount` of damage: half on guard (rounded up), and never its last HP when it is invincible. */
 export const taken = (victim: Unit, amount: number) =>
@@ -221,12 +251,7 @@ export function transition(
       targetId: target.id,
       skillId: skill?.id,
       hits: affected(state, unit, target, skill?.id ?? false).map((victim) => {
-        let amount = damage(state, unit, skill?.id ?? false);
-        for (const h of hooks) {
-          const next = h.onDamage?.({ state, attacker: unit, target: victim, skill, amount });
-          if (typeof next === "number" && Number.isFinite(next)) amount = Math.max(0, Math.round(next));
-        }
-        amount = taken(victim, amount);
+        const amount = taken(victim, hookedDamage(state, unit, victim, skill, hooks));
         victim.hp -= amount;
         if (victim.hp === 0) for (const h of hooks) h.onDefeat?.({ state, unit: victim, by: unit });
         return { unitId: victim.id, damage: amount, killed: victim.hp === 0 };

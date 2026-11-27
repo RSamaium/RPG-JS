@@ -52,6 +52,8 @@ defineModule<RpgServer>({
 });
 ```
 
+The forecast a player sees before an attack (damage, "lethal") includes the damage formulas of the map (`damagePhysic`, `damageSkill`): they run on the server, which sends their result with each state for the side that plays. It does not include your `onDamage` hooks, which only run when the action is played: a hook that changes the amount makes the forecast differ from the damage dealt.
+
 `TacticalBattleHandle` gives hooks the battle `id`, `player`, `players` (it keeps the players who left), `versus`, `spectators()` and `state()`.
 
 ### Objectives

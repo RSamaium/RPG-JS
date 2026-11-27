@@ -41,6 +41,7 @@ import {
   type Command,
   type Unit,
   chooseFor,
+  damageTable,
   type TacticalUnitRecord,
   type TacticalUnitData,
   type Placement,
@@ -401,16 +402,20 @@ function withHeroes(setup: EncounterSetup, players: RpgPlayer[], versus: RpgPlay
 
 const RULE_HOOKS = ["onDamage", "onJudge", "onAction", "onMove", "onDefeat", "onPhase"] as const;
 
-/** Rule hooks of the plugin option and of game modules (`tactical: { onDamage }`). */
-function ruleHooks(player: RpgPlayer, battle: () => TacticalBattleHandle): RulesHooks[] {
-  // The damage is the one of the formulas of the map (as in the turn-based battle); the hooks of the game adjust it
-  const list: RulesHooks[] = [nativeDamageHook((name) => {
+/** The damage formulas of the map of a player (`damagePhysic`, `damageSkill`) as a rule hook. */
+const formulaHook = (player: RpgPlayer): RulesHooks =>
+  nativeDamageHook((name) => {
     try {
       return (player as any).getFormulas?.(name);
     } catch {
       return undefined;
     }
-  })];
+  });
+
+/** Rule hooks of the plugin option and of game modules (`tactical: { onDamage }`). */
+function ruleHooks(player: RpgPlayer, battle: () => TacticalBattleHandle): RulesHooks[] {
+  // The damage is the one of the formulas of the map (as in the turn-based battle); the hooks of the game adjust it
+  const list: RulesHooks[] = [formulaHook(player)];
   // The rule hooks of a game also get the leader and the battle (`TacticalRuleContext`)
   const withBattle = (fn: (ctx: never) => unknown) => (ctx: object) => fn({ ...ctx, player, battle: battle() } as never);
   for (const name of RULE_HOOKS)
@@ -629,8 +634,12 @@ async function run(
   let timedPhase = "";
   let clock: ReturnType<typeof setTimeout> | undefined;
   /** The state as a player is sent it: their own speed in a duel, and what is left of the time of the phase. */
-  const shown = (seat?: Seat): BattleState => ({
+  // The forecast of a client is the damage of the map's formulas, which only the server has. The hooks of the game are left out:
+  // they may do more than return an amount, and they run when the action is played.
+  const formulas = [formulaHook(leader)];
+  const shown = (seat?: Seat, damage = damageTable(state, formulas)): BattleState => ({
     ...state,
+    ...(Object.keys(damage).length ? { damage } : {}),
     ...(versus.length && seat ? { pace: seat.pace } : {}),
     ...(deadline ? { timer: { seconds: limit, left: Math.max(0, deadline - Date.now()) } } : {}),
   });
@@ -650,8 +659,9 @@ async function run(
     winners: !state.winner ? [] : (state.winner === "ally" ? players : versus).map((p) => p.id),
   });
   const send = (packet: Omit<BattlePacket, "state">) => {
-    for (const seat of present()) seat.gui.update({ ...packet, state: shown(seat) });
-    for (const watcher of watchers.values()) watcher.gui.update({ ...packet, state: shown() });
+    const damage = damageTable(state, formulas);
+    for (const seat of present()) seat.gui.update({ ...packet, state: shown(seat, damage) });
+    for (const watcher of watchers.values()) watcher.gui.update({ ...packet, state: shown(undefined, damage) });
   };
   /** Items each hero carried when the battle began: what is missing at the end was spent. */
   const heroItems = new Map(state.units.filter((u) => u.player).map((u) => [u.player!, { ...u.items }]));

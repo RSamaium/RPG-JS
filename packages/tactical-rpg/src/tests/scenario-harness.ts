@@ -51,6 +51,8 @@ export const database: Record<string, unknown> = {
 export interface Loadout {
   skills?: string[];
   items?: Record<string, number>;
+  /** The damage formulas of the player's map (`damagePhysic`, `damageSkill`). */
+  formulas?: Record<string, (...args: any[]) => number>;
 }
 
 let count = 0;
@@ -93,6 +95,7 @@ function makePlayer(name: string, loadout: Loadout = {}) {
       return database[id];
     },
     getCurrentMap: () => sharedMap,
+    getFormulas: (name: string) => loadout.formulas?.[name],
     gui: () => gui,
   };
   return { player, gui, listeners, packets, inventory, connect: (fn: (packet: BattlePacket) => void) => (deliver = fn) };

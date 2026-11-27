@@ -230,6 +230,23 @@ describe("the heroes of the players", () => {
 });
 
 describe("duel: one player against the other", () => {
+  it("the forecast is the damage of the map's formulas, which the server deals between two heroes with parameters", async () => {
+    // Half the target's max HP: 50, where the power of a hero is 20.
+    const formulas = { damagePhysic: (_a: Record<string, number>, b: Record<string, number>) => b.maxHp / 2 };
+    const { a, b } = await play("arena", { duel: true, a: { formulas }, b: { formulas } });
+    await a.keys("nextUnit", "up", "up", "action", "entry5");
+    await settle();
+    await b.keys("nextUnit", "down", "down", "action", "entry5");
+    await settle();
+    await a.keys("nextUnit", "up", "action", "action", "up");
+    const forecast = a.state.forecast()!;
+    // Bob is on guard: half of 50.
+    expect(forecast).toMatchObject({ amount: 25, remaining: 75 });
+    await a.keys("action");
+    await settle();
+    expect(b.hero().hp).toBe(100 - forecast.amount);
+  });
+
   it("is played to the KO; the forecast against a hero on guard is what it takes; nothing is written on the players", async () => {
     const { a, b, result } = await play("arena", { duel: true });
     // Alice walks up two cells and guards, Bob walks down two cells and guards.
