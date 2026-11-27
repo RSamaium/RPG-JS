@@ -53,6 +53,23 @@ function duel() {
 afterEach(() => vi.useRealTimers());
 
 describe("PvP session", () => {
+  it("names two guests' heroes like the list of the players: Player 1 and Player 2", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer({ units: pick("tactical-unit"), skills: pick("skill") });
+    const a = fake("");
+    const b = fake("");
+    void startTacticalBattle({
+      players: [a.player],
+      versus: [b.player],
+      encounter: { name: "Arena", tactical: { allies: [{ hero: true, x: 4, y: 6 }], enemies: [{ hero: true, x: 4, y: 0 }] } } as never,
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    const state = a.state();
+    expect([...state.players, ...state.versus].map((p) => p.name)).toEqual(["Player 1", "Player 2"]);
+    const hero = (player: { id: string }) => state.units.find((u) => u.player === player.id)!.name;
+    expect([hero(a.player), hero(b.player)]).toEqual(["Player 1", "Player 2"]);
+  });
+
   it("each side plays its own units and phase; no AI", async () => {
     const { alice, bob } = duel();
     await vi.advanceTimersByTimeAsync(0);

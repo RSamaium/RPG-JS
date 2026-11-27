@@ -314,7 +314,7 @@ const heroUnitId = (player: RpgPlayer) => `hero:${player.id}`;
  * The hero of a player as a unit: HP, SP and parameters of the player (equipment and states included), the skills it knows and the
  * items it carries that a tactical battle can use. `hero` option and the class of the player give its role, battler, range and move.
  */
-function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterSetup): TacticalUnitRecord {
+function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterSetup, index = seat): TacticalUnitRecord {
   const me = readBattlePlayer(player);
   const own = options.hero?.(player, { side, seat }) ?? {};
   const classId = String(val((read(() => (player as unknown as { _class?: () => { id?: unknown } })._class?.()) as { id?: unknown } | undefined)?.id) ?? "");
@@ -343,7 +343,8 @@ function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterS
   const roleRecord = setup.roles?.[role] ?? options.roles?.[role] ?? dbRecord<TacticalRoleRecord>(player, role);
   if (roleRecord?.tactical) setup.roles = { ...setup.roles, [role]: { ...roleRecord, name: String(val(roleRecord.name) ?? role) } };
   return {
-    name: me.name ?? nameOf(player, seat),
+    // A guest is named like in the list of the players of the battle (the other side counted after the first one).
+    name: me.name ?? nameOf(player, index),
     tactical: {
       role,
       // Right after another battle, the map sprite is still the hidden one: take the graphic it stashed.
@@ -390,7 +391,7 @@ function withHeroes(setup: EncounterSetup, players: RpgPlayer[], versus: RpgPlay
       taken.add(seat);
       const player = sidePlayers[seat];
       if (!player) return [];
-      setup.units[heroUnitId(player)] = heroUnit(player, side, seat, setup);
+      setup.units[heroUnitId(player)] = heroUnit(player, side, seat, setup, side === "enemy" ? players.length + seat : seat);
       return [{ ...p, unit: heroUnitId(player) }];
     });
   };
