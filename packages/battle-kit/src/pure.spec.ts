@@ -24,6 +24,20 @@ describe("battle kit (pure parts)", () => {
     await expect(pending).resolves.toBeUndefined();
   });
 
+  it("tells whether something still runs on it", async () => {
+    const clock = new Clock();
+    expect(clock.busy).toBe(false);
+    const tween = clock.tween(100, () => {});
+    expect(clock.busy).toBe(true);
+    clock.flush();
+    await tween;
+    expect(clock.busy).toBe(false);
+    void clock.wait(50);
+    expect(clock.busy).toBe(true);
+    clock.tick(60);
+    expect(clock.busy).toBe(false);
+  });
+
   it("drops a tween that throws, so the other tweens and the waits go on", async () => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     const clock = new Clock();

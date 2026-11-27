@@ -87,11 +87,14 @@ export class BattlerLook {
  * @example
  * ```ts
  * const screen = new ScreenFilters()
+ * const filters = signal([])
  * tick(() => {
  *   screen.zoomBlur(scene.impact(), 0.5 * width, 0.5 * height)
  *   screen.chromatic(scene.split())
+ *   // Only the effects playing: no filter pass at all when none plays.
+ *   if (screen.changed(filters())) filters.set(screen.active)
  * })
- * // <Container filters={screen.filters}>
+ * // <Container filters={filters}>
  * ```
  */
 export class ScreenFilters {
@@ -103,6 +106,28 @@ export class ScreenFilters {
   constructor() {
     this.zoom.enabled = this.split.enabled = false;
     this.filters = [this.zoom, this.split];
+  }
+
+  /**
+   * The filters of the effects playing now: an empty list when none plays, so the container is drawn without any filter pass
+   * (a filter that is only disabled still costs a pass on every frame).
+   *
+   * @prop {readonly unknown[]} active
+   * @memberof ScreenFilters
+   */
+  get active(): readonly unknown[] {
+    return this.filters.filter((filter) => (filter as { enabled: boolean }).enabled);
+  }
+
+  /**
+   * Do the effects playing differ from the filters a container was given?
+   *
+   * @param shown - The filters the container has now
+   * @returns True when `active` should be given to it again
+   */
+  changed(shown: readonly unknown[]): boolean {
+    const active = this.active;
+    return active.length !== shown.length || active.some((filter, i) => filter !== shown[i]);
   }
 
   /**

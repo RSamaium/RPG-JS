@@ -215,6 +215,21 @@ export class Clock {
   }
 
   /**
+   * Is something still running on the clock: a tween, or a wait not yet over?
+   *
+   * @title busy
+   * @prop {boolean} busy
+   * @memberof Clock
+   * @example
+   * ```ts
+   * while (clock.busy) clock.flush();
+   * ```
+   */
+  get busy(): boolean {
+    return this.tweens.size > 0 || this.waits.length > 0;
+  }
+
+  /**
    * Ends everything pending: each tween gets `update(1)` and resolves, each
    * wait resolves. Call it when the battle scene is torn down so no
    * choreography stays blocked.
