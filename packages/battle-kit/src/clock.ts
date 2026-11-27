@@ -244,11 +244,17 @@ export class Clock {
    * ```
    */
   flush() {
-    for (const tw of this.tweens) {
-      tw.update(1);
+    const tweens = [...this.tweens];
+    this.tweens.clear();
+    for (const tw of tweens) {
+      try {
+        tw.update(1);
+      } catch (error) {
+        // As in `tick`: a broken animation must not leave the others and the waits pending.
+        console.error("[Clock] a tween failed", error);
+      }
       tw.resolve();
     }
-    this.tweens.clear();
     this.waits.forEach((w) => w.resolve());
     this.waits = [];
   }

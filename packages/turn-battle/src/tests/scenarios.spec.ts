@@ -152,10 +152,37 @@ describe("co-op: two players against a troop", () => {
       for (const battler of s.scene.battlers()) {
         expect([battler.id, Math.abs(battler.offX()), Math.abs(battler.offY())]).toEqual([battler.id, 0, 0]);
         expect(battler.dead()).toBe(battler.hp() <= 0);
+        // Alive: shown; fallen: dissolved for a monster, lying for a hero.
+        expect([battler.id, battler.visible(), battler.alpha()]).toEqual(
+          battler.hp() > 0 || !battler.dissolves ? [battler.id, true, 1] : [battler.id, false, 0],
+        );
       }
+    // The result screen rolls its counters up to what was won, as after a victory played to its end.
+    await frames(2000);
+    for (const s of [a, b]) expect(s.state.shownExp()).toBe(s.state.result()!.exp);
     await closeResult(a, b);
     expect((await result).outcome).toBe("victory");
     errors.mockRestore();
+  });
+
+  it("after a beat cut short, the screen takes the battlers of the server: a summon that came, one that left, a monster revived", async () => {
+    const battle = await play();
+    const { a } = battle;
+    expect(await nextTurn(battle)).toBeTruthy();
+    const state = structuredClone(a.latest());
+    const [goblin1, goblin2] = state.combatants.filter((c) => c.side === "enemy");
+    // The first goblin had fallen and dissolved, then a revival was cut short: it is alive on the server.
+    const fallen = a.scene.actor(goblin1.id)!;
+    fallen.dead.set(true);
+    fallen.alpha.set(0);
+    fallen.visible.set(false);
+    // A summon came during the beat (as a copy of a hero), and the second goblin left.
+    const hero = state.combatants.find((c) => c.side === "ally")!;
+    const summon = { ...structuredClone(hero), id: "summon:1", owner: undefined, summon: "fairy" };
+    a.scene.settleBattlers([...state.combatants.filter((c) => c.id !== goblin2.id), summon] as typeof state.combatants);
+    expect(a.scene.actor(goblin2.id)).toBeUndefined();
+    expect(a.scene.actor("summon:1")).toBeTruthy();
+    expect([fallen.dead(), fallen.visible(), fallen.alpha()]).toEqual([false, true, 1]);
   });
 
   it("a battler without a spritesheet does not block the battle: it is drawn invisible and the battle plays to its end", async () => {

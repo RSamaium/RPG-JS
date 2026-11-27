@@ -6,7 +6,6 @@ import {
   candidates,
   isMultiTarget,
   previewTimeline,
-  snapshot,
   DEFAULT_WEIGHTS,
   type Beat,
   type BattlePacket,
@@ -262,10 +261,10 @@ async function pump() {
           scene.clock.flush();
           await new Promise((resolve) => setTimeout(resolve, 0));
         }
-        // The numbers of the server, and every battler back home: nothing stays where the animation stopped.
-        s.director.applySnap(snapshot(packet.state));
-        scene.settleBattlers();
-        if (packet.state.result && !result()) result.set(packet.state.result);
+        // The battle may have closed meanwhile (or another opened): the scene is no longer this one's.
+        if (current !== s) return;
+        // The battlers and the numbers of the server, each back home: nothing stays where the animation stopped.
+        s.director.resync(packet.state);
       }
       s.latest = packet.state;
       s.director.display = structuredClone(packet.state);

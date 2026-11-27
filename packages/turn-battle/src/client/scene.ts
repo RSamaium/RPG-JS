@@ -122,7 +122,7 @@ export class BattlerModel {
     this.dead.set(c.hp <= 0);
     if (c.hp <= 0) this.anim.set(`${animName(info, "dead")}@hold`);
     // Joining mid-battle (spectator): fallen monsters have already dissolved.
-    if (c.hp <= 0 && c.side === "enemy" && !this.owned) this.alpha.set(0);
+    if (c.hp <= 0 && this.dissolves) this.alpha.set(0);
   }
 
   get facingLeft() {
@@ -230,13 +230,20 @@ export class BattlerModel {
     const fallen = this.hp() <= 0;
     this.dead.set(fallen);
     if (!fallen) {
+      // Alive on the server: shown, even after a fall that had dissolved it (a revival cut short).
+      this.visible.set(true);
       this.alpha.set(1);
       return this.idle();
     }
     this.anim.set(`${animName(this.info, "dead")}@hold`);
-    // A fallen monster has dissolved; a player's character lies down.
-    if (this.side === "enemy" && !this.owned && !this.summoned) this.alpha.set(0);
-    if (this.summoned) this.alpha.set(0);
+    // A fallen monster or summon has dissolved, as after `fall`; a player's character lies down.
+    this.visible.set(!this.dissolves);
+    this.alpha.set(this.dissolves ? 0 : 1);
+  }
+
+  /** Does it dissolve when it falls (a monster, a summon) rather than lie down (a player's character)? */
+  get dissolves() {
+    return (this.side === "enemy" && !this.owned) || this.summoned;
   }
 
   idle() {
@@ -305,10 +312,20 @@ export class Scene {
     this.active.set(true);
   }
 
-  /** Every battler back home and at rest (see `BattlerModel.settle`). */
-  settleBattlers() {
+  /**
+   * The battlers of the server state, each back home and at rest (see `BattlerModel.settle`): after a beat cut short, a summon that
+   * came is added and one that left is removed.
+   */
+  settleBattlers(combatants: Combatant[]) {
     this.setTargets([]);
-    for (const b of this.battlers()) b.settle();
+    const ids = new Set(combatants.map((c) => c.id));
+    for (const b of this.battlers()) if (!ids.has(b.id)) this.removeBattler(b.id);
+    for (const c of combatants) this.addBattler(c);
+    for (const b of this.battlers()) {
+      const c = combatants.find((x) => x.id === b.id)!;
+      b.hp.set(c.hp);
+      b.settle();
+    }
   }
 
   stop() {

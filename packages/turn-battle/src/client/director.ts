@@ -1,4 +1,4 @@
-import type { Beat, BattleView, Combatant, FxName, Hit, Snap } from "../core";
+import { snapshot, type Beat, type BattleView, type Combatant, type FxName, type Hit, type Snap } from "../core";
 import { ease, runVisualEffect, type PlayableVisualEffect, type VisualEffectPlayback } from "@rpgjs/battle-kit/pure";
 import { FxPlayer } from "@rpgjs/battle-kit";
 import { elementColor } from "@rpgjs/battle-kit/pure";
@@ -149,6 +149,20 @@ export class Director {
         return;
     }
     this.applySnap(beat.snap);
+  }
+
+  /**
+   * After a beat cut short: the screen takes the state of the server. Its battlers (a summon that came is added, one that left is
+   * removed), each back home and at rest, its numbers, and its result with the counters of the result screen.
+   */
+  resync(state: BattleView) {
+    this.scene.settleBattlers(state.combatants);
+    this.display = structuredClone(state);
+    this.applySnap(snapshot(state));
+    if (state.result && !result()) {
+      result.set(state.result);
+      rollCounters(state.result.exp, state.result.gold);
+    }
   }
 
   /** Converge on authoritative numbers after each beat. */
@@ -665,7 +679,7 @@ export class Director {
     await Promise.race([b.play("dead", { hold: true }), this.clock.wait(1600)]);
     stopLoop(`stun:${b.id}`);
     stopLoop(`guard:${b.id}`);
-    if ((!b.facingLeft && !b.owned) || b.summoned) {
+    if (b.dissolves) {
       dissolveFx(this.scene, b.chest.x, b.chest.y, this.s);
       await this.clock.tween(560, (k) => {
         b.alpha.set(1 - k);

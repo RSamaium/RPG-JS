@@ -58,6 +58,23 @@ describe("battle kit (pure parts)", () => {
     errors.mockRestore();
   });
 
+  it("ends every tween and wait on flush, even when a tween throws", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const clock = new Clock();
+    let seen = 0;
+    const broken = clock.tween(100, (t) => {
+      if (t === 1) throw new Error("boom");
+    });
+    const fine = clock.tween(100, (t) => (seen = t));
+    const waited = clock.wait(50);
+    expect(() => clock.flush()).not.toThrow();
+    await Promise.all([broken, fine, waited]);
+    expect(seen).toBe(1);
+    expect(clock.busy).toBe(false);
+    expect(errors).toHaveBeenCalledTimes(1);
+    errors.mockRestore();
+  });
+
   it("aims directional presets and converts colours", () => {
     expect(aim({ x: 0, y: 0 }, { x: 10, y: 0 })).toEqual({ flip: false, rotation: 0 });
     expect(aim({ x: 10, y: 0 }, { x: 0, y: 0 }).flip).toBe(true);
