@@ -408,7 +408,8 @@ function openMenu(level: "root" | "skills" | "items" | "options") {
         }),
     );
   }
-  focusEntry(0);
+  // The first entry that can be used: confirming at once does something.
+  focusEntry(Math.max(0, menuEntries().findIndex((e) => !e.disabled)));
 }
 
 /** Highlight an entry and preview its effect on the turn order. */
@@ -436,11 +437,22 @@ export function focusEntry(index: number) {
   previewing.set(true);
 }
 
+/** The entry `delta` steps away that can be used, over the greyed ones (or the next one when none can be used). */
+function usableFrom(index: number, delta: number) {
+  const entries = menuEntries();
+  const n = entries.length;
+  for (let step = 1; step <= n; step++) {
+    const i = (((index + delta * step) % n) + n) % n;
+    if (!entries[i]?.disabled) return i;
+  }
+  return index + delta;
+}
+
 export function moveMenu(delta: number) {
   if (phase() === "target") return moveTarget(delta);
   if (phase() !== "command") return;
   sfx("cursor");
-  focusEntry(menuIndex() + delta);
+  focusEntry(usableFrom(menuIndex(), delta));
 }
 
 export function confirm() {
@@ -459,7 +471,7 @@ export function chooseEntry(index: number) {
     sfx("back");
     if (e.id.startsWith("cmd:") || menuLevel() === "options")
       return showToast((e.cost ?? 0) > h.sp ? t("turnBattle.error.noSp") : t("turnBattle.error.unavailable"));
-    return showToast(e.cost !== undefined && menuLevel() === "skills" ? t("turnBattle.error.noSp") : e.label);
+    return showToast(e.cost !== undefined && menuLevel() === "skills" ? t("turnBattle.error.noSp") : t("turnBattle.error.unavailable"));
   }
   sfx("confirm");
   menuIndex.set(index);

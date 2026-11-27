@@ -1001,7 +1001,9 @@ async function runBattle(
         const mates = fighters().filter((f) => f.side === seat.side);
         if (mates.every((f) => f.surrendered)) apply(forfeit(state, seat.side));
         else for (const f of mates) f.gui.update(packet(f, [], "turnBattle.surrenderVote"));
-      })),
+      })
+      // A failure must not reject the queue: every later command would be skipped.
+      .catch((error) => console.error("[TurnBattle] surrender failed", error))),
     );
     seat.gui.on("close", () => {
       if (!state.result) return;

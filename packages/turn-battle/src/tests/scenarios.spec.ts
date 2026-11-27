@@ -84,8 +84,8 @@ describe("co-op: two players against a troop", () => {
     expect((await result).outcome).toBe("victory");
   });
 
-  it("a skill too expensive is refused with a message; a skill used spends its SP, written on the player", async () => {
-    const battle = await play({ a: { skills: ["slash", "ultima"] } });
+  it("the skills open on one that can be used, the arrows skip the others, a click on one too expensive says why; the SP spent are written on the player", async () => {
+    const battle = await play({ a: { skills: ["ultima", "slash"] } });
     const { a, b } = battle;
     let side = await nextTurn(battle);
     while (side && side !== a) {
@@ -93,11 +93,14 @@ describe("co-op: two players against a troop", () => {
       side = await nextTurn(battle);
     }
     await choose(a, "skills");
-    expect(a.menu()).toEqual([">slash", "ultima (greyed)"]);
-    await a.press("down", "action");
+    expect(a.menu()).toEqual(["ultima (greyed)", ">slash"]);
+    await a.press("down");
+    expect(a.menu()).toEqual(["ultima (greyed)", ">slash"]);
+    // A click (pointer) on the greyed one.
+    a.session.chooseEntry(0);
     expect(a.state.toast()?.text).toBe("Not enough MP");
     expect(a.state.phase()).toBe("command");
-    await a.press("up", "action");
+    await a.press("action");
     expect(a.state.phase()).toBe("target");
     await a.press("action");
     await until(() => a.hero().sp === 10);
