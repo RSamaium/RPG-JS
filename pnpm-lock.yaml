@@ -598,12 +598,6 @@ importers:
       canvasengine:
         specifier: ^2.6.0
         version: 2.6.0(@types/react@19.2.17)(pixi.js@8.19.0)(react@19.2.7)
-      pixi-filters:
-        specifier: ^6.1.5
-        version: 6.1.5(pixi.js@8.19.0)
-      pixi.js:
-        specifier: ^8.9.2
-        version: 8.19.0
     devDependencies:
       '@canvasengine/compiler':
         specifier: 2.5.0
