@@ -102,7 +102,8 @@ async function makeClient(seat: ReturnType<typeof fakePlayer>, clientOptions: Re
     {
       interact: (name, data) => void seat.handlers[name]?.(data),
       registerSheet: () => {},
-      getSheet: (id) => sheet(id) as never,
+      // The spritesheets the game registered: all of them but the `missing` ones.
+      getSheet: (id) => ((clientOptions.missing as string[] | undefined)?.includes(id) ? undefined : (sheet(id) as never)),
       hideOtherGuis: () => () => {},
       music: () => () => {},
       callHooks: async () => [],

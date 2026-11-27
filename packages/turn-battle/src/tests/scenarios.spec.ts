@@ -158,6 +158,20 @@ describe("co-op: two players against a troop", () => {
     errors.mockRestore();
   });
 
+  it("a battler without a spritesheet does not block the battle: it is drawn invisible and the battle plays to its end", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Bob's hero is drawn with the "mage" sheet, which the game did not register.
+    const battle = await play({ client: { missing: ["mage"] } });
+    const { a, b, result } = battle;
+    expect(await nextTurn(battle)).toBeTruthy();
+    expect(errors.mock.calls.some((c) => String(c[0]).includes('battler "mage" could not be loaded'))).toBe(true);
+    await fightToEnd(battle);
+    for (const s of [a, b]) expect(s.state.result()?.outcome).toBe("victory");
+    await closeResult(a, b);
+    expect((await result).outcome).toBe("victory");
+    errors.mockRestore();
+  });
+
   it("the heroes escape: both screens end the battle", async () => {
     const battle = await play();
     const { a, b, result } = battle;

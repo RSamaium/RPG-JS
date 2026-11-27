@@ -20,7 +20,7 @@ import { commandEntry, commandsOf } from "./menu-entries";
 import { Director, chips, publish } from "./director";
 import type { FxFn } from "./fx";
 import { scene, type Backdrop } from "./scene";
-import { loadBattler, type BattleSpritesheet, type BattlerHints, type BattlerInfo } from "./sheets";
+import { loadBattler, placeholderBattler, type BattleSpritesheet, type BattlerHints, type BattlerInfo } from "./sheets";
 import { setMuted, sfx } from "./sfx";
 import {
   actorId,
@@ -200,7 +200,9 @@ function open(packet: BattlePacket) {
       const info = await battler(id).catch((error) => {
         // A summon without spritesheet only fails when it is summoned.
         if (summons.includes(id) && !display.combatants.some((c) => c.battler === id)) return null;
-        throw error;
+        // A battler that cannot be loaded never blocks the battle: it is drawn invisible, the rest plays.
+        console.error(`[TurnBattle] battler "${id}" could not be loaded`, error);
+        return placeholderBattler(id);
       });
       return info ? ([id, info] as const) : null;
     }),
@@ -255,6 +257,11 @@ async function pump() {
         // server and the battle goes on.
         console.error("[TurnBattle] playback failed", error);
         showToast(t("turnBattle.error.playback"));
+        // What the beat still ran besides (its other animations) ends now, so that nothing moves a battler once it is back home.
+        for (let i = 0; i < 20 && scene.clock.busy; i++) {
+          scene.clock.flush();
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
         // The numbers of the server, and every battler back home: nothing stays where the animation stopped.
         s.director.applySnap(snapshot(packet.state));
         scene.settleBattlers();

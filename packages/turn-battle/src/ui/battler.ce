@@ -2,14 +2,16 @@
   <Graphics draw={drawShadow} />
   <Graphics draw={drawRing} />
   <Container scale={bodyScale} x={wobble}>
-    <Sprite
-      sheet={{ definition: definition, playing: anim(), onFinish: onFinish }}
-      anchor={anchor}
-      filters={filters}
-      click={onPick}
-      pointerover={onOver}
-      pointerout={onOut}
-    />
+    @if (drawn) {
+      <Sprite
+        sheet={{ definition: definition, playing: anim(), onFinish: onFinish }}
+        anchor={anchor}
+        filters={filters}
+        click={onPick}
+        pointerover={onOver}
+        pointerout={onOut}
+      />
+    }
   </Container>
 </Container>
 
@@ -25,6 +27,8 @@
   const engine = inject(RpgClientEngine)
   // The battler is a regular RPGJS spritesheet (registered by the plugin).
   const definition = engine.getSpriteSheet(m.info.sheetId)
+  // A battler whose spritesheet could not be loaded is not drawn (the battle still plays it).
+  const drawn = !m.info.missing
   const { anim, alpha, visible } = m
   const { bounds, cell, hints } = m.info
   const anchor = [(bounds.x + bounds.w / 2) / cell.width, (bounds.y + bounds.h) / cell.height]

@@ -81,6 +81,8 @@ export interface BattlerInfo {
   bounds: { x: number; y: number; w: number; h: number };
   cell: { width: number; height: number };
   face: { x: number; y: number; size: number };
+  /** Its spritesheet could not be loaded: nothing is drawn for it (see `placeholderBattler`). */
+  missing?: boolean;
 }
 
 const ALIASES: Record<string, string[]> = {
@@ -188,6 +190,27 @@ export function toSpritesheet(info: BattlerInfo) {
     framesWidth: info.columns,
     framesHeight: info.rows,
     textures,
+  };
+}
+
+/**
+ * The battler of a spritesheet that could not be loaded (no spritesheet of that id, an image that fails): nothing is drawn for it,
+ * and the battle still opens and plays (its HUD, names and numbers are shown).
+ */
+export function placeholderBattler(id: string): BattlerInfo {
+  const pose: BattlerAnim = { frames: [{ x: 0, y: 0 }], durations: [1000], loop: true, impact: 0 };
+  return {
+    id,
+    sheetId: `turn-battle:missing:${id}`,
+    image: "",
+    hints: {},
+    anims: new Map([["idle", pose]]),
+    columns: 1,
+    rows: 1,
+    bounds: { x: 16, y: 8, w: 32, h: 56 },
+    cell: { width: 64, height: 64 },
+    face: { x: 0.5, y: 0.3, size: 0.8 },
+    missing: true,
   };
 }
 
