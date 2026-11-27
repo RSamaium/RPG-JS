@@ -36,6 +36,10 @@ export const database: Record<string, unknown> = {
   limits: tacticalEncounter({ name: "Limits", tactical: { allies: heroes, enemies: [{ unit: "sentinel", x: 3, y: 2 }, { unit: "sentinel", x: 6, y: 0 }] } }),
   items: tacticalEncounter({ name: "Items", tactical: { allies: heroes, enemies: [{ unit: "post", x: 3, y: 2 }] } }),
   doom: tacticalEncounter({ name: "Doom", tactical: { allies: heroes, enemies: [{ unit: "reaper", x: 3, y: 2 }, { unit: "reaper", x: 4, y: 2 }] } }),
+  // Two hero placements without a seat: one for each player, in order.
+  "no-seat": tacticalEncounter({ name: "No seat", tactical: { allies: [{ hero: true, x: 3, y: 5 }, { hero: true, x: 4, y: 5 }], enemies: [{ unit: "sentinel", x: 4, y: 0 }] } }),
+  // One hero placement for two players.
+  "one-hero": tacticalEncounter({ name: "One hero", tactical: { allies: [{ hero: true, x: 3, y: 5 }], enemies: [{ unit: "sentinel", x: 4, y: 0 }] } }),
   arena: tacticalEncounter({ name: "Arena", tactical: { allies: [{ hero: true, x: 4, y: 6 }], enemies: [{ hero: true, x: 4, y: 0 }] } }),
 };
 
@@ -140,14 +144,16 @@ async function makeSide(name: string, loadout?: Loadout) {
 export const settle = (ms = 3000) => vi.advanceTimersByTimeAsync(ms);
 
 /** Two players, A and B, in a co-op battle against the AI, or in a duel (A against B). Both enter it. */
-export async function play(encounter: string, o: { a?: Loadout; b?: Loadout; duel?: boolean } = {}) {
+export async function play(encounter: string, o: { a?: Loadout; b?: Loadout; duel?: boolean; server?: Parameters<typeof provideTacticalServer>[0] } = {}) {
   vi.useFakeTimers();
-  provideTacticalServer();
+  provideTacticalServer(o.server);
   const a = await makeSide("Alice", o.a);
   const b = await makeSide("Bob", o.b);
   const result = startTacticalBattle(
     o.duel ? { players: [a.player as never], versus: [b.player as never], encounter } : { players: [a.player as never, b.player as never], encounter },
   ) as Promise<TacticalResult>;
+  // A battle that does not open rejects before the test awaits it: not an unhandled rejection.
+  result.catch(() => {});
   await settle(0);
   // "Enter the battle" on both screens.
   await a.keys("action");

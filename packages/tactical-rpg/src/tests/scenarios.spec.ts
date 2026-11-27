@@ -158,6 +158,33 @@ describe("co-op: two players against the AI", () => {
   });
 });
 
+describe("the heroes of the players", () => {
+  it("hero placements without a seat take the players in order: one hero each", async () => {
+    const { a, b } = await play("no-seat");
+    expect(a.hero()).toBeTruthy();
+    expect(b.hero()).toBeTruthy();
+    expect(a.hero().id).not.toBe(b.hero().id);
+    expect([a.hero().x, b.hero().x]).toEqual([3, 4]);
+  });
+
+  it("a player without any unit is not taken into the battle", async () => {
+    const { result } = await play("one-hero");
+    await expect(result).rejects.toThrow(/has no unit in this encounter/);
+  });
+
+  it("a hook of the end that fails does not tell the player their winning order was refused", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { a, b } = await play("area", { a: { skills: ["nova"] }, server: { hooks: { onEnd: () => { throw new Error("boom"); } } } });
+    await a.keys("nextUnit", "action", "action", "action", "up", "up", "up", "action");
+    await settle();
+    expect(a.view().winner).toBe("ally");
+    expect(a.state.notice()).not.toBe("This order is not valid.");
+    expect(b.view().winner).toBe("ally");
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
+});
+
 describe("duel: one player against the other", () => {
   it("is played to the KO; the forecast against a hero on guard is what it takes; nothing is written on the players", async () => {
     const { a, b, result } = await play("arena", { duel: true });

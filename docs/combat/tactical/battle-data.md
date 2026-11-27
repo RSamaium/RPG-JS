@@ -116,9 +116,9 @@ export const database = {
 
 ## The hero of a player
 
-A `hero: true` placement is the hero of a player of the battle (`seat`: the index of the player in its side, the first one by default). It is read from the `RpgPlayer`: its name, HP and SP, its parameters (equipment and states included, used by the damage formulas of the map), the skills it knows that have a `tactical` field, and the items of its inventory that restore HP or SP. Its role comes from the `hero` server option, else from the `tactical.role` of the class of the player (`warrior` otherwise); its battler is the graphic of the player.
+A `hero: true` placement is the hero of a player of the battle (`seat`: the index of the player in its side; without it, the hero placements take the players of the side in order, and two placements on one seat are refused). It is read from the `RpgPlayer`: its name, HP and SP, its parameters (equipment and states included, used by the damage formulas of the map), the skills it knows that have a `tactical` field, and the items of its inventory that restore HP or SP. Its role comes from the `hero` server option, else from the `tactical.role` of the class of the player (`warrior` otherwise); its battler is the graphic of the player.
 
-When the battle ends, its HP, SP and the items it spent are written back on the player (never in PvP, never for a player who left). A seat that no player takes leaves its hero out.
+When the battle ends, its HP, SP and the items it spent are written back on the player (never in PvP, never for a player who left). A seat that no player takes leaves its hero out, and a player who would have no unit (no hero placement for them, no unit dealt to them) is refused: `startTacticalBattle` rejects.
 
 ```ts
 import { provideTacticalServer } from "@rpgjs/tactical-rpg/server";

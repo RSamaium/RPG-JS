@@ -369,18 +369,31 @@ function heroUnit(player: RpgPlayer, side: Team, seat: number, setup: EncounterS
 
 /**
  * Replaces the `hero: true` placements of an encounter by the heroes of the players of the battle: `seat` is the index of the player
- * in its side (the first one by default). A hero without a player (a seat nobody takes) is left out.
+ * in its side; without it, the placements take the players of the side in order. A hero without a player (a seat nobody takes) is
+ * left out; two placements on one seat are refused.
  */
 function withHeroes(setup: EncounterSetup, players: RpgPlayer[], versus: RpgPlayer[]): EncounterSetup {
-  const place = (side: Team, list: Placement[], sidePlayers: RpgPlayer[]) =>
-    list.flatMap((p) => {
+  const place = (side: Team, list: Placement[], sidePlayers: RpgPlayer[]) => {
+    // Without a `seat`, a hero placement takes the first player of the side that no other placement takes: two placements never
+    // take the same player.
+    const explicit = new Set(list.filter((p) => p.hero && p.seat !== undefined).map((p) => p.seat!));
+    const taken = new Set<number>();
+    let next = 0;
+    return list.flatMap((p) => {
       if (!p.hero) return [p];
-      const seat = p.seat ?? 0;
+      let seat = p.seat;
+      if (seat === undefined) {
+        while (taken.has(next) || explicit.has(next)) next++;
+        seat = next;
+      }
+      if (taken.has(seat)) throw new Error(`[Tactical] Two hero placements of the ${side} side take the seat ${seat}`);
+      taken.add(seat);
       const player = sidePlayers[seat];
       if (!player) return [];
       setup.units[heroUnitId(player)] = heroUnit(player, side, seat, setup);
       return [{ ...p, unit: heroUnitId(player) }];
     });
+  };
   const data = { ...setup.data, allies: place("ally", setup.data.allies, players), enemies: place("enemy", setup.data.enemies, versus) };
   return { ...setup, data };
 }
@@ -586,6 +599,9 @@ async function run(
     players: players.map((p, index) => ({ id: p.id, name: nameOf(p, index) })),
     versus: versus.map((p, index) => ({ id: p.id, name: nameOf(p, players.length + index) })),
   });
+  // A player who would command nothing (no hero placement for them, no unit dealt to them) is not taken into the battle.
+  const idle = [...players, ...versus].find((p) => !state.units.some((u) => u.owner === p.id));
+  if (idle) throw new Error(`[Tactical] Player ${idle.id} has no unit in this encounter: give it a hero placement (seat) for each player`);
   const watchers = new Map<string, Watcher>();
   const handle: TacticalBattleHandle = {
     id: state.id,
@@ -793,7 +809,8 @@ async function run(
           arm();
           send({ event: after.event });
         }
-        if (state.winner) await finish();
+        // The order went through: a hook of the end that fails is logged, not answered as a refused order.
+        if (state.winner) await finish().catch((error) => console.error("[Tactical] end of battle failed", error));
         else schedule();
       } catch (error) {
         // A refusal of the rules is a text of the battle; anything else (a hook of the game that failed) is logged, and the
