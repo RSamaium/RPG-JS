@@ -346,11 +346,19 @@ export function runVisualEffect(effect: PlayableVisualEffect, o: VisualEffectRun
       if (cue.type === "hit" && !first) continue;
       void o.wait(cue.at).then(() => {
         if (stopped) return;
-        if (cue.type === "sound") o.sound?.(cue.sound, cue.volume);
+        // A callback that fails is logged: the effect goes on, and what waits for its hit or its end is never left waiting.
+        const safely = (what: string, fn?: () => void) => {
+          try {
+            fn?.();
+          } catch (error) {
+            console.error(`[VisualEffect] ${what} failed`, error);
+          }
+        };
+        if (cue.type === "sound") safely("sound", o.sound && (() => o.sound!(cue.sound, cue.volume)));
         else if (cue.type === "hit") {
           hitDone = true;
-          o.onHit?.();
           resolveHit();
+          safely("onHit", o.onHit);
         } else if (loop && effect.duration > 0) cycle(false);
         else resolveDone();
       });

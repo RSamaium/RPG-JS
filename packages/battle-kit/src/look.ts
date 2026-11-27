@@ -3,25 +3,30 @@ import { MotionBlurFilter, RGBSplitFilter, ZoomBlurFilter } from "pixi-filters";
 
 /**
  * The look of one battler sprite: a hit flash, a tint, a glow and a motion
- * blur, as filters given to a CanvasEngine `<Sprite filters={look.filters}>`.
- * The battle GUIs drive it from their signals and never touch the renderer:
- * the filters stay inside the battle kit. Client only.
+ * blur, as filters given to a CanvasEngine `<Sprite filters={…}>`. Give it
+ * `active` (the filters in use, none at rest) so a sprite at rest is drawn
+ * without a filter pass. In a reactive `effect`, keep what the sprite was given
+ * in a plain variable: reading the `filters` signal there would make the effect
+ * depend on what it sets, and run again and again. The battle GUIs drive it from their signals and never
+ * touch the renderer: the filters stay inside the battle kit. Client only.
  *
  * @title BattlerLook
  * @example
  * ```ts
  * // in a .ce component
  * const look = new BattlerLook({ motionBlur: true })
+ * const filters = signal([])
  * tick(() => {
  *   look.reset()
  *   if (unit.flash() > 0) look.brightness(3.2)
  *   look.motionBlur(unit.blur() * 34)
+ *   if (look.changed(filters())) filters.set(look.active)
  * })
- * // <Sprite filters={look.filters} />
+ * // <Sprite filters={filters} />
  * ```
  */
 export class BattlerLook {
-  /** The filters to give to the sprite (`filters={look.filters}`). */
+  /** Every filter of the look; give a sprite `active` instead (only those in use). */
   readonly filters: readonly unknown[];
   private readonly color = new ColorMatrixFilter();
   private readonly motion?: MotionBlurFilter;
@@ -33,11 +38,34 @@ export class BattlerLook {
       this.motion.enabled = false;
     }
     this.filters = this.motion ? [this.color, this.motion] : [this.color];
+    this.color.enabled = false;
+  }
+
+  /**
+   * The filters in use now: an empty list at rest (no flash, tint or blur), so the sprite is drawn without any filter pass.
+   *
+   * @prop {readonly unknown[]} active
+   * @memberof BattlerLook
+   */
+  get active(): readonly unknown[] {
+    return this.filters.filter((filter) => (filter as { enabled: boolean }).enabled);
+  }
+
+  /**
+   * Do the filters in use differ from the ones a sprite was given?
+   *
+   * @param shown - The filters the sprite has now
+   * @returns True when `active` should be given to it again
+   */
+  changed(shown: readonly unknown[]): boolean {
+    const active = this.active;
+    return active.length !== shown.length || active.some((filter, i) => filter !== shown[i]);
   }
 
   /** Back to the plain sprite (no flash, no tint). Returns the look, to chain. */
   reset(): this {
     this.color.reset();
+    this.color.enabled = false;
     return this;
   }
 
@@ -49,6 +77,7 @@ export class BattlerLook {
    */
   brightness(amount: number, combine = false): this {
     this.color.brightness(amount, combine);
+    this.color.enabled = true;
     return this;
   }
 
@@ -60,6 +89,7 @@ export class BattlerLook {
    */
   tint(color: number, combine = false): this {
     this.color.tint(color, combine);
+    this.color.enabled = true;
     return this;
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ScreenFilters } from "./look";
+import { BattlerLook, ScreenFilters } from "./look";
 
 describe("screen filters of a battle", () => {
   it("give a container only the effects playing: none at rest, so no filter pass", () => {
@@ -19,5 +19,21 @@ describe("screen filters of a battle", () => {
 
     screen.zoomBlur(0, 0, 0).chromatic(0);
     expect(screen.active).toEqual([]);
+  });
+});
+
+describe("the look of a battler", () => {
+  it("gives a sprite at rest no filter, and only the ones in use during a flash or a dash", () => {
+    const look = new BattlerLook({ motionBlur: true });
+    expect(look.active).toEqual([]);
+    look.reset().brightness(3.2);
+    expect(look.active).toHaveLength(1);
+    look.motionBlur(20);
+    expect(look.active).toHaveLength(2);
+    const shown = look.active;
+    expect(look.changed(shown)).toBe(false);
+    look.reset().motionBlur(0);
+    expect(look.active).toEqual([]);
+    expect(look.changed(shown)).toBe(true);
   });
 });

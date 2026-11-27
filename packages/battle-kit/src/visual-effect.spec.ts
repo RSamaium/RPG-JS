@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Clock, effectCues, runVisualEffect, visualEffectsOf, type PlayableVisualEffect } from "./pure";
 
 const flush = async () => {
@@ -141,5 +141,30 @@ describe("Visual Effects played by the battles", () => {
     expect(hit).toBe(true);
     await advance(clock, 900);
     expect(events).toEqual(["spawn@0", "whoosh:0.5@0"]);
+  });
+});
+
+describe("a Visual Effect whose callbacks fail", () => {
+  it("still resolves its hit and its end, and logs the failures", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const clock = new Clock();
+    const playback = runVisualEffect(fireball, {
+      spawn: () => () => {},
+      wait: (ms) => clock.wait(ms),
+      sound: () => {
+        throw new Error("no audio");
+      },
+      onHit: () => {
+        throw new Error("battler gone");
+      },
+    });
+    let hit = false;
+    let done = false;
+    void playback.hit.then(() => (hit = true));
+    void playback.done.then(() => (done = true));
+    await advance(clock, 1000);
+    expect([hit, done]).toEqual([true, true]);
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
   });
 });
