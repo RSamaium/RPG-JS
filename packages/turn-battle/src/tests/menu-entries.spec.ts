@@ -22,6 +22,13 @@ describe("the custom commands of the menu", () => {
     expect(entry).toEqual({ id: "cmd:steal", label: "STEAL", icon: "✋", hint: "4 MP", cost: 4, detail: "Takes an item", disabled: false });
   });
 
+  it("a skill played as a command is greyed by a troop that forbids the skills, not by one that forbids the actions", () => {
+    const fire = info("fire", { skill: true });
+    expect(commandEntry(fire, hero, view([], { forbid: ["skill"] }), mp).disabled).toBe(true);
+    expect(commandEntry(fire, hero, view([], { forbid: ["action"] }), mp).disabled).toBe(false);
+    expect(commandEntry(info("steal"), hero, view([], { forbid: ["action"] }), mp).disabled).toBe(true);
+  });
+
   it("are greyed out when they cost more than the SP the unit has, or the battle blocks them", () => {
     expect(commandEntry(info("a", { spCost: 99 }), hero, view([]), mp).disabled).toBe(true);
     expect(commandEntry(info("a"), hero, view([], { blocked: ["a"] }), mp).disabled).toBe(true);

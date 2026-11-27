@@ -18,7 +18,7 @@ export function commandEntry(
     hint: info.spCost ? spCost(info.spCost) : undefined,
     ...(info.spCost ? { cost: info.spCost } : {}),
     detail: info.description,
-    disabled: (info.spCost ?? 0) > h.sp || !!view.blocked?.includes(info.id) || forbids(view, "custom"),
+    disabled: (info.spCost ?? 0) > h.sp || !!view.blocked?.includes(info.id) || forbids(view, "custom", info),
   };
 }
 

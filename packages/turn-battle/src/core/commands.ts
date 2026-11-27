@@ -68,7 +68,10 @@ export interface Loot {
 
 export interface CommandActions {
   /** Damage with the normal formulas, elements, stagger, limit and `onDamage` hooks. */
-  damage(target: Combatant, o?: { power?: number; kind?: Exclude<SkillKind, "heal">; element?: ElementName; stagger?: number }): Hit;
+  damage(
+    target: Combatant,
+    o?: { power?: number; kind?: Exclude<SkillKind, "heal">; element?: ElementName; stagger?: number; coefficient?: Record<string, number> },
+  ): Hit;
   heal(target: Combatant, amount: number): Hit;
   /** Give (or take, if negative) SP. */
   sp(target: Combatant, amount: number): Hit;
@@ -150,6 +153,7 @@ export function commandInfo(id: string, c: CustomCommand): CommandInfo {
     options: c.options,
     ...(c.cooldown ? { cooldown: c.cooldown } : {}),
     ...(c.once ? { once: true } : {}),
+    ...(c.skill ? { skill: true } : {}),
     ...(c.inSkills ? { inSkills: true } : {}),
     ...(c.ai ? { ai: c.ai } : {}),
     ...(c.triggers?.length ? { triggers: c.triggers } : {}),

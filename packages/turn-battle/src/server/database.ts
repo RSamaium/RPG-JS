@@ -291,8 +291,8 @@ export function skillCommandFromDb(id: string, raw: Raw | undefined): CustomComm
   if (!own && skill.kind === "heal") return undefined;
   const effects = own
     ? b.effects
-    : [{ type: "damage", power: skill.power, kind: skill.kind, ...(skill.element ? { element: skill.element } : {}), ...(skill.hits ? { hits: skill.hits } : {}), ...(skill.stagger !== undefined ? { stagger: skill.stagger } : {}) }];
-  return actionCommand({
+    : [{ type: "damage", power: skill.power, kind: skill.kind, ...(skill.element ? { element: skill.element } : {}), ...(skill.hits ? { hits: skill.hits } : {}), ...(skill.stagger !== undefined ? { stagger: skill.stagger } : {}), ...(skill.coefficient ? { coefficient: skill.coefficient } : {}) }];
+  const command = actionCommand({
     name: skill.name,
     ...(skill.description ? { description: skill.description } : {}),
     ...(typeof b.icon === "string" && b.icon ? { icon: b.icon } : {}),
@@ -315,6 +315,7 @@ export function skillCommandFromDb(id: string, raw: Raw | undefined): CustomComm
     ...visualEffectsOf(skill),
     effects,
   });
+  return { ...command, skill: true };
 }
 
 /** An enemy of the database as a creature to summon: its battle shape, without what it gives when it falls. */

@@ -9,13 +9,20 @@ import {
   type BattleActionRecord,
   type BattleState,
   type Command,
+  type CustomCommand,
+  type Formulas,
+  defaultAi,
+  createRng,
 } from "../core";
+import { skillCommandFromDb } from "../server/database";
 import { battle, catalog, goblin, hero, stats } from "./fixtures";
 
 /** A battle where the hero uses the actions of the database, drawn as data. */
-function rig(actions: Record<string, BattleActionRecord>, over: Parameters<typeof battle>[0] = {}) {
-  const commands = Object.fromEntries(Object.entries(actions).map(([id, record]) => [id, actionCommand(record)]));
-  const rules = createRules({ commands });
+function rig(actions: Record<string, BattleActionRecord | CustomCommand>, over: Parameters<typeof battle>[0] = {}, formulas: Partial<Formulas> = {}) {
+  const commands = Object.fromEntries(
+    Object.entries(actions).map(([id, record]) => [id, "resolve" in record ? record : actionCommand(record as BattleActionRecord)]),
+  );
+  const rules = createRules({ commands, formulas });
   const cat = {
     ...catalog,
     commands: Object.fromEntries(Object.entries(commands).map(([id, command]) => [id, commandInfo(id, command)])),
@@ -38,6 +45,59 @@ function rig(actions: Record<string, BattleActionRecord>, over: Parameters<typeo
 }
 
 describe("an action of the database, as data", () => {
+  it("stops hitting a target that fell: no blows on the fallen, no extra stagger finish", () => {
+    const { state, run, waves } = rig(
+      { flurry: { name: "Rafale", effects: [{ type: "damage", power: 100, hits: 3 }] } },
+      { enemies: [goblin("g1", { stats: stats({ maxHp: 1, atk: 1, agi: 1 }) }), goblin("g2", { stats: stats({ maxHp: 5000, atk: 1, agi: 1 }) })] },
+    );
+    const out = run(state, { type: "custom", command: "flurry", target: "g1" });
+    expect(waves(out).flat().filter((hit) => hit.target === "g1" && hit.kind === "damage")).toHaveLength(1);
+    expect(out.state.tally.staggerFinishes).toBeLessThanOrEqual(1);
+  });
+
+  it("scales its damage with the parameters of its user, as a skill does (`coefficient`)", () => {
+    const seen: unknown[] = [];
+    const damage: Formulas["damage"] = ({ skill }) => (seen.push(skill?.coefficient), { amount: 10, crit: false });
+    const { state, run } = rig({ bolt: { name: "Foudre", effects: [{ type: "damage", power: 50, kind: "magical", coefficient: { int: 1 } }] } }, {}, { damage });
+    run(state, { type: "custom", command: "bolt", target: "g1" });
+    expect(seen).toEqual([{ int: 1 }]);
+  });
+
+  it("a skill of the database played as a command keeps its coefficient, and stays a skill for the troop's `forbid`", () => {
+    const fire = skillCommandFromDb("fire", { name: "Fire", power: 50, kind: "magical", coefficient: { int: 1 }, spCost: 0, turnBattle: { cooldown: 2, pinned: true } })!;
+    expect(commandInfo("fire", fire).skill).toBe(true);
+    const seen: unknown[] = [];
+    const damage: Formulas["damage"] = ({ skill }) => (seen.push(skill?.coefficient), { amount: 10, crit: false });
+    const { state, run } = rig({ fire }, {}, { damage });
+    run(state, { type: "custom", command: "fire", target: "g1" });
+    expect(seen).toEqual([{ int: 1 }]);
+    // No magic in this battle: the skill is refused, as the others; an action would not be.
+    const noMagic = { ...state, forbid: ["skill" as const] };
+    expect(run(noMagic, { type: "custom", command: "fire", target: "g1" }).error).toBe("turnBattle.error.forbidden");
+    expect(run({ ...state, forbid: ["action" as const] }, { type: "custom", command: "fire", target: "g1" }).error).toBeUndefined();
+  });
+
+  it("a skill charges the limit gauge fully, whatever weapon its user holds (only the attack is split over the blows of the weapon)", () => {
+    const { state, run } = rig(
+      { bolt: { name: "Foudre", effects: [{ type: "damage", power: 50 }] } },
+      { allies: [hero({ commands: ["bolt"], owner: "p1", attack: { hits: 3 }, stats: stats({ agi: 90, maxSp: 60 }) })] },
+    );
+    const before = state.combatants.find((c) => c.id === "hero")!.limit!.value;
+    const out = run(state, { type: "custom", command: "bolt", target: "g1" });
+    expect(out.state.combatants.find((c) => c.id === "hero")!.limit!.value - before).toBe(6);
+  });
+
+  it("an enemy uses a command with a sub-menu: it picks one of its options", () => {
+    const { state, rules } = rig({ call: { name: "Appel", effects: [{ type: "summon", creatures: [{ id: "ifrit" }, { id: "imp" }] }] } });
+    const s = structuredClone(state);
+    const enemy = s.combatants.find((c) => c.id === "g1")!;
+    enemy.commands = ["call"];
+    enemy.commandRules = { call: { weight: 100 } };
+    const picked = defaultAi({ state: s, self: enemy, rng: createRng(1), rules } as never);
+    expect(picked).toMatchObject({ type: "custom", command: "call" });
+    expect(["ifrit", "imp"]).toContain((picked as { option?: string }).option);
+  });
+
   it("is a record of the battle: its type is `command`", () => {
     expect(turnBattleAction({ name: "Voler", effects: [] })).toEqual({ _type: "command", name: "Voler", effects: [] });
   });

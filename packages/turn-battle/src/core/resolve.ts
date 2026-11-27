@@ -1,4 +1,5 @@
 import type {
+  CommandInfo,
   Beat,
   BattleResult,
   BattleState,
@@ -278,9 +279,12 @@ export function syncVitals(state: BattleState, id: string, vitals: { hp?: number
   return { state: next, beats: [{ t: "sync", snap: snapshot(next) }] };
 }
 
-/** The troop forbids this command to the heroes (the limit burst is a skill; the escape has its own error). */
-export function forbids(state: Pick<BattleState, "forbid">, command: CommandType): boolean {
-  const kind = command === "limit" ? "skill" : command === "custom" ? "action" : command;
+/**
+ * The troop forbids this command to the heroes (the limit burst is a skill; the escape has its own error). A custom command
+ * (`info`) is an action, or a skill when it is a skill of the database played as a command.
+ */
+export function forbids(state: Pick<BattleState, "forbid">, command: CommandType, info?: Pick<CommandInfo, "skill">): boolean {
+  const kind = command === "limit" ? "skill" : command === "custom" ? (info?.skill ? "skill" : "action") : command;
   return kind !== "escape" && !!state.forbid?.includes(kind);
 }
 
@@ -299,7 +303,8 @@ export function validate(
   if (ownerId && actor.owner && actor.owner !== ownerId) return "turnBattle.error.notYourTurn";
   const cmd = env.command;
   // What the troop forbids concerns the heroes: the enemies are not asked.
-  if (actor.side === "ally" && forbids(state, cmd.type)) return "turnBattle.error.forbidden";
+  if (actor.side === "ally" && forbids(state, cmd.type, cmd.type === "custom" ? state.catalog.commands?.[cmd.command] : undefined))
+    return "turnBattle.error.forbidden";
   switch (cmd.type) {
     case "attack":
       return targetError(state, actor, "enemy", cmd.target);
@@ -690,6 +695,7 @@ function commandActions(
         power: o.power ?? 100,
         element: o.element,
         stagger: o.stagger,
+        ...(o.coefficient ? { coefficient: o.coefficient } : {}),
       };
       return push(strike(state, actor, target, skill, rules, rng));
     },
@@ -848,7 +854,7 @@ function strike(
     }
   }
   if (attacker.limit)
-    attacker.limit.value = Math.min(attacker.limit.max, attacker.limit.value + f.limitOnHit({ ...ctx, skill }) / hits);
+    attacker.limit.value = Math.min(attacker.limit.max, attacker.limit.value + f.limitOnHit({ ...ctx, skill }) / (skill ? 1 : hits));
   if (target.limit)
     target.limit.value = Math.min(
       target.limit.max,

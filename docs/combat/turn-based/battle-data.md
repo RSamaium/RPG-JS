@@ -128,7 +128,7 @@ goblin: turnBattleEnemy({
 goblins: turnBattleTroop({ turnBattle: { enemies: ["goblin", "goblin"], background: "meadow" } }),
 ```
 
-A troop given as an object (to `startTurnBattle`, or in the `troops` server option, `TroopDef`) can also list `TroopMember`s in `enemies`: `{ enemy, level, levelSpread, invincible, position, condition }`. `level` is a number or `"party"` (the average level of the players); `condition` is checked by the `enemyCondition` server option. It also takes `forbid` (commands the heroes cannot use; `escape` is the same as `canEscape: false`) and `heroesPosition`.
+A troop given as an object (to `startTurnBattle`, or in the `troops` server option, `TroopDef`) can also list `TroopMember`s in `enemies`: `{ enemy, level, levelSpread, invincible, position, condition }`. `level` is a number or `"party"` (the average level of the players); `condition` is checked by the `enemyCondition` server option. It also takes `forbid` (commands the heroes cannot use; `escape` is the same as `canEscape: false`; `skill` covers the limit burst and the skills of the database played as commands, `action` the other custom commands) and `heroesPosition`.
 
 ## Summon
 
@@ -168,7 +168,7 @@ The `effects` (`ActionEffect`), each with an optional `target` (`self` or `targe
 
 | `type` | Fields |
 |---|---|
-| `damage` | `power`, `kind`, `element`, `hits`, `stagger` |
+| `damage` | `power`, `kind`, `element`, `hits`, `stagger`, `coefficient` (the parameters of the user that scale `power`, as for a skill; a skill with a recharge keeps its own). A target that falls takes no more hits. |
 | `heal` | `amount`, or `rate` percent of the max life, or `of: "damage"` with `rate` percent of the damage done |
 | `sp` | `amount` |
 | `steal` | `chance`, `successText`, `failText`, `emptyText` |

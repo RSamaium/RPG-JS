@@ -22,7 +22,8 @@ export interface SummonChoice {
 
 /** One thing an action does, in order. The presets of an editor. */
 export type ActionEffect =
-  | { type: "damage"; power?: number; kind?: Exclude<SkillKind, "heal">; element?: ElementName; hits?: number; stagger?: number; target?: EffectTarget }
+  /** `coefficient`: the parameters of the user that scale `power` (as for a skill, read by the `damageSkill` formula of the map). */
+  | { type: "damage"; power?: number; kind?: Exclude<SkillKind, "heal">; element?: ElementName; hits?: number; stagger?: number; coefficient?: Record<string, number>; target?: EffectTarget }
   /** `amount`, or `rate` percent of the maximum life of the healed one, or (`of: "damage"`) `rate` percent of the damage the action did. */
   | { type: "heal"; target?: EffectTarget; amount?: number; rate?: number; of?: "damage" }
   | { type: "sp"; target?: EffectTarget; amount: number }
@@ -120,8 +121,9 @@ function runEffects(effects: readonly ActionEffect[], ctx: CommandContext, run: 
       case "damage": {
         const hits = Math.max(1, Math.floor(effect.hits ?? 1));
         for (const target of aliveTargets(ctx, effect.target, defaultTarget)) {
-          for (let i = 0; i < hits; i++) {
-            const hit = act.damage(target, { power: effect.power, kind: effect.kind, element: effect.element, stagger: effect.stagger });
+          // A target that fell (by this hit or an earlier effect) takes no more hits: as for a skill.
+          for (let i = 0; i < hits && target.hp > 0; i++) {
+            const hit = act.damage(target, { power: effect.power, kind: effect.kind, element: effect.element, stagger: effect.stagger, coefficient: effect.coefficient });
             run.damage += hit.amount;
             if (i < hits - 1) act.nextWave();
           }

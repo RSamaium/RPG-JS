@@ -298,6 +298,8 @@ export interface CommandInfo {
   cooldown?: number;
   /** Usable once in the battle. */
   once?: boolean;
+  /** A skill of the database played as a command (a recharge, several effects, pinned): a troop's `forbid: ["skill"]` applies to it, not `"action"`. */
+  skill?: boolean;
   /** Listed in the Skills sub-menu instead of the menu itself. */
   inSkills?: boolean;
   /** How the AI of an enemy uses it when the unit has no rule of its own for it. */

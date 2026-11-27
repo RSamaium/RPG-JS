@@ -63,9 +63,15 @@ export const defaultAi: AiFn = ({ state, self, rng }) => {
   if (custom.length && rng.chance(Math.min(0.9, (0.3 * total) / custom.length))) {
     let left = rng.next() * total;
     const id = custom.find((_, index) => (left -= weights[index]!) < 0) ?? custom[custom.length - 1]!;
-    const scope = state.catalog.commands![id].scope;
-    const ally = scope === "ally" || scope === "allAllies" || scope === "self";
-    return { type: "custom", command: id, target: ally ? self.id : target.id };
+    const info = state.catalog.commands![id];
+    // A command with a sub-menu (which creature to call…): one of its options the unit can pay for.
+    const options = info.options?.filter((o) => (o.spCost ?? info.spCost ?? 0) <= self.sp);
+    if (!info.options || options?.length) {
+      const option = options?.length ? rng.pick(options) : undefined;
+      const scope = option?.scope ?? info.scope;
+      const ally = scope === "ally" || scope === "allAllies" || scope === "self";
+      return { type: "custom", command: id, ...(option ? { option: option.id } : {}), target: ally ? self.id : target.id };
+    }
   }
   const offensive = skills.filter((s) => s.kind !== "heal");
   if (offensive.length && rng.chance(0.35))
