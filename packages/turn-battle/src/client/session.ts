@@ -244,9 +244,17 @@ async function pump() {
       actorId.set(null);
       waitingFor.set(null);
       stopCountdown();
-      for (const beat of packet.beats) {
-        if (current !== s) return;
-        await s.director.play(beat);
+      try {
+        for (const beat of packet.beats) {
+          if (current !== s) return;
+          await s.director.play(beat);
+        }
+      } catch (error) {
+        // A beat that cannot be played (an effect of the game that fails…) is skipped: the screen takes the state of the
+        // server and the battle goes on.
+        console.error("[TurnBattle] playback failed", error);
+        showToast(t("turnBattle.error.playback"));
+        if (packet.state.result && !result()) result.set(packet.state.result);
       }
       s.latest = packet.state;
       s.director.display = structuredClone(packet.state);

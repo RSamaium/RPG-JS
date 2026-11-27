@@ -138,6 +138,20 @@ describe("co-op: two players against a troop", () => {
     expect(b.player.removeItem).not.toHaveBeenCalled();
   });
 
+  it("an effect of the game that fails is skipped: both screens go on to the end of the battle", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    // Every effect the battle plays throws.
+    const fx = new Proxy({}, { get: () => () => { throw new Error("boom"); } });
+    const battle = await play({ client: { fx } });
+    const { a, b, result } = battle;
+    await fightToEnd(battle);
+    for (const s of [a, b]) expect(s.state.result()?.outcome).toBe("victory");
+    expect(errors).toHaveBeenCalled();
+    await closeResult(a, b);
+    expect((await result).outcome).toBe("victory");
+    errors.mockRestore();
+  });
+
   it("the heroes escape: both screens end the battle", async () => {
     const battle = await play();
     const { a, b, result } = battle;

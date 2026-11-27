@@ -92,7 +92,7 @@ function fakePlayer(name: string, o: { skills?: string[]; items?: Record<string,
 }
 
 /** The battle screen of a player: their own session, scene and controls, connected to their GUI. */
-async function makeClient(seat: ReturnType<typeof fakePlayer>) {
+async function makeClient(seat: ReturnType<typeof fakePlayer>, clientOptions: Record<string, unknown> = {}) {
   vi.resetModules();
   const session = await import("../client/session");
   const state = await import("../client/state");
@@ -107,7 +107,7 @@ async function makeClient(seat: ReturnType<typeof fakePlayer>) {
       music: () => () => {},
       callHooks: async () => [],
     },
-    {},
+    clientOptions,
   );
   seat.connect((packet) => session.receive(packet));
   return { session, state, scene, keys: turnBattleKeys };
@@ -115,9 +115,9 @@ async function makeClient(seat: ReturnType<typeof fakePlayer>) {
 
 export type Side = Awaited<ReturnType<typeof makeSide>>;
 
-async function makeSide(name: string, loadout?: Parameters<typeof fakePlayer>[1]) {
+async function makeSide(name: string, loadout?: Parameters<typeof fakePlayer>[1], clientOptions?: Record<string, unknown>) {
   const seat = fakePlayer(name, loadout);
-  const client = await makeClient(seat);
+  const client = await makeClient(seat, clientOptions);
   const { state } = client;
   const latest = () => seat.packets.at(-1)!.state;
   return {
@@ -154,12 +154,12 @@ export async function until(done: () => boolean, ms = 60_000) {
 }
 
 /** Two players, A and B: partners against a troop, or the two sides of a duel. */
-export async function play(o: { troop?: string; duel?: boolean; turnTimer?: number | false; a?: Parameters<typeof fakePlayer>[1]; b?: Parameters<typeof fakePlayer>[1]; server?: Partial<TurnBattleServerOptions> } = {}) {
+export async function play(o: { troop?: string; duel?: boolean; turnTimer?: number | false; a?: Parameters<typeof fakePlayer>[1]; b?: Parameters<typeof fakePlayer>[1]; server?: Partial<TurnBattleServerOptions>; client?: Record<string, unknown> } = {}) {
   vi.useFakeTimers();
   screens.length = 0;
   const provider = provideTurnBattleServer(serverOptions(o.server));
-  const a = await makeSide("Alice", o.a);
-  const b = await makeSide("Bob", o.b);
+  const a = await makeSide("Alice", o.a, o.client);
+  const b = await makeSide("Bob", o.b, o.client);
   screens.push(a, b);
   const result = startTurnBattle(
     o.duel
