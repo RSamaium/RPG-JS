@@ -77,6 +77,22 @@ describe("an action of the database, as data", () => {
     expect(run({ ...state, forbid: ["action" as const] }, { type: "custom", command: "fire", target: "g1" }).error).toBeUndefined();
   });
 
+  it("a skill played as a command with its own effects gives its coefficient to its damage effects that have none", () => {
+    const drain = skillCommandFromDb("drain", {
+      name: "Drain",
+      power: 50,
+      kind: "magical",
+      coefficient: { int: 1 },
+      spCost: 0,
+      turnBattle: { cooldown: 2, effects: [{ type: "damage", power: 50 }, { type: "damage", power: 10, coefficient: { str: 2 } }] },
+    })!;
+    const seen: unknown[] = [];
+    const damage: Formulas["damage"] = ({ skill }) => (seen.push(skill?.coefficient), { amount: 10, crit: false });
+    const { state, run } = rig({ drain }, {}, { damage });
+    run(state, { type: "custom", command: "drain", target: "g1" });
+    expect(seen).toEqual([{ int: 1 }, { str: 2 }]);
+  });
+
   it("a skill charges the limit gauge fully, whatever weapon its user holds (only the attack is split over the blows of the weapon)", () => {
     const { state, run } = rig(
       { bolt: { name: "Foudre", effects: [{ type: "damage", power: 50 }] } },

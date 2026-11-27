@@ -1,5 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { RpgClientEngine } from "@rpgjs/client";
+
+/** The GUIs displayed by the client (a dialog of an event…). */
+const displayed = vi.hoisted(() => new Set<string>());
+vi.mock("@rpgjs/client", async (original) => ({
+  ...(await original<typeof import("@rpgjs/client")>()),
+  inject: () => ({ isDisplaying: (id: string) => displayed.has(id) }),
+}));
 import { BattleCues, battleControls } from "../index";
 
 const engine = (keyboardControls: Record<string, unknown> = {}, playSound = vi.fn()) =>
@@ -33,6 +40,17 @@ describe("battle controls (client)", () => {
     const custom = battleControls(engine({ tabPrev: "q", tabNext: "w" }), handlers) as Record<string, any>;
     expect(custom.tabPrev.bind).toBe("q");
     expect(custom.tabNext.bind).toBe("w");
+  });
+
+  it("leaves the keys to a built-in dialog shown over the battle, without being told to", () => {
+    const confirm = vi.fn();
+    const controls = battleControls(engine(), { action: confirm }) as Record<string, any>;
+    displayed.add("rpg-dialog");
+    controls.action.keyDown();
+    expect(confirm).not.toHaveBeenCalled();
+    displayed.clear();
+    controls.action.keyDown();
+    expect(confirm).toHaveBeenCalledOnce();
   });
 
   it("leaves the keys to another GUI while paused", () => {

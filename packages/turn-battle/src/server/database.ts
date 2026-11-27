@@ -289,8 +289,11 @@ export function skillCommandFromDb(id: string, raw: Raw | undefined): CustomComm
   const skill = skillFromDb(id, raw)!;
   // Without effects, it hits as the skill says (a healing skill needs effects to be a command)
   if (!own && skill.kind === "heal") return undefined;
+  // The damage of its own effects scales as the skill does, unless an effect says otherwise.
   const effects = own
-    ? b.effects
+    ? b.effects.map((effect: Record<string, unknown>) =>
+        effect?.type === "damage" && effect.coefficient === undefined && skill.coefficient ? { ...effect, coefficient: skill.coefficient } : effect,
+      )
     : [{ type: "damage", power: skill.power, kind: skill.kind, ...(skill.element ? { element: skill.element } : {}), ...(skill.hits ? { hits: skill.hits } : {}), ...(skill.stagger !== undefined ? { stagger: skill.stagger } : {}), ...(skill.coefficient ? { coefficient: skill.coefficient } : {}) }];
   const command = actionCommand({
     name: skill.name,

@@ -1,4 +1,5 @@
 import { getKeyboardControlBind, menuGamepadControls, type RpgClientEngine } from "@rpgjs/client";
+import { modalGuiShown } from "./guis";
 
 /**
  * The commands of a battle screen. Their keys come from the keyboard controls
@@ -118,7 +119,8 @@ export type BattleControlHandlers = Partial<Record<BattleControl, BattleControlH
   extra?: Record<string, BattleExtraControl>;
   /**
    * When it returns true, the battle leaves every key to another GUI (a
-   * dialog opened over the battle): no handler runs. `modalGuiShown` fits.
+   * dialog opened over the battle): no handler runs. Default: `modalGuiShown`
+   * (a built-in dialog, menu, shop… shown over the battle).
    *
    * @prop {() => boolean} [paused]
    * @memberof BattleControlHandlers
@@ -166,8 +168,9 @@ export function typingInTextField(): boolean {
  */
 export function battleControls(engine: RpgClientEngine, handlers: BattleControlHandlers): Record<string, unknown> {
   const keyboard = (engine.globalConfig?.keyboardControls ?? {}) as Record<string, unknown>;
+  const paused = handlers.paused ?? modalGuiShown;
   const run = (fn?: () => void) => () => {
-    if (!fn || handlers.paused?.() || typingInTextField()) return;
+    if (!fn || paused() || typingInTextField()) return;
     fn();
   };
   const controls: Record<string, unknown> = {};

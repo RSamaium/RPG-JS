@@ -168,7 +168,7 @@ The `effects` (`ActionEffect`), each with an optional `target` (`self` or `targe
 
 | `type` | Fields |
 |---|---|
-| `damage` | `power`, `kind`, `element`, `hits`, `stagger`, `coefficient` (the parameters of the user that scale `power`, as for a skill; a skill with a recharge keeps its own). A target that falls takes no more hits. |
+| `damage` | `power`, `kind`, `element`, `hits`, `stagger`, `coefficient` (the parameters of the user that scale `power`, as for a skill; a skill played as a command gives its own to its damage effects that have none). A target that falls takes no more hits. |
 | `heal` | `amount`, or `rate` percent of the max life, or `of: "damage"` with `rate` percent of the damage done |
 | `sp` | `amount` |
 | `steal` | `chance`, `successText`, `failText`, `emptyText` |
