@@ -34,7 +34,7 @@ The data is read on the server only, when a battle starts. The server options `s
 | `scope` | Who can be targeted: `enemy` (default), `allEnemies`, `ally`, `allAllies`, `self`, `deadAlly`. |
 | `power` | Overrides the native `power` (100 = a regular attack). |
 | `element` | `physical`, `fire`, `ice`, `thunder`, `light`, `dark`, `wind`, `earth`, `water`, or any other string. |
-| `hits` | Hits per target. |
+| `hits` | Hits per target (1 by default: the blows of the weapon are for the basic attack). |
 | `stagger` | Stagger damage multiplier. |
 | `weight` | Turn-order cost (attack = 1): heavier skills come back later. |
 | `anim` | Battler animation (default `skill`). |

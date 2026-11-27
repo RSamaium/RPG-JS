@@ -26,7 +26,7 @@ The server reads the data when a battle starts: the `units`, `skills`, `items`, 
 
 ## Skill
 
-Native fields: `spCost` (SP cost) and `power` (damage or healing power). The `tactical` field:
+Native fields: `spCost` (SP cost), `power` (damage or healing power) and `coefficient` (the parameters of the user that scale the damage, read by the map's `damageSkill` formula when both units carry parameters). The `tactical` field:
 
 | Field | Meaning |
 |---|---|

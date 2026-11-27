@@ -55,6 +55,8 @@ export interface SkillDef extends VisualEffects {
   /** SP cost (the native `spCost` of the skill). */
   spCost: number;
   power: number;
+  /** The parameters of its user that scale its damage with the `damageSkill` formula of the map (native `coefficient`). */
+  coefficient?: Record<string, number>;
   range: number;
   shape: SkillShape;
   /** The area the Studio skill draws around its target (rows of `#` for a hit tile, the target in the middle); wins over `shape`. */

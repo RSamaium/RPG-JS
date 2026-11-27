@@ -47,7 +47,7 @@ export function nativeDamageHook(get: (name: string) => Formula | undefined): Ru
       if (!a || !b) return;
       const formula = skill ? get("damageSkill") : get("damagePhysic");
       if (!formula) return;
-      const amount = skill ? formula(a, b, { ...skill, coefficient: {} }) : formula(a, b);
+      const amount = skill ? formula(a, b, { ...skill, coefficient: skill.coefficient ?? {} }) : formula(a, b);
       return Number.isFinite(amount) ? Math.max(1, amount) : undefined;
     },
   };

@@ -313,7 +313,17 @@ export function createTacticalBattle(
     }
     for (const id of b.skills ?? []) {
       const s = setup.skills[id];
-      if (s) skills[id] = { id, name: s.name, description: s.description, spCost: Number(s.spCost) || 0, power: Number(s.power) || 0, ...s.tactical };
+      if (s)
+        skills[id] = {
+          id,
+          name: s.name,
+          description: s.description,
+          spCost: Number(s.spCost) || 0,
+          power: Number(s.power) || 0,
+          // The parameters that scale its damage with the map's `damageSkill` formula (the native field of the skill).
+          ...(s.coefficient && typeof s.coefficient === "object" ? { coefficient: s.coefficient as Record<string, number> } : {}),
+          ...s.tactical,
+        };
     }
     return {
       id: b.player ? `hero-${b.player}` : `${team}-${p.unit}-${i}`,

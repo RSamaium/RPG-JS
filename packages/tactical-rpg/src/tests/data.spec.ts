@@ -24,6 +24,14 @@ describe("database helpers", () => {
     expect(state.meta).toMatchObject({ name: "Test", objective: "Gagner" });
     expect(state.board).toMatchObject({ columns: 9, rows: 7, cellSize: 64, origin: { x: 100, y: 50 } });
   });
+  it("keep the native coefficient of a skill, for the damage formula of the map", () => {
+    const fire = tacticalSkill({ name: "Fire", power: 30, coefficient: { int: 1 }, tactical: { range: 2, shape: "single" } });
+    const state = createTacticalBattle(
+      { name: encounter.name, data: encounter.tactical, units: { ana: { ...unit, tactical: { ...unit.tactical, skills: ["fire"] } } }, skills: { fire } },
+      { id: "b2" },
+    );
+    expect(state.skills.fire.coefficient).toEqual({ int: 1 });
+  });
   it("reject an unknown unit", () => {
     expect(() => createTacticalBattle({ data: encounter.tactical, units: {}, skills: {} }, { id: "b" })).toThrow('Unknown unit "ana"');
   });

@@ -516,7 +516,8 @@ function perform(
       const targets = resolveTargets(state, actor, scope, "target" in cmd ? cmd.target : undefined);
       const waves: Hit[][] = [];
       const standing = targets.filter(alive);
-      const hits = skill?.hits ?? actor.attack.hits ?? 1;
+      // A skill hits as many times as it says (once by default); only the attack takes the blows of the weapon.
+      const hits = skill ? (skill.hits ?? 1) : (actor.attack.hits ?? 1);
       for (let i = 0; i < hits; i++) {
         const wave = targets
           .filter((t) => alive(t))

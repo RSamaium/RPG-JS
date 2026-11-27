@@ -103,6 +103,14 @@ describe("an action of the database, as data", () => {
     expect(out.state.combatants.find((c) => c.id === "hero")!.limit!.value - before).toBe(6);
   });
 
+  it("a skill without `hits` strikes once, whatever weapon its user holds: the blows of a dagger are for the attack", () => {
+    const { state, run, waves } = rig({}, { allies: [hero({ owner: "p1", attack: { hits: 3 }, stats: stats({ agi: 90, maxSp: 60 }) })] });
+    const before = state.combatants.find((c) => c.id === "hero")!.limit!.value;
+    const out = run(state, { type: "skill", skill: "fire", target: "g1" });
+    expect(waves(out)).toHaveLength(1);
+    expect(out.state.combatants.find((c) => c.id === "hero")!.limit!.value - before).toBe(6);
+  });
+
   it("an enemy uses a command with a sub-menu: it picks one of its options", () => {
     const { state, rules } = rig({ call: { name: "Appel", effects: [{ type: "summon", creatures: [{ id: "ifrit" }, { id: "imp" }] }] } });
     const s = structuredClone(state);

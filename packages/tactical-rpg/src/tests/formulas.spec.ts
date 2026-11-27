@@ -17,6 +17,12 @@ describe("the damage of the formulas of RPGJS in a tactical battle", () => {
     expect(nativeDamageHook((name) => formulas[name]).onDamage!(ctx({ skill: { id: "fire", power: 50 } }))).toBe(42);
   });
 
+  it("scales a skill with the parameters its native `coefficient` names, as in the other battles", () => {
+    const scaled: Record<string, (...args: any[]) => number> = { damageSkill: (a, _b, skill) => skill.power * (1 + (skill.coefficient.atk ?? 0) * a.atk / 10) };
+    expect(nativeDamageHook((name) => scaled[name]).onDamage!(ctx({ skill: { id: "fire", power: 10, coefficient: { atk: 1 } } }))).toBe(40);
+    expect(nativeDamageHook((name) => scaled[name]).onDamage!(ctx({ skill: { id: "fire", power: 10 } }))).toBe(10);
+  });
+
   it("leaves the damage alone when the map has no formula or a unit has no parameters", () => {
     expect(nativeDamageHook(() => undefined).onDamage!(ctx())).toBeUndefined();
     expect(nativeDamageHook((name) => formulas[name]).onDamage!(ctx({ target: {} }))).toBeUndefined();
