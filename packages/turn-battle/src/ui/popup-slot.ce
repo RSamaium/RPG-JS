@@ -1,0 +1,62 @@
+<Container x={x} y={boxY} alpha={boxAlpha} visible={shown}>
+  <Text text={d0} x={dx0} y={dy0} alpha={da0} anchor={[0.5, 1]} size={size} color={fill} style={style} />
+  <Text text={d1} x={dx1} y={dy1} alpha={da1} anchor={[0.5, 1]} size={size} color={fill} style={style} />
+  <Text text={d2} x={dx2} y={dy2} alpha={da2} anchor={[0.5, 1]} size={size} color={fill} style={style} />
+  <Text text={d3} x={dx3} y={dy3} alpha={da3} anchor={[0.5, 1]} size={size} color={fill} style={style} />
+  <Text text={d4} x={dx4} y={dy4} alpha={da4} anchor={[0.5, 1]} size={size} color={fill} style={style} />
+</Container>
+
+<script>
+  import { battleFont } from '@rpgjs/battle-kit'
+  import { signal, computed, tick } from 'canvasengine'
+  import { scene } from '../client/scene'
+  import { t } from '../client/state'
+  import { digitMotion, popupLift } from '@rpgjs/battle-kit/pure'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
+
+  // One pooled damage number: digits drop in one by one with a bounce, then lift and fade.
+  const { index } = defineProps()
+  const popup = scene.popupSlots[index()]
+  const elapsed = signal(0)
+  let key = 0
+  const label = computed(() => {
+    const p = popup()
+    if (!p) return ''
+    return p.kind === 'miss' ? t('turnBattle.miss') : String(p.value).slice(0, 5)
+  })
+  tick(({ deltaTime }) => {
+    const p = popup()
+    if (!p) return
+    if (p.key !== key) {
+      key = p.key
+      elapsed.set(0)
+    }
+    elapsed.set(elapsed() + deltaTime * scene.clock.speed)
+    if (elapsed() > 1250 + label().length * 32) popup.set(null)
+  })
+  const shown = computed(() => !!popup())
+  const size = computed(() => (popup()?.crit ? 48 : 36) * (popup()?.scale ?? 1))
+  const fill = computed(() => {
+    const p = popup()
+    return !p ? '#ffffff' : p.kind === 'heal' ? '#8dffb4' : p.kind === 'sp' ? '#8fd0ff' : p.crit ? '#ffd45c' : p.weak ? '#ffa24a' : '#ffffff'
+  })
+  const style = {
+    fontFamily: font, fontWeight: '900',
+    stroke: { color: '#17121f', width: 7, join: 'round' },
+    dropShadow: { color: '#000000', alpha: 0.6, blur: 2, distance: 3, angle: Math.PI / 2 },
+  }
+  const x = computed(() => popup()?.x ?? 0)
+  // Digit drop and lift-and-fade: shared motion (battle kit).
+  const lift = computed(() => popupLift(elapsed(), label().length))
+  const boxY = computed(() => (popup()?.y ?? 0) + lift().y)
+  const boxAlpha = computed(() => lift().alpha)
+  const ch = (i) => computed(() => label()[i] ?? '')
+  const dx = (i) => computed(() => (i - (label().length - 1) / 2) * size() * 0.58)
+  const dy = (i) => computed(() => digitMotion(elapsed(), i).y)
+  const da = (i) => computed(() => digitMotion(elapsed(), i).alpha)
+  const [d0, d1, d2, d3, d4] = [0, 1, 2, 3, 4].map(ch)
+  const [dx0, dx1, dx2, dx3, dx4] = [0, 1, 2, 3, 4].map(dx)
+  const [dy0, dy1, dy2, dy3, dy4] = [0, 1, 2, 3, 4].map(dy)
+  const [da0, da1, da2, da3, da4] = [0, 1, 2, 3, 4].map(da)
+</script>

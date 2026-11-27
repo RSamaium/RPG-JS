@@ -1,0 +1,43 @@
+<Container zIndex={100000}>
+  <FieldGrid />
+  <Container sortableChildren={true}>
+    @for (id of unitIds(); track id) {
+      <FieldUnit id={id} />
+    }
+  </Container>
+  <Graphics draw={drawProjectile} />
+  <Container pixiChildren={[fxLayer]} />
+  @for (i of popupIndexes; track i) {
+    <FieldPopup index={i} />
+  }
+</Container>
+
+<script>
+  import { mount, tick } from 'canvasengine'
+  import FieldGrid from './field-grid.ce'
+  import FieldUnit from './field-unit.ce'
+  import FieldPopup from './field-popup.ce'
+  import { field } from '../client/field'
+
+  // Tactical battlefield, rendered in the map world (RPGJS component animation).
+  // The model (client/field.ts) is advanced every tick; components read its signals.
+  const unitIds = field.unitIds
+  const popupIndexes = field.popups.map((_, i) => i)
+  // CanvasEngine effect presets (battle kit) play into this raw layer.
+  const fxLayer = field.fx.layer
+
+  mount((element) => {
+    field.mount(element.componentInstance)
+    return () => field.unmount()
+  })
+  tick(() => field.frame(performance.now()))
+
+  // Ranged basic attacks: a bolt with a glow.
+  const drawProjectile = (g) => {
+    const p = field.projectile()
+    if (!p) return
+    g.moveTo(p.ax, p.ay).lineTo(p.x, p.y).stroke({ color: p.color, width: p.size > 5 ? 6 : 3, alpha: 0.65 })
+    g.circle(p.x, p.y, p.size).fill(0xffffff)
+    g.circle(p.x, p.y, 18).fill({ color: p.color, alpha: 0.18 })
+  }
+</script>

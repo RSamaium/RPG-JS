@@ -1,0 +1,58 @@
+<Container x={px} y={py} alpha={alpha} visible={shown}>
+  <Text text={name} anchor={[0.5, 0]} y={12} style={nameStyle} />
+  <Text text={hpLabel} anchor={[1, 0.5]} x={labelX} y={35.5} style={labelStyle} />
+  <Container x={barX} y={32}>
+    <Bar value={hpLag} maxValue={maxHp} width={barWidth} height={7} backgroundColor="#0c0a12" foregroundColor="#ffffff" borderRadius={3} />
+    <Bar value={hp} maxValue={maxHp} width={barWidth} height={7} backgroundColor="#00000000" foregroundColor={hpColor} borderRadius={3} />
+  </Container>
+  @if (revealed()) {
+    <Text text={hpText} anchor={[0.5, 0]} y={hasStagger ? 50 : 42} style={infoStyle} />
+  }
+  @if (hasStagger) {
+    <Text text={guardLabel} anchor={[1, 0.5]} x={labelX} y={44.5} style={labelStyle} />
+    <Container x={barX} y={42}>
+      <Bar value={staggerValue} maxValue={staggerMax} width={barWidth} height={5} backgroundColor="#0c0a12" foregroundColor={staggerColor} borderRadius={3} />
+    </Container>
+  }
+</Container>
+
+<script>
+  import { battleFont } from '@rpgjs/battle-kit'
+  import { computed, effect, animatedSignal, Easing } from 'canvasengine'
+  import { Bar } from '@canvasengine/presets'
+  import { scene } from '../client/scene'
+  import { t } from '../client/state'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
+
+  // Enemy name, HP bar (white lag = recent damage) and guard gauge (drops with each hit; empty = broken), each labelled.
+  const { model } = defineProps()
+  const m = model()
+  const isEnemy = !m.facingLeft
+  const name = m.name
+  const { alpha, hp, revealed } = m
+  // Scanned (a "Scan" command): HP numbers under the bars.
+  const hpText = computed(() => t('turnBattle.gaugeValue', { value: hp(), max: m.maxHp }))
+  const infoStyle = { fontFamily: font, fontSize: 11, fontWeight: '800', fill: '#9fd8ff', stroke: { color: '#120d18', width: 3, join: 'round' } }
+  const maxHp = m.maxHp
+  const staggerMax = m.staggerMax
+  const hasStagger = staggerMax > 0
+  const shown = computed(() => isEnemy && m.visible() && !m.dead())
+  const px = computed(() => m.homeX() + m.offX() + m.parallax())
+  const py = computed(() => m.homeY() + m.offY())
+  const barWidth = Math.max(76, m.info.bounds.w * m.scale() * 0.8)
+  const barX = -barWidth / 2
+  const labelX = barX - 5
+  const hpLag = animatedSignal(hp(), { duration: 600, ease: Easing.easeOut })
+  effect(() => {
+    const value = hp()
+    setTimeout(() => hpLag.set(value, { duration: 600, ease: Easing.easeOut }), 250)
+  })
+  const hpColor = computed(() => (hp() < maxHp * 0.3 ? '#ff5b5b' : '#ff8a5b'))
+  const staggerValue = computed(() => (m.broken() ? staggerMax : m.stagger()))
+  const staggerColor = computed(() => (m.broken() ? '#9fb6ff' : '#ffd45c'))
+  const hpLabel = computed(() => t('turnBattle.hp'))
+  const guardLabel = computed(() => t('turnBattle.guardGauge'))
+  const labelStyle = { fontFamily: font, fontSize: 10, fontWeight: '900', fill: '#d8d2c4', stroke: { color: '#120d18', width: 3, join: 'round' } }
+  const nameStyle = { fontFamily: font, fontSize: 13, fontWeight: '800', fill: '#fff4e0', stroke: { color: '#120d18', width: 4, join: 'round' } }
+</script>

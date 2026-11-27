@@ -1,0 +1,36 @@
+<Text text={text} anchor={0.5} x={x} y={y} scale={scale} alpha={alpha} visible={shown} size={size} color={color} style={style} />
+
+<script>
+  import { battleFont } from '@rpgjs/battle-kit'
+  import { signal, computed, tick } from 'canvasengine'
+  import { scene } from '../client/scene'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
+
+  // One pooled floating label ("FAIBLESSE", "CRITIQUE"…).
+  const { index } = defineProps()
+  const label = scene.labelSlots[index()]
+  const elapsed = signal(0)
+  let key = 0
+  tick(({ deltaTime }) => {
+    const l = label()
+    if (!l) return
+    if (l.key !== key) {
+      key = l.key
+      elapsed.set(0)
+    }
+    elapsed.set(elapsed() + deltaTime * scene.clock.speed)
+    if (elapsed() > l.life) label.set(null)
+  })
+  const out = (t) => 1 - (1 - t) ** 3
+  const k = computed(() => Math.min(1, elapsed() / (label()?.life ?? 1)))
+  const shown = computed(() => !!label())
+  const text = computed(() => label()?.text ?? '')
+  const x = computed(() => label()?.x ?? 0)
+  const y = computed(() => (label()?.y ?? 0) - 24 * out(Math.min(1, k() * 2)))
+  const scale = computed(() => (k() < 0.15 ? 0.6 + (k() / 0.15) * 0.5 : 1.1 - Math.min(0.1, k() - 0.15)))
+  const alpha = computed(() => (k() > 0.75 ? 1 - (k() - 0.75) / 0.25 : 1))
+  const size = computed(() => label()?.size ?? 16)
+  const color = computed(() => '#' + (label()?.color ?? 0xffffff).toString(16).padStart(6, '0'))
+  const style = { fontFamily: font, fontWeight: '900', stroke: { color: 0x120d18, width: 5, join: 'round' }, letterSpacing: 1 }
+</script>

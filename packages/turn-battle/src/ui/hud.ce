@@ -1,0 +1,232 @@
+<DOMContainer width="100%" height="100%">
+  <div class={['rpg-ui-turn-battle-root', 'rpg-ui-theme-default', 'rpg-ui-turn-battle-phase-' + phase(), { 'rpg-ui-turn-battle-reduced': reduced() }]}>
+    @if (phase() !== 'closed') {
+      <div class={['rpg-ui-turn-battle-timeline', { 'rpg-ui-turn-battle-preview': previewing() }]}>
+        <div class="rpg-ui-turn-battle-timeline-rail"></div>
+        <div class="rpg-ui-turn-battle-timeline-chips">
+          @for (chip of order(); track chip.key) {
+            <div class={['rpg-ui-turn-battle-chip', 'rpg-ui-turn-battle-' + chip.side, { 'rpg-ui-turn-battle-current': chip.current, 'rpg-ui-turn-battle-landing': chip.landing }]} title={chip.name}>
+              <div class="rpg-ui-turn-battle-chip-face" style={faceStyle(chip.battler, chip.current ? 50 : 38)}></div>
+            </div>
+          }
+        </div>
+      </div>
+      <div class="rpg-ui-turn-battle-options">
+        @if (spectating()) {
+          <span class="rpg-ui-turn-battle-pill rpg-ui-turn-battle-spectator-badge">👁 {{ t('turnBattle.spectator') }}</span>
+          <button class="rpg-ui-btn rpg-ui-turn-battle-pill" data-variant="secondary" data-size="small" click={leaveWatching}>{{ t('turnBattle.leave') }} ✕</button>
+        }
+        @if (pvp() && !spectating() && phase() !== 'result') {
+          <button class={['rpg-ui-btn', 'rpg-ui-turn-battle-pill', 'rpg-ui-turn-battle-surrender', { 'rpg-ui-turn-battle-armed': surrenderArmed(), 'rpg-ui-turn-battle-done': surrendered() }]} data-variant="ghost" data-size="small" click={surrender} title={t('turnBattle.surrenderHint')}>⚑ {{ surrenderLabel() }}</button>
+        }
+        @if (!spectating() && audience() > 0) {
+          <span class="rpg-ui-turn-battle-pill rpg-ui-turn-battle-audience" title={t('turnBattle.audience')}>👁 {{ audience() }}</span>
+        }
+        <button class="rpg-ui-btn rpg-ui-turn-battle-pill" data-variant="ghost" data-size="small" click={toggleMuted} title={t('turnBattle.sound')} aria-label={t(muted() ? 'turnBattle.soundOn' : 'turnBattle.soundOff')} aria-pressed={muted() ? 'true' : 'false'}>{{ muted() ? '🔇' : '🔊' }}</button>
+        <button class="rpg-ui-btn rpg-ui-turn-battle-pill" data-variant="ghost" data-size="small" click={cycleSpeed} title={t('turnBattle.speed')} aria-label={t('turnBattle.speedValue', { speed: speed() })}>▸▸ ×{{ speed() }}</button>
+      </div>
+    }
+
+    @if (banner()) {
+      <div class={['rpg-ui-turn-battle-banner', 'rpg-ui-turn-battle-' + banner()?.side]}><span>{{ banner()?.text }}</span></div>
+    }
+
+    @if (phase() === 'command' || phase() === 'target') {
+      <section class={['rpg-ui-panel', 'rpg-ui-turn-battle-menu', { 'rpg-ui-turn-battle-dim': phase() === 'target' }]}>
+        <header>
+          <span class="rpg-ui-eyebrow rpg-ui-turn-battle-menu-title">{{ menuTitle() }}</span>
+          @if (countdown() !== null) {
+            <span class={['rpg-ui-turn-battle-countdown', { 'rpg-ui-turn-battle-urgent': countdown() <= 5 }]}>{{ countdown() }}</span>
+          }
+          @if (menuLevel() !== 'root') {
+            <button class="rpg-ui-turn-battle-back" aria-label={t('turnBattle.back')} click={back}>✕</button>
+          }
+        </header>
+        <div class="rpg-ui-turn-battle-menu-list">
+          @for (entry of menuEntries(); track entry.id) {
+            <button
+              class={['rpg-ui-turn-battle-entry', { 'rpg-ui-turn-battle-focus': menuEntries()[menuIndex()]?.id === entry.id, 'rpg-ui-turn-battle-disabled': entry.disabled, 'rpg-ui-turn-battle-special': entry.special }]}
+              click={() => choose(entry.id)}
+              mouseenter={() => focus(entry.id)}
+            >
+              <span class="rpg-ui-turn-battle-entry-icon">{{ entry.icon || '◆' }}</span>
+              <span class="rpg-ui-turn-battle-entry-label">{{ entry.label }}</span>
+              <span class="rpg-ui-turn-battle-entry-hint">{{ entry.hint || '' }}</span>
+            </button>
+          }
+        </div>
+        <footer class="rpg-ui-muted">{{ menuEntries()[menuIndex()]?.detail || t('turnBattle.keys') }}</footer>
+      </section>
+    }
+
+    @if (phase() === 'waiting' && waitingFor()) {
+      <div class="rpg-ui-panel rpg-ui-turn-battle-target-hint rpg-ui-turn-battle-waiting">
+        <span class="rpg-ui-eyebrow">{{ t('turnBattle.waitingFor') }}</span>
+        <strong>{{ waitingFor()?.player }}</strong>
+        <span class="rpg-ui-turn-battle-waiting-unit">{{ waitingFor()?.unit }}</span>
+        @if (countdown() !== null) {
+          <span class={['rpg-ui-turn-battle-countdown', { 'rpg-ui-turn-battle-urgent': countdown() <= 5 }]}>{{ countdown() }}</span>
+        }
+      </div>
+    }
+
+    @if (targetCard()) {
+      <aside class="rpg-ui-panel rpg-ui-turn-battle-target-card" aria-label={t('turnBattle.targetInfo')}>
+        <div class="rpg-ui-turn-battle-member-face" style={faceStyle(targetInfo()?.battler, 46)}></div>
+        <div class="rpg-ui-turn-battle-target-body">
+          <span class="rpg-ui-eyebrow">{{ t('turnBattle.chooseTarget') }}</span>
+          <strong class="rpg-ui-turn-battle-target-name">{{ targetInfo()?.name }}</strong>
+          <div class="rpg-ui-turn-battle-stat">
+            <span class="rpg-ui-turn-battle-stat-key">{{ t('turnBattle.hp') }}</span>
+            <div class={['rpg-ui-turn-battle-gauge', targetInfo()?.foe ? 'rpg-ui-turn-battle-foe-hp' : 'rpg-ui-turn-battle-hp']}><i style={{ width: pct(targetInfo()?.hp, targetInfo()?.maxHp) }}></i></div>
+            <span class="rpg-ui-turn-battle-stat-val">{{ targetInfo()?.known ? t('turnBattle.gaugeValue', { value: targetInfo()?.hp, max: targetInfo()?.maxHp }) : t('turnBattle.unknownValue') }}</span>
+          </div>
+          @if (targetInfo()?.known && !targetInfo()?.foe) {
+            <div class="rpg-ui-turn-battle-stat">
+              <span class="rpg-ui-turn-battle-stat-key">{{ t('turnBattle.sp') }}</span>
+              <div class="rpg-ui-turn-battle-gauge rpg-ui-turn-battle-sp"><i style={{ width: pct(targetInfo()?.sp, targetInfo()?.maxSp) }}></i></div>
+              <span class="rpg-ui-turn-battle-stat-val">{{ t('turnBattle.gaugeValue', { value: targetInfo()?.sp, max: targetInfo()?.maxSp }) }}</span>
+            </div>
+          }
+          @if (targetInfo()?.stagger) {
+            <div class="rpg-ui-turn-battle-stat">
+              <span class="rpg-ui-turn-battle-stat-key">{{ t('turnBattle.guardGauge') }}</span>
+              <div class={['rpg-ui-turn-battle-gauge', 'rpg-ui-turn-battle-break', { 'rpg-ui-turn-battle-broken': targetInfo()?.stagger?.broken }]}><i style={{ width: guardWidth(targetInfo()) }}></i></div>
+              <span class="rpg-ui-turn-battle-stat-val">{{ guardText(targetInfo()) }}</span>
+            </div>
+            <small class="rpg-ui-turn-battle-target-help">{{ t(targetInfo()?.stagger?.broken ? 'turnBattle.brokenHelp' : 'turnBattle.breakHelp') }}</small>
+          }
+          @if (targetInfo()?.known && targetInfo()?.foe && (targetInfo()?.weaknesses.length || targetInfo()?.resists.length)) {
+            <div class="rpg-ui-turn-battle-target-elements">
+              @for (el of targetInfo()?.weaknesses; track el) { <span class="rpg-ui-turn-battle-chip rpg-ui-turn-battle-chip-weak">{{ t('turnBattle.weakTo', { element: t('turnBattle.el.' + el) }) }}</span> }
+              @for (el of targetInfo()?.resists; track el) { <span class="rpg-ui-turn-battle-chip">{{ t('turnBattle.resistsTo', { element: t('turnBattle.el.' + el) }) }}</span> }
+            </div>
+          }
+          @if (targetInfo()?.foe && !targetInfo()?.known) {
+            <small class="rpg-ui-turn-battle-target-help">{{ t('turnBattle.scanHint') }}</small>
+          }
+        </div>
+        <button class="rpg-ui-btn rpg-ui-turn-battle-target-back" data-variant="secondary" data-size="small" click={back}>{{ t('turnBattle.back') }}</button>
+      </aside>
+    }
+
+    @if (targetHint()) {
+      <div class="rpg-ui-panel rpg-ui-turn-battle-target-hint">
+        <span class="rpg-ui-eyebrow">{{ t('turnBattle.chooseTarget') }}</span>
+        <strong>{{ targetName() }}</strong>
+        <button class="rpg-ui-btn" data-variant="secondary" data-size="small" click={back}>{{ t('turnBattle.back') }}</button>
+      </div>
+    }
+
+    @if (phase() !== 'closed') {
+      <div class="rpg-ui-turn-battle-party">
+        @for (id of partyIds(); track id) {
+          <div class={['rpg-ui-panel', 'rpg-ui-turn-battle-member', { 'rpg-ui-turn-battle-hit-a': member(id)().hits % 2 === 1, 'rpg-ui-turn-battle-hit-b': member(id)().hits > 0 && member(id)().hits % 2 === 0, 'rpg-ui-turn-battle-active': actorId() === id, 'rpg-ui-turn-battle-dead': member(id)().dead, 'rpg-ui-turn-battle-guard': member(id)().guarding, 'rpg-ui-turn-battle-limit-full': limitFull(id), 'rpg-ui-turn-battle-other': !member(id)().mine }]}>
+            <div class="rpg-ui-turn-battle-member-face" style={faceStyle(member(id)().battler, 46)}></div>
+            <div class="rpg-ui-turn-battle-member-body">
+              <div class="rpg-ui-turn-battle-member-name">{{ member(id)().name }}
+                @if (member(id)().tag) {
+                  <small class="rpg-ui-turn-battle-member-tag">{{ member(id)().tag }}</small>
+                }
+              </div>
+              <div class="rpg-ui-turn-battle-stat">
+                <span class="rpg-ui-turn-battle-stat-key">{{ t('turnBattle.hp') }}</span>
+                <div class="rpg-ui-turn-battle-gauge rpg-ui-turn-battle-hp"><i class="rpg-ui-turn-battle-lag" style={{ width: pct(member(id)().hp, member(id)().maxHp) }}></i><i style={{ width: pct(member(id)().hp, member(id)().maxHp) }}></i></div>
+                <span class={['rpg-ui-turn-battle-stat-val', { 'rpg-ui-turn-battle-low': member(id)().hp < member(id)().maxHp * 0.3 }]}>{{ member(id)().hp }}</span>
+              </div>
+              <div class="rpg-ui-turn-battle-stat">
+                <span class="rpg-ui-turn-battle-stat-key">{{ t('turnBattle.sp') }}</span>
+                <div class="rpg-ui-turn-battle-gauge rpg-ui-turn-battle-sp"><i style={{ width: pct(member(id)().sp, member(id)().maxSp) }}></i></div>
+                <span class="rpg-ui-turn-battle-stat-val">{{ member(id)().sp }}</span>
+              </div>
+              <div class="rpg-ui-turn-battle-gauge rpg-ui-turn-battle-limit"><i style={{ width: pct(member(id)().limit || 0, member(id)().limitMax) }}></i></div>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    @if (cutin()) {
+      <div class="rpg-ui-turn-battle-cutin" click={skipCutin}>
+        <div class="rpg-ui-turn-battle-cutin-lines"></div>
+        <div class="rpg-ui-turn-battle-cutin-band">
+          <div class="rpg-ui-turn-battle-cutin-face" style={faceStyle(cutin()?.battler, 300)}></div>
+          <div class="rpg-ui-turn-battle-cutin-text">
+            <small>{{ cutin()?.name }}</small>
+            <strong>{{ t('turnBattle.cutinLine', { line: cutin()?.line }) }}</strong>
+          </div>
+        </div>
+        <div class="rpg-ui-turn-battle-letterbox rpg-ui-turn-battle-top"></div>
+        <div class="rpg-ui-turn-battle-letterbox rpg-ui-turn-battle-bottom"></div>
+        <button class="rpg-ui-btn rpg-ui-turn-battle-skip" data-variant="ghost" data-size="small" click={skipCutin}>{{ t('turnBattle.skip') }} ▸</button>
+      </div>
+    }
+
+    @if (phase() === 'result' && result()) {
+      <div class={['rpg-ui-turn-battle-result', 'rpg-ui-turn-battle-' + result()?.outcome]}>
+        <div class="rpg-ui-turn-battle-result-title">{{ outcomeTitle() }}</div>
+        @if (result()?.outcome === 'victory') {
+          <section class="rpg-ui-panel rpg-ui-turn-battle-result-panel">
+            <header class="rpg-ui-eyebrow">{{ t(spectating() ? 'turnBattle.resultTeam' : 'turnBattle.result') }}</header>
+            <div class="rpg-ui-turn-battle-result-row"><span>{{ t('turnBattle.exp') }}</span><b>{{ shownExp() }}</b></div>
+            <div class="rpg-ui-turn-battle-result-row"><span>{{ t('turnBattle.gold') }}</span><b>{{ shownGold() }}</b></div>
+            <div class="rpg-ui-turn-battle-result-row rpg-ui-turn-battle-drops"><span>{{ t('turnBattle.drops') }}</span>
+              <div>
+                @for (drop of drops(); track drop.id) {
+                  <em>✦ {{ drop.name }} {{ t('turnBattle.quantity', { count: drop.quantity }) }}</em>
+                }
+                @if (noDrops()) {
+                  <em>{{ t('turnBattle.none') }}</em>
+                }
+              </div>
+            </div>
+          </section>
+          <div class="rpg-ui-turn-battle-bonuses">
+            @for (bonus of bonuses(); track bonus.id) {
+              <div class="rpg-ui-turn-battle-bonus">{{ t('turnBattle.bonus.' + bonus.id) }}</div>
+            }
+          </div>
+        }
+        <button class="rpg-ui-btn rpg-ui-turn-battle-continue" data-variant="primary" click={close}>{{ t('turnBattle.continue') }} ▸</button>
+      </div>
+    }
+
+    @if (toast()) {
+      <div class="rpg-ui-panel rpg-ui-turn-battle-toast">{{ toast()?.text }}</div>
+    }
+  </div>
+</DOMContainer>
+
+<script>
+  import { computed } from 'canvasengine'
+  import {
+    phase, order, previewing, speed, banner, menuTitle, menuLevel, menuEntries, menuIndex,
+    targetName, targetInfo, partyIds, member, actorId, cutin, result, toast, reduced, t, faceStyle, shownExp, shownGold, muted,
+    waitingFor, countdown, spectating, audience, pvp, surrenderArmed, surrendered,
+  } from '../client/state'
+  import { chooseEntry, focusEntry, back, cycleSpeed, toggleMuted, skipCutin, close, leaveWatching, surrender } from '../client/session'
+
+  const surrenderLabel = () => t(surrendered() ? 'turnBattle.surrendered' : surrenderArmed() ? 'turnBattle.surrenderConfirm' : 'turnBattle.surrender')
+  const drops = () => result()?.items || []
+  const bonuses = () => result()?.bonuses || []
+  const noDrops = () => drops().length === 0
+  const outcomeTitle = () => t({ victory: 'turnBattle.victory', defeat: 'turnBattle.defeat', escape: 'turnBattle.escaped' }[result()?.outcome] || 'turnBattle.victory')
+  const limitFull = (id) => { const m = member(id)(); return m.limit !== null && m.limit >= m.limitMax }
+  // Both signals are read on every run: a computed only follows the signals its first run read (`&&` would skip one).
+  const targetCard = computed(() => {
+    const info = targetInfo()
+    return phase() === 'target' ? info : null
+  })
+  const targetHint = computed(() => {
+    const info = targetInfo()
+    return phase() === 'target' && !info
+  })
+  const pctNumber = (v, max) => Math.max(0, Math.min(100, (v / Math.max(1, max)) * 100))
+  const pct = (v, max) => pctNumber(v, max) + '%'
+  // The guard of the target: what is left of it, full when it is broken (the gauge then shows the broken colour).
+  const guardWidth = (info) => (info?.stagger?.broken ? '100%' : pct(info?.stagger?.value, info?.stagger?.max))
+  const guardText = (info) => (info?.stagger?.broken ? t('turnBattle.broken') : Math.round(pctNumber(info?.stagger?.value, info?.stagger?.max)) + '%')
+  const indexOf = (id) => menuEntries().findIndex((e) => e.id === id)
+  const choose = (id) => chooseEntry(indexOf(id))
+  const focus = (id) => { if (menuIndex() !== indexOf(id)) focusEntry(indexOf(id)) }
+</script>

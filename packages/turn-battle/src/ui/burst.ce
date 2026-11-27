@@ -1,0 +1,80 @@
+<Container visible={shown} alpha={alpha}>
+  <Graphics draw={drawRays} blendMode="add" />
+  <Graphics draw={drawRings} blendMode="add" />
+  <Text text={title} anchor={0.5} x={cx} y={cy} scale={titleScale} style={titleStyle} />
+  <Text text={sub} anchor={0.5} x={cx} y={subY} alpha={subAlpha} style={subStyle} />
+</Container>
+
+<script>
+  import { battleFont } from '@rpgjs/battle-kit'
+  import { signal, computed, tick } from 'canvasengine'
+  import { scene } from '../client/scene'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
+
+  // Full-screen burst ("BRISURE !", limit name, encounter): radial speed lines,
+  // chromatic rings and a punched-in title, as in FFBE break moments.
+  const LIFE = 1150
+  const burst = scene.burst
+  const elapsed = signal(0)
+  let key = 0
+  tick(({ deltaTime }) => {
+    const b = burst()
+    if (!b) return
+    if (b.key !== key) {
+      key = b.key
+      elapsed.set(0)
+    }
+    elapsed.set(elapsed() + deltaTime)
+    if (elapsed() > LIFE) burst.set(null)
+  })
+  const k = computed(() => Math.min(1, elapsed() / LIFE))
+  const shown = computed(() => !!burst())
+  const alpha = computed(() => (k() > 0.8 ? 1 - (k() - 0.8) / 0.2 : 1))
+  const cx = computed(() => scene.size().w / 2)
+  const cy = computed(() => scene.size().h * 0.42)
+  const subY = computed(() => cy() + 56 * scene.uiScale)
+  const title = computed(() => burst()?.text ?? '')
+  const sub = computed(() => burst()?.sub ?? '')
+  const color = computed(() => burst()?.color ?? 0xffffff)
+  const titleScale = computed(() => {
+    const t = Math.min(1, k() / 0.12)
+    return (2.4 - 1.4 * (1 - (1 - t) ** 3)) * scene.uiScale
+  })
+  const subAlpha = computed(() => Math.min(1, Math.max(0, (k() - 0.1) * 5)))
+  const titleStyle = computed(() => ({
+    fontFamily: font, fontWeight: '900', fontStyle: 'italic', fontSize: 64,
+    fill: '#ffffff', stroke: { color: color(), width: 8, join: 'round' },
+    dropShadow: { color: color(), alpha: 0.9, blur: 18, distance: 0 }, letterSpacing: 4,
+  }))
+  const subStyle = computed(() => ({
+    fontFamily: font, fontWeight: '800', fontSize: 20 * scene.uiScale,
+    fill: '#ffffff', letterSpacing: 8, stroke: { color: '#0a0f24', width: 4 },
+  }))
+
+  const drawRays = (g) => {
+    const { w, h } = scene.size()
+    const x = cx(), y = cy()
+    const spin = elapsed() / 900
+    const reach = Math.hypot(w, h)
+    const a = (1 - k()) * 0.8
+    for (let i = 0; i < 48; i++) {
+      const ang = (i / 48) * Math.PI * 2 + spin + (i % 3) * 0.02
+      const inner = 120 + ((i * 37) % 90) + k() * 220
+      g.moveTo(x + Math.cos(ang) * inner, y + Math.sin(ang) * inner)
+        .lineTo(x + Math.cos(ang) * reach, y + Math.sin(ang) * reach)
+        .stroke({ width: 2 + (i % 4), color: i % 5 ? 0xffffff : color(), alpha: a * 0.55 })
+    }
+  }
+
+  const drawRings = (g) => {
+    const x = cx(), y = cy()
+    const t = 1 - (1 - k()) ** 2
+    const colors = [0xff3b6b, 0x3bffb5, 0x5b7bff]
+    colors.forEach((c, i) => {
+      const r = 60 + t * (420 + i * 40)
+      g.circle(x + (i - 1) * 6, y, r).stroke({ width: 14 * (1 - t) + 2, color: c, alpha: (1 - t) * 0.8 })
+    })
+    g.circle(x, y, 40 + t * 300).stroke({ width: 6 * (1 - t) + 1, color: color(), alpha: 1 - t })
+  }
+</script>

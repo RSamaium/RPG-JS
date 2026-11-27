@@ -1,0 +1,25 @@
+<section class="rpg-ui-tactical-skill-menu rpg-ui-tactical-panel" style={placement()} role="dialog" aria-label={t('tactical.chooseSkill')}>
+  <header><div><span class="rpg-ui-tactical-eyebrow">{{ t('tactical.chooseSkill') }}</span><h3>{{ current()?.name ?? '' }}</h3></div><button click={cancel} aria-label={t('tactical.back')}>×</button></header>
+  <p>{{ t('tactical.skillMenuHint') }}</p>
+  <div class="rpg-ui-tactical-skill-list">
+    @for (skill of skillOptions(); track skill.id) {
+      <button class={['rpg-ui-tactical-skill-choice', {focused:skillOptions()[skillIndex()]?.id === skill.id}]} aria-disabled={Boolean(skill.reason) || busy()} click={() => pickSkill(skill.id)}>
+        <AreaIcon shape={skill.shape} mask={skill.mask} visual={skill.visual} />
+        <span class="rpg-ui-tactical-skill-copy"><strong>{{ skill.name }}</strong><span>{{ skill.description ?? '' }}</span><small>{{ skill.power + ' ' + t('tactical.damage') + ' · ' + t('tactical.range') + ' ' + skill.range }}</small></span>
+        <span class="rpg-ui-tactical-skill-cost"><b>{{ skill.spCost }}</b>{{ t('tactical.sp') }}<small>{{ skill.reason ? t('tactical.unavailable') : usesLabel(skill) }}</small></span>
+      </button>
+      @if (skill.reason) { <small class="rpg-ui-tactical-skill-reason">{{ t(skill.reason) }}</small> }
+    }
+  </div>
+  <footer><span>{{ t('tactical.mockSkills') }}</span><small>{{ t('tactical.skillKeys', keys()) }}</small></footer>
+</section>
+<script>
+  import { field } from '../client/field'
+  import { panelPlacement } from '../client/panel-anchor'
+  import { current, skillOptions, skillIndex, pickSkill, cancel, busy, t, keys } from '../client/state'
+  import AreaIcon from './area-icon.ce'
+  // Beside the unit that acts (like its menu of actions); docked above the dock on a narrow screen.
+  const placement = () => panelPlacement(field.menuAt(), { width: window.innerWidth, height: window.innerHeight })
+  // Uses left this battle (default: once).
+  const usesLabel = (skill) => { const n = skill.uses ?? 1; return n + ' ' + t('tactical.uses') }
+</script>

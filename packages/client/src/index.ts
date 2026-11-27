@@ -10,6 +10,7 @@ export * from "./core/inject";
 export * from "./services/loadMap";
 export * from "./services/actionInput";
 export * from "./services/hotbar";
+export { menuGamepadControls } from "./services/gamepadControls";
 export type { HideMapObjectsOptions, MapObjectSelector, RestoreMapObjects } from "./services/mapObjectVisibility";
 export * from "./services/mapStreaming";
 export * from "./services/pointerContext";

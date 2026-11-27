@@ -1,0 +1,37 @@
+<Text text={label} x={px} y={py} anchor={[0.5, 1]} scale={size} alpha={alpha} visible={shown} style={style} />
+
+<script>
+  import { battleFont } from '@rpgjs/battle-kit'
+  import { computed } from 'canvasengine'
+  import { popupMotion } from '@rpgjs/battle-kit/pure'
+  import { field } from '../client/field'
+  import { battle } from '../client/state'
+  // The font of the game's GUIs (ui-css theme), never a hard-coded one.
+  const font = battleFont()
+
+  // One pooled floating number (damage, K.O.), animated by the battle kit.
+  const { index } = defineProps()
+  const slot = field.popups[index()]
+  // CanvasEngine computeds track the signals of their first run: read them all before branching.
+  const motion = computed(() => {
+    const now = field.time()
+    const p = slot()
+    return p ? popupMotion(now - p.born) : null
+  })
+  const shown = computed(() => !!motion() && !motion().done)
+  const label = computed(() => slot()?.text ?? '')
+  const px = computed(() => slot()?.x ?? 0)
+  // Numbers follow the size of the cells (the tile of the map), readable on small tiles.
+  const k = () => Math.max(0.55, (battle()?.board.cellSize ?? 64) / 64)
+  const py = computed(() => (slot()?.y ?? 0) + (motion()?.y ?? 0) * k())
+  const size = computed(() => (motion()?.scale ?? 1) * (slot()?.big ? 1.1 : 1) * k())
+  const alpha = computed(() => motion()?.alpha ?? 0)
+  const style = computed(() => ({
+    fontFamily: font,
+    fontSize: slot()?.big ? 34 : 28,
+    fontWeight: 'bold',
+    fill: slot()?.color ?? 0xfff0c5,
+    stroke: { color: 0x1b1113, width: 6, join: 'round' },
+    dropShadow: { color: 0x000000, alpha: 0.55, blur: 2, distance: 3, angle: Math.PI / 2 },
+  }))
+</script>

@@ -1,0 +1,79 @@
+<Container x={px} y={py} zIndex={py} alpha={alpha} visible={visible}>
+  <Graphics draw={drawShadow} />
+  <Graphics draw={drawRing} />
+  <Container scale={bodyScale} x={wobble}>
+    @if (drawn) {
+      <Sprite
+        sheet={{ definition: definition, playing: anim(), onFinish: onFinish }}
+        anchor={anchor}
+        filters={filters}
+        click={onPick}
+        pointerover={onOver}
+        pointerout={onOut}
+      />
+    }
+  </Container>
+</Container>
+
+<script>
+  import { computed, signal, tick } from 'canvasengine'
+  import { inject, RpgClientEngine } from '@rpgjs/client'
+  import { BattlerLook } from '@rpgjs/battle-kit'
+  import { scene } from '../client/scene'
+  import { pick, hover } from '../client/session'
+
+  const { model } = defineProps()
+  const m = model()
+  const engine = inject(RpgClientEngine)
+  // The battler is a regular RPGJS spritesheet (registered by the plugin).
+  const definition = engine.getSpriteSheet(m.info.sheetId)
+  // A battler whose spritesheet could not be loaded is not drawn (the battle still plays it).
+  const drawn = !m.info.missing
+  const { anim, alpha, visible } = m
+  const { bounds, cell, hints } = m.info
+  const anchor = [(bounds.x + bounds.w / 2) / cell.width, (bounds.y + bounds.h) / cell.height]
+  const drawnLeft = (hints.facing ?? (m.facingLeft ? 'left' : 'right')) === 'left'
+  const flip = drawnLeft === m.facingLeft ? 1 : -1
+
+  const px = computed(() => m.homeX() + m.offX() + m.parallax())
+  const py = computed(() => m.homeY() + m.offY())
+  // Stagger wobble. No idle breathing: scaling a pixel-art body by fractions of a pixel makes its pixels shimmer.
+  const bodyScale = computed(() => [m.scale() * flip, m.scale()])
+  const wobble = computed(() => (m.broken() ? Math.sin(scene.time() / 55) * 2.5 : 0))
+
+  // Hit flash, stagger tint, target glow and dash blur: the battle kit owns the filters.
+  const look = new BattlerLook({ motionBlur: true })
+  // Only the filters in use: no filter pass at rest.
+  const filters = signal([])
+
+  tick(({ deltaTime, deltaRatio }) => {
+    m.onSpriteTick(deltaRatio)
+    const flash = m.flash()
+    if (flash > 0) m.flash.set(Math.max(0, flash - deltaTime))
+    look.reset()
+    if (flash > 0) look.brightness(3.2)
+    else if (m.broken()) look.tint(0x9fb6ff).brightness(0.9 + Math.sin(scene.time() / 90) * 0.15, true)
+    else if (m.targeted()) look.brightness(1.15 + Math.sin(scene.time() / 120) * 0.12)
+    look.motionBlur(m.blur() > 0 ? m.blur() * (m.facingLeft ? -34 : 34) : 0)
+    if (look.changed(filters())) filters.set(look.active)
+  })
+
+  const onFinish = () => m.onSheetFinish()
+  const onPick = () => pick(m.id)
+  const onOver = () => hover(m.id)
+  const onOut = () => hover(null)
+
+  const drawShadow = (g) => {
+    const s = m.scale()
+    g.ellipse(0, 0, bounds.w * s * 0.42, 9 * s).fill({ color: 0x000000, alpha: m.dead() ? 0.12 : 0.38 })
+  }
+
+  const drawRing = (g) => {
+    if (!m.active() || m.dead()) return
+    const r = bounds.w * m.scale() * 0.5
+    const pulse = 1 + Math.sin(scene.time() / 160) * 0.06
+    const color = m.facingLeft ? 0x7fe6ff : 0xff6a6a
+    g.ellipse(0, 0, r * pulse, r * 0.28 * pulse).stroke({ width: 3, color, alpha: 0.9 })
+    g.ellipse(0, 0, r * 0.7 * pulse, r * 0.2 * pulse).fill({ color, alpha: 0.18 })
+  }
+</script>

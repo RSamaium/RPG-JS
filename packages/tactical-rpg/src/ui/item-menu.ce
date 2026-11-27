@@ -1,0 +1,22 @@
+<section class="rpg-ui-tactical-skill-menu rpg-ui-tactical-panel" style={placement()} role="dialog" aria-label={t('tactical.chooseItem')}>
+  <header><div><span class="rpg-ui-tactical-eyebrow">{{ t('tactical.chooseItem') }}</span><h3>{{ current()?.name ?? '' }}</h3></div><button click={cancel} aria-label={t('tactical.back')}>×</button></header>
+  <p>{{ t('tactical.itemMenuHint') }}</p>
+  <div class="rpg-ui-tactical-skill-list">
+    @for (item of itemOptions(); track item.id) {
+      <button class={['rpg-ui-tactical-skill-choice', {focused: itemOptions()[itemIndex()]?.id === item.id}]} aria-disabled={busy()} click={() => pickItem(item.id)}>
+        <span class="rpg-ui-tactical-skill-copy"><strong>{{ item.name }}</strong><span>{{ item.description ?? '' }}</span><small>{{ restores(item) }}</small></span>
+        <span class="rpg-ui-tactical-skill-cost"><b>{{ item.count }}</b>{{ t('tactical.owned') }}</span>
+      </button>
+    }
+  </div>
+  <footer><span>{{ t('tactical.items') }}</span><small>{{ t('tactical.skillKeys', keys()) }}</small></footer>
+</section>
+<script>
+  import { field } from '../client/field'
+  import { panelPlacement } from '../client/panel-anchor'
+  import { current, itemOptions, itemIndex, pickItem, cancel, busy, t, keys } from '../client/state'
+  // Beside the unit that acts (like its menu of actions); docked above the dock on a narrow screen.
+  const placement = () => panelPlacement(field.menuAt(), { width: window.innerWidth, height: window.innerHeight })
+  // What an item gives back.
+  const restores = (item) => [item.hp ? '+' + item.hp + ' ' + t('tactical.hp') : '', item.sp ? '+' + item.sp + ' ' + t('tactical.sp') : ''].filter(Boolean).join(' · ')
+</script>

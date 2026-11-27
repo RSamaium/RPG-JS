@@ -5,46 +5,56 @@ description: "Guide for Items System in RPGJS."
 
 # Items System
 
-The items system in RPGJS allows you to manage player inventory, equipment, and item usage. You can add items to players in three different ways: using string IDs, item classes, or item objects.
+The items system in RPGJS allows you to manage player inventory, equipment, and item usage. An item is a plain object typed with `ItemObject`: its data (name, price, effects) and its hooks (`onUse`, `onEquip`…) side by side, with autocompletion and type checking, and no decorator or class to write.
 
 Studio regular items can also select a spritesheet animation, a personal sound,
 and/or a built-in particle preset for successful use. This feedback runs from
 the authoritative native `onUse` hook and can be combined with an item
 workflow.
 
+## Define an item
+
+Write the item as an `ItemObject` in a file of your database:
+
+```ts
+// src/database/potion.ts
+import type { ItemObject } from '@rpgjs/server'
+
+export const potion: ItemObject = {
+  id: 'potion',      // same ID as its key in the database
+  name: 'Potion',
+  description: 'Restores 100 HP',
+  price: 200,
+  hpValue: 100,      // restored before `onUse` runs
+  consumable: true,
+  onAdd(player) {
+    console.log('Potion added to inventory')
+  },
+  onUse(player) {
+    // `hpValue` is already applied: only add what is specific to the item
+    player.showText('You feel better!')
+  }
+}
+```
+
+The parameters of the hooks are typed (`player` is an `RpgPlayer`), and a misspelled field is a compile error. The fields an item understands are those of `ItemData`: `name`, `description`, `price`, `hpValue`, `mpValue` (SP), `hitRate`, `consumable`, `addStates`, `removeStates`, `elements`, `paramsModifier`, `atk`, `pdef`, `sdef` and `_type`.
+
 ## Adding Items
 
 ### Method 1: String ID (Pre-registered Items)
 
-Items must be registered in the `database` property of `provideServerModules` before they can be used with string IDs.
+Items must be registered in the `database` property of `provideServerModules` before they can be used with string IDs. The key of an entry is the ID of the item.
 
 ```ts
-import { createServer, provideServerModules, RpgPlayer } from '@rpgjs/server'
-import { Item } from '@rpgjs/database'
-
-@Item({
-  name: 'Potion',
-  description: 'Restores 100 HP',
-  price: 200,
-  hpValue: 100,
-  consumable: true
-})
-export class Potion {
-  onAdd(player: RpgPlayer) {
-    console.log('Potion added to inventory');
-  }
-  
-  onUse(player: RpgPlayer) {
-    player.hp += 100;
-  }
-}
+import { createServer, provideServerModules } from '@rpgjs/server'
+import { potion } from './database/potion'
 
 export default createServer({
   providers: [
     provideServerModules([
       {
         database: {
-          Potion  // Register the item in the database
+          potion  // Registered with the ID "potion"
         },
         player: {
           // ... your player hooks
@@ -59,25 +69,25 @@ Then you can use it:
 
 ```ts
 // In your server hooks or events
-player.addItem('Potion', 5);  // Add 5 potions
+player.addItem('potion', 5);  // Add 5 potions
 ```
 
 > **Note**: The `@RpgModule` decorator is available for backward compatibility with v4, but the modern approach is to use `provideServerModules` with the `database` property directly.
 
-### Method 2: Item Class (Auto-registered)
+### Method 2: Item Object (Auto-registered)
 
-When using an item class directly, it will be automatically added to the map's database if not already present.
+When you give the object itself, it is automatically added to the map's database if not already present, under its `id`. Give it the same `id` as its key in `database`, so the object and the string ID name the same item (without an `id`, an ID is generated and it becomes another item).
 
 ```ts
-import Potion from './database/Potion'
+import { potion } from './database/potion'
 
-// The class is automatically registered in the map database
-player.addItem(Potion, 3);
+// The object is automatically registered in the map database
+player.addItem(potion, 3);
 ```
 
-### Method 3: Item Object (Dynamic Items)
+### Method 3: Inline Item Object (Dynamic Items)
 
-You can create items dynamically using objects. These are automatically added to the map's database.
+You can create items on the fly. These are automatically added to the map's database.
 
 ```ts
 // Create a dynamic item
@@ -92,7 +102,6 @@ player.addItem({
     console.log('Custom potion added!');
   },
   onUse(player) {
-    player.hp += 50;
     player.showText('You feel better!');
   }
 }, 2);
@@ -111,6 +120,10 @@ player.addItem({
 });
 ```
 
+<Note>
+Classes decorated with `@Item` from `@rpgjs/database` (the v4 style) are still accepted wherever an item is expected (`database`, `addItem`, `addInDatabase`). Prefer `ItemObject`: same fields and hooks, without a decorator.
+</Note>
+
 ## Dynamic Item Creation in Events
 
 When creating items dynamically (especially in events), you should first add them to the map's database, then add them to the player.
@@ -118,7 +131,7 @@ When creating items dynamically (especially in events), you should first add the
 ### Example: Event Giving an Item
 
 ```ts
-import { RpgPlayer, RpgMap } from '@rpgjs/server'
+import { RpgPlayer, type ItemObject } from '@rpgjs/server'
 
 export function ChestEvent() {
   return {
@@ -130,7 +143,7 @@ export function ChestEvent() {
       const map = player.getCurrentMap();
       
       // Step 1: Add the item to the map database
-      const itemData = {
+      const itemData: ItemObject = {
         id: 'treasure-coin',
         name: 'Treasure Coin',
         description: 'A rare coin found in a chest',
@@ -167,7 +180,7 @@ async onAction(player: RpgPlayer) {
   const map = player.getCurrentMap();
   
   // Create and register the item
-  const specialItem = {
+  const specialItem: ItemObject = {
     id: 'quest-item-1',
     name: 'Ancient Artifact',
     description: 'A mysterious artifact',
@@ -190,7 +203,7 @@ async onAction(player: RpgPlayer) {
 
 ## Item Hooks
 
-Items can implement lifecycle hooks that are called at specific moments:
+Items can implement lifecycle hooks that are called at specific moments (they are typed by `ItemHooks`):
 
 - **`onAdd(player)`**: Called when the item is added to inventory
 - **`onUse(player)`**: Called when the item is successfully used
@@ -206,59 +219,22 @@ from the current map database. Updating that database entry therefore replaces
 the hook used by an item that is already present in the player's inventory.
 Class-based items keep using their instantiated class hooks.
 
-### Using Classes
+## Weapons and Armors
+
+A weapon or an armor is an item with `_type: 'weapon'` or `_type: 'armor'`. While it is equipped, its `atk`, `pdef` and `sdef` are added to `player.atk`, `player.pdef` and `player.sdef`.
 
 ```ts
-import { Item } from '@rpgjs/database'
-import { createServer, provideServerModules, RpgPlayer } from '@rpgjs/server'
+import { createServer, provideServerModules, type ItemObject } from '@rpgjs/server'
 
-@Item({
-  name: 'Magic Sword',
-  price: 1000
-})
-export class MagicSword {
-  onAdd(player: RpgPlayer) {
-    player.showText('You obtained the Magic Sword!');
-  }
-  
-  onEquip(player: RpgPlayer, equip: boolean) {
-    if (equip) {
-      player.showText('Magic Sword equipped!');
-      // Add special effects
-    } else {
-      player.showText('Magic Sword unequipped!');
-    }
-  }
-  
-}
-
-// Register in provideServerModules
-export default createServer({
-  providers: [
-    provideServerModules([
-      {
-        database: {
-          MagicSword
-        }
-      }
-    ])
-  ]
-});
-```
-
-### Using Objects
-
-```ts
-import { createServer, provideServerModules, RpgPlayer } from '@rpgjs/server'
-
-const magicSword = {
-  id: 'magic-sword',
+export const magicSword: ItemObject = {
   name: 'Magic Sword',
   price: 1000,
-  onAdd(player: RpgPlayer) {
+  _type: 'weapon',
+  atk: 30,
+  onAdd(player) {
     player.showText('You obtained the Magic Sword!');
   },
-  onEquip(player: RpgPlayer, equip: boolean) {
+  onEquip(player, equip) {
     if (equip) {
       player.showText('Magic Sword equipped!');
     } else {
@@ -273,13 +249,15 @@ export default createServer({
     provideServerModules([
       {
         database: {
-          'magic-sword': magicSword  // Use string key for object items
+          'magic-sword': magicSword  // The key is the ID: "magic-sword"
         }
       }
     ])
   ]
 });
 ```
+
+Then `player.addItem('magic-sword')` and `player.equip('magic-sword')`.
 
 ## Managing Database
 
@@ -288,17 +266,17 @@ export default createServer({
 ```ts
 const map = player.getCurrentMap();
 
-// Add item class
-map.addInDatabase('Potion', PotionClass);
+// Add an item object
+map.addInDatabase('potion', potion);
 
-// Add item object
+// Add an item defined inline
 map.addInDatabase('custom-item', {
   name: 'Custom Item',
   price: 100
 });
 
 // Force overwrite existing item
-map.addInDatabase('Potion', UpdatedPotionClass, { force: true });
+map.addInDatabase('potion', { ...potion, hpValue: 150 }, { force: true });
 ```
 
 ### Removing Items from Database
@@ -307,7 +285,7 @@ map.addInDatabase('Potion', UpdatedPotionClass, { force: true });
 const map = player.getCurrentMap();
 
 // Remove item
-const removed = map.removeInDatabase('Potion');
+const removed = map.removeInDatabase('potion');
 if (removed) {
   console.log('Item removed successfully');
 }
@@ -316,36 +294,32 @@ if (removed) {
 ## Complete Example: Shop Event
 
 ```ts
-import { createServer, provideServerModules, RpgPlayer, RpgMap } from '@rpgjs/server'
-import { Item } from '@rpgjs/database'
+import { createServer, provideServerModules, RpgPlayer, type ItemObject } from '@rpgjs/server'
 
-// Define shop items as classes (optional, can also be objects)
-@Item({
+// Shop items, as typed objects
+export const shopPotion: ItemObject = {
   name: 'Shop Potion',
   description: 'A potion sold in shops',
   price: 200,
-  hpValue: 100,
-  consumable: true
-})
-export class ShopPotion {
-  onUse(player: RpgPlayer) {
-    player.hp += 100;
+  hpValue: 100,   // restored before `onUse` runs
+  consumable: true,
+  onUse(player) {
     player.showText('HP restored!');
   }
-}
+};
 
-@Item({
+export const ironSword: ItemObject = {
   name: 'Iron Sword',
   description: 'A basic sword',
-  price: 500
-})
-export class IronSword {
-  onEquip(player: RpgPlayer, equip: boolean) {
+  price: 500,
+  _type: 'weapon',
+  atk: 10,
+  onEquip(player, equip) {
     if (equip) {
       player.showText('Iron Sword equipped!');
     }
   }
-}
+};
 
 export function ShopEvent() {
   return {
@@ -359,14 +333,14 @@ export function ShopEvent() {
       // Option 1: Use pre-registered items from database
       await player.showText('Welcome to my shop!');
       try {
-        player.buyItem('ShopPotion', 1);
+        player.buyItem('shop-potion', 1);
         player.showText('Thank you for your purchase!');
       } catch (err) {
         player.showText('Not enough gold!');
       }
       
       // Option 2: Create dynamic items on the fly
-      const dynamicItem = {
+      const dynamicItem: ItemObject = {
         id: 'limited-edition-potion',
         name: 'Limited Edition Potion',
         description: 'A rare potion',
@@ -374,7 +348,6 @@ export function ShopEvent() {
         hpValue: 200,
         consumable: true,
         onUse(player) {
-          player.hp += 200;
           player.showText('Super HP restored!');
         }
       };
@@ -393,8 +366,8 @@ export default createServer({
     provideServerModules([
       {
         database: {
-          ShopPotion,  // Pre-registered items
-          IronSword
+          'shop-potion': shopPotion,  // Pre-registered items
+          'iron-sword': ironSword
         },
         player: {
           // ... your player hooks

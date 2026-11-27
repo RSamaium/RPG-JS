@@ -6,6 +6,7 @@ export * from "./core/inject";
 export * from "./Player/Player";
 export * from "./Player/types";
 export type { DamageFormulas, DamageResult, BattleParameterSet } from "./Player/BattleManager";
+export type { ItemData, ItemHooks, ItemObject } from "./Player/ItemManager";
 export type { SkillClass, SkillData, SkillObject, SkillHooks, SkillChangePayload, SkillChangeOptions, SkillUseHandler } from "./Player/SkillManager";
 export { registerSkillUseHandler } from "./Player/SkillManager";
 export * from "./Player/HotbarManager";

@@ -127,6 +127,12 @@ export interface ItemData {
   elements?: ElementAffinity[];
   /** Parameter modifiers */
   paramsModifier?: Record<string, unknown>;
+  /** Attack added to the player while it is equipped (weapons, `player.atk`) */
+  atk?: number;
+  /** Physical defense added while it is equipped (armors, `player.pdef`) */
+  pdef?: number;
+  /** Skill defense added while it is equipped (armors, `player.sdef`) */
+  sdef?: number;
   /** Item type (for equipment validation) */
   _type?: 'item' | 'weapon' | 'armor';
 }

@@ -7,16 +7,63 @@ description: "Register items, skills, states, and other game data."
 
 The database is where you register reusable game data such as items, skills, classes, states, or custom objects.
 
+## Write the data as typed objects
+
+Each entry of the database is a plain object with a type of `@rpgjs/server`: its data and its hooks side by side, checked by TypeScript, without a decorator or a class.
+
+| Kind | Type | Example fields |
+|---|---|---|
+| Item, weapon, armor | `ItemObject` | `name`, `price`, `hpValue`, `consumable`, `_type`, `atk`, `onUse`, `onEquip` |
+| Skill | `SkillObject` | `name`, `spCost`, `power`, `hitRate`, `onUse` |
+| State | `StateData` | `name`, `addStates`, `removeStates` |
+| Class | `ClassData` | `name`, `description`, `icon`, `skillsToLearn` |
+| Actor | `ActorData` | `name`, `initialLevel`, `parameters`, `class`, `startingEquipment`, `graphic` |
+
+```ts
+// src/database/potion.ts
+import type { ItemObject } from "@rpgjs/server";
+
+export const potion: ItemObject = {
+  id: "potion",
+  name: "Potion",
+  price: 200,
+  hpValue: 100,
+  consumable: true,
+};
+```
+
+```ts
+// src/database/fire.ts
+import type { SkillObject } from "@rpgjs/server";
+
+export const fire: SkillObject = {
+  name: "Fire",
+  spCost: 10,
+  power: 40,
+  onUse(player, target) {
+    // runs on the server once the skill is used
+  },
+};
+```
+
+<Note>
+Classes decorated with `@Item`, `@Skill`… from `@rpgjs/database` (the v4 style) are still accepted. Prefer the typed objects.
+</Note>
+
 ## Register data in `provideServerModules`
+
+The key of an entry is its ID:
 
 ```ts
 import { provideServerModules } from "@rpgjs/server";
-import { Potion } from "./database/Potion";
+import { potion } from "./database/potion";
+import { fire } from "./database/fire";
 
 provideServerModules([
   {
     database: {
-      Potion
+      potion,
+      fire
     }
   }
 ]);
@@ -25,7 +72,8 @@ provideServerModules([
 Once registered, you can use string IDs from the server:
 
 ```ts
-player.addItem("Potion", 1);
+player.addItem("potion", 1);
+player.learnSkill("fire");
 ```
 
 ## Add data dynamically on a map

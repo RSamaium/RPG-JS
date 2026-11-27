@@ -1,0 +1,39 @@
+<Container controls={controls}>
+  <Stage />
+  <Hud />
+  <Graphics draw={drawEntering} />
+  @if (cinematic()) {
+    <CinematicComponent data={cinematic} onFinish={onCinematicEnd} />
+  }
+</Container>
+
+<script>
+  import { effect, mount, signal } from 'canvasengine'
+  import { CinematicComponent, inject, RpgClientEngine } from '@rpgjs/client'
+  import Stage from './stage.ce'
+  import Hud from './hud.ce'
+  import { receive, onCinematicEnd, teardown } from '../client/session'
+  import { cinematic, entering } from '../client/state'
+  import { scene } from '../client/scene'
+  import { turnBattleControls } from '../client/input'
+
+  // Keyboard and gamepad: the controls of the game, the gamepad mapping of the RPGJS GUIs.
+  const controls = signal(turnBattleControls(inject(RpgClientEngine)))
+
+  // Battle packets arrive as the GUI data (server gui.open / gui.update).
+  const { data } = defineProps()
+  effect(() => {
+    const packet = data()
+    // Played outside of the effect so the session's own signals are not tracked.
+    queueMicrotask(() => receive(packet))
+  })
+  // The dark the map fades to as soon as the battle starts, while its fighters and scenery load.
+  const drawEntering = (g) => {
+    const dark = entering()
+    if (dark <= 0.01) return
+    const { w, h } = scene.size()
+    g.rect(0, 0, w, h).fill({ color: 0x05070f, alpha: dark })
+  }
+  // Closed by the server (spectator whose fighters all left…): restore the map.
+  mount(() => () => teardown())
+</script>
