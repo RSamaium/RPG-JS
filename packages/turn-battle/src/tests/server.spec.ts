@@ -345,6 +345,52 @@ describe("coop", () => {
   });
 });
 
+describe("a hook or a command of the game that fails", () => {
+  it("does not freeze the battle: the order is refused and the player gets their turn back", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    provideTurnBattleServer({
+      ...catalog,
+      enemies: { goblin: goblin("x", { stats: stats({ maxHp: 60, atk: 5, agi: 5 }) }) },
+      troops: { duo: { id: "duo", enemies: ["goblin", "goblin"] } },
+      hero: () => ({ battler: "knight" }),
+      hooks: { onCommand: (_p, _b, env) => { if (env.command.type === "guard") throw new Error("boom"); } },
+    });
+    const { player, packets, handlers } = fakePlayer();
+    void startTurnBattle(player, "duo", { seed: 3 });
+    await flush();
+    const s = last(packets).state;
+    await handlers.command({ revision: s.revision, actor: s.actor, command: { type: "guard" } });
+    expect(last(packets)).toMatchObject({ error: "turnBattle.error.invalid", revision: s.revision, beats: [] });
+    // The same turn can still be played.
+    const target = s.combatants.find((c) => c.side === "enemy")!.id;
+    await handlers.command({ revision: s.revision, actor: s.actor, command: { type: "attack", target } });
+    expect(last(packets).revision).toBe(s.revision + 1);
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it("frees a spectator whose onSpectate hook fails", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    provideTurnBattleServer({
+      ...catalog,
+      enemies: { goblin: goblin("x", { stats: stats({ maxHp: 90, atk: 5, agi: 5 }) }) },
+      troops: { duo: { id: "duo", enemies: ["goblin", "goblin"] } },
+      hero: () => ({ battler: "knight" }),
+      hooks: { onSpectate: () => { throw new Error("boom"); } },
+    });
+    const fighter = fakePlayer();
+    const watcher = fakePlayer();
+    const late = fakePlayer();
+    void startTurnBattle({ players: [fighter.player], troop: "duo", seed: 4, spectators: [late.player] });
+    await flush();
+    // Started with the battle: logged, not left unhandled, and freed.
+    expect(isInTurnBattle(late.player)).toBe(false);
+    await expect(watchTurnBattle(watcher.player, fighter.player)).rejects.toThrow("boom");
+    expect(isInTurnBattle(watcher.player)).toBe(false);
+    errors.mockRestore();
+  });
+});
+
 describe("spectators", () => {
   beforeEach(() => {
     provideTurnBattleServer({

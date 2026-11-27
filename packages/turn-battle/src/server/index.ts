@@ -905,10 +905,15 @@ async function runBattle(
   const onCommand = (seat: Seat, env: CommandEnvelope) =>
     (queue = queue.then(async () => {
       if (seat.left) return;
-      const vetoed = (await callHooks(seat.player, "onCommand", seat.player, handle, env)).includes(false);
-      const out = vetoed
-        ? { state, beats: [], error: "turnBattle.error.refused" }
-        : runCommand(state, env, battleRules, seat.player.id);
+      let out: ReturnType<typeof runCommand>;
+      try {
+        const vetoed = (await callHooks(seat.player, "onCommand", seat.player, handle, env)).includes(false);
+        out = vetoed ? { state, beats: [], error: "turnBattle.error.refused" } : runCommand(state, env, battleRules, seat.player.id);
+      } catch (error) {
+        // A hook or a command of the game failed: the order does not go through, and the player gets their menu back.
+        console.error("[TurnBattle] command failed", error);
+        out = { state, beats: [], error: "turnBattle.error.invalid" };
+      }
       if (out.error) return void seat.gui.update(packet(seat, [], out.error));
       apply(out);
     }).catch((error) => console.error("[TurnBattle] command failed", error)));
@@ -959,7 +964,14 @@ async function runBattle(
       if (!sameBattleMap(spectator, leader)) return false;
       // Seated before the async hook: a double request must not open two GUIs.
       if (!battles.seat(spectator, session)) return false;
-      const refused = (await callHooks(spectator, "onSpectate", spectator, handle)).includes(false);
+      let refused: boolean;
+      try {
+        refused = (await callHooks(spectator, "onSpectate", spectator, handle)).includes(false);
+      } catch (error) {
+        // The hook failed: the spectator is freed, and the caller gets the error.
+        battles.release(spectator, session);
+        throw error;
+      }
       if (refused || state.result || !fighters().length) {
         battles.release(spectator, session);
         return false;
@@ -1014,7 +1026,8 @@ async function runBattle(
     seat.done = seat.gui.open(packet(seat, opening.beats), { waitingAction: true, blockPlayerInput: true });
   }
   arm(opening.beats); // a battle lost before any hero turn is committed here
-  for (const spectator of spectators) void session.watch(spectator);
+  for (const spectator of spectators)
+    session.watch(spectator).catch((error) => console.error("[TurnBattle] a spectator could not join", spectator.id, error));
   try {
     await Promise.all(everyone.map((p) => seats.get(p.id)!.done));
     // The leader's point of view (with `winners` in PvP).
