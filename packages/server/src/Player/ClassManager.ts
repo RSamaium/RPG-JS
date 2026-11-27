@@ -149,7 +149,7 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
       const classInstance = instance;
       const player = this as any;
       player._class.set(classInstance);
-      player["execMethod"]("onSet", [this], classInstance);
+      void player.runHook("onSet", [this], classInstance);
       for (const skill of classInstance.skillsToLearn ?? []) {
         if (skill.level <= player.level && !player.getSkill?.(skill.skill)) {
           player.learnSkill?.(skill.skill, {
@@ -178,7 +178,7 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
         }
       }
       if (actor.class) this.setClass(actor.class);
-      (this as any)["execMethod"]("onSet", [this], actor);
+      void (this as any).runHook("onSet", [this], actor);
       return actor;
     }
 
@@ -222,7 +222,7 @@ export function WithClassManager<TBase extends PlayerCtor>(Base: TBase) {
       if (actor.hitbox) player.setHitbox?.(actor.hitbox.width, actor.hitbox.height);
       player.combatAnimations = { ...(actor.animations ?? {}) };
 
-      player.execMethod("onSet", [this], actor);
+      void player.runHook("onSet", [this], actor);
       if (player._exp?.set) player._exp.set(experience);
       else player.exp = experience;
       if (player._level?.set) player._level.set(level);

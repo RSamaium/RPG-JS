@@ -402,11 +402,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
     }
     /** Tells the modules (`player.onItemAdd`, ...) about a change of the inventory; never throws. */
     _emitItemHook(hook: string, itemId: string, quantity: number, extra: Record<string, unknown> = {}): void {
-      try {
-        void (this as any)["execMethod"](hook, [{ itemId, quantity, ...extra }]).catch(() => {});
-      } catch {
-        // the player has no hooks yet (not attached to a room)
-      }
+      void (this as any).runHook(hook, [{ itemId, quantity, ...extra }]);
     }
 
     addItem(item: ItemClass | ItemObject | string, nb: number = 1): Item {
@@ -450,7 +446,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       // Call onAdd hook - use stored instance if available
       const hookTarget = (instance as any)._itemInstance || instance;
       // Only call onAdd if it exists and is a function
-      (this as any)["execMethod"]("onAdd", [this], hookTarget);
+      void (this as any).runHook("onAdd", [this], hookTarget);
       this._emitItemHook("onItemAdd", itemId, nb);
       this["placeHotbarItem"]?.(itemId);
       return instance;
@@ -474,7 +470,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       // Call onRemove hook - use stored instance if available
       const hookTarget = (item as any)._itemInstance || item;
       if (hookTarget && typeof hookTarget.onRemove === 'function') {
-        this["execMethod"]("onRemove", [this], hookTarget);
+        void (this as any).runHook("onRemove", [this], hookTarget);
       }
       this._emitItemHook("onItemRemove", item.id(), Math.min(nb, currentNb));
       this["refreshHotbar"]?.();
@@ -615,12 +611,12 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       
       if (Math.random() > hitRate) {
         this.removeItem(itemClass);
-        this["execMethod"]("onUseFailed", [this], hookTarget);
+        void (this as any).runHook("onUseFailed", [this], hookTarget);
         throw ItemLog.chanceToUseFailed(itemId);
       }
       this.applyEffect(hookTarget);
       (this as any).applyStates?.(this, itemData);
-      this["execMethod"]("onUse", [this], hookTarget);
+      void (this as any).runHook("onUse", [this], hookTarget);
       this._emitItemHook("onItemUse", itemId, 1);
       this.removeItem(itemClass);
       return inventory;
@@ -669,7 +665,7 @@ export function WithItemManager<TBase extends PlayerCtor>(Base: TBase) {
       }
       // Call onEquip hook - use stored instance if available
       const hookTarget = (item as any)._itemInstance || item;
-      this["execMethod"]("onEquip", [this, equipState], hookTarget);
+      void (this as any).runHook("onEquip", [this, equipState], hookTarget);
       this._emitItemHook("onItemEquip", itemId, 1, { equipped: equipState });
       this["refreshHotbar"]?.();
     }

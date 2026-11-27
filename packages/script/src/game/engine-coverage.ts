@@ -183,7 +183,7 @@ export const ENGINE_COVERAGE: Record<"player" | "event" | "map" | "gui" | "mapPr
         "initializeHotbar", "isConnected", "isEvent", "load", "mergeComponents", "normalizeComponents", "normalizeHotbar", "off",
         "on", "once", "pendingMapPosition", "prepareSnapshotForObjectLoad", "projectiles", "resolveClassSnapshot",
         "resolveConfiguredCapacity", "resolveEquipmentsSnapshot", "resolveItemsSnapshot", "resolveSkillsSnapshot",
-        "resolveStatesSnapshot", "save", "server", "setMap", "setSync", "snapshot", "spSignal", "syncChanges", "transferRoom",
+        "resolveStatesSnapshot", "runHook", "save", "server", "setMap", "setSync", "snapshot", "spSignal", "syncChanges", "transferRoom",
         "type", "worldPositionX", "worldPositionY"
       ],
       "flags the physics engine keeps up to date: scripts read and change the character with x, y, z, through, pushable, speed, setHitbox": [

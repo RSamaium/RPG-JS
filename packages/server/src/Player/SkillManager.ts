@@ -509,8 +509,8 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
       
       // Call onLearn hook
       const hookTarget = (instance as any)._skillInstance || instance;
-      this["execMethod"]("onLearn", [this], hookTarget);
-      this["execMethod"]("onSkillChange", [
+      void (this as any).runHook("onLearn", [this], hookTarget);
+      void (this as any).runHook("onSkillChange", [
         {
           action: "learn",
           skill: skillData,
@@ -570,8 +570,8 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
         (skillEntry as any)?._skillInstance ||
         (skillEntry as any)?._skillData ||
         skillData;
-      this["execMethod"]("onForget", [this], hookTarget);
-      this["execMethod"]("onSkillChange", [
+      void (this as any).runHook("onForget", [this], hookTarget);
+      void (this as any).runHook("onSkillChange", [
         {
           action: "forget",
           skill: skillData,
@@ -663,7 +663,7 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
           (skillEntry as any)?._skillInstance ||
           (skillEntry as any)?._skillData ||
           skill;
-        this["execMethod"]("onUseFailed", [this, otherPlayer], hookTarget);
+        void (this as any).runHook("onUseFailed", [this, otherPlayer], hookTarget);
         throw SkillLog.chanceToUseFailed(skill);
       }
       
@@ -681,7 +681,7 @@ export function WithSkillManager<TBase extends PlayerCtor>(Base: TBase): TBase {
         (skillEntry as any)?._skillInstance ||
         (skillEntry as any)?._skillData ||
         skill;
-      this["execMethod"]("onUse", [this, otherPlayer], hookTarget);
+      void (this as any).runHook("onUse", [this, otherPlayer], hookTarget);
       
       return skill;
     }

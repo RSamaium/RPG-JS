@@ -28,11 +28,7 @@ export function WithGoldManager<TBase extends PlayerCtor>(
       const previous = this._gold();
       this._gold.set(val);
       if (val !== previous) {
-        try {
-          void (this as any).execMethod("onGoldChange", [{ gold: val, delta: val - previous }]).catch(() => {});
-        } catch {
-          // the player has no hooks yet (not attached to a room)
-        }
+        void (this as any).runHook("onGoldChange", [{ gold: val, delta: val - previous }]);
       }
     }
 

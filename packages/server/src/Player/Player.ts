@@ -443,6 +443,46 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
   }
 
   /**
+   * Run a hook without letting its failure escape.
+   *
+   * Same as `execMethod`, but a synchronous throw or a rejected promise of the
+   * hook (an async `onAction` that throws, for instance) is logged with the hook
+   * name and the player or event id instead of becoming an unhandled rejection
+   * that would stop the server. Use it for hooks that are fired and not awaited.
+   * The returned promise never rejects; it resolves to `undefined` on failure.
+   *
+   * @param method - Name of the hook (`onAction`, `onInShape`...)
+   * @param methodData - Arguments passed to the hook
+   * @param target - Object holding the hook (an item, a skill...); defaults to this player or event
+   * @returns The hook result, or `undefined` if it failed
+   *
+   * @example
+   * ```ts
+   * void event.runHook('onAction', [player, action])
+   * ```
+   */
+  runHook<TResult = unknown>(method: string, methodData: unknown[] = [], target?: object): Promise<TResult | undefined> {
+    // Not attached to a room yet: there are no module hooks to call.
+    if (!target && !this.context) {
+      return Promise.resolve(undefined);
+    }
+    const onError = (error: unknown): undefined => {
+      const kind = this.isEvent() ? "event" : "player";
+      console.error(`[RPGJS] Error in hook "${method}" of ${kind} "${this.id}":`, error);
+      return undefined;
+    };
+    try {
+      return Promise.resolve(
+        target === undefined
+          ? this.execMethod<TResult>(method, methodData)
+          : this.execMethod<TResult>(method, methodData, target),
+      ).catch(onError);
+    } catch (error) {
+      return Promise.resolve(onError(error));
+    }
+  }
+
+  /**
    * Change the map for this player
    *
    * @param mapId - The ID of the map to change to
@@ -1448,14 +1488,14 @@ export class RpgPlayer extends BasicPlayerMixins(RpgCommonPlayer) {
         const player = map.getPlayer(entity.uuid);
 
         if (event && (!map.isEventVisibleForPlayer || map.isEventVisibleForPlayer(event, this))) {
-          event.execMethod(phase === "in" ? "onInShape" : "onOutShape", [shape, this]);
+          void event.runHook(phase === "in" ? "onInShape" : "onOutShape", [shape, this]);
           const inShapes = (event as any)._inShapes;
           if (inShapes) {
             phase === "in" ? inShapes.add(shape) : inShapes.delete(shape);
           }
         }
         if (player) {
-          this.execMethod(phase === "in" ? "onDetectInShape" : "onDetectOutShape", [player, shape]);
+          void this.runHook(phase === "in" ? "onDetectInShape" : "onDetectOutShape", [player, shape]);
           if (player._inShapes) {
             phase === "in" ? player._inShapes.add(shape) : player._inShapes.delete(shape);
           }
