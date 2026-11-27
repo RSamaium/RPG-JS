@@ -216,8 +216,8 @@ The turn-based hooks `onStart` and `onEnd` (see [Customization](/combat/turn-bas
 | `seed` | Seed of the random numbers, for a reproducible battle. |
 | `bgm` / `victoryBgm` / `background` | Music, victory music and backdrop used when the troop has none (the troop's own value wins). |
 | `party` | Replaces the configured companions for this battle (solo). |
-| `heroes` | Fight with these `HeroDef` allies instead of the player's hero and companions (solo). Each needs `name`, `battler`, `stats`. |
-| `heroesByPlayer` | Heroes of some players of a group battle, by player id. |
+| `heroes` | Fight with these `HeroDef` allies instead of the player's hero and companions (solo). Each needs `name`, `battler`, `stats`. Their HP, SP and limit gauge stay in the battle: the player's own are left as they were (the EXP, gold and items won are the player's). |
+| `heroesByPlayer` | Heroes of some players of a group battle, by player id (same rule as `heroes`). |
 | `turnTimer` | Overrides the `turnTimer` server option for this battle. |
 
 Group battles (`TurnBattleGroupOptions`) add `players`, `troop`, `versus`, `spectators`, `background` and `bgm`. Every player must be on the leader's map: a battle lives in the room of its map.

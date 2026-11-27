@@ -385,7 +385,14 @@ export function mirrorView(view: BattleView): BattleView {
 }
 
 export function mirrorBeats(beats: Beat[]): Beat[] {
-  return beats.map((b) => (b.t === "end" ? { ...b, result: mirrorResult(b.result) } : b));
+  const flip = (side: Side): Side => (side === "ally" ? "enemy" : "ally");
+  return beats.map((b) => {
+    if (b.t === "end") return { ...b, result: mirrorResult(b.result) };
+    // A summon enters with its unit: seen from the other side, it joins the other half of the stage.
+    if (b.t === "action" && b.waves.some((wave) => wave.some((hit) => hit.unit)))
+      return { ...b, waves: b.waves.map((wave) => wave.map((hit) => (hit.unit ? { ...hit, unit: { ...hit.unit, side: flip(hit.unit.side) } } : hit))) };
+    return b;
+  });
 }
 
 /** Owner key of the bag an ally uses (its player's, or the shared one). */

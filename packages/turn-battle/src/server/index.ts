@@ -318,6 +318,8 @@ interface Seat {
   /** Resolves when this player closes the result screen (or leaves). */
   done?: Promise<unknown>;
   left: boolean;
+  /** This fighter closed the result screen: their GUI may already show another battle, nothing is sent to it any more. */
+  closed?: boolean;
 }
 
 interface Session extends BattleSession<TurnBattleHandle> {
@@ -729,6 +731,8 @@ async function runBattle(
     const heroes = given?.map((c, i) => withWeapon(player, { ...c, id: i === 0 ? heroIdOf(player) : `ally${i}:${player.id}`, side, owner: player.id }));
     return { player, side, heroBase, party, heroes };
   });
+  /** The players who fight with given heroes instead of their own. */
+  const standIns = new Set(teams.filter((t) => t.heroes).map((t) => t.player.id));
   const monsters = enemyDefs(leader, troop, players, start.seed);
   // The actions the units carry: the ones of the options, and the actions of the database
   // (and the skills of the units, which can be commands: several effects, a recharge)
@@ -805,7 +809,7 @@ async function runBattle(
   });
   /** Same state, new audience: refresh the spectator count on every screen. */
   const refreshAudience = () => {
-    for (const seat of active()) seat.gui.update(packet(seat, []));
+    for (const seat of active()) if (!seat.closed) seat.gui.update(packet(seat, []));
   };
 
   /** The result as a player of `side` lives it (PvP), with the winners' ids. */
@@ -823,8 +827,11 @@ async function runBattle(
     committed = true;
     clearTimeout(timer);
     for (const { player, side } of fighters()) {
-      // PvP: nobody loses HP for real, used items are spent.
-      commitPlayer(player, state, resultFor(side), { nativeStats, vitals: !pvp });
+      // PvP: nobody loses HP for real, used items are spent. A player whose heroes were given (`heroes`, `heroesByPlayer`) did not
+      // fight with their own hero: its HP, SP and limit gauge are not theirs to keep.
+      const standIn = standIns.has(player.id);
+      commitPlayer(player, state, resultFor(side), { nativeStats, vitals: !pvp && !standIn });
+      if (standIn) continue;
       const saved = savedData(player);
       const limits = { ...saved.limits };
       for (const c of state.combatants) if (c.owner === player.id && c.limit && !c.summon) limits[c.id] = c.limit.value;
@@ -835,7 +842,7 @@ async function runBattle(
 
   /** New authoritative state: send it to everyone, arm the turn timer. */
   const publishState = (beats: Beat[]) => {
-    for (const seat of active()) seat.gui.update(packet(seat, beats));
+    for (const seat of active()) if (!seat.closed) seat.gui.update(packet(seat, beats));
     arm(beats);
   };
   /** Commit a finished battle, or give the acting player `turnTimer` seconds once `beats` are played. */
@@ -1018,7 +1025,8 @@ async function runBattle(
       .catch((error) => console.error("[TurnBattle] surrender failed", error))),
     );
     seat.gui.on("close", () => {
-      if (!state.result) return;
+      if (!state.result || seat.closed) return;
+      seat.closed = true;
       seat.gui.close(resultFor(seat.side));
       // Free this player on the map without waiting for the others.
       battles.release(seat.player, session);

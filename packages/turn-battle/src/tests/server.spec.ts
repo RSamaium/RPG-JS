@@ -11,8 +11,9 @@ import {
   setLimit,
   startTurnBattle,
   watchTurnBattle,
+  DEFAULT_HERO_STATS,
 } from "../server";
-import { actionCommand, turnBattleCommand, type BattlePacket } from "../core";
+import { actionCommand, mirrorBeats, turnBattleCommand, type BattlePacket, type Beat, type Combatant } from "../core";
 import { catalog, goblin, stats } from "./fixtures";
 
 let seq = 0;
@@ -95,6 +96,26 @@ describe("startTurnBattle", () => {
       troops: { duo: { id: "duo", enemies: ["goblin", "goblin"] } },
       hero: () => ({ battler: "knight", limit: { skill: "burst" } }),
     });
+  });
+
+  it("keeps the HP, SP and limit gauge of a player who fought with given heroes (a story battle)", async () => {
+    const { player, packets, handlers, saved } = fakePlayer();
+    const done = startTurnBattle(player, "duo", {
+      seed: 3,
+      heroes: [{ name: "Old knight", battler: "knight", stats: { ...DEFAULT_HERO_STATS, maxHp: 420 }, limit: { skill: "burst" } }],
+    });
+    await flush();
+    const result = await playToEnd(packets, handlers);
+    const knight = last(packets).state.combatants.find((c) => c.name === "Old knight")!;
+    expect(knight.hp).toBeLessThan(420);
+    expect(knight.hp).not.toBe(300);
+    await handlers.close({});
+    await done;
+    expect(result.outcome).toBe("victory");
+    // The knight fought, not the player's hero: nothing of it is written on the player, but the rewards are theirs.
+    expect([player.hp, player.sp]).toEqual([300, 20]);
+    expect(saved()).toBe("");
+    expect(player.exp).toBeGreaterThan(5);
   });
 
   it("reads the native player, plays to victory and commits the outcome", async () => {
@@ -436,6 +457,23 @@ describe("spectators", () => {
     expect(watcher.player.exp).toBe(5); // spectators get nothing
     await fighter.handlers.close({});
     await expect(done).resolves.toEqual(result);
+  });
+
+  it("sends nothing more to a fighter who closed the result, when a spectator leaves after them", async () => {
+    const fighter = fakePlayer();
+    const watcher = fakePlayer();
+    const done = startTurnBattle(fighter.player, "duo", { seed: 4 });
+    await flush();
+    const watching = watchTurnBattle(watcher.player, fighter.player);
+    await flush();
+    await playToEnd(fighter.packets, fighter.handlers);
+    await fighter.handlers.close({});
+    await done;
+    // The fighter's GUI may show their next battle now: the spectator leaving must not send them this one again.
+    const sent = fighter.packets.length;
+    await watcher.handlers.close({});
+    await expect(watching).resolves.toBe(true);
+    expect(fighter.packets.length).toBe(sent);
   });
 
   it("starts with spectators, lets onSpectate refuse, and closes them when the fighters leave", async () => {
@@ -1039,3 +1077,13 @@ function findHook(provider: unknown, name: string): (...a: any[]) => any {
   if (!fn) throw new Error(`hook ${name} not found`);
   return fn;
 }
+
+describe("the view of the challenged player (PvP)", () => {
+  it("shows a summon entering on the side of the one who called it", () => {
+    const unit = { id: "summon:imp", side: "ally" } as Combatant;
+    const beat = { t: "action", actor: "player:a", kind: "skill", label: "Call", anim: "", melee: false, targets: [unit.id], waves: [[{ target: unit.id, amount: 0, kind: "summon", unit }]], snap: [] } as unknown as Beat;
+    const [mirrored] = mirrorBeats([beat]);
+    expect((mirrored as Extract<Beat, { t: "action" }>).waves[0][0].unit!.side).toBe("enemy");
+    expect(unit.side).toBe("ally");
+  });
+});
