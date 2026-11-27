@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 vi.mock("@rpgjs/server", () => ({ defineModule: (value: unknown) => value }));
 vi.mock("@rpgjs/common", () => ({ createModule: (_name: string, value: unknown) => value }));
-import { provideTacticalServer, startTacticalBattle, stopTacticalBattle, tacticalEncounter, tacticalItem, tacticalSkill, tacticalUnit } from "../server";
+import { isInTacticalBattle, provideTacticalServer, startTacticalBattle, stopTacticalBattle, tacticalEncounter, tacticalItem, tacticalSkill, tacticalUnit } from "../server";
 import type { BattlePacket } from "../core/types";
 
 afterEach(() => vi.useRealTimers());
@@ -173,5 +173,38 @@ describe("the hero of a player in a tactical battle", () => {
     void stopTacticalBattle(player as never);
     // Synchronously: no timer has run yet.
     expect(player.setGraphic).toHaveBeenLastCalledWith(["aria"]);
+  });
+});
+
+describe("a hook of the game that fails", () => {
+  it("at the start: the battle does not open, and the player is shown again and free", async () => {
+    vi.useFakeTimers();
+    provideTacticalServer({ hooks: { onStart: () => { throw new Error("boom"); } } });
+    const { player, gui } = heroPlayer();
+    const start = startTacticalBattle(player as never, "guard-room");
+    await expect(start).rejects.toThrow("boom");
+    expect(isInTacticalBattle(player as never)).toBe(false);
+    expect(gui.open).not.toHaveBeenCalled();
+    // The map sprite is back, and nothing hides it again.
+    expect(player.setGraphic).toHaveBeenLastCalledWith(["aria"]);
+    const calls = player.setGraphic.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(player.setGraphic.mock.calls.length).toBe(calls);
+  });
+
+  it("on an order: the player reads that the order did not go through, not the error of the hook", async () => {
+    vi.useFakeTimers();
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    provideTacticalServer({ hooks: { onCommand: (_p, _b, env) => { if (env.command.type === "endPhase") throw new Error("Cannot read quest"); } } });
+    const { player, packets, listeners } = heroPlayer();
+    void startTacticalBattle(player as never, "guard-room");
+    await vi.advanceTimersByTimeAsync(0);
+    listeners.get("command")!({ revision: packets.at(-1)!.state.revision, command: { type: "start" } });
+    await vi.advanceTimersByTimeAsync(2000);
+    listeners.get("command")!({ revision: packets.at(-1)!.state.revision, command: { type: "endPhase" } });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(packets.at(-1)!.error).toBe("tactical.error.action");
+    expect(errors).toHaveBeenCalled();
+    errors.mockRestore();
   });
 });

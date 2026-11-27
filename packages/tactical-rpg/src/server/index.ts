@@ -796,7 +796,11 @@ async function run(
         if (state.winner) await finish();
         else schedule();
       } catch (error) {
-        seat.gui.update({ state: shown(seat), error: error instanceof Error ? error.message : "tactical.error.action" });
+        // A refusal of the rules is a text of the battle; anything else (a hook of the game that failed) is logged, and the
+        // player reads that the order did not go through.
+        const refusal = error instanceof Error && error.message.startsWith("tactical.");
+        if (!refusal) console.error("[Tactical] order failed", error);
+        seat.gui.update({ state: shown(seat), error: refusal ? error.message : "tactical.error.action" });
       }
     }).catch((error) => console.error("[Tactical] order failed", error)));
 
@@ -931,9 +935,23 @@ async function run(
     });
     if (options.hidePlayer !== false) seat.restore = hidePlayer(player);
   }
-  await callHooks(leader, "onSetup", leader, handle, state);
-  for (const seat of seats.values()) await callHooks(seat.player, "onStart", seat.player, handle);
-  for (const spectator of spectators) void session.watch(spectator);
+  try {
+    await callHooks(leader, "onSetup", leader, handle, state);
+    for (const seat of seats.values()) await callHooks(seat.player, "onStart", seat.player, handle);
+  } catch (error) {
+    // The battle does not open: its players are shown again and freed, and the game gets the error.
+    clearTimeout(timer);
+    clearTimeout(clock);
+    for (const seat of seats.values()) {
+      seat.present = false;
+      seat.restore(true);
+      battles.release(seat.player, session);
+    }
+    battles.close(session);
+    throw error;
+  }
+  for (const spectator of spectators)
+    session.watch(spectator).catch((error) => console.error("[Tactical] a spectator could not join", spectator.id, error));
   for (const seat of seats.values()) {
     seat.done = (async () => {
       try {
