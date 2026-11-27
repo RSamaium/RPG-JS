@@ -16,7 +16,7 @@
 </Container>
 
 <script>
-  import { computed, tick } from 'canvasengine'
+  import { computed, signal, tick } from 'canvasengine'
   import { inject, RpgClientEngine } from '@rpgjs/client'
   import { BattlerLook } from '@rpgjs/battle-kit'
   import { scene } from '../client/scene'
@@ -43,7 +43,8 @@
 
   // Hit flash, stagger tint, target glow and dash blur: the battle kit owns the filters.
   const look = new BattlerLook({ motionBlur: true })
-  const filters = look.filters
+  // Only the filters in use: no filter pass at rest.
+  const filters = signal([])
 
   tick(({ deltaTime, deltaRatio }) => {
     m.onSpriteTick(deltaRatio)
@@ -54,6 +55,7 @@
     else if (m.broken()) look.tint(0x9fb6ff).brightness(0.9 + Math.sin(scene.time() / 90) * 0.15, true)
     else if (m.targeted()) look.brightness(1.15 + Math.sin(scene.time() / 120) * 0.12)
     look.motionBlur(m.blur() > 0 ? m.blur() * (m.facingLeft ? -34 : 34) : 0)
+    if (look.changed(filters())) filters.set(look.active)
   })
 
   const onFinish = () => m.onSheetFinish()

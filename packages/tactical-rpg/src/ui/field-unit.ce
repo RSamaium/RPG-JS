@@ -8,7 +8,7 @@
 </Container>
 
 <script>
-  import { computed, effect } from 'canvasengine'
+  import { computed, effect, signal } from 'canvasengine'
   import { inject, RpgClientEngine } from '@rpgjs/client'
   import { BattlerLook } from '@rpgjs/battle-kit'
   import { field } from '../client/field'
@@ -41,11 +41,15 @@
 
   // Hit flash (brightness), driven by the choreography; the battle kit owns the filter.
   const look = new BattlerLook()
-  const filters = look.filters
+  // Only the filters in use: no filter pass at rest. What the sprite was given is kept apart: reading the signal here would make
+  // the effect depend on what it sets.
+  const filters = signal([])
+  let shown = []
   effect(() => {
     const f = v.flash()
     look.reset()
     if (f > 0) look.brightness(1 + f * 1.4)
+    if (look.changed(shown)) filters.set((shown = look.active))
   })
 
   const drawRing = (g) => {
