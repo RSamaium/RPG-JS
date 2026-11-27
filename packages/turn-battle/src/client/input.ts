@@ -10,6 +10,19 @@ const menu = (fn: () => void, skips = false) => () => {
   fn();
 };
 
+/** What each control of the battle does, whatever key or button gave it (the keyboard, a gamepad, a test). */
+export const turnBattleKeys = {
+  up: menu(() => moveMenu(-1)),
+  left: menu(() => moveMenu(-1)),
+  down: menu(() => moveMenu(1)),
+  right: menu(() => moveMenu(1)),
+  action: menu(confirm, true),
+  escape: menu(back, true),
+  tabNext: () => {
+    if (!cutin()) cycleSpeed();
+  },
+};
+
 /**
  * The controls of the battle GUI: the keyboard controls of the game and the
  * shared gamepad mapping of the RPGJS GUIs (A confirms, B or Start goes back,
@@ -18,15 +31,7 @@ const menu = (fn: () => void, skips = false) => () => {
  */
 export function turnBattleControls(engine: RpgClientEngine): Record<string, unknown> {
   return battleControls(engine, {
-    up: menu(() => moveMenu(-1)),
-    left: menu(() => moveMenu(-1)),
-    down: menu(() => moveMenu(1)),
-    right: menu(() => moveMenu(1)),
-    action: menu(confirm, true),
-    escape: menu(back, true),
-    tabNext: () => {
-      if (!cutin()) cycleSpeed();
-    },
+    ...turnBattleKeys,
     paused: () => !inBattle() || !!cinematic() || modalGuiShown(),
   });
 }
