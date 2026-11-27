@@ -195,7 +195,16 @@ export interface BattleState {
   holds?: Hold[];
   /** The time a side has to play its phase, when the battle has one: `seconds` for a phase, `left` (ms) what remained when this state was sent. */
   timer?: { seconds: number; left: number };
+  /**
+   * The damage the server's formulas give where they replace the power of the rules (map `damagePhysic` / `damageSkill`
+   * between two units with parameters): attacker id → target id → skill id (`""` for the attack) → amount, before guard and
+   * invincibility. Sent with each state for the units of the side that plays, so the forecast shows what the server deals.
+   */
+  damage?: DamageTable;
 }
+
+/** Damage of the server's formulas: attacker id → target id → skill id (`""` for the attack) → amount. */
+export type DamageTable = Record<string, Record<string, Record<string, number>>>;
 
 /** A cell a unit is about to move to, held for it by the player who commands it. */
 export interface Hold extends Cell {
