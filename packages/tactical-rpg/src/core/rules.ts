@@ -58,6 +58,10 @@ export function affected(state: BattleState, source: Unit, target: Unit, skill: 
 export const damage = (state: BattleState, unit: Unit, skill: boolean | string) =>
   skill ? skillOf(state, unit, skill)?.power ?? 0 : unit.power;
 
+/** The HP a unit loses to `amount` of damage: half on guard (rounded up), and never its last HP when it is invincible. */
+export const taken = (victim: Unit, amount: number) =>
+  Math.max(0, Math.min(victim.hp - (victim.invincible ? 1 : 0), victim.guarding ? Math.ceil(amount / 2) : amount));
+
 function advance(state: BattleState, hooks: RulesHooks[] = []) {
   const judges = hooks.flatMap((h) => (h.onJudge ? [(s: BattleState) => h.onJudge!({ state: s })] : []));
   let winner = outcome(state, judges);
@@ -215,9 +219,7 @@ export function transition(
           const next = h.onDamage?.({ state, attacker: unit, target: victim, skill, amount });
           if (typeof next === "number" && Number.isFinite(next)) amount = Math.max(0, Math.round(next));
         }
-        // A unit on guard takes half
-        if (victim.guarding) amount = Math.ceil(amount / 2);
-        amount = Math.max(0, Math.min(victim.hp - (victim.invincible ? 1 : 0), amount));
+        amount = taken(victim, amount);
         victim.hp -= amount;
         if (victim.hp === 0) for (const h of hooks) h.onDefeat?.({ state, unit: victim, by: unit });
         return { unitId: victim.id, damage: amount, killed: victim.hp === 0 };

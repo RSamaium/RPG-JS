@@ -847,7 +847,7 @@ async function run(
       units: heir ? state.units.map((u) => (u.owner === player.id ? { ...u, owner: heir.player.id } : u)) : state.units,
     };
     // The name the battle gave them (a guest has the one of their seat).
-    send({ left: [...before.players, ...before.versus].find((p) => p.id === player.id)?.name ?? nameOf(player) });
+    send({ left: [...before.players, ...before.versus].find((p) => p.id === player.id)?.name ?? nameOf(player), leftTeam: seat.team });
     if (!heir) {
       if (state.winner) return;
       const winner = (seat.team === "ally" ? "enemy" : "ally") as Team;

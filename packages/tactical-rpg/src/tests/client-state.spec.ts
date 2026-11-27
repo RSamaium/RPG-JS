@@ -23,7 +23,7 @@ import {
   send,
   controls,
   objectiveText,
-  menuItems, menuIndex, stepMenu, confirm,
+  menuItems, menuIndex, stepMenu, confirm, lastSurrender,
   action, timeLeft, notice, myId, spectator, myTeam, allies, mode, staged, commit, route, pace, setPace, selectUnit, skillMenu, selectedSkill, pickSkill, planned, chooseCell, cancel, inspected, hoverCell, details, forecast,
 } from "../client/state";
 
@@ -95,6 +95,18 @@ describe("client signals and transport", () => {
     await receive({state});selected.set('');hoverCell({x:4,y:1});
     expect(inspected()?.id).toBe('enemy-warrior');expect(current()).toBeNull();expect(planned()).toBeNull();
     hoverCell(null);expect(inspected()).toBeNull();
+  });
+  it('forecasts the damage the rules deal: half to a unit on guard, as the server takes it', async () => {
+    const state = transition(createEncounter(), { type: 'start' }, 'ally').state;
+    const target = state.units.find((u) => u.id === 'enemy-mage')!;
+    target.guarding = true;
+    await receive({ state }); busy.set(false); selectUnit(state.units[2]);
+    action('skill'); pickSkill('frost-lance'); chooseCell({ x: 6, y: 1 }, { touch: true });
+    const aimed = forecast()!;
+    const played = transition(state, planned()!, 'ally').event!;
+    const hit = 'hits' in played ? played.hits!.find((h) => h.unitId === 'enemy-mage')! : undefined;
+    expect(aimed.amount).toBe(hit?.damage);
+    expect(aimed.remaining).toBe(target.hp - hit!.damage);
   });
   it('keeps the forecast target in the character sheet when the pointer leaves the map',async () =>{
     const state=transition(createEncounter(),{type:'start'},'ally').state;
@@ -215,6 +227,29 @@ describe("client signals and transport", () => {
     expect(canPlay()).toBe(true);
     selected.set('');selectUnit(state.units.find((u)=>u.team==='enemy')!);
     expect(current()?.team).toBe('enemy');
+    connectEngine({ t: (key: string) => key } as never);
+  });
+  it('a rival who leaves a duel is not a partner: their side forfeits, and the result says they left', async () => {
+    connectEngine({ t: english, playerIdSignal: () => 'a' } as never);
+    const state = transition(createEncounter(), { type: 'start' }, 'ally').state;
+    state.players = [{ id: 'a', name: 'Alice' }]; state.versus = [{ id: 'b', name: 'Bob' }];
+    state.units.forEach((u) => { u.owner = u.team === 'ally' ? 'a' : 'b'; });
+    await receive({ state }); vi.advanceTimersByTime(1500);
+    const without = { ...state, versus: [] };
+    await receive({ state: without, left: 'Bob', leftTeam: 'enemy' });
+    expect(notice()).toBe('Bob left the battle.');
+    const out = transition(state, { type: 'surrender' }, 'enemy');
+    await receive({ state: { ...out.state, versus: [] }, event: out.event });
+    expect(lastSurrender()).toBe('Bob left the battle.');
+    connectEngine({ t: (key: string) => key } as never);
+  });
+  it('a partner who leaves a co-op battle hands their units over', async () => {
+    connectEngine({ t: english, playerIdSignal: () => 'a' } as never);
+    const state = transition(createEncounter(), { type: 'start' }, 'ally').state;
+    state.players = [{ id: 'a', name: 'Alice' }, { id: 'c', name: 'Cleo' }];
+    await receive({ state }); vi.advanceTimersByTime(1500);
+    await receive({ state: { ...state, players: [{ id: 'a', name: 'Alice' }] }, left: 'Cleo', leftTeam: 'ally' });
+    expect(notice()).toBe('Cleo left the battle: you now command their units.');
     connectEngine({ t: (key: string) => key } as never);
   });
   it('move: the unit walks at once, Escape brings it back, the action sends the move with it',async()=>{

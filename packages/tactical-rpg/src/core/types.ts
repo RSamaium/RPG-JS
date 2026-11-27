@@ -241,8 +241,10 @@ export interface BattlePacket {
   state: BattleState;
   event?: BattleEvent;
   error?: string;
-  /** Coop: name of a player who left (their units go to a partner). */
+  /** Name of a player who left: in co-op their units go to a partner, in a duel their side may forfeit. */
   left?: string;
+  /** The side of the player who left. */
+  leftTeam?: Team;
 }
 
 export interface CommandEnvelope {

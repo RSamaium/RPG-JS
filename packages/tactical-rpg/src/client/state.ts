@@ -12,7 +12,7 @@ import type {
   Unit,
 } from "../core/types";
 import { TACTICAL_I18N } from "../core/messages";
-import { affected, damage, targetable } from "../core/rules";
+import { affected, damage, taken, targetable } from "../core/rules";
 import { distance, reachable, key } from "../core/board";
 import { skillFor, skillsOf, skillUnavailable } from "../core/skills";
 import { actionTiming, itemTiming } from "./choreography";
@@ -305,6 +305,8 @@ export const objectiveText = computed(() => {
 });
 let lastPacket: BattlePacket | null = null;
 let noticeUntil = 0;
+/** The players who left the battle, by side: a side that forfeits because of them is named by them. */
+let departed: Record<Team, string[]> = { ally: [], enemy: [] };
 /** Packets waiting for the current animation to end (played in order). */
 const inbox: BattlePacket[] = [];
 let playing = false;
@@ -336,14 +338,17 @@ async function play(packet: BattlePacket) {
   // A new battle: forget the previous one.
   if (battle()?.id !== packet.state.id) {
     battle.set(null);
+    departed = { ally: [], enemy: [] };
     animation = null;
     loaded.set(false);
     host.started(packet.state);
   }
   myId.set(engine?.playerIdSignal?.() ?? "");
   if (packet.left) {
-    // Kept a few seconds: the next actions would clear it at once.
-    notice.set(t("tactical.partnerLeft", { name: packet.left }));
+    if (packet.leftTeam) departed[packet.leftTeam].push(packet.left);
+    // A partner's units come to me; an opponent who leaves only leaves. Kept a few seconds: the next actions would clear it at once.
+    const opponent = !!packet.leftTeam && packet.leftTeam !== myTeam();
+    notice.set(t(opponent ? "tactical.opponentLeft" : "tactical.partnerLeft", { name: packet.left }));
     noticeUntil = performance.now() + 6000;
   }
   if (packet.error) {
@@ -397,7 +402,9 @@ async function play(packet: BattlePacket) {
   if (packet.event?.kind === "surrender") {
     const side = packet.event.team === "enemy" ? packet.state.versus : packet.state.players;
     const names = side.map((p) => p.name).join(", ");
-    lastSurrender.set(t("tactical.surrendered", { names: names || t("tactical.opponents") }));
+    // A side that forfeits because its players left: they are no longer in the state, the result names them as having left.
+    const gone = departed[packet.event.team ?? "ally"].join(", ");
+    lastSurrender.set(names || !gone ? t("tactical.surrendered", { names: names || t("tactical.opponents") }) : t("tactical.opponentLeft", { name: gone }));
   } else if (packet.event?.kind === "start") lastSurrender.set("");
   if (packet.event) {
     const actor = packet.state.units.find(
@@ -820,10 +827,12 @@ export const forecast = computed(() => {
     command = aimed();
   if (!state || !unit || !command || !("targetId" in command)) return null;
   const target = state.units.find((u) => u.id === command.targetId)!;
+  // What the rules take: half on guard, never the last HP of an invincible unit (the server's damage hooks are not known here).
+  const amount = taken(target, damage(state, unit, command.type === "skill" ? command.skillId : false));
   return {
     target,
-    amount: damage(state,unit,command.type==='skill'?command.skillId:false),
-    remaining: Math.max(0, target.hp - damage(state,unit,command.type==='skill'?command.skillId:false)),
+    amount,
+    remaining: target.hp - amount,
     hits: affected(state, unit, target, command.type === "skill"?command.skillId:false).length,
   };
 });
@@ -932,6 +941,7 @@ export function teardown() {
   cutin.set(null);
   notice.set("");
   lastSurrender.set("");
+  departed = { ally: [], enemy: [] };
   clearSelection();
   hovered.set(null);
 }
