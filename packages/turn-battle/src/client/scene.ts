@@ -252,6 +252,9 @@ export class BattlerModel {
   }
 }
 
+/** How long the battlers slide to their new places when the formation changes (a summon comes or leaves), in ms. */
+export const FORMATION_SLIDE_MS = 420;
+
 export class Scene {
   readonly clock = new Clock();
   readonly active = signal(false);
@@ -375,7 +378,7 @@ export class Scene {
       if (!dx && !dy) continue;
       b.offX.set(dx);
       b.offY.set(dy);
-      void this.clock.tween(420, (k) => {
+      void this.clock.tween(FORMATION_SLIDE_MS, (k) => {
         b.offX.set(dx * (1 - k));
         b.offY.set(dy * (1 - k));
       });

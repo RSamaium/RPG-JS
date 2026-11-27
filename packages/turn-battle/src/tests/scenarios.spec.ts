@@ -220,6 +220,53 @@ describe("co-op: two players against a troop", () => {
     expect(looping.size).toBe(0);
   });
 
+  it("the looping shields follow their heroes when a summon comes and the formation slides", async () => {
+    const battle = await play();
+    const { b } = battle;
+    expect(await nextTurn(battle)).toBeTruthy();
+    const looping = new Map<object, { x: number; y: number }>();
+    b.scene.particles = (_preset, x, y, o) => {
+      if (!o?.loop) return () => {};
+      const token = {};
+      looping.set(token, { x, y });
+      return () => looping.delete(token);
+    };
+    const { Director } = await import("../client/director");
+    const state = structuredClone(b.latest());
+    const heroes = state.combatants.filter((c) => c.side === "ally");
+    for (const hero of heroes) hero.guarding = true;
+    const director = new Director(b.scene as never, structuredClone(state), { fx: {} } as never);
+    director.resync(state);
+    const models = heroes.map((h) => b.scene.actor(h.id)!);
+    // Where the shields loop, and where the heroes stand (within a few pixels: the parallax drifts a little).
+    const at = (x: number, y: number) => `${Math.round(x / 4)},${Math.round(y / 4)}`;
+    const shields = () => [...looping.values()].map((p) => at(p.x, p.y)).sort();
+    const chests = () => models.map((m) => at(m.chest.x, m.chest.y)).sort();
+    expect(shields()).toEqual(chests());
+    const before = chests();
+    // A summon comes on the side of the heroes: they slide to their new places.
+    const summon = { ...structuredClone(heroes[0]), id: "summon:1", owner: undefined, summon: "fairy", guarding: false };
+    director.resync({ ...state, combatants: [...state.combatants, summon] } as typeof state);
+    await frames(800);
+    expect(chests()).not.toEqual(before);
+    expect(shields()).toEqual(chests());
+  });
+
+  it("the result counters stop rolling when the battle closes", async () => {
+    const battle = await play();
+    const { b } = battle;
+    expect(await nextTurn(battle)).toBeTruthy();
+    const { Director } = await import("../client/director");
+    const state = structuredClone(b.latest());
+    const director = new Director(b.scene as never, structuredClone(state), { fx: {} } as never);
+    director.resync({ ...state, result: { outcome: "victory", exp: 50, gold: 9, items: [], bonuses: [], turns: 1 } } as typeof state);
+    b.session.teardown();
+    // The next battle shows its own numbers: the counters of the last one no longer write over them.
+    b.state.shownExp.set(0);
+    await frames(2000);
+    expect(b.state.shownExp()).toBe(0);
+  });
+
   it("a battler without a spritesheet does not block the battle: it is drawn invisible and the battle plays to its end", async () => {
     const errors = vi.spyOn(console, "error").mockImplementation(() => {});
     // Bob's hero is drawn with the "mage" sheet, which the game did not register.

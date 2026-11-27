@@ -716,6 +716,7 @@ export function teardown() {
   if (!current) return;
   current.restore.forEach((restore) => restore());
   Director.clearLoops();
+  Director.stopCounters();
   fadeEntering(0, 0);
   scene.stop();
   scene.fade.set(0);

@@ -3,7 +3,7 @@ import { ease, runVisualEffect, type PlayableVisualEffect, type VisualEffectPlay
 import { FxPlayer } from "@rpgjs/battle-kit";
 import { elementColor } from "@rpgjs/battle-kit/pure";
 import { ATTACK_SCALE, breakFx, builtinFx, burst, dissolveFx, hasPreset, isAttackPreset, playPreset, type FxFn } from "./fx";
-import type { BattlerModel, FxPreset, Scene } from "./scene";
+import { FORMATION_SLIDE_MS, type BattlerModel, type FxPreset, type Scene } from "./scene";
 import { sfx, sfxSound } from "./sfx";
 import {
   banner,
@@ -162,7 +162,9 @@ export class Director {
         stopLoop(`stun:${b.id}`);
         stopLoop(`guard:${b.id}`);
       }
+    const before = this.scene.battlers().map((b) => b.id).join();
     this.scene.settleBattlers(state.combatants);
+    if (this.scene.battlers().map((b) => b.id).join() !== before) this.replaceLoopsAfterSlide();
     this.display = structuredClone(state);
     this.applySnap(snapshot(state));
     if (state.result && !result()) {
@@ -215,6 +217,31 @@ export class Director {
   /** Stop every looping effect (battle closed). */
   static clearLoops() {
     for (const key of [...loops.keys()]) stopLoop(key);
+  }
+
+  /** The result counters stop rolling (battle closed): a later battle starts from its own numbers. */
+  static stopCounters() {
+    if (countersFrame !== null) cancelAnimationFrame(countersFrame);
+    countersFrame = null;
+  }
+
+  /**
+   * The status loops are played at a fixed place: once the formation has slid to its new places (a summon came or left), each one
+   * is played again where its battler now stands.
+   */
+  private replaceLoopsAfterSlide() {
+    const scene = this.scene;
+    void this.clock.wait(FORMATION_SLIDE_MS).then(() => {
+      if (!scene.active()) return;
+      for (const b of scene.battlers()) {
+        const stun = loops.has(`stun:${b.id}`);
+        const guard = loops.has(`guard:${b.id}`);
+        if (!stun && !guard) continue;
+        stopLoop(`stun:${b.id}`);
+        stopLoop(`guard:${b.id}`);
+        this.syncStatus(b, stun, guard);
+      }
+    });
   }
 
   setOrder(ids: string[]) {
@@ -481,6 +508,7 @@ export class Director {
     if (!this.display.combatants.some((c) => c.id === unit.id)) this.display.combatants.push(structuredClone(unit));
     const b = sc.addBattler(unit);
     if (!b) return;
+    this.replaceLoopsAfterSlide();
     b.alpha.set(0);
     sfx("limit");
     // The portal preset loops: close it once the creature is out.
@@ -515,6 +543,7 @@ export class Director {
         });
       }
       sc.removeBattler(id);
+      this.replaceLoopsAfterSlide();
     }
     publish(this.display);
     await this.clock.wait(200);
@@ -858,7 +887,9 @@ export function scanText(c: BattleView["combatants"][number]): string {
 }
 
 /** EXP / gold roll up on the result screen. */
+let countersFrame: number | null = null;
 function rollCounters(exp: number, gold: number) {
+  Director.stopCounters();
   shownExp.set(0);
   shownGold.set(0);
   const start = performance.now() + 450;
@@ -867,9 +898,9 @@ function rollCounters(exp: number, gold: number) {
     const e = 1 - (1 - k) ** 3;
     shownExp.set(Math.round(exp * e));
     shownGold.set(Math.round(gold * e));
-    if (k < 1) requestAnimationFrame(step);
+    countersFrame = k < 1 ? requestAnimationFrame(step) : null;
   };
-  requestAnimationFrame(step);
+  countersFrame = requestAnimationFrame(step);
 }
 
 export function chips(view: BattleView, ids: string[], landingIndex = -1): OrderChip[] {
