@@ -98,23 +98,28 @@ describe("co-op: two players against the AI", () => {
     expect(a.player.removeItem).toHaveBeenCalledWith("ether", 1);
   });
 
-  it("a potion goes to an ally next to the hero; the last one greys the items; a move and an attack in one order win", async () => {
+  it("the last potion greys the items; a potion for an ally with nothing to get back is refused and kept; a move and an attack in one order win", async () => {
     const { a, b, result } = await play("items", { a: { items: { potion: 1 } }, b: { items: { potion: 2 } } });
     await endPhase(a, b);
     await settle(10000);
     expect(a.view().round).toBe(2);
 
-    // Bob gives a potion to Alice, on his left.
-    const before = a.hero().hp;
-    await b.keys("nextUnit", "action");
-    expect(b.menu()).toEqual(["attack (greyed)", "skill (greyed)", ">item", "guard", "wait"]);
-    await b.keys("action", "action", "left", "action");
+    // Alice, hurt by the post, drinks her only potion.
+    const hurt = a.hero().hp;
+    expect(hurt).toBeLessThan(100);
+    await a.keys("nextUnit", "action");
+    expect(a.menu()).toEqual(["attack (greyed)", "skill (greyed)", ">item", "guard", "wait"]);
+    await a.keys("action", "action", "action");
     await settle();
-    expect(a.hero().hp).toBe(Math.min(100, before + 40));
-    expect(b.hero().items.potion).toBe(1);
+    expect(a.hero().hp).toBe(Math.min(100, hurt + 40));
 
-    // Alice drinks her only potion.
-    await a.keys("nextUnit", "action", "action", "action", "action");
+    // Bob would give her one, on his left: she has nothing to get back, so he keeps it and can still act.
+    await b.keys("nextUnit", "action", "action", "action", "left", "action");
+    await settle();
+    expect(b.state.notice()).toBe("This unit has nothing to get back from this item.");
+    expect(b.hero().items.potion).toBe(2);
+    expect(b.hero().acted).toBe(false);
+    await b.keys("entry5");
     await settle(12000);
     expect(a.view().round).toBe(3);
     await a.keys("nextUnit", "action");
@@ -132,7 +137,7 @@ describe("co-op: two players against the AI", () => {
     await closeResult(a, b);
     expect((await result).outcome).toBe("victory");
     expect(a.player.removeItem).toHaveBeenCalledWith("potion", 1);
-    expect(b.player.removeItem).toHaveBeenCalledWith("potion", 1);
+    expect(b.player.removeItem).not.toHaveBeenCalled();
   });
 
   it("a partner who leaves hands their units over; the battle goes on to a defeat, written on the one who stayed", async () => {

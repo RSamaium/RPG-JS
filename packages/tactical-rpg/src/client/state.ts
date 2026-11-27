@@ -346,8 +346,9 @@ async function play(packet: BattlePacket) {
   myId.set(engine?.playerIdSignal?.() ?? "");
   if (packet.left) {
     if (packet.leftTeam) departed[packet.leftTeam].push(packet.left);
-    // A partner's units come to me; an opponent who leaves only leaves. Kept a few seconds: the next actions would clear it at once.
-    const opponent = !!packet.leftTeam && packet.leftTeam !== myTeam();
+    // A partner's units come to me; an opponent who leaves only leaves, and a spectator commands nobody's units. Kept a few
+    // seconds: the next actions would clear it at once.
+    const opponent = spectator() || (!!packet.leftTeam && packet.leftTeam !== myTeam());
     notice.set(t(opponent ? "tactical.opponentLeft" : "tactical.partnerLeft", { name: packet.left }));
     noticeUntil = performance.now() + 6000;
   }
@@ -404,7 +405,9 @@ async function play(packet: BattlePacket) {
     const names = side.map((p) => p.name).join(", ");
     // A side that forfeits because its players left: they are no longer in the state, the result names them as having left.
     const gone = departed[packet.event.team ?? "ally"].join(", ");
-    lastSurrender.set(names || !gone ? t("tactical.surrendered", { names: names || t("tactical.opponents") }) : t("tactical.opponentLeft", { name: gone }));
+    lastSurrender.set(
+      names ? t("tactical.surrendered", { names }) : gone ? t("tactical.opponentLeft", { name: gone }) : t("tactical.sideSurrendered"),
+    );
   } else if (packet.event?.kind === "start") lastSurrender.set("");
   if (packet.event) {
     const actor = packet.state.units.find(

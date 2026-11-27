@@ -31,6 +31,18 @@ describe("using an item", () => {
     expect(event.heals).toEqual([{ unitId: "ally-archer", hp: Math.min(50, ally(state, "archer").maxHp - 10), sp: 0 }]);
   });
 
+  it("is refused, and kept, on a unit with nothing to get back from it", () => {
+    const state = started((s) => {
+      ally(s, "warrior").x = 2; ally(s, "warrior").y = 5;
+      ally(s, "archer").x = 3; ally(s, "archer").y = 5;
+      ally(s, "archer").hp = ally(s, "archer").maxHp;
+    });
+    const command = { type: "item", unitId: "ally-warrior", targetId: "ally-archer", itemId: "potion" } as const;
+    expect(() => transition(state, command, "ally")).toThrow("tactical.error.full");
+    expect(ally(state, "warrior").items.potion).toBe(2);
+    expect(ally(state, "warrior").acted).toBe(false);
+  });
+
   it("restores the MP of the unit too, up to its maximum", () => {
     const state = started((s) => {
       s.items = { ether: { id: "ether", name: "Ether", hp: 0, sp: 30 } };

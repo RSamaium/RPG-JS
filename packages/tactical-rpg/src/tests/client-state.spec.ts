@@ -252,6 +252,25 @@ describe("client signals and transport", () => {
     expect(notice()).toBe('Cleo left the battle: you now command their units.');
     connectEngine({ t: (key: string) => key } as never);
   });
+  it('a spectator commands nobody: a player who leaves is announced as leaving, whatever their side', async () => {
+    connectEngine({ t: english, playerIdSignal: () => 'c' } as never);
+    const state = transition(createEncounter(), { type: 'start' }, 'ally').state;
+    state.players = [{ id: 'a', name: 'Alice' }, { id: 'b', name: 'Bob' }];
+    await receive({ state }); vi.advanceTimersByTime(1500);
+    await receive({ state: { ...state, players: [{ id: 'a', name: 'Alice' }] }, left: 'Bob', leftTeam: 'ally' });
+    expect(notice()).toBe('Bob left the battle.');
+    connectEngine({ t: (key: string) => key } as never);
+  });
+  it('a side that gives up and can no longer be named is told so without a name', async () => {
+    connectEngine({ t: english, playerIdSignal: () => 'a' } as never);
+    const state = transition(createEncounter(), { type: 'start' }, 'ally').state;
+    state.players = [{ id: 'a', name: 'Alice' }]; state.versus = [{ id: 'b', name: 'Bob' }];
+    await receive({ state }); vi.advanceTimersByTime(1500);
+    const out = transition(state, { type: 'surrender' }, 'enemy');
+    await receive({ state: { ...out.state, versus: [] }, event: out.event });
+    expect(lastSurrender()).toBe('The other side gave up.');
+    connectEngine({ t: (key: string) => key } as never);
+  });
   it('move: the unit walks at once, Escape brings it back, the action sends the move with it',async()=>{
     const command = vi.fn();
     connectHost({ command, pace: vi.fn(), close: vi.fn(), enter: () => () => {}, started: vi.fn(), ended: vi.fn() });

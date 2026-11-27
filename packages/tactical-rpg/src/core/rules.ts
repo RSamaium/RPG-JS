@@ -191,6 +191,8 @@ export function transition(
     // An item goes to a standing ally, the unit itself or next to it
     if (!target || target.hp <= 0 || target.team !== unit.team || distance(unit, target) > 1) throw new Error("tactical.error.target");
     const heal = { unitId: target.id, hp: Math.min(item.hp, target.maxHp - target.hp), sp: Math.min(item.sp, target.maxSp - target.sp) };
+    // An item that restores HP or SP is not spent on a unit that has nothing to get back.
+    if ((item.hp > 0 || item.sp > 0) && heal.hp <= 0 && heal.sp <= 0) throw new Error("tactical.error.full");
     target.hp += heal.hp;
     target.sp += heal.sp;
     unit.items[command.itemId] -= 1;

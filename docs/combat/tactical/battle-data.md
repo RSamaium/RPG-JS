@@ -70,7 +70,7 @@ defineModule<RpgClient>({ spritesheets: [walkingSheet("guard", "/sprites/guard.p
 
 ## Item
 
-Native fields: `hpValue`, `spValue` restored to a unit next to the user. The `tactical` field may give an `effect`: a Visual Effect played from the user to that unit.
+Native fields: `hpValue`, `spValue` restored to a unit next to the user (or the user itself). An item that restores HP or SP is refused on a unit with nothing to get back from it (`tactical.error.full`): it is kept, and the unit can still act. The `tactical` field may give an `effect`: a Visual Effect played from the user to that unit.
 
 ## Role (`tactical`)
 
