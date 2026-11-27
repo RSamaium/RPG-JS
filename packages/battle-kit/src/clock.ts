@@ -127,7 +127,15 @@ export class Clock {
     this.now += dt;
     for (const tw of [...this.tweens]) {
       const t = Math.min(1, (this.now - tw.start) / tw.duration);
-      tw.update(tw.ease(t));
+      try {
+        tw.update(tw.ease(t));
+      } catch (error) {
+        // A broken animation ends here: it must not hold the other tweens and every wait of the battle.
+        console.error("[Clock] a tween failed", error);
+        this.tweens.delete(tw);
+        tw.resolve();
+        continue;
+      }
       if (t >= 1) {
         this.tweens.delete(tw);
         tw.resolve();

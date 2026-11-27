@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { Clock, aim, digitMotion, elementColor, popupLift, popupMotion } from "./pure";
 import { toCss, toHex } from "./colors";
 
@@ -22,6 +22,26 @@ describe("battle kit (pure parts)", () => {
     const pending = clock.wait(1000);
     clock.flush();
     await expect(pending).resolves.toBeUndefined();
+  });
+
+  it("drops a tween that throws, so the other tweens and the waits go on", async () => {
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const clock = new Clock();
+    let seen = 0;
+    let calls = 0;
+    const broken = clock.tween(100, () => {
+      if (calls++ > 0) throw new Error("boom");
+    });
+    const fine = clock.tween(100, (t) => (seen = t));
+    const waited = clock.wait(50);
+    clock.tick(60);
+    await expect(broken).resolves.toBeUndefined();
+    await expect(waited).resolves.toBeUndefined();
+    clock.tick(60);
+    await fine;
+    expect(seen).toBe(1);
+    expect(errors).toHaveBeenCalledTimes(1);
+    errors.mockRestore();
   });
 
   it("aims directional presets and converts colours", () => {
