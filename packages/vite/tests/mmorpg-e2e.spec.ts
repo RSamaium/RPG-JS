@@ -430,6 +430,27 @@ describe("MMORPG end-to-end", () => {
       expect(battleData().error).toBeUndefined();
     });
 
+    test("plays to the end through the GUI: the player escapes, closes the result and is free on the map with their HP", async () => {
+      const server = await startMmorpgServer(battleModule(), [provideTurnBattleServer()]);
+      const engine = await startClient(server.host, {}, [provideTestingLoadMap(), provideTurnBattleClient()]);
+      const player = await waitFor(() => joinedPlayer("map-map1"), "the server player");
+      await waitFor(() => localPlayerOn(engine, "map-map1"), "the local player");
+
+      const battle = startTurnBattle(player, "slimes", { seed: 1 });
+      const actor = await waitFor(() => battleData()?.state?.actor, "the hero's turn");
+      inject(RpgGui).guiInteraction(TURN_BATTLE_GUI, "command", { revision: battleData().state.revision, actor, command: { type: "escape" } });
+      const end = await waitFor(() => battleData()?.state?.result, "the result on the client");
+      expect(end.outcome).toBe("escape");
+      const hero = battleData().state.combatants.find((c: any) => c.id === actor);
+
+      // The result screen is closed on the client: the battle resolves and the GUI goes away.
+      inject(RpgGui).guiInteraction(TURN_BATTLE_GUI, "close", {});
+      await expect(battle).resolves.toMatchObject({ outcome: "escape" });
+      await waitFor(() => !inject(RpgGui).isDisplaying(TURN_BATTLE_GUI), "the battle GUI closed");
+      expect(isInTurnBattle(player)).toBe(false);
+      expect(player.hp).toBe(hero.hp);
+    });
+
     test("frees a player who disconnects during a battle", async () => {
       const server = await startMmorpgServer(battleModule(), [provideTurnBattleServer()]);
       const engine = await startClient(server.host, {}, [provideTestingLoadMap(), provideTurnBattleClient()]);
@@ -453,7 +474,8 @@ describe("MMORPG end-to-end", () => {
     const TACTICAL_GUI = "tactical-hud";
     const battleModule = () =>
       defineModule<RpgServer>({
-        maps: [{ id: "map1" }],
+        // An event of the map, hidden on the fighter's screen during the battle.
+        maps: [{ id: "map1", events: [{ id: "guard", x: 300, y: 300, event: { onInit() {} } }] }],
         database: {
           wolf: tacticalUnit({ name: "Wolf", tactical: { role: "warrior", battler: "wolf", stats: { hp: 40, sp: 0, power: 8, range: 1, move: 3 } } }),
           "guard-room": tacticalEncounter({
@@ -498,6 +520,52 @@ describe("MMORPG end-to-end", () => {
         }
         return false;
       }, "the battle started by the server");
+    });
+
+    /** Sends a command from the HUD until the state shows it, with the latest revision the client holds (again if the server refused a stale one, as the HUD does). */
+    const commandFromHud = (command: unknown, done: (state: any) => unknown, label: string) => {
+      let sentAt = 0;
+      return waitFor(() => {
+        const data = hudData();
+        if (data?.state && done(data.state)) return true;
+        if (data && Date.now() - sentAt > 500) {
+          sentAt = Date.now();
+          inject(RpgGui).guiInteraction(TACTICAL_GUI, "command", { revision: data.state.revision, command });
+        }
+        return false;
+      }, label);
+    };
+
+    test("draws the grid on the tiles of the map and hides the objects of the map until the battle ends", async () => {
+      const server = await startMmorpgServer(battleModule(), [provideTacticalServer()]);
+      const engine = await startClient(server.host, {}, [provideTestingLoadMap(), provideTacticalClient()]);
+      const player = await waitFor(() => joinedPlayer("map-map1"), "the server player");
+      await waitFor(() => localPlayerOn(engine, "map-map1"), "the local player");
+      await waitFor(() => (engine as any).sceneMap?.events?.()?.guard, "the event of the map on the client");
+      expect(engine.isMapObjectHidden("guard")).toBe(false);
+
+      const battle = startTacticalBattle(player, "guard-room");
+      const opening = await waitFor(() => hudData()?.state, "the tactical HUD");
+      // The cells are the tiles of the map, the player's tile in the grid.
+      const tile = Number((player.getCurrentMap() as any).tileWidth);
+      expect(tile).toBeGreaterThan(0);
+      expect(opening.board.cellSize).toBe(tile);
+      expect(Math.abs(opening.board.origin.x % tile)).toBe(0);
+      expect(Math.abs(opening.board.origin.y % tile)).toBe(0);
+      // The fighter's screen hides the events and the players of the map.
+      await waitFor(() => engine.isMapObjectHidden("guard"), "the event hidden");
+      expect(engine.isMapObjectHidden(player.id)).toBe(true);
+
+      // The heroes flee, the result screen is closed: the map shows its objects again, the HP is written on the player.
+      await commandFromHud({ type: "start" }, (state) => state.started, "the battle started by the server");
+      await commandFromHud({ type: "escape" }, (state) => state.winner, "the end of the battle");
+      const hero = hudData().state.units.find((u: any) => u.player === player.id);
+      inject(RpgGui).guiInteraction(TACTICAL_GUI, "close", {});
+      await expect(battle).resolves.toMatchObject({ outcome: "escape" });
+      await waitFor(() => !engine.isMapObjectHidden("guard"), "the event shown again");
+      expect(engine.isMapObjectHidden(player.id)).toBe(false);
+      expect(isInTacticalBattle(player)).toBe(false);
+      expect(player.hp).toBe(hero.hp);
     });
 
     test("frees a player who disconnects during a battle", async () => {
