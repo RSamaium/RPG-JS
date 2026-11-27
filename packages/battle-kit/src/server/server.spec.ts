@@ -63,6 +63,31 @@ describe("battle sessions (server)", () => {
     expect(sessions.isIn(bob)).toBe(true);
   });
 
+  it("keeps a player who disconnected during the preparation out of another battle until the first one opens", () => {
+    const sessions = new BattleSessions("Test");
+    const bob = fakePlayer("bob");
+    const release = sessions.reserve([bob]);
+    sessions.disconnect(bob);
+    // Bob reconnects and something tries to start another battle with him: refused while the first one is prepared.
+    expect(() => sessions.reserve([bob])).toThrow(/already in a battle/);
+    const session = fakeSession("b1", [bob]);
+    sessions.open(session, [bob]);
+    expect(session.left).toEqual(["bob"]);
+    // Once it opened without him, he is free.
+    expect(sessions.isIn(bob)).toBe(false);
+    release();
+    expect(() => sessions.reserve([bob])).not.toThrow();
+  });
+
+  it("frees a player who disconnected during a preparation that fails", () => {
+    const sessions = new BattleSessions("Test");
+    const bob = fakePlayer("bob");
+    const release = sessions.reserve([bob]);
+    sessions.disconnect(bob);
+    release();
+    expect(sessions.isIn(bob)).toBe(false);
+  });
+
   it("reserves the players of a battle and refuses a second one", () => {
     const sessions = new BattleSessions("Test");
     const alice = fakePlayer("alice");

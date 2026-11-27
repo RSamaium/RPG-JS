@@ -236,8 +236,10 @@ export class BattleSessions<H extends BattleHandleBase = BattleHandleBase> {
     this.byId.set(session.handle.id, session);
     const left: RpgPlayer[] = [];
     for (const p of players) {
-      if (this.gone.delete(p.id)) left.push(p);
-      else this.byPlayer.set(p.id, session);
+      if (this.gone.delete(p.id)) {
+        left.push(p);
+        if (this.byPlayer.get(p.id) === RESERVED) this.byPlayer.delete(p.id);
+      } else this.byPlayer.set(p.id, session);
     }
     for (const p of left) session.leave(p);
   }
@@ -396,8 +398,10 @@ export class BattleSessions<H extends BattleHandleBase = BattleHandleBase> {
    */
   disconnect(player: RpgPlayer): void {
     const session = this.byPlayer.get(player.id);
-    if (session === RESERVED) this.gone.add(player.id);
-    else if (session) session.leave(player);
+    // Still reserved: the battle being prepared takes them out when it opens (or frees them if it fails), so no other battle can
+    // reserve them meanwhile.
+    if (session === RESERVED) return void this.gone.add(player.id);
+    if (session) session.leave(player);
     this.byPlayer.delete(player.id);
   }
 }
