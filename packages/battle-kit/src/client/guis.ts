@@ -89,8 +89,9 @@ export function modalGuiShown(): boolean {
  * (a map module may show its HUD again meanwhile). Both CanvasEngine and Vue
  * GUIs are hidden through `RpgGui.hide`. When the battle ends, a GUI is shown
  * again with its current data, unless the game closed it meanwhile. The GUIs
- * are checked again every 200 ms until the returned function is called.
- * Client only.
+ * are checked again every 200 ms until the returned function is called, or
+ * until the battle GUI, once shown, is gone (the client lost its connection):
+ * the GUIs are then shown again. Client only.
  *
  * @title hideGuisDuringBattle
  * @method hideGuisDuringBattle(battleGui, options?)
@@ -108,9 +109,15 @@ export function modalGuiShown(): boolean {
 export function hideGuisDuringBattle(battleGui: string, options: BattleScreenOptions = {}): () => void {
   /** The GUIs hidden by the battle, with the open id they had (a server GUI closed meanwhile is not shown again). */
   const hidden = new Map<string, string | undefined>();
+  /** The battle screen was shown: once it is gone, the battle is over for this client. */
+  let shown = false;
   const hide = () => {
     const gui = guiService();
     if (!gui) return;
+    // The battle screen went away without the battle showing the GUIs again (the client lost its connection, a new
+    // game started): they are shown again, and nothing is hidden any more.
+    if (gui.isDisplaying(battleGui)) shown = true;
+    else if (shown) return restore();
     const ids =
       options.hideGuis ??
       Object.keys(gui.getAll()).filter((id) => id !== battleGui && !options.keepGuis?.includes(id) && !MODAL_GUIS.includes(id));
@@ -124,10 +131,12 @@ export function hideGuisDuringBattle(battleGui: string, options: BattleScreenOpt
       hidden.set(id, openId);
     }
   };
-  hide();
-  const timer = setInterval(hide, 200);
-  const leave = options.onBattleShown?.();
-  return () => {
+  let timer: ReturnType<typeof setInterval> | undefined;
+  let leave: (() => void) | void = undefined;
+  let restored = false;
+  const restore = () => {
+    if (restored) return;
+    restored = true;
     clearInterval(timer);
     const gui = guiService();
     if (gui) {
@@ -141,6 +150,10 @@ export function hideGuisDuringBattle(battleGui: string, options: BattleScreenOpt
     hidden.clear();
     leave?.();
   };
+  hide();
+  timer = setInterval(hide, 200);
+  leave = options.onBattleShown?.();
+  return restore;
 }
 
 /**
