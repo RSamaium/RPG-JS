@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="880" height="64" viewBox="0 0 880 64" role="img" aria-labelledby="title">
-  <title id="title">Build your game visually with RPGJS Studio. Try it at rpgstudio.ai</title>
+  <title id="title">Build your game visually with RPG Studio. Try it at rpgstudio.ai</title>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0" stop-color="#1e1b4b"/>
@@ -12,7 +12,7 @@
   <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif">
     <rect x="22" y="20" width="52" height="24" rx="12" fill="#a78bfa" fill-opacity="0.22" stroke="#c4b5fd" stroke-opacity="0.6"/>
     <text x="48" y="36.5" text-anchor="middle" font-size="12" font-weight="700" fill="#ede9fe" letter-spacing="0.6">NEW</text>
-    <text x="90" y="38" font-size="17" fill="#f5f3ff"><tspan font-weight="700">RPGJS Studio</tspan><tspan fill="#c4b5fd"> · build your game visually, right in the browser</tspan></text>
+    <text x="90" y="38" font-size="17" fill="#f5f3ff"><tspan font-weight="700">RPG Studio</tspan><tspan fill="#c4b5fd"> · build your game visually, right in the browser</tspan></text>
     <rect x="686" y="16" width="172" height="32" rx="16" fill="#f5f3ff"/>
     <text x="772" y="37" text-anchor="middle" font-size="14" font-weight="700" fill="#3b0764">Try rpgstudio.ai →</text>
   </g>

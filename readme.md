@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://rpgstudio.ai"><img src="./docs/assets/readme/studio-banner.svg" alt="New: RPGJS Studio, build your game visually in the browser. Try it at rpgstudio.ai" width="880"></a>
+  <a href="https://rpgstudio.ai/?utm_source=github&amp;utm_medium=readme&amp;utm_campaign=rpgjs_readme"><img src="./docs/assets/readme/studio-banner.svg" alt="New: RPG Studio, build your game visually in the browser. Try it at rpgstudio.ai" width="880"></a>
 </p>
 
 ![RPGJS](/header.png)
