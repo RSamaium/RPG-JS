@@ -1,5 +1,52 @@
 # @rpgjs/server
 
+## 5.4.2
+
+### Patch Changes
+
+- 2cd754e: On a streamed map, the server simulates events according to the interest of players (#517). An event in a chunk that no player retains is paused: its route, its movements and its physics stop, it keeps its state and its hitbox, and it goes on when a player comes near. With 100 wandering events of which 8 are near the player, a step takes about 1.4 ms instead of 10.5 ms.
+
+  **Behavior change:** an event far from every player no longer moves. Set `event.alwaysSimulated = true` for an event that must keep moving everywhere, or `eventSimulation: 'always'` in the options of `provideServerMapStreaming()` (the `streaming` options of `provideTiledMap()` and of the Studio module) to simulate every event as before.
+
+  `MovementManager` has `pause()`, `resume()` and `isPaused()`: the strategies of a paused entity keep their state and are not updated. In a world step, a sleeping entity that did not change is no longer synchronized with the spatial partition and does not start a collision query; its collisions are kept until an entity reaches it, or until it moves or is removed.
+
+- 1135bf1: `ItemObject`, `ItemData` and `ItemHooks` are exported by `@rpgjs/server`, so an item is written as a typed object (data and hooks, no decorator). `ItemData` types the `atk`, `pdef` and `sdef` a weapon or an armor adds while equipped.
+- 9d8cbc2: A map room created again from its storage (an evicted Durable Object, a restarted process) rebuilds its map when a player joins, and runs its loop again: it stayed frozen, with events that did not move and no sync, when the client did not ask for the map stream or when a player had already left the new instance (#519)
+- caf714d: A map room woken after a restart now rebuilds its map, and so its database, before it restores a player transferred to it. A player owning a skill or an item of the map's database can enter the map again instead of staying on the lobby. A map that is already loaded is not rebuilt when another player arrives.
+- b6bfe79: With map streaming, the interest of players in flying projectiles costs less (#520). At every physics step, the position and the chunk of each flying projectile were computed again for every player. They are now computed once per step, and a player whose retained chunks did not change is skipped when no projectile changed chunk. With 100 players who see 55 flying projectiles, the step spends about 0.1 to 0.2 ms on it instead of 1.2 ms. A spawn packet is also filtered for every client from one computation of the chunks of its projectiles.
+- 171aecf: Projectile messages follow the sync rate of the map instead of the number of shots (#520). `map.projectiles.emit()` no longer sends a message right away: spawns, impacts, updates and destroys are queued and sent once per sync interval (`throttleSync`, 50 ms by default; every step when the map has no throttle). With 110 shots per second, a map sends about 38 projectile messages per second instead of 193, and half the bytes before compression; most messages now pass the compression threshold.
+
+  - A shot is drawn up to one sync interval later than before.
+  - A projectile that stops on its hit sends its impact once, in its destroy entry. The client calls `projectiles.onImpact` from there.
+  - A spawn leaves out the values that are the defaults of the client (`delay: 0`, `index: 0`, `count: 1`, a plain linear `trajectory`), and rounds `direction` to 5 decimals and `origin` to 2.
+
+- ec33a62: A character on a route costs less on the server (#516). The movement strategy of `moveRoutes()` was a class declared inside the method: a new class was created at every call, that is at every cycle of an infinite route for every event, and the JavaScript engine could not optimize its `update()`, which runs at every physics step. It is now declared once. With 100 events on `infiniteMoveRoute([Move.tileRandom()])`, a physics step takes about 30 % less time (37 µs per event instead of 53 µs in the bench, half of which is the bench itself).
+
+  The route strategy also stops deleting and creating its clamp at every step, and no longer formats its debug messages when they are not printed.
+
+- 66e6011: Keep `@signe/*` and `rxjs` external in the server build, so that a standalone game shares one copy of the reactive runtime between the client and the server
+- 283076c: Hooks fired without being awaited (`onAction`, `onInput`, `onInShape`/`onOutShape`, `onDetectInShape`/`onDetectOutShape`, `onTouch`, `onPlayerTouch`, item, skill, class, gold, hotbar and parameter hooks) no longer stop the server when they throw or reject. The error is logged with the hook name and the player or event id, and the map keeps running. The new `player.runHook()` / `event.runHook()` runs a hook this way.
+- 9b587e1: The reactive runtime is updated and shared (#518):
+
+  - `canvasengine` 2.6.0, which is built on `@signe/reactive` 3 (it was on 2.10).
+  - `@signe/reactive` 3.2.0, `@signe/sync` 3.2.0, `@signe/room` 3.3.0 and `@signe/di` 3.1.1: `batch()`, faster `load()`, signals that notify without rxjs subjects, less memory per signal, and one sync packet per interval instead of two.
+  - `@rpgjs/common` and `@rpgjs/client` no longer bundle `@signe/*` and `rxjs` in their `dist`: they import them, so that an application has one copy shared by RPGJS. The lockfile has a single version of `@signe/reactive`.
+  - The Vite plugin dedupes `@signe/reactive` when the application can resolve it from its root.
+
+  canvasengine 2.6.0 still bundles its own copy of `@signe/reactive` 3.2.0, so the client bundle has two copies. They share the dependency tracker and the batch state through the global reactive store, so a `batch()` spans both.
+
+  With `@signe/reactive` 3.2, an effect is run again when one of its dependencies changes while it runs. Three components had an effect that wrote a signal and then depended on what that write read (the typewriter of the dialog box, the position of notifications, the animated HP bar): they ran without end and filled the memory. Their writes are now made in `untracked()`.
+
+  The other component effects that write a signal (menus, shop, title and game over screens, action bar, combat input, Studio shadow and level-up icon, Tiled map) make their write in `untracked()` as well, so that they cannot fall into the same loop.
+
+- ccf59be: With map streaming, the visibility of a sync packet no longer runs a spatial query per client (#515). The players and the events of the map are indexed by chunk once per sync broadcast, and each client reads the index for its retained chunks. Building the sync packets of 80 clients that each see 80 entities takes about 2 ms instead of 21 ms. The visible entities are the same, with one difference: an event without a physics body is now visible when its position is in a retained chunk.
+- Updated dependencies [2cd754e]
+- Updated dependencies [3d39a17]
+- Updated dependencies [9b587e1]
+  - @rpgjs/physic@5.1.2
+  - @rpgjs/common@5.3.2
+  - @rpgjs/testing@5.0.7
+
 ## 5.4.1
 
 ### Patch Changes

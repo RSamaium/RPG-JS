@@ -1,5 +1,14 @@
 # @rpgjs/script
 
+## 5.3.1
+
+### Patch Changes
+
+- e510682: `$player.showAttachedGui(targets?)` and `$player.hideAttachedGui(targets?)` take the id of a player, or a list of ids, to show or hide the GUIs attached to the sprites of other players of the map (#525). They only acted on the sprite of the player of the script.
+- f712e0f: `$map.getEvents()` and `$map.getEvent(id)` now give the `tags` of the events, as the signals already do. A script that looks at the map on its own (`map.tick`, `player.joinMap`) finds the events of a kind with `$map.getEvents().filter((e) => e.tags.includes("sheriff"))` instead of their name. `simulate()` keeps the `tags` of `world.events`.
+- dbe4979: `$http.request(connection, { method, path, query, body })`: scripts reach outside services through the connections the host declares with `provideScripts({ http })`. The package never does networking: it checks each request (a declared connection, an allowed method, a path that stays in the connection, a flat query, a plain body), bounds the requests of a handler (`httpPerHandler`), the size of an answer (`httpBodyMax`) and the wait (`httpTimeout`, through an `AbortSignal`), and gives the answer as data (`{ ok, status, json, text, error }`). What the transport throws never reaches the script. `$http` is refused in `map.tick`. Without connections it does not exist. `simulate()` and `runTests()` take fake answers by connection.
+- 7a20d76: `shared()` takes a `scope`: `"room"` (the default, `$shared.<name>`, one value for the players of the room) or `"player"` (`$player.shared.<name>`, one value for each player). A property of each player is a synchronized property of the player, `script_<name>`, given to every player from its arrival: a GUI reads it with `getEntityProp(player, "script_<name>")` and updates when it changes, `client` sends it to the clients of the map and `persist` saves it with the player. Two scripts that declare the same name for each player with other options are refused, with the reason.
+
 ## 5.3.0
 
 ### Minor Changes
