@@ -1,3 +1,7 @@
+<p align="center">
+  <a href="https://rpgstudio.ai"><img src="./docs/assets/readme/studio-banner.svg" alt="New: RPGJS Studio, build your game visually in the browser. Try it at rpgstudio.ai" width="880"></a>
+</p>
+
 ![RPGJS](/header.png)
 
 <p align="center">
@@ -138,11 +142,32 @@ export function Merchant(): EventDefinition {
 }
 ```
 
-Want enemies that fight back? Give an event a battle AI:
+## ⚔️ Three battle modes
+
+Pick the combat that fits your game, or mix them. Each mode is its own package,
+the server owns the rules, and each one runs solo or online with the same code.
+
+<table>
+<tr>
+<td width="33%"><a href="https://v5.rpgjs.dev/combat/action-battle"><img src="./docs/assets/combat/action-battle.jpg" alt="Action Battle System: real-time combat on the map"></a></td>
+<td width="33%"><a href="https://v5.rpgjs.dev/combat/turn-based"><img src="./docs/assets/combat/turn-based.jpg" alt="Turn-based battle: a battle scene above the map"></a></td>
+<td width="33%"><a href="https://v5.rpgjs.dev/combat/tactical"><img src="./docs/assets/combat/tactical.jpg" alt="Tactical battle: units on a grid drawn on the map"></a></td>
+</tr>
+<tr>
+<td valign="top"><b><a href="https://v5.rpgjs.dev/combat/action-battle">Action Battle</a></b><br><code>@rpgjs/action-battle</code><br>Real-time fights on the map: enemy AI, combos, dashes, skills and projectiles.</td>
+<td valign="top"><b><a href="https://v5.rpgjs.dev/combat/turn-based">Turn-based</a></b><br><code>@rpgjs/turn-battle</code><br>Classic battles in a scene above the map, solo, co-op or PvP.</td>
+<td valign="top"><b><a href="https://v5.rpgjs.dev/combat/tactical">Tactical</a></b><br><code>@rpgjs/tactical-rpg</code><br>Units move on a grid drawn on the map, act in phases and fight for an objective.</td>
+</tr>
+</table>
 
 ```ts
-new BattleAi(this, { enemyType: EnemyType.Aggressive });
+new BattleAi(this, { enemyType: EnemyType.Aggressive }); // action: an enemy that fights back
+await startTurnBattle(player, "goblins");                 // turn-based: fight a troop
+await startTacticalBattle(player, "first-fight");         // tactical: play an encounter
 ```
+
+Want your own rules? All three are built on
+[`@rpgjs/battle-kit`](https://v5.rpgjs.dev/combat/battle-kit).
 
 ## 🎨 Beautiful by default
 
@@ -162,7 +187,7 @@ new BattleAi(this, { enemyType: EnemyType.Aggressive });
 | | |
 |---|---|
 | 🗺️ **World** | Maps, world maps, Tiled support, events, shared and per-player scenarios, weather, lighting, day/night |
-| ⚔️ **Gameplay** | Items, skills, states, classes, real-time [action battle](https://v5.rpgjs.dev/guide/battle-ai), projectiles, hotbar, save/load |
+| ⚔️ **Gameplay** | Items, skills, states, classes, [three battle modes](https://v5.rpgjs.dev/combat) (action, turn-based, tactical), projectiles, hotbar, save/load |
 | 🌐 **Multiplayer** | Authoritative server, map rooms, client prediction and reconciliation, live map updates, [accounts](https://v5.rpgjs.dev/gui/account), [chat](https://v5.rpgjs.dev/gui/chat) |
 | 🖼️ **Interface** | Title screen, dialogs, menus, shop, HUD, character select, [themes](https://v5.rpgjs.dev/gui/theming), mobile controls, gamepad, Vue overlays |
 | 🌍 **i18n** | One translation catalog for server dialogs, client menus and modules |

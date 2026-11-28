@@ -7,6 +7,8 @@ description: "A turn-based battle system for RPGJS: server-authoritative rules, 
 
 `@rpgjs/turn-battle` adds turn-based fights to a game: the server owns the rules (turn order, damage, AI, rewards), the client plays a battle scene above the map. It works in standalone RPG mode and in MMORPG mode, solo, in co-op and in player versus player, and other players can watch.
 
+![A turn-based battle: the battle scene covers the map, the hero faces a goblin troop and picks a command](/assets/combat/turn-based.jpg)
+
 Unlike the [Action Battle System](/combat/action-battle), nothing happens on the map itself: your server code calls `startTurnBattle`, the battle scene covers the map for the players who fight, and the map comes back when it ends. Unlike the [tactical battle](/combat/tactical), there is no grid and no movement: heroes and enemies face each other and act in turn. See [Combat modes](/combat) to compare the three.
 
 It is built on [`@rpgjs/battle-kit`](/combat/battle-kit), the foundation shared by the RPGJS battle systems, and does **not** depend on any other battle system: a game can install it next to [`@rpgjs/tactical-rpg`](/combat/tactical) or alone.

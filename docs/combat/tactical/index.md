@@ -7,6 +7,8 @@ description: "Grid-based tactical battles for RPGJS: units move on a grid drawn 
 
 `@rpgjs/tactical-rpg` adds grid-based tactical battles to an RPGJS game: units move on a grid, act in phases, use skills with areas, and fight for an objective. The server owns the rules; the client draws the grid on the map and the HUD over it. It works in standalone RPG mode and in MMORPG mode, solo, in co-op and in player versus player, and other players can watch.
 
+![A tactical battle: the grid is drawn on the map, the reachable tiles of the selected hero are highlighted](/assets/combat/tactical.jpg)
+
 Unlike the [turn-based battle](/combat/turn-based), the fight does not leave the map: the grid is drawn where the player stands and units walk on it, so position, range and areas matter. Unlike the [Action Battle System](/combat/action-battle), nothing is real time: each side plays its phase, and your server code starts the battle with `startTacticalBattle`. See [Combat modes](/combat) to compare the three.
 
 It is **independent of the turn-based battle**: it does not import it and does not need it. Both are built on [`@rpgjs/battle-kit`](/combat/battle-kit), the foundation shared by the RPGJS battle systems, so they take the same options and hooks.

@@ -8,13 +8,13 @@ description: "Choose how your game fights: real-time action on the map, turn-bas
 RPGJS ships three combat modes. Each one is a separate package that you install as a module, and each one works in a solo game (standalone RPG) and in an online game (MMORPG) with the same code.
 
 <CardGroup cols={3}>
-  <Card title="Action Battle System" icon="bolt" href="/combat/action-battle">
+  <Card title="Action Battle System" icon="bolt" href="/combat/action-battle" img="/assets/combat/action-battle.jpg">
     Real-time combat on the map: enemies with an AI, combos, dashes, skills, projectiles.
   </Card>
-  <Card title="Turn-based battle" icon="hourglass-half" href="/combat/turn-based">
+  <Card title="Turn-based battle" icon="hourglass-half" href="/combat/turn-based" img="/assets/combat/turn-based.jpg">
     Classic turn-based fights in a battle scene shown above the map.
   </Card>
-  <Card title="Tactical battle" icon="chess-board" href="/combat/tactical">
+  <Card title="Tactical battle" icon="chess-board" href="/combat/tactical" img="/assets/combat/tactical.jpg">
     Units move on a grid, act in phases and fight for an objective.
   </Card>
 </CardGroup>

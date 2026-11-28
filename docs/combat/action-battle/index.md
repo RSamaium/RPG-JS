@@ -11,6 +11,8 @@ The AI controller manages **behavior only**. All stats, HP, SP, skills, items, c
 
 Combat happens in real time directly on the map: there is no separate battle scene. Players and enemies keep moving on the same map while they fight.
 
+![Real-time combat on the map: the hero fights a brute, a guardian and a fire caster](/assets/combat/action-battle.jpg)
+
 ## Features
 
 - Adventure combat by default: three-hit player combo, charged attack, and dodge invulnerability
