@@ -1,5 +1,28 @@
 # @rpgjs/studio
 
+## 5.5.2
+
+### Patch Changes
+
+- 2cd754e: On a streamed map, the server simulates events according to the interest of players (#517). An event in a chunk that no player retains is paused: its route, its movements and its physics stop, it keeps its state and its hitbox, and it goes on when a player comes near. With 100 wandering events of which 8 are near the player, a step takes about 1.4 ms instead of 10.5 ms.
+
+  **Behavior change:** an event far from every player no longer moves. Set `event.alwaysSimulated = true` for an event that must keep moving everywhere, or `eventSimulation: 'always'` in the options of `provideServerMapStreaming()` (the `streaming` options of `provideTiledMap()` and of the Studio module) to simulate every event as before.
+
+  `MovementManager` has `pause()`, `resume()` and `isPaused()`: the strategies of a paused entity keep their state and are not updated. In a world step, a sleeping entity that did not change is no longer synchronized with the spatial partition and does not start a collision query; its collisions are kept until an entity reaches it, or until it moves or is removed.
+
+- 9b587e1: The reactive runtime is updated and shared (#518):
+
+  - `canvasengine` 2.6.0, which is built on `@signe/reactive` 3 (it was on 2.10).
+  - `@signe/reactive` 3.2.0, `@signe/sync` 3.2.0, `@signe/room` 3.3.0 and `@signe/di` 3.1.1: `batch()`, faster `load()`, signals that notify without rxjs subjects, less memory per signal, and one sync packet per interval instead of two.
+  - `@rpgjs/common` and `@rpgjs/client` no longer bundle `@signe/*` and `rxjs` in their `dist`: they import them, so that an application has one copy shared by RPGJS. The lockfile has a single version of `@signe/reactive`.
+  - The Vite plugin dedupes `@signe/reactive` when the application can resolve it from its root.
+
+  canvasengine 2.6.0 still bundles its own copy of `@signe/reactive` 3.2.0, so the client bundle has two copies. They share the dependency tracker and the batch state through the global reactive store, so a `batch()` spans both.
+
+  With `@signe/reactive` 3.2, an effect is run again when one of its dependencies changes while it runs. Three components had an effect that wrote a signal and then depended on what that write read (the typewriter of the dialog box, the position of notifications, the animated HP bar): they ran without end and filled the memory. Their writes are now made in `untracked()`.
+
+  The other component effects that write a signal (menus, shop, title and game over screens, action bar, combat input, Studio shadow and level-up icon, Tiled map) make their write in `untracked()` as well, so that they cannot fall into the same loop.
+
 ## 5.5.1
 
 ### Patch Changes

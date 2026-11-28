@@ -1,5 +1,46 @@
 # @rpgjs/client
 
+## 5.5.2
+
+### Patch Changes
+
+- 79aa654: `menuGamepadControls` is exported by `@rpgjs/client`, so the GUIs of modules answer the gamepad like the built-in ones (A confirms, B or Start goes back, the d-pad or the stick moves, L/R switch tabs). `@rpgjs/ui-css` styles the HUDs of the turn-based battle (`rpg-ui-turn-battle-*`) and of the tactical battle (`rpg-ui-tactical-*`), with their stories.
+- 171aecf: Projectile messages follow the sync rate of the map instead of the number of shots (#520). `map.projectiles.emit()` no longer sends a message right away: spawns, impacts, updates and destroys are queued and sent once per sync interval (`throttleSync`, 50 ms by default; every step when the map has no throttle). With 110 shots per second, a map sends about 38 projectile messages per second instead of 193, and half the bytes before compression; most messages now pass the compression threshold.
+
+  - A shot is drawn up to one sync interval later than before.
+  - A projectile that stops on its hit sends its impact once, in its destroy entry. The client calls `projectiles.onImpact` from there.
+  - A spawn leaves out the values that are the defaults of the client (`delay: 0`, `index: 0`, `count: 1`, a plain linear `trajectory`), and rounds `direction` to 5 decimals and `origin` to 2.
+
+- 9b587e1: The reactive runtime is updated and shared (#518):
+
+  - `canvasengine` 2.6.0, which is built on `@signe/reactive` 3 (it was on 2.10).
+  - `@signe/reactive` 3.2.0, `@signe/sync` 3.2.0, `@signe/room` 3.3.0 and `@signe/di` 3.1.1: `batch()`, faster `load()`, signals that notify without rxjs subjects, less memory per signal, and one sync packet per interval instead of two.
+  - `@rpgjs/common` and `@rpgjs/client` no longer bundle `@signe/*` and `rxjs` in their `dist`: they import them, so that an application has one copy shared by RPGJS. The lockfile has a single version of `@signe/reactive`.
+  - The Vite plugin dedupes `@signe/reactive` when the application can resolve it from its root.
+
+  canvasengine 2.6.0 still bundles its own copy of `@signe/reactive` 3.2.0, so the client bundle has two copies. They share the dependency tracker and the batch state through the global reactive store, so a `batch()` spans both.
+
+  With `@signe/reactive` 3.2, an effect is run again when one of its dependencies changes while it runs. Three components had an effect that wrote a signal and then depended on what that write read (the typewriter of the dialog box, the position of notifications, the animated HP bar): they ran without end and filled the memory. Their writes are now made in `untracked()`.
+
+  The other component effects that write a signal (menus, shop, title and game over screens, action bar, combat input, Studio shadow and level-up icon, Tiled map) make their write in `untracked()` as well, so that they cannot fall into the same loop.
+
+- Updated dependencies [79aa654]
+- Updated dependencies [2cd754e]
+- Updated dependencies [1135bf1]
+- Updated dependencies [9d8cbc2]
+- Updated dependencies [caf714d]
+- Updated dependencies [3d39a17]
+- Updated dependencies [b6bfe79]
+- Updated dependencies [171aecf]
+- Updated dependencies [ec33a62]
+- Updated dependencies [66e6011]
+- Updated dependencies [283076c]
+- Updated dependencies [9b587e1]
+- Updated dependencies [ccf59be]
+  - @rpgjs/ui-css@5.3.1
+  - @rpgjs/server@5.4.2
+  - @rpgjs/common@5.3.2
+
 ## 5.5.1
 
 ### Patch Changes

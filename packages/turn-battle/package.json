@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/turn-battle",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "Turn-based battle system for RPGJS: battle rules, server, and a CanvasEngine battle scene",
   "main": "dist/client/index.js",
   "types": "dist/client/client-index.d.ts",

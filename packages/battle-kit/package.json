@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/battle-kit",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "Shared foundation of the RPGJS battle systems: battle sessions, hooks, controls, sound cues and presentation pieces (effects, screen impacts, floating numbers, presentation clock)",
   "type": "module",
   "main": "./dist/index.js",

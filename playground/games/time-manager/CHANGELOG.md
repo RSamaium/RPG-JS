@@ -1,5 +1,28 @@
 # @rpgjs/playground-time-manager
 
+## 1.0.6
+
+### Patch Changes
+
+- Updated dependencies [79aa654]
+- Updated dependencies [2cd754e]
+- Updated dependencies [1135bf1]
+- Updated dependencies [9d8cbc2]
+- Updated dependencies [caf714d]
+- Updated dependencies [3d39a17]
+- Updated dependencies [b6bfe79]
+- Updated dependencies [171aecf]
+- Updated dependencies [ec33a62]
+- Updated dependencies [66e6011]
+- Updated dependencies [283076c]
+- Updated dependencies [9b587e1]
+- Updated dependencies [ccf59be]
+  - @rpgjs/client@5.5.2
+  - @rpgjs/ui-css@5.3.1
+  - @rpgjs/server@5.4.2
+  - @rpgjs/common@5.3.2
+  - @rpgjs/vite@5.0.7
+
 ## 1.0.5
 
 ### Patch Changes

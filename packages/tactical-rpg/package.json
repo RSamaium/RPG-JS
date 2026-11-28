@@ -1,7 +1,7 @@
 {
   "name": "@rpgjs/tactical-rpg",
   "repository": "github:RSamaium/RPG-JS",
-  "version": "5.2.0",
+  "version": "5.2.1",
   "description": "Grid-based tactical RPG battles for RPGJS: rules, AI, objectives, skills, HUD and battlefield, independent of the turn-based battle",
   "type": "module",
   "main": "dist/client/index.js",
